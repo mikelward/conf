@@ -47,30 +47,43 @@ cd()
 	esac
 }
 
+# set the window title
+settitle()
+{
+	if test -n "$TITLESTART"
+	then
+		eval echo -n \""${TITLESTART}${TITLESTRING}${TITLEFINISH}"\"
+	fi
+	if test -n "$ICONSTART"
+	then
+		eval echo -n \""${ICONSTART}${ICONSTRING}${ICONFINISH}"\"
+	fi
+}
+
 # set environment for interactive sessions
 case $- in *i*)
 
 	# set the prompt
-	#PS1='\[\e[1m\]\n\u@\h $PWD\n\$\[\e[0m\] '
 	if type tput >& /dev/null
 	then
-		PS1='\[`tput bold`\]\n\u@\h ${PWD/#$HOME/~}\n\$\[`tput sgr0`\] '
-	else
-		#PS1='\[\e[1m\]\n\u@\h ${PWD/#$HOME/~}\n\$\[\e[0m\] '
-		PS1='\n\u@\h ${PWD/#$HOME/~}\n\$ '
+		BOLD="`tput bold`"
+		NORMAL="`tput sgr0`"
 	fi
+	PS1='\[$BOLD\]\n\u@\h ${PWD/#$HOME/~}\n\$\[$NORMAL\] '
 
 	# set the xterm title
+	ICONSTRING='${HOSTNAME%%.*}<${TTY##/*/}>'
+	TITLESTRING='${HOSTNAME%%.*}<${TTY##/*/}> ${USER} ${0##/*/} ${PWD}'
+	STATUSSTRING='${0##/*/}'
 	case "$TERM" in
-	aixterm|dtterm|rxvt|xterm*)
-		PROMPT_COMMAND='echo -n "]0;${HOSTNAME%%.*}<${TTY##/*/}>"'
-		#PROMPT_COMMAND='echo -n "]0;${USER}@${HOSTNAME%%.*}<${TTY##/*/}>"'
-		;;
-	screen*)
-		PROMPT_COMMAND='echo -n "]0;${HOSTNAME%%.*}<${TTY##/*/}>"'
-		#PROMPT_COMMAND='echo -n "]0;${USER}@${HOSTNAME%%.*}<${TTY##/*/}>"'
+	aixterm|dtterm|putty|rxvt|xterm*)
+		ICONSTART="]1;"
+		ICONFINISH=""
+		TITLESTART="]2;"
+		TITLEFINISH=""
 		;;
 	esac
+	PROMPT_COMMAND='settitle'
 
 	# set command completions
 	if type complete >& /dev/null
