@@ -1,5 +1,5 @@
 # .inputrc - Readline configuration
-# Michael Wardle, November 28, 2004
+# $Id$
 
 set bell-style visible
 set horizontal-scroll-mode on
