@@ -160,7 +160,7 @@ case $- in *i*)
 		alias g='egrep'
 		alias h='history'
 		alias j='jobs -l'
-		alias l='ls -Fsx'
+		alias l='ls -Fx'
 		alias la='l -A'
 		alias ll='l -l'
 		alias lt='l -t'
