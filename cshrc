@@ -84,6 +84,10 @@ if ( $?prompt ) then
 		setenv INPUTRC ~/.inputrc
 	endif
 	setenv CLICOLOR true
+	which dircolors >& /dev/null && eval "`dircolors -c`"
+	if ( $?LS_COLORS ) then
+		alias l	`alias l`\ --color=auto
+	endif
 	setenv LESS Eij3MX
 	#setenv LESS j3M
 	if ( $?TABSIZE ) then
@@ -101,6 +105,8 @@ if ( $?prompt ) then
 	which vi >& /dev/null && setenv EDITOR vi
 	which nvi >& /dev/null && setenv EDITOR nvi
 	which vim >& /dev/null && setenv EDITOR vim
+	#which pico >& /dev/null && setenv EDITOR pico
+	#which nano >& /dev/null && setenv EDITOR nano
 	setenv GREP_COLOR 1
 	setenv PAGER more
 	which less >& /dev/null && setenv PAGER less
