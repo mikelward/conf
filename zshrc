@@ -21,7 +21,7 @@ precmd()
 		tf="`tput fsl`"
 		;;
 	esac
-	test -n "$ts" && print -Pn "${ts}%n@%m %~${tf}"
+	test -n "$ts" && print -Pn "${ts}%m<$(basename $(tty))> %n $0${tf}"
 }
 
 # update the xterm title when running a command
@@ -44,13 +44,20 @@ preexec()
 		tf="`tput fsl`"
 		;;
 	esac
-	test -n "$ts" && print -Pn "${ts}%n@%m $1${tf}"
+	test -n "$ts" && print -Pn "${ts}%m<$(basename $(tty))> %n $1${tf}"
 }
 
 # set prompt
 prompt='
 %B%n@%m `dirs`
 %#%b '
+
+# set non-alphanumeric characters that constitute a word
+# (remove / so Alt-Backspace deletes only one path component)
+# (remove <>& so redirection not part of path)
+# (remove ; so command list separator not part of word)
+#WORDCHARS=
+WORDCHARS="`echo $WORDCHARS | sed -e 's/[/<>&;]\+//'`"
 
 # set key bindings
 bindkey -e
