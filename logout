@@ -2,10 +2,8 @@
 # $Id$
 
 # kill ssh-agent
-if ( 0 ) then
 if ( $?SSH_AGENT_PID ) then
     ssh-agent -k
-endif
 endif
 
 # clear the screen
