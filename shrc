@@ -24,8 +24,8 @@ addpath()
 		eval dirs=\$$var
 		for d in $dirs
 		do
-		# directory is already in PATH, leave as is
-		[ "${dir:-.}" = "${d:-.}" ] && seen=true
+			# directory is already in PATH, leave as is
+			[ "${dir:-.}" = "${d:-.}" ] && seen=true
 		done
 		[ -z "$seen" ] && eval $var="\$$var""\${$var:+$sep}""\$dir"
 		;;
@@ -41,8 +41,9 @@ delpath()
 	sep=${3:-":"}
 	NIFS="$IFS"
 	IFS="$sep"
-	path=
+
 	# reconstruct the variable's value, omitting $dir
+	typeset path
 	eval dirs=\$$var
 	for d in $dirs
 	do
@@ -65,17 +66,17 @@ rgrep()
 # add preferred locations at start
 for dir in /opt/freeware/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
 do
-	addpath "$dir" start
+	[ -d $dir ] && addpath "$dir" start
 done
 # add standard locations if they're not there
 for dir in /usr/bin /bin
 do
-	addpath "$dir"
+	[ -d $dir ] && addpath "$dir"
 done
 # add the current directory to the end
 for dir in .
 do
-	addpath "$dir" end
+	[ -d $dir ] && addpath "$dir" end
 done
 export PATH
 
@@ -133,8 +134,8 @@ case $- in *i*)
 		INPUTRC="$HOME"/.inputrc
 	fi
 	FIGNORE=
-	#LESS=eij3MX
-	LESS=j3M
+	LESS=-eIj3MX
+	#LESS=j3M
 	TOP=I
 	export CLICOLOR FIGNORE INPUTRC LESS TOP
 
