@@ -1,0 +1,12 @@
+# .exitrc - Bourne Shell login session shutdown script
+# Michael Wardle, January 12, 2004
+
+# kill ssh-agent if it is running
+if test -n "$SSH_AGENT_PID"
+then
+    ssh-agent -k
+fi
+
+# clear the screen
+clear
+

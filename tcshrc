@@ -1,0 +1,83 @@
+# .cshrc - C Shell startup commands
+# Michael Wardle, November 28, 2004
+
+if ( -r ~/.cshrc ) then
+    source ~/.cshrc
+endif
+
+# set environment for interactive sessions
+if ( $?prompt ) then
+	# set shell options
+	set addsuffix
+	set autoexpand
+	set autolist
+	set complete
+	set correct=cmd
+	set ellipsis
+	set fignore=()
+	unset ignoreeof
+	set listjobs
+	set symlinks=expand
+	set visiblebell
+
+	# set key bindings
+	bindkey -e
+
+	# set command completions
+	complete alias      'p/1/a/' 'p/2/c/'
+	complete bindkey    'C/*/b/'
+	complete {c,push,pop}d  'C/*/d/'
+	complete {c,gc,xl}c 'c/-I/d/' 'n/-I/d/' 'C/*/f:*.c/'
+	complete {CC,g++,xlC} 'c/-I/d/' 'n/-I/d/' 'C/*/f:*.{c,cc,cpp,cxx,c++,C}/'
+	complete chgrp      'p/1/g/'
+	complete chown      'p/1/u/'
+	complete {,un}complete  'C/*/X/'
+	complete exec       'C/*/c/'
+	complete fg         'c/%/j/'
+	complete find       'p/1/d/' 'n/-user/u/' 'n/-group/g/' 'n/-exec/c/'
+	complete gpasswd    'n/-a/u/' 'n/-d/u/' 'C/*/g/'
+	complete groupdel   'C/*/g/'
+	complete javac      'c/-d/d/' 'c/@/f/' 'C/*/f:*.java/'
+	complete java       'C/*/f:*.class/'
+	complete kill       'c/%/j/' 'c/-/S/'
+	complete {,un}limit 'C/*/l/'
+	complete man        'C/./f/' 'C/*/c/'
+	complete nice       'p/1/c/'
+	complete nohup      'p/1/c/'
+	complete {notify,stop} 'c/%/j/'
+	complete newgrp     'C/*/g/'
+	complete printenv   'C/*/e/'
+	complete {,un}set   'C/*/s/'
+	complete setenv     'n/{LANG,LC_*}/`locale -a`/' 'C/*/e/'
+	complete unsetenv   'C/*/e/'
+	complete sudo       'n/-u/u/' 'p/1/c/'
+	complete time       'p/1/c/'
+	complete {where,which} 'C/*/c/'
+	complete unalias    'C/*/a/'
+	complete userdel    'C/*/u/'
+
+	# set the window title on supported terminals
+	setenv HOST `hostname`
+	setenv TTY `tty`
+	setenv USER `whoami`
+	if ( $?TERM ) then
+		switch ( $TERM )
+		case "aixterm":
+		case "dtterm":
+		case "putty":
+		case "rxvt":
+		case "xterm*":
+			alias precmd 'echo -n "]0;${HOST:ar}<${TTY:t}>"'
+			breaksw
+		#case "screen*":
+			#alias precmd 'echo -n "k${HOST:ar}<${TTY:t}>\\"'
+		default:
+			breaksw
+		endsw
+	endif
+
+	# set the prompt format
+	set promptchars=">#"
+	set prompt='\n%B%n@%m %~\n%#%b '
+endif
+

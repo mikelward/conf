@@ -1,0 +1,18 @@
+# .logout - C Shell login session shutdown commands
+# Michael Wardle, September 4, 2004
+
+# kill ssh-agent
+if ( 0 ) then
+if ( $?SSH_AGENT_PID ) then
+    ssh-agent -k
+endif
+endif
+
+# clear the screen
+clear
+
+# read local settings (company environment, etc.)
+if ( -r ~/.logout.local ) then
+    source ~/.logout.local
+endif
+
