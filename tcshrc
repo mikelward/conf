@@ -2,7 +2,7 @@
 # $Id$
 
 if ( -r ~/.cshrc ) then
-    source ~/.cshrc
+	source ~/.cshrc
 endif
 
 # set environment for interactive sessions
@@ -69,7 +69,7 @@ if ( $?prompt ) then
 		case "putty":
 		case "rxvt":
 		case "xterm*":
-			set TITLESTART="]2;"
+			set TITLESTART="]0;"
 			set TITLEFINISH=""
 			breaksw
 		case "screen*":
@@ -85,8 +85,9 @@ if ( $?prompt ) then
 			set TITLEFINISH=""
 			breaksw
 		endsw
+		set TITLESTRING='${HOST:ar}<${TTY:t}> ${USER} ${0:t} ${PWD}'
 		if ( $?TITLESTART ) then
-			alias precmd echo -n \""${TITLESTART}"'${HOST:ar}<${TTY:t}> ${USER} $0'"${TITLEFINISH}"\"
+			alias precmd eval echo -n '\"${TITLESTART}${TITLESTRING}${TITLEFINISH}\"'
 		endif
 	endif
 
