@@ -56,10 +56,10 @@ whence()
 	do
 		case $flag in
 		p)
-			pathonly=1
+			pathonly=true
 			;;
 		v)
-			verbose=1
+			verbose=true
 			;;
 		*)
 			echo "Unknown option $1"
@@ -79,7 +79,19 @@ whence()
 
 	for arg
 	do
-		if test -z "$verbose" && `type -t "$arg" | grep -q alias`
+		if test -n "$pathonly"
+		then
+			local path=`type -P "$arg"`
+			if test -n "$path"
+			then
+				if test -n "$verbose"
+				then
+					echo "$arg is $path"
+				else
+					echo "$path"
+				fi
+			fi
+		elif test -z "$verbose" && `type -t "$arg" | grep -q alias`
 		then
 			echo "$arg"
 		else
