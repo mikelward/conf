@@ -88,7 +88,7 @@ if ( $?prompt ) then
 	if ( $?LS_COLORS ) then
 		alias l	`alias l`\ --color=auto
 	endif
-	setenv LESS Eij3MX
+	setenv LESS -EIj3MX
 	#setenv LESS j3M
 	if ( $?TABSIZE ) then
 		setenv LESS "${LESS}x${TABSIZE}"
