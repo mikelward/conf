@@ -1,5 +1,5 @@
 # .cshrc - csh startup commands
-# Michael Wardle, November 28, 2004
+# $Id$
 
 # set command aliases
 alias bell	'echo "\a"'

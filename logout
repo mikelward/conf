@@ -1,5 +1,5 @@
 # .logout - C Shell login session shutdown commands
-# Michael Wardle, September 4, 2004
+# $Id$
 
 # kill ssh-agent
 if ( 0 ) then

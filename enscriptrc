@@ -1,0 +1,13 @@
+# .enscriptrc - Enscript configuration file
+# $Id$
+
+DefaultFancyHeader: enscript
+DefaultMedia: A4
+DefaultOutputMethod: printer
+MarkWrappedLines: plus
+NonPrintableFormat: octal
+PageLabelFormat: long
+#StatesHighlightLevel: heavy
+#StatesPath: /usr/bin/states
+
+# EOF

@@ -1,5 +1,5 @@
 # .zshrc - Z Shell interactive session startup script
-# Michael Wardle, November 28, 2004
+# $Id$
 
 # update the xterm title after every command
 precmd()

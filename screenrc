@@ -1,0 +1,14 @@
+# .screenrc - screen configuration file
+# $Id$
+
+escape ^]^]
+#other ^]]
+startup_message off
+hardstatus on
+hardstatus lastline
+hardstatus string " %w %=%M %d %c "
+vbell off
+bind = resize =
+bind + resize +1
+bind - resize -1
+bind _ resize max

@@ -1,0 +1,120 @@
+#----------------------------------------
+# Mutt mail client configuration
+# $Id$
+#----------------------------------------
+
+#----------------------------------------
+# Account settings
+#----------------------------------------
+#set realname="Michael Wardle"
+#set imap_user=$LOGNAME
+#set folder="imaps://mbwardle@sent.com@mail.messagingengine.com/"
+#set folder="imaps://mbwardle@mail.mailsnare.net/"
+#set folder="imap://michael@mail.endbracket.net/"
+set folder=~/mail
+#set spoolfile="imaps://mbwardle@sent.com@mail.messagingengine.com/INBOX"
+#set spoolfile="imaps://mbwardle@mail.mailsnare.net/INBOX"
+#set spoolfile="imap://michael@mail.endbracket.net/INBOX"
+# determined from $MAIL
+#set spoolfile=~/mail/inbox
+#set imap_home_namespace="INBOX."
+set record==Sent
+#set mail_check=60
+set mail_check=5
+alternates "(mbw|michael|mwardle)@(endbracket.net|leighmardon.com.au)"
+
+#----------------------------------------
+# Composition settings
+#----------------------------------------
+set fast_reply=yes
+set forward_format="Fwd: %s"
+set include=yes
+#set indent_string=" >"
+set metoo=yes
+set mime_forward=yes
+#set reply_to=yes
+#set sig_dashes=yes
+set text_flowed=yes
+
+#----------------------------------------
+# Message settings
+#----------------------------------------
+set delete=yes		# automatically purge messages marked for deletion
+set move=no		# do not ask for confirmation when moving messages
+
+#----------------------------------------
+# Display settings
+#----------------------------------------
+#auto_view text/html
+set markers=yes
+set sort=threads
+set strict_threads
+set pgp_replysign=yes	# automatically sign replies to signed messages
+set pgp_verify_sig	# automatically verify signatures
+ignore *
+unignore Subject: Date: From: To: Cc: X-Spam-Status:
+#unignore X-Priority: Importance: X-Mailer: User-Agent: X-Spam-Flag: X-Spam-Level: X-Spam-Status: X-Spam-Report
+
+#----------------------------------------
+# Color settings
+#----------------------------------------
+# Colors for a black on white color xterm
+color normal default default
+#color hdrdefault white default
+color hdrdefault magenta default
+#color header magenta default ^(Subject|Date|From|To|Cc):
+color quoted magenta default
+#color signature white default
+#color indicator brightwhite blue
+color error brightred default
+#color status brightwhite blue
+color tree cyan default
+color tilde cyan default
+color markers cyan default
+color attachment cyan default
+#color search default yellow
+color body cyan default "(ftp|http)://[^ ]+" # highlight URLs
+color body cyan default [-a-z_0-9.]+@[-a-z_0-9.]+    # highlight mail accounts
+#color underline cyan default
+color underline magenta default
+
+mono normal none
+mono indicator reverse
+
+#----------------------------------------
+# Encryption settings
+#----------------------------------------
+#set pgp_decode_command="gpg %?p?--passphrase-fd 0? --no-verbose --batch --output - %f"
+#set pgp_verify_command="gpg --no-verbose --batch --output - --verify %s %f"
+#set pgp_decrypt_command="gpg --passphrase-fd 0 --no-verbose --batch --output - %f"
+#set pgp_sign_command="gpg --no-verbose --batch --output - --passphrase-fd 0 --armor --detach-sign --textmode %?a?-u %a? %f"
+#set pgp_clearsign_command="gpg --no-verbose --batch --output - --passphrase-fd 0 --armor --textmode --clearsign %?a?-u %a? %f"
+#set pgp_encrypt_only_command="pgpewrap gpg --batch --quiet --no-verbose --output - --encrypt --textmode --armor --always-trust --encrypt-to 0xC9C40C31 -- -r %r -- %f"
+#set pgp_encrypt_sign_command="pgpewrap gpg --passphrase-fd 0 --batch --quiet --no-verbose --textmode --output - --encrypt --sign %?a?-u %a? --armor --always-trust --encrypt-to 0xC9C40C31 -- -r %r -- %f"
+#set pgp_import_command="gpg --no-verbose --import -v %f"
+#set pgp_export_command="gpg --no-verbose --export --armor %r"
+#set pgp_verify_key_command="gpg --no-verbose --batch --fingerprint --check-sigs %r"
+#set pgp_list_pubring_command="gpg --no-verbose --batch --with-colons --list-keys %r" 
+#set pgp_list_secring_command="gpg --no-verbose --batch --with-colons --list-secret-keys %r" 
+
+#----------------------------------------
+# Key bindings
+#----------------------------------------
+#macro pager "S" "<pipe-message>sa-learn --spam<enter><delete-message>" "learn as spam and delete"
+macro pager "S" "<pipe-message>spamassassin -r<enter><delete-message>" "learn as spam and delete"
+#macro index "S" "<pipe-message>sa-learn --spam<enter><delete-message>" "learn as spam and delete"
+macro index "S" "<pipe-message>spamassassin -r<enter><delete-message>" "learn as spam and delete"
+#macro pager "H" "<pipe-message>sa-learn --ham<enter><save-message>!<enter>" "learn as not spam and move to INBOX"
+macro pager "H" "<pipe-message>spamassassin -k<enter><save-message>!<enter>" "learn as not spam and move to INBOX"
+#macro pager "H" "<pipe-message>sa-learn --ham<enter><pipe-message>spamassassin -d | /usr/lib/sendmail michael<enter>" "learn as not spam, clean, and resend to self"
+#macro index "H" "<pipe-message>sa-learn --ham<enter><save-message>!<enter>" "learn as not spam and move to INBOX"
+macro index "H" "<pipe-message>spamassassin -k<enter><save-message>!<enter>" "learn as not spam and move to INBOX"
+#macro index "H" "<pipe-message>sa-learn --ham<enter><pipe-message>spamassassin -d | /usr/lib/sendmail michael<enter>" "learn as not spam, clean, and resend to self"
+
+#----------------------------------------
+# Miscellaneous settings
+#----------------------------------------
+set date_format="(%y-%m-%d %H:%M %Z)"	# international date format
+set nowait_key				# don't prompt if pipeline exits successfully
+set print=ask-yes			# ask before printing
+

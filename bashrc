@@ -1,5 +1,5 @@
 # .bashrc - Bash startup commands
-# Michael Wardle, November 28, 2004
+# $Id$
 
 # source the user's environment file
 if test -z "$ENV"

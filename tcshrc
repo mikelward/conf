@@ -1,5 +1,5 @@
 # .cshrc - C Shell startup commands
-# Michael Wardle, November 28, 2004
+# $Id$
 
 if ( -r ~/.cshrc ) then
     source ~/.cshrc

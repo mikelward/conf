@@ -1,0 +1,7 @@
+# .cvsrc - cvs configuration file
+# $Id$
+
+cvs -q
+checkout -P
+diff -cw
+update -dP
