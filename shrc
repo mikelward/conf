@@ -47,6 +47,7 @@ delpath()
 
 	# reconstruct the variable's value, omitting $dir
 	typeset path
+	#path=
 	eval dirs=\$$var
 	for d in $dirs
 	do
@@ -137,8 +138,7 @@ case $- in *i*)
 		INPUTRC="$HOME"/.inputrc
 	fi
 	FIGNORE=
-	LESS=-eIj3MX
-	#LESS=j3M
+	LESS=-Ej3MX
 	TOP=I
 	export CLICOLOR FIGNORE INPUTRC LESS TOP
 
