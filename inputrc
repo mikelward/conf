@@ -11,9 +11,9 @@ set print-completions-horizontally on
 set show-all-if-ambiguous on
 set visible-stats on
 
-set input-meta off
-set output-meta off
-set convert-meta on
+set convert-meta off
+set input-meta on
+set output-meta on
 
 #set editing-mode emacs
 
