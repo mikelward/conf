@@ -135,7 +135,7 @@ case $- in *i*)
 	type less > /dev/null 2>&1 && PAGER=less
 	VISUAL="$EDITOR"
 	WINTERM=xterm
-	export BROWSER EDITOR GREP_COLOR PAGER VISUAL WINTERM
+	export BROWSER CVS_RSH EDITOR GREP_COLOR PAGER VISUAL WINTERM
 
 	# set program configuration
 	CLICOLOR=true
@@ -188,7 +188,6 @@ case $- in *i*)
 		alias s='ssh'
 		alias v='$VISUAL'
 		alias where='type -pa'
-		alias which='type -p'
 	fi
 	;;
 esac
