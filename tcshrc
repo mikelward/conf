@@ -69,13 +69,25 @@ if ( $?prompt ) then
 		case "putty":
 		case "rxvt":
 		case "xterm*":
-			alias precmd 'echo -n "]0;${HOST:ar}<${TTY:t}>"'
+			set TITLESTART="]2;"
+			set TITLEFINISH=""
 			breaksw
-		#case "screen*":
-			#alias precmd 'echo -n "k${HOST:ar}<${TTY:t}>\\"'
+		case "screen*":
+			set TITLESTART="k"
+			set TITLEFINISH="\\"
+			breaksw
+		case "cygwin":
+			set TITLESTART="];"
+			set TITLEFINISH="\a"
+			breaksw
 		default:
+			set TITLESTART=""
+			set TITLEFINISH=""
 			breaksw
 		endsw
+		if ( $?TITLESTART ) then
+			alias precmd echo -n \""${TITLESTART}"'${HOST:ar}<${TTY:t}> ${USER} $0'"${TITLEFINISH}"\"
+		endif
 	endif
 
 	# set the prompt format
