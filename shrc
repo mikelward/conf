@@ -107,6 +107,7 @@ export MANPATH
 # set environment for all sessions
 CDPATH=".:~"
 HISTIGNORE="bg:fg:l:ll:ls: *"
+HISTSIZE=1000
 HOSTNAME=`hostname`
 TTY=`tty`
 USER=`whoami`
