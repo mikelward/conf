@@ -80,6 +80,6 @@ if ( $?prompt ) then
 
 	# set the prompt format
 	set promptchars=">#"
-	set prompt='\n%B%n@%m %~\n%#%b '
+	set prompt='\n%B%n@%m %$dirstack\n%#%b '
 endif
 
