@@ -109,8 +109,13 @@ CDPATH=".:~"
 HISTIGNORE="bg:fg:l:ll:ls: *"
 HISTSIZE=1000
 HOSTNAME=`hostname`
-TTY=`tty`
-USER=`whoami`
+if type tty >/dev/null 2>&1
+then
+	TTY=`tty`
+else
+	TTY='?'
+fi
+USER=`id -un`
 export CDPATH HOSTNAME TTY USER
 
 # set environment for interactive sessions

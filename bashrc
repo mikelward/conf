@@ -64,7 +64,7 @@ settitle()
 case $- in *i*)
 
 	# set the prompt
-	if type tput >& /dev/null
+	if type tput >/dev/null 2>&1
 	then
 		BOLD="`tput bold`"
 		NORMAL="`tput sgr0`"
@@ -86,20 +86,24 @@ case $- in *i*)
 	PROMPT_COMMAND='settitle'
 
 	# set command completions
-	if type complete >& /dev/null
+	if type complete >/dev/null 2>&1
 	then
-		complete -a {,un}alias
-		complete -d {c,push,pop}d
-		complete -o default -g chgrp
-		complete -o default -u chown
-		complete -j fg
-		complete -j kill
-		complete -c command
-		complete -o default -c exec
-		complete -o default -c man
-		complete -o default -c sudo
-		complete -e printenv
-		complete -G "*.java" javac
+		if complete -o >/dev/null 2>&1
+		then
+			COMPDEF="-o complete"
+		fi
+		complete -a {,un}alias >/dev/null 2>&1
+		complete -d {c,p,push,pop}d,po >/dev/null 2>&1
+		complete $COMPDEF -g chgrp >/dev/null 2>1
+		complete $COMPDEF -u chown >/dev/null 2>1
+		complete -j fg >/dev/null 2>1
+		complete -j kill >/dev/null 2>1
+		complete $COMPDEF -c command >/dev/null 2>1
+		complete $COMPDEF -c exec >/dev/null 2>1
+		complete $COMPDEF -c man >/dev/null 2>1
+		complete $COMPDEF -c sudo >/dev/null 2>1
+		complete -e printenv >/dev/null 2>1
+		complete -G "*.java" javac >/dev/null 2>1
 	fi
 	;;
 esac
