@@ -62,6 +62,8 @@ WORDCHARS="`echo $WORDCHARS | sed -e 's/[/<>&;]\+//'`"
 # set key bindings
 bindkey -e
 bindkey '^X?' expand-cmd-path
+bindkey '^[p' history-beginning-search-backward
+bindkey '^[n' history-beginning-search-forward
 
 # enable some options originally from csh
 setopt banghist
