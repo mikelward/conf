@@ -139,7 +139,7 @@ case $- in *i*)
 	fi
 	FIGNORE=
 	LESS=-Ej3MX
-	TOP=I
+	TOP=-I
 	export CLICOLOR FIGNORE INPUTRC LESS TOP
 
 	# set key bindings
