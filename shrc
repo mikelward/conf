@@ -132,7 +132,7 @@ case $- in *i*)
 	then
 		INPUTRC="$HOME"/.inputrc
 	fi
-	FIGNORE=".o:~"
+	FIGNORE=
 	#LESS=eij3MX
 	LESS=j3M
 	TOP=I
