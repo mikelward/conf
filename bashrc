@@ -47,6 +47,47 @@ cd()
 	esac
 }
 
+# ksh style whence
+whence()
+{
+	local arg opts pathonly verbose
+	while test ${1:0:1} = "-"
+	do
+		case $1 in
+		-p)
+			pathonly=1
+			shift
+			;;
+		-v)
+			verbose=1
+			shift
+			;;
+		-*)
+			echo "Unknown option $1"
+			return
+			;;
+		esac
+	done
+
+	opts=-
+	# whence translates to command -v
+	test -z "$verbose" && opts="${opt}v"
+	# whence -v translates to command -V
+	test -n "$verbose" && opts="${opt}V"
+	# whence -p searches only the default PATH
+	test -n "$pathonly" && opts="${opt}p"
+
+	for arg
+	do
+		if test -z "$verbose" && `type -t "$arg" | grep -q alias`
+		then
+			echo "$arg"
+		else
+			command $opts "$arg"
+		fi
+	done
+}
+
 # set the window title
 settitle()
 {
