@@ -51,31 +51,31 @@ cd()
 whence()
 {
 	local arg opts pathonly verbose
-	while test ${1:0:1} = "-"
+	OPTIND=1
+	while getopts pv flag
 	do
-		case $1 in
-		-p)
+		case $flag in
+		p)
 			pathonly=1
-			shift
 			;;
-		-v)
+		v)
 			verbose=1
-			shift
 			;;
-		-*)
+		*)
 			echo "Unknown option $1"
 			return
 			;;
 		esac
 	done
+	shift $(($OPTIND - 1))
 
 	opts=-
 	# whence translates to command -v
-	test -z "$verbose" && opts="${opt}v"
+	test -z "$verbose" && opts="${opts}v"
 	# whence -v translates to command -V
-	test -n "$verbose" && opts="${opt}V"
+	test -n "$verbose" && opts="${opts}V"
 	# whence -p searches only the default PATH
-	test -n "$pathonly" && opts="${opt}p"
+	test -n "$pathonly" && opts="${opts}p"
 
 	for arg
 	do
