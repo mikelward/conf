@@ -5,34 +5,51 @@
 precmd()
 {
 	[[ -t 1 ]] || return
+	local ts
+	local tf
 	case $TERM in
 	aixterm|dtterm|putty|rxvt|xterm*)
-		#print -Pn "\e]0;%m<%l>\a"
-		print -Pn "\e]0;%n@%m\a"
+		ts="\e]0"
+		tf="\a"
 		;;
 	screen*)
-		print -Pn "\e]kzsh\e]\\"
+		ts="\e]k"
+		tf="\e]\\"
+		;;
+	*)
+		ts="`tput tsl`"
+		tf="`tput fsl`"
 		;;
 	esac
+	test -n "$ts" && print -Pn "${ts}%n@%m %~${tf}"
 }
 
 # update the xterm title when running a command
 preexec()
 {
 	[[ -t 1 ]] || return
+	local ts
+	local tf
 	case $TERM in
 	aixterm|dtterm|putty|rxvt|xterm*)
-		print -Pn "\e]0;%n@%m $1\a"
+		ts="\e]0;"
+		tf="\a"
 		;;
 	screen*)
-		print -Pn "\e]kzsh\e]\\"
+		ts="\e]k"
+		tf="\e]\\"
+		;;
+	*)
+		ts="`tput tsl`"
+		tf="`tput fsl`"
 		;;
 	esac
+	test -n "$ts" && print -Pn "${ts}%n@%m $1${tf}"
 }
 
 # set prompt
 prompt="
-%B%n@%m %~
+%B%n@%m `dirs`
 %#%b "
 
 # set key bindings
