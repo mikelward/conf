@@ -36,6 +36,9 @@ addpath()
 # remove a directory from the path
 delpath()
 {
+	# these variables might be set in the calling function but we
+	# can't guarantee we have typeset and the parent probably uses
+	# the same values
 	dir=$1
 	var=${2:-"PATH"}
 	sep=${3:-":"}
