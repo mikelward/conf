@@ -32,6 +32,7 @@ set notitle                     " don't change terminal's title
 set laststatus=2                " always show status line for each window
 set showmode                    " always show command or insert mode
 set shortmess=aoOtTI            " brief messages, no ENTER to continue, no intro
+set sidescroll=1		" scroll sideways smoothly
 "set tabstop=8                   " real tabs are every 8 columns
 set nowrap                      " don't wrap long lines
 if has("cmdline_info")
@@ -68,4 +69,16 @@ set incsearch                   " search while typing
 set noignorecase                " make searches case-sensitive
 set tags+=./tags;/              " search up the tree for tags files
 set nowrapscan                  " do not allow searches to wrap beyond end of file
+
+" BINARY EDITING
+augroup Binary
+	au!
+	au BufReadPre  *.bin,*.exe.*.jpg,*.pcx let &bin=1
+	au BufReadPost *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd
+	au BufReadPost *.bin,*.exe.*.jpg,*.pcx set ft=xxd | endif
+	au BufWritePre *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd -r
+	au BufWritePre *.bin,*.exe.*.jpg,*.pcx endif
+	au BufWritePost *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd
+	au BufWritePost *.bin,*.exe.*.jpg,*.pcx set nomod | endif
+augroup END
 
