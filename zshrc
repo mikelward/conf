@@ -67,6 +67,7 @@ setopt extendedhistory
 setopt histignorespace
 setopt histreduceblanks
 setopt nohup
+setopt nomatch
 setopt noksharrays
 
 # set some options originally from ksh
