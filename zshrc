@@ -70,7 +70,7 @@ setopt banghist
 setopt braceexpand
 #setopt chasedots
 setopt correct
-setopt cshnullglob
+#setopt cshnullglob
 setopt extendedglob
 setopt extendedhistory
 setopt histignorespace
