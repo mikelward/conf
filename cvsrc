@@ -4,4 +4,5 @@
 cvs -q
 checkout -P
 diff -cw
+remove -f
 update -dP
