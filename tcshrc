@@ -17,7 +17,7 @@ if ( $?prompt ) then
 	set fignore=()
 	unset ignoreeof
 	set listjobs
-	set symlinks=expand
+	set symlinks=ignore
 	set visiblebell
 
 	# set key bindings
