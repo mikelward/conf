@@ -1,0 +1,191 @@
+# .shrc - Bourne Shell environment commands
+# Michael Wardle, November 28, 2004
+
+# add a directory to the path
+addpath()
+{
+    dir=$1
+    pos=$2
+    var=${3:-"PATH"}
+    sep=${4:-":"}
+    OIFS="$IFS"
+    IFS="$sep"
+
+    case "$pos" in
+    start)
+        delpath "$dir" "$var" "$sep"
+        eval $var="\$dir""\${$var:+\$sep}""\$$var"
+        ;;
+    end)
+        delpath "$dir" "$var" "$sep"
+        eval $var="\$$var""\${$var:+\$sep}""\$dir"
+        ;;
+    *)
+	eval dirs=\$$var
+        for d in $dirs
+        do
+            # directory is already in PATH, leave as is
+            [ "${dir:-.}" = "${d:-.}" ] && seen=true
+        done
+	[ -z "$seen" ] && eval $var="\$$var""\${$var:+$sep}""\$dir"
+        ;;
+    esac
+    IFS="$OIFS"
+}
+
+# remove a directory from the path
+delpath()
+{
+    dir=$1
+    var=${2:-"PATH"}
+    sep=${3:-":"}
+    NIFS="$IFS"
+    IFS="$sep"
+    path=
+    # reconstruct the variable's value, omitting $dir
+    eval dirs=\$$var
+    for d in $dirs
+    do
+        [ "${d:-.}" = "${dir:-.}" ] && continue
+        path="$path""${path:+$sep}""$d"
+    done
+    eval $var="\$path"
+    IFS="$NIFS"
+}
+
+# search for a lines matching the specified pattern in a directory tree
+rgrep()
+{
+    pattern=$1
+    path=${2:-.}
+    find "$path" -type f -print | xargs -i grep "$pattern" {} /dev/null
+}
+
+# set directories to search for commands
+# add preferred locations at start
+for dir in /opt/freeware/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
+do
+    addpath "$dir" start
+done
+# add standard locations if they're not there
+for dir in /usr/bin /bin
+do
+    addpath "$dir"
+done
+# add the current directory to the end
+for dir in .
+do
+    addpath "$dir" end
+done
+export PATH
+
+# set directories to search for documentation
+for dir in /opt/freeware/info /usr/local/share/info /usr/local/info "$HOME"/info
+do
+    [ -d "$dir" ] && addpath "$dir" start INFOPATH
+done
+for dir in /usr/share/info /usr/info
+do
+    [ -d "$dir" ] && addpath "$dir" end INFOPATH
+done
+export INFOPATH
+for dir in /opt/freeware/man /usr/local/share/man /usr/local/man "$HOME"/man
+do
+    [ -d "$dir" ] && addpath "$dir" start MANPATH
+done
+for dir in /usr/share/man /usr/man
+do
+    [ -d "$dir" ] && addpath "$dir" end MANPATH
+done
+export MANPATH
+
+# set environment for all sessions
+CDPATH=".:~"
+HISTIGNORE="bg:fg:l:ll:ls: *"
+HOSTNAME=`hostname`
+TTY=`tty`
+USER=`whoami`
+export CDPATH HOSTNAME TTY USER
+
+# set environment for interactive sessions
+case $- in *i*)
+
+    # set preferred programs
+    BROWSER=lynx
+    type links > /dev/null 2>&1 && BROWSER=links
+    CVS_RSH=rsh
+    type ssh > /dev/null 2>&1 && CVS_RSH=ssh
+    EDITOR=vi
+    type nvi > /dev/null 2>&1 && EDITOR=nvi
+    type elvis > /dev/null 2>&1 && EDITOR=elvis
+    type vim > /dev/null 2>&1 && EDITOR=vim
+    GREP_COLOR=1
+    PAGER=more
+    type less > /dev/null 2>&1 && PAGER=less
+    VISUAL="$EDITOR"
+    WINTERM=xterm
+    export BROWSER EDITOR GREP_COLOR PAGER VISUAL WINTERM
+
+    # set program configuration
+    CLICOLOR=true
+    if test -r "$HOME"/.inputrc
+    then
+        INPUTRC="$HOME"/.inputrc
+    fi
+    FIGNORE=".o:~"
+    #LESS=eij3MX
+    LESS=j3M
+    TOP=I
+    export CLICOLOR FIGNORE INPUTRC LESS TOP
+
+    # set key bindings
+    set -o emacs 2> /dev/null
+
+    # set the prompt
+    if test `id -u` -eq 0
+    then
+        PS1='${HOSTNAME%%.*}:${PWD##*/}# '
+    else
+        PS1='${HOSTNAME%%.*}:${PWD##*/}$ '
+    fi
+
+    # create aliases
+    if alias a='alias' 2> /dev/null
+    then
+        alias b='echo "\a"'
+        alias cs='cscope -R'
+        alias d='dirs'
+        alias e='$EDITOR'
+        alias f='finger'
+        alias g='egrep'
+        alias h='history'
+        alias j='jobs -l'
+        alias l='ls -Fsx'
+        alias la='l -A'
+        alias ll='l -l'
+        alias lt='l -t'
+        alias latest='ls -t $* | head'
+        alias m='make'
+        alias p='$PAGER'
+        alias pd='pushd'
+        alias po='popd'
+        alias psc='env UNIX95=true ps -f -o pid,args'
+        alias psf='env UNIX95=true ps -o user,pid,ppid,c,stime,tty,time,args'
+        alias psj='env UNIX95=true ps -o ppid,pid,pgid,sid,tty,stat,uid,time,args'
+        alias psme='env UNIX95=true ps -fU $USER'
+        alias psu='env UNIX95=true ps -o user,pid,pcpu,vsz,tty,stat,start,time,args'
+        alias r='fc -e -'
+        alias s='ssh'
+        alias v='$VISUAL'
+        alias where='type -pa'
+        alias which='type -p'
+    fi
+    ;;
+esac
+
+# source local settings (company environment, network, etc.)
+if test -r "$HOME"/.shrc.local
+then
+    . "$HOME"/.shrc.local
+fi
+
