@@ -42,4 +42,8 @@
 ;; Use Stroustrup style for C and C++, Java style for Java
 (setq c-default-style '((java-mode . "java") (other . "stroustrup")))
 ;; Default to Bourne shell for new shell scripts
-(setq-default sh-style "sh")
+(defvar sh-shell-file "sh")
+;; Use third-party PHP mode for PHP if available
+(autoload 'php-mode "php-mode")
+(setq auto-mode-alist
+      (append '(("\\.php" . php-mode)) auto-mode-alist))
