@@ -61,13 +61,13 @@ setopt banghist
 setopt braceexpand
 #setopt chasedots
 setopt correct
-#setopt cshnullglob
+setopt cshnullglob
 setopt extendedglob
 setopt extendedhistory
 setopt histignorespace
 setopt histreduceblanks
 setopt nohup
-setopt nomatch
+#setopt nomatch
 setopt noksharrays
 
 # set some options originally from ksh
@@ -87,7 +87,7 @@ setopt listrowsfirst
 setopt magicequalsubst
 setopt nobeep
 #setopt nolistbeep
-setopt nullglob
+#setopt nullglob
 setopt numericglobsort
 setopt pathdirs
 setopt promptpercent
