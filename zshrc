@@ -41,6 +41,7 @@ bindkey '^X?' expand-cmd-path
 
 # enable some options originally from csh
 setopt banghist
+setopt braceexpand
 #setopt chasedots
 setopt correct
 #setopt cshnullglob
@@ -49,19 +50,20 @@ setopt extendedhistory
 setopt histignorespace
 setopt histreduceblanks
 setopt nohup
+setopt noksharrays
 
 # set some options originally from ksh
 setopt interactivecomments
-setopt kshglob
+#setopt kshglob
 setopt markdirs
-setopt shwordsplit
-#setopt promptsubst
+#setopt shwordsplit
+setopt promptsubst
 
 # set some zsh-specific options
 setopt appendhistory
 setopt autocd
 setopt autolist
-setopt autopushd
+#setopt autopushd
 setopt automenu
 setopt listrowsfirst
 setopt magicequalsubst
