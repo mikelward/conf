@@ -9,7 +9,7 @@ precmd()
 	local tf
 	case $TERM in
 	aixterm|dtterm|putty|rxvt|xterm*)
-		ts="\e]0"
+		ts="\e]0;"
 		tf="\a"
 		;;
 	screen*)
@@ -48,9 +48,9 @@ preexec()
 }
 
 # set prompt
-prompt="
+prompt='
 %B%n@%m `dirs`
-%#%b "
+%#%b '
 
 # set key bindings
 bindkey -e
