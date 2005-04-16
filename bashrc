@@ -147,16 +147,16 @@ case $- in *i*)
 		fi
 		complete -a {,un}alias >/dev/null 2>&1
 		complete -d {c,p,push,pop}d,po >/dev/null 2>&1
-		complete $COMPDEF -g chgrp >/dev/null 2>1
-		complete $COMPDEF -u chown >/dev/null 2>1
-		complete -j fg >/dev/null 2>1
-		complete -j kill >/dev/null 2>1
-		complete $COMPDEF -c command >/dev/null 2>1
-		complete $COMPDEF -c exec >/dev/null 2>1
-		complete $COMPDEF -c man >/dev/null 2>1
-		complete $COMPDEF -c sudo >/dev/null 2>1
-		complete -e printenv >/dev/null 2>1
-		complete -G "*.java" javac >/dev/null 2>1
+		complete $COMPDEF -g chgrp >/dev/null 2>&1
+		complete $COMPDEF -u chown >/dev/null 2>&1
+		complete -j fg >/dev/null 2>&1
+		complete -j kill >/dev/null 2>&1
+		complete $COMPDEF -c command >/dev/null 2>&1
+		complete $COMPDEF -c exec >/dev/null 2>&1
+		complete $COMPDEF -c man >/dev/null 2>&1
+		complete $COMPDEF -c sudo >/dev/null 2>&1
+		complete -e printenv >/dev/null 2>&1
+		complete -G "*.java" javac >/dev/null 2>&1
 	fi
 	;;
 esac
