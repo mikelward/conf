@@ -17,14 +17,6 @@
 ;; Enable syntax highlighting if available
 (cond ((fboundp 'global-font-lock-mode) (global-font-lock-mode t)))
 (setq-default font-lock-maximum-decoration 2)
-;; (add-hook 'c-mode-common-hook
-;;   '(lambda ()
-;;      ;; Enable hungry whitespace deletion
-;;      (c-toggle-auto-hungry-state t)
-;;      ;; Enable automatic syntactic newlines
-;;      ;;(c-toggle-auto-state t)
-;;      )
-;; )
 ;; Create a useful key binding for goto-line
 (global-set-key "\M-g" 'goto-line)
 
@@ -39,11 +31,22 @@
 ;;(setq x-select-enable-clipboard t)
 
 ;; PROGRAMMING
+;; Default to Bourne shell for new shell scripts
+;;(defvar sh-shell-file "sh")
+(setq-default sh-shell-file "sh")
 ;; Use Stroustrup style for C and C++, Java style for Java
 (setq c-default-style '((java-mode . "java") (other . "stroustrup")))
-;; Default to Bourne shell for new shell scripts
-(defvar sh-shell-file "sh")
+(add-hook 'c-mode-common-hook
+          '(lambda ()
+             ;; Enable hungry whitespace deletion
+             ;;(c-toggle-auto-hungry-state t)
+             ;; Enable automatic syntactic newlines
+             ;;(c-toggle-auto-state t)
+             ;; Make new lines start at current indentation level
+             (define-key c-mode-base-map "\C-m" 'c-context-line-break))
+          )
+)
 ;; Use third-party PHP mode for PHP if available
 (autoload 'php-mode "php-mode")
-(setq auto-mode-alist
-      (append '(("\\.php" . php-mode)) auto-mode-alist))
+;;(setq auto-mode-alist (append '(("\\.php\\'" . php-mode)) auto-mode-alist))
+(setq auto-mode-alist (append '(("\\.php\\'" . sgml-mode)) auto-mode-alist))
