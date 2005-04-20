@@ -43,7 +43,7 @@
              ;; Enable automatic syntactic newlines
              ;;(c-toggle-auto-state t)
              ;; Make new lines start at current indentation level
-             (define-key c-mode-base-map "\C-m" 'c-context-line-break))
+             (define-key c-mode-base-map "\C-m" 'c-context-line-break)
           )
 )
 ;; Use third-party PHP mode for PHP if available
