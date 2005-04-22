@@ -1,3 +1,4 @@
+;; -*- mode: emacs-lisp -*-
 ;; Emacs settings
 ;; $Id$
 
@@ -15,8 +16,9 @@
 ;; Highlight matching parens
 (setq show-paren-mode t)
 ;; Enable syntax highlighting if available
-(cond ((fboundp 'global-font-lock-mode) (global-font-lock-mode t)))
-(setq-default font-lock-maximum-decoration 2)
+(if (fboundp 'global-font-lock-mode) (global-font-lock-mode t))
+;; Use minimal highlighting
+(setq-default font-lock-maximum-decoration nil)
 ;; Create a useful key binding for goto-line
 (global-set-key "\M-g" 'goto-line)
 
@@ -26,27 +28,20 @@
 ;; Disable menu bar in console mode (GNU Emacs only)
 (if (not window-system) (menu-bar-mode nil))
 ;; Position the scroll bar on the right-hand side
-(cond ((fboundp 'set-scroll-bar-mode) (set-scroll-bar-mode 'right)))
+(if (fboundp 'set-scroll-bar-mode) (set-scroll-bar-mode 'right))
 ;; Use the system clipboard
 ;;(setq x-select-enable-clipboard t)
 
 ;; PROGRAMMING
 ;; Default to Bourne shell for new shell scripts
-;;(defvar sh-shell-file "sh")
 (setq-default sh-shell-file "sh")
-;; Use Stroustrup style for C and C++, Java style for Java
-(setq c-default-style '((java-mode . "java") (other . "stroustrup")))
+;; Use Stroustrup identation style for C and C++
+(setq c-default-style '((c-mode . "stroustrup") (c++-mode . "stroustrup")))
 (add-hook 'c-mode-common-hook
           '(lambda ()
              ;; Enable hungry whitespace deletion
-             ;;(c-toggle-auto-hungry-state t)
-             ;; Enable automatic syntactic newlines
-             ;;(c-toggle-auto-state t)
+             (c-toggle-hungry-state t)
+             ;; Disable automatic syntactic newlines
+             ;;(c-toggle-auto-state nil)
              ;; Make new lines start at current indentation level
-             (define-key c-mode-base-map "\C-m" 'c-context-line-break)
-          )
-)
-;; Use third-party PHP mode for PHP if available
-(autoload 'php-mode "php-mode")
-;;(setq auto-mode-alist (append '(("\\.php\\'" . php-mode)) auto-mode-alist))
-(setq auto-mode-alist (append '(("\\.php\\'" . sgml-mode)) auto-mode-alist))
+             (define-key c-mode-base-map "\C-m" 'c-context-line-break)))
