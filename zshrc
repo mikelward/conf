@@ -72,7 +72,7 @@ setopt braceexpand
 setopt correct
 #setopt cshnullglob
 setopt extendedglob
-setopt extendedhistory
+#setopt extendedhistory
 setopt histignorespace
 setopt histreduceblanks
 setopt nohup
@@ -92,6 +92,7 @@ setopt autocd
 setopt autolist
 #setopt autopushd
 setopt automenu
+setopt incappendhistory
 setopt listrowsfirst
 setopt magicequalsubst
 setopt nobeep

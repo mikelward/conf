@@ -106,8 +106,11 @@ export MANPATH
 
 # set environment for all sessions
 CDPATH=".:~"
+HISTFILE="$HOME/.sh_history"
 HISTIGNORE="bg:fg:l:ll:ls: *"
-HISTSIZE=1000
+HISTSIZE=10000
+HISTFILESIZE=10000
+SAVEHIST=$HISTFILESIZE
 HOSTNAME=`hostname`
 if type tty >/dev/null 2>&1
 then
