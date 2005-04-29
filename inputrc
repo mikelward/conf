@@ -2,10 +2,9 @@
 # $Id$
 
 set bell-style visible
+set completion-ignore-case on
 set horizontal-scroll-mode on
 set mark-directories on
-set mark-modified-lines on
-set mark-symlinked-directories on
 set prefer-visible-bell on
 set print-completions-horizontally on
 set show-all-if-ambiguous on
@@ -17,9 +16,9 @@ set output-meta on
 
 #set editing-mode emacs
 
-"\C-d": delete-char-or-list
 $if mode=emacs
-"\M-p": history-search-backward
-"\M-n": history-search-forward
+"\C-d": delete-char-or-list
+"\ep": history-search-backward
+"\en": history-search-forward
 $endif
 
