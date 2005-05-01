@@ -22,6 +22,20 @@ alias pd	'pushd'
 alias psme	'ps -f -U $USER'
 alias po	'popd'
 alias qfind	'sh -c "find \!* 2> /dev/null | $PAGER"'
+alias rtags	'ctags -R'
+alias retags	'find . \( -name "*.c" -o -name "*.h" \
+		 -o -name "*.a" -o -name "*.s" \
+		 -o -name "*.C" -o -name "*.H" \
+		 -o -name "*.cc" -o -name "*.hh" \
+		 -o -name "*.cpp" -o -name "*.hpp" \
+		 -o -name "*.cxx" -o -name "*.hxx" \
+		 -o -name "*.c++" -o -name "*.h++" \
+		 -o -name "*.l" \
+		 -o -name "*.p" -o -name "*.pas" \
+		 -o -name "*.pl" -o -name "*.pm" \
+		 -o -name "*.py" \
+		 -o -name "*.y" -o -name "*.yy" \) \
+		 -print | etags -'
 alias v		'$VISUAL'
 unalias vi
 unalias vim
@@ -92,7 +106,7 @@ if ( $?prompt ) then
 	if ( $?TABSIZE ) then
 		setenv LESS "${LESS}x${TABSIZE}"
 	endif
-	setenv TOP I
+	setenv TOP -I
 
 	# set preferred programs
 	setenv BROWSER lynx
