@@ -92,13 +92,13 @@ setopt autocd
 setopt autolist
 #setopt autopushd
 setopt automenu
+setopt nobeep
 setopt incappendhistory
+#unsetopt listbeep
 setopt listrowsfirst
 setopt magicequalsubst
-setopt nobeep
-#setopt nolistbeep
-#setopt nullglob
 setopt numericglobsort
+#setopt nullglob
 setopt pathdirs
 setopt promptpercent
 
@@ -115,15 +115,14 @@ alias psme='ps -fU $USER'
 
 # set command completions
 compctl -a {,un}alias
-compctl -/ {c,push,pop}d
-compctl -c exec
-compctl -c man
-compctl -c {where,which}
-compctl -o {,un}setopt
-compctl -E {,un}setenv
-compctl -E printenv
 compctl -b bindkey
+compctl -/ {c,push,pop}d
+compctl -E {print,set,unset}env
+compctl -c exec
 compctl -j fg
 compctl -j kill
-compctl -u chown
+compctl -c man
+compctl -u {ch}own
+compctl -o {set,unset}opt
+compctl -c {whence,where,which}
 
