@@ -12,19 +12,17 @@ then
 fi
 
 # start the ssh agent if one isn't already running
-if type ssh-agent > /dev/null 2>&1
+if test -z "$SSH_AUTH_SOCK"
 then
-	test -z "$SSH_AUTH_SOCK" && eval `ssh-agent -s`
+	type ssh-agent >/dev/null 2>&1 && eval `ssh-agent -s`
+	type ssh-add >/dev/null 2>&1 && ssh-add </dev/null
 fi
 
 # interactive commands
-if `tty > /dev/null 2>&1`
+if type tty >/dev/null 2>&1 && tty >/dev/null 2>&1
 then
 	# disable output control so applications can use ^Q and ^S
-	stty -ixon
-
-	# prompt for ssh passphrases to remember
-	ssh-add < /dev/null
+	type stty >/dev/null 2>&1 && stty -ixon
 fi
 
 # set a script that will be sourced on exiting the shell
