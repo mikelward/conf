@@ -6,8 +6,6 @@
 ;; Wrap text at the 78th column
 (setq-default auto-fill-function 'do-auto-fill)
 (setq-default fill-column 78)
-;; Do not use tabs for indentation (always insert spaces)
-(setq-default indent-tabs-mode nil)
 ;; Show line and column numbers
 (setq line-number-mode t)
 (setq column-number-mode t)
@@ -43,5 +41,7 @@
              (c-toggle-hungry-state t)
              ;; Disable automatic syntactic newlines
              ;;(c-toggle-auto-state nil)
+             ;; Do not use tabs for indentation (always insert spaces)
+             (setq indent-tabs-mode nil)
              ;; Make new lines start at current indentation level
              (define-key c-mode-base-map "\C-m" 'c-context-line-break)))
