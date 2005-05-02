@@ -164,12 +164,12 @@ case $- in *i*)
 	fi
 
 	# create aliases
-	if alias a='alias' 2> /dev/null
+	if alias a='alias' 2>/dev/null
 	then
 		alias b='echo "\a"'
 		alias cs='cscope -R'
 		alias d='dirs'
-		alias e='$EDITOR'
+		alias e='emacs'
 		alias f='finger'
 		alias g='egrep'
 		alias h='history'
@@ -190,7 +190,7 @@ case $- in *i*)
 		alias psu='env UNIX95=true ps -o user,pid,pcpu,vsz,tty,stat,start,time,args'
 		alias r='fc -e -'
 		alias s='ssh'
-		alias v='$VISUAL'
+		alias v='vi'
 		alias where='type -pa'
 	fi
 	;;
