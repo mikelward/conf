@@ -1,3 +1,4 @@
+# -*- mode: sh -*-
 # $Id$
 # C Shell startup commands
 
@@ -6,7 +7,7 @@ alias bell	'echo "\a"'
 alias cd..	'cd ..'
 alias cx	'chmod +x'
 alias d		'dirs'
-alias e		'$EDITOR'
+alias e		'emacs'
 alias f		'find . -type f -name \!1 -print \!2* | $PAGER'
 alias g		'egrep'
 alias h		'history'
@@ -36,7 +37,7 @@ alias retags	'find . \( -name "*.c" -o -name "*.h" \
 		 -o -name "*.py" \
 		 -o -name "*.y" -o -name "*.yy" \) \
 		 -print | etags -'
-alias v		'$VISUAL'
+alias v		'vi'
 unalias vi
 unalias vim
 
