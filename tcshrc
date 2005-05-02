@@ -1,3 +1,4 @@
+# -*- mode: sh -*-
 # $Id$
 # TCSH startup commands
 
@@ -55,6 +56,7 @@ if ( $?prompt ) then
 	complete {ch}own	'p/1/u/'
 	complete {,un}set	'C/*/s/'
 	complete stop		'c/%/j/'
+	complete strace		'p/1/c/'
 	complete sudo		'n/-u/u/' 'p/1/c/'
 	complete time		'p/1/c/'
 	complete user{del}	'C/*/u/'
