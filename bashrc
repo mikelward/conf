@@ -123,7 +123,7 @@ case $- in *i*)
 		BOLD="`tput bold`"
 		NORMAL="`tput sgr0`"
 	fi
-	PS1='\[$BOLD\]\n\u@\h ${PWD/#$HOME/~}\n\$\[$NORMAL\] '
+	PS1='\[$BOLD\]\n\u@\h `dirs`\n\$\[$NORMAL\] '
 
 	# set the xterm title
 	ICONSTRING='${HOSTNAME%%.*}<${TTY##/*/}>'
