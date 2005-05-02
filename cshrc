@@ -1,5 +1,5 @@
-# .cshrc - csh startup commands
 # $Id$
+# C Shell startup commands
 
 # set command aliases
 alias bell	'echo "\a"'

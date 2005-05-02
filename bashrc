@@ -1,5 +1,6 @@
-# .bashrc - Bash startup commands
+# -*- mode: sh -*-
 # $Id$
+# Bash startup commands
 
 # source the user's environment file
 if test -z "$ENV"

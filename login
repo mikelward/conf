@@ -1,5 +1,5 @@
-# .login - C Shell login session startup commands
 # $Id$
+# C Shell login session startup commands
 
 # set environment script in case a Bourne-like shell is invoked within csh
 test -f "$HOME"/.shrc && setenv ENV "$HOME"/.shrc

@@ -1,5 +1,6 @@
-# .zshenv - zsh environment settings
+# -*- mode: sh -*-
 # $Id$
+# Z Shell environment settings
 
 emulate -L ksh
 

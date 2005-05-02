@@ -1,5 +1,5 @@
-# .logout - C Shell login session shutdown commands
 # $Id$
+# C Shell login session shutdown commands
 
 # kill ssh-agent
 if ( $?SSH_AGENT_PID ) then

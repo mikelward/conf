@@ -1,5 +1,6 @@
-# .exitrc - Bourne Shell login session shutdown script
+# -*- mode: sh -*-
 # $Id$
+# Bourne Shell login session shutdown commands
 
 # kill ssh-agent if it is running
 if test -n "$SSH_AGENT_PID"

@@ -1,5 +1,6 @@
-# .shrc - Bourne Shell environment commands
+# -*- mode: sh -*-
 # $Id$
+# Bourne Shell environment commands
 
 # add a directory to the path
 addpath()

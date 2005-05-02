@@ -1,6 +1,7 @@
-# .cshrc - C Shell startup commands
 # $Id$
+# TCSH startup commands
 
+# source the startup commands common to csh
 if ( -r ~/.cshrc ) then
 	source ~/.cshrc
 endif

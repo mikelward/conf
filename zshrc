@@ -1,5 +1,6 @@
-# .zshrc - Z Shell interactive session startup script
+# -*- mode: sh -*-
 # $Id$
+# Z Shell interactive session startup commands
 
 # update the xterm title after every command
 precmd()

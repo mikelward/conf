@@ -1,5 +1,5 @@
-# .enscriptrc - Enscript configuration file
 # $Id$
+# Enscript configuration file
 
 DefaultFancyHeader: enscript
 DefaultMedia: A4

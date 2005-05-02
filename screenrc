@@ -1,5 +1,5 @@
-# .screenrc - screen configuration file
 # $Id$
+# Screen configuration file
 
 escape ^]^]
 #other ^]]

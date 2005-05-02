@@ -1,5 +1,5 @@
-# .inputrc - Readline configuration
 # $Id$
+# Readline configuration
 
 set bell-style visible
 set completion-ignore-case on

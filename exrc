@@ -1,5 +1,5 @@
-" .exrc - ex and vi configuration file
-" $Id
+" $Id$
+" Ex and Vi startup commands
 
 :set autoindent
 ":set shiftwidth=4

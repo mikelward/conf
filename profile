@@ -1,5 +1,6 @@
-# .profile - Bourne Shell login session startup commands
+# -*- mode: sh -*-
 # $Id$
+# Bourne Shell login session startup commands
 
 # read environment
 if test -f "$HOME"/.shrc

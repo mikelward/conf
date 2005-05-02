@@ -1,5 +1,5 @@
-" Vim startup commands
 " $Id$
+" Vim startup commands
 
 " DEFAULT OPTIONS
 set nocompatible                " make Vim default to nicer options

@@ -1,5 +1,6 @@
-# .bash_profile - Bash login session startup commands
+# -*- mode: sh -*-
 # $Id$
+# Bash login session startup commands
 
 # read login commands
 if test -f "$HOME"/.profile

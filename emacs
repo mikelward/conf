@@ -1,6 +1,6 @@
 ;; -*- mode: emacs-lisp -*-
-;; Emacs settings
 ;; $Id$
+;; Emacs settings
 
 ;; EDITING
 ;; Wrap text at the 78th column
