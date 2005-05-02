@@ -4,8 +4,8 @@
 
 ;; EDITING
 ;; Wrap text at the 78th column
-(setq-default auto-fill-function 'do-auto-fill)
-(setq-default fill-column 78)
+;;(setq-default auto-fill-function 'do-auto-fill)
+;;(setq-default fill-column 78)
 ;; Show line and column numbers
 (setq line-number-mode t)
 (setq column-number-mode t)
