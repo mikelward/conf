@@ -31,6 +31,54 @@ preexec()
 	[[ -t 1 ]] || return
 	local ts
 	local tf
+	local comm
+	case $1 in
+	# resuming an existing job
+	fg*|%*)
+		local spec
+		spec=${1#fg}
+		case $spec in
+		[0-9]*)
+			# process identifier
+			comm=$(ps -o comm= -p $spec)
+			;;
+		*)
+			# job identifier
+			# normalise %, %+, and %% to +, otherwise just strip %
+			spec=$(echo $spec | sed -e 's/^%%\?//')
+			spec=${spec:-+}
+			case $spec in
+			+|-)
+				# find job number from zsh's $jobstates array
+				local i=0
+				for jobstate in $jobstates
+				do
+					i=$(($i+1))
+					echo $jobstate | IFS=: read state mark pidstate
+					if test "$mark" = "$spec"
+					then
+						job=$i
+						break
+					fi
+				done
+				comm=$jobtexts[$job]
+				;;
+			\?*)
+				# job string search unsupported
+				comm=unknown
+				;;
+			*)
+				comm=$jobtexts[$spec]
+				;;
+			esac
+			;;
+		esac
+		;;
+	# executing a new command
+	*)
+		comm=$1
+		;;
+	esac
 	case $TERM in
 	aixterm|dtterm|putty|rxvt|xterm*)
 		ts="\e]0;"
@@ -45,7 +93,7 @@ preexec()
 		tf="`tput fsl`"
 		;;
 	esac
-	test -n "$ts" && print -Pn "${ts}%m<$(basename $(tty))> %n $1${tf}"
+	test -n "$ts" && print -Pn "${ts}%m<$(basename $(tty))> %n ${comm}${tf}"
 }
 
 # set prompt
