@@ -174,4 +174,5 @@ compctl -c man
 compctl -u {ch}own
 compctl -o {set,unset}opt
 compctl -c {whence,where,which}
+compctl -M '' 'm:{a-zA-Z}={A-Za-z}'
 
