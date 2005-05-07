@@ -36,6 +36,7 @@
 ;; Fix the shell indentation
 (add-hook 'sh-mode-hook
 	  '(lambda ()
+	     (setq sh-basic-offset 8)
 	     (setq sh-indent-for-do 0)
 	     (setq sh-indent-after-do '+)))
 
