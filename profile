@@ -17,6 +17,11 @@ if test -z "$SSH_AUTH_SOCK"
 then
 	type ssh-agent >/dev/null 2>&1 && eval `ssh-agent -s`
 	type ssh-add >/dev/null 2>&1 && ssh-add </dev/null
+	type ssh-add >/dev/null 2>&1 && ssh-add -l >/dev/null 2>&1
+	if test $? -ne 0
+	then
+		echo "No SSH identities" >&2
+	fi
 fi
 
 # interactive commands
