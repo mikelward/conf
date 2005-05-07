@@ -38,7 +38,8 @@
 	  '(lambda ()
 	     (setq sh-basic-offset 8)
 	     (setq sh-indent-for-do 0)
-	     (setq sh-indent-after-do '+)))
+	     (setq sh-indent-after-do '+)
+	     (setq sh-indent-for-then 0)))
 
 ;; Use Stroustrup identation style for C and C++
 (setq c-default-style '((c-mode . "stroustrup") (c++-mode . "stroustrup")))
