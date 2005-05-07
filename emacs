@@ -33,6 +33,12 @@
 ;; PROGRAMMING
 ;; Default to Bourne shell for new shell scripts
 (setq-default sh-shell-file "sh")
+;; Fix the shell indentation
+(add-hook 'sh-mode-hook
+	  '(lambda ()
+	     (setq sh-indent-for-do 0)
+	     (setq sh-indent-after-do '+)))
+
 ;; Use Stroustrup identation style for C and C++
 (setq c-default-style '((c-mode . "stroustrup") (c++-mode . "stroustrup")))
 (add-hook 'c-mode-common-hook
@@ -45,5 +51,6 @@
              (setq indent-tabs-mode nil)
              ;; Make new lines start at current indentation level
              (define-key c-mode-base-map "\C-m" 'c-context-line-break)))
+
 ;; Use HTML mode for PHP files
 (add-to-list 'auto-mode-alist '("\\.php[34]?\\'" . html-mode))
