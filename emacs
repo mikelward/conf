@@ -56,3 +56,25 @@
 
 ;; Use HTML mode for PHP files
 (add-to-list 'auto-mode-alist '("\\.php[34]?\\'" . html-mode))
+
+;; Custom function to determine configuration file
+;; (hopefully fixes custom settings overwriting symlinks)
+(defun custom-file ()
+  "Return the file name for saving customizations."
+  (file-chase-links
+   (or custom-file
+       (let ((user-init-file user-init-file)
+             (default-init-file
+               (if (eq system-type 'ms-dos) "~/_emacs" "~/.emacs")))
+         (when (null user-init-file)
+           (if (or (file-exists-p default-init-file)
+                   (and (eq system-type 'windows-nt)
+                        (file-exists-p "~/_emacs")))
+               ;; Started with -q, i.e. the file containing
+               ;; Custom settings hasn't been read.  Saving
+               ;; settings there would overwrite other settings.
+               (error "Saving settings from \"emacs -q\" would overwrite existing customizations"))
+           (setq user-init-file default-init-file))
+         user-init-file))))
+
+
