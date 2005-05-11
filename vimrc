@@ -33,7 +33,7 @@ set laststatus=2                " always show status line for each window
 set showmode                    " always show command or insert mode
 set shortmess=aoOtTI            " brief messages, no ENTER to continue, no intro
 set sidescroll=1		" scroll sideways smoothly
-"set tabstop=8                   " real tabs are every 8 columns
+set tabstop=8                   " real tabs are every 8 columns
 set nowrap                      " don't wrap long lines
 if has("cmdline_info")
     set showcmd                 " show partial commands
@@ -46,7 +46,7 @@ endif
 " SAVING OPTIONS
 "set backup                      " save a copy of the original file
 set backupext=~                 " backup files end in ~
-"set expandtab                   " convert tabs into spaces
+set expandtab                   " convert tabs into spaces
 
 " EDITING OPTIONS
 set autoindent                  " new line inherits previous line's indentation
@@ -56,11 +56,11 @@ set noerrorbells visualbell     " flash screen instead of ringing bell
 set shiftround                  " manual shift aligns on columns
 set showmatch                   " show matching brackets
 set shiftround                  " indentation aligns on columns
-"set shiftwidth=4                " indentation width is 4 spaces
+set shiftwidth=4                " indentation width is 4 spaces
 set showbreak=+                 " specially mark continued lines with a plus
 set smartindent                 " automatically indent program code
 set smarttab                    " tab does indent at start, tab otherwise
-"set softtabstop=4               " tab inserts spaces but feels like tabs
+set softtabstop=4               " tab inserts spaces but feels like tabs
 "set textwidth=78                " wrap lines at 78 columns
 
 " SEARCH OPTIONS
