@@ -13,8 +13,9 @@
 (setq column-number-mode t)
 ;; Highlight the selected region
 (setq transient-mark-mode t)
-;; FIXME: Highlight matching parens
-(setq show-paren-mode t)
+;; Highlight matching parens
+;; XXX: Why is this a function instead of a setting?
+(show-paren-mode t)
 ;; Enable syntax highlighting if available
 (if (fboundp 'global-font-lock-mode) (global-font-lock-mode t))
 ;; Use minimal highlighting
