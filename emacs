@@ -54,6 +54,3 @@
              ;;(c-toggle-auto-state nil)
              ;; Make new lines start at current indentation level
              (define-key c-mode-base-map "\C-m" 'c-context-line-break)))
-
-;; Use HTML mode for PHP files
-(add-to-list 'auto-mode-alist '("\\.php[34]?\\'" . html-mode))
