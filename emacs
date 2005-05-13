@@ -53,7 +53,10 @@
           '(lambda ()
              ;; Enable hungry whitespace deletion
              (c-toggle-hungry-state t)
-             ;; Disable automatic syntactic newlines
-             ;;(c-toggle-auto-state nil)
              ;; Make new lines start at current indentation level
              (define-key c-mode-base-map "\C-m" 'c-context-line-break)))
+
+;; Remind PHP mode to not get carried away with syntax highlighting
+(add-hook 'php-mode-user-hook
+          '(lambda ()
+             (setq font-lock-maximum-decoration nil)))
