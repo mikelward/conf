@@ -34,11 +34,14 @@
 ;;(setq x-select-enable-clipboard t)
 
 ;; PROGRAMMING
+;; Follow symlinks to CVS and SVN files
+(setq vc-follow-symlinks t)
 ;; Default to Bourne shell for new shell scripts
 (setq-default sh-shell-file "sh")
 ;; Fix the shell indentation
 (add-hook 'sh-mode-hook
 	  '(lambda ()
+             (setq sh-indent-comment t)
 	     (setq sh-indent-for-do 0)
 	     (setq sh-indent-after-do '+)
              (setq sh-indent-after-if '+)
