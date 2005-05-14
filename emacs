@@ -42,8 +42,11 @@
 ;; Add an alternate binding for help in case C-h is unavailable
 (global-set-key "\C-x\?" 'help-for-help)
 
-;; Create a useful key binding for goto-line
+;; Add a binding to go to a specified line number
 (global-set-key "\C-xg" 'goto-line)
+
+;; Add a binding to kill the current buffer
+(global-set-key "\C-x\C-k" 'kill-this-buffer)
 
 ;; PROGRAMMING
 ;; Default to Bourne shell for new shell scripts
