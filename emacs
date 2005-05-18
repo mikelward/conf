@@ -74,3 +74,7 @@
 (add-hook 'php-mode-user-hook
           '(lambda ()
              (setq font-lock-maximum-decoration nil)))
+
+;; Load any local customisations
+(if (file-exists-p "~/.emacs.local")
+    (load "~/.emacs.local"))
