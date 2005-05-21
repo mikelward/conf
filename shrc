@@ -166,6 +166,7 @@ case $- in *i*)
 	# create aliases
 	if alias a='alias' 2>/dev/null
 	then
+                alias apt='aptitude'
 		alias b='echo "\a"'
 		alias cs='cscope -R'
 		alias d='dirs'

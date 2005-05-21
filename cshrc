@@ -3,6 +3,7 @@
 # C Shell startup commands
 
 # set command aliases
+alias apt	'aptitude'
 alias bell	'echo "\a"'
 alias cd..	'cd ..'
 alias cx	'chmod +x'
