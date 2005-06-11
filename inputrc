@@ -14,10 +14,21 @@ set convert-meta off
 set input-meta on
 set output-meta on
 
-#set editing-mode emacs
+set editing-mode emacs
 
 $if mode=emacs
+"\C-a": beginning-of-line
+"\C-b": backward-char
 "\C-d": delete-char-or-list
+"\C-e": end-of-line
+"\C-f": forward-char
+"\C-i": complete
+"\C-k": kill-line
+"\C-u": kill-whole-line
+"\e\C-?": backward-kill-word
+"\eb": backward-word
+"\ed": kill-word
+"\ef": forward-word
 "\ep": history-search-backward
 "\en": history-search-forward
 $endif
