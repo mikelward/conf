@@ -22,7 +22,7 @@ precmd()
 		tf="`tput fsl`"
 		;;
 	esac
-	test -n "$ts" && print -Pn "${ts}%m<$(basename $(tty))> %n $0${tf}"
+	test -n "$ts" && print -Pn "${ts}%m<$(basename $(tty))> %n $0 ${PWD}${tf}"
 }
 
 # update the xterm title when running a command
@@ -93,7 +93,7 @@ preexec()
 		tf="`tput fsl`"
 		;;
 	esac
-	test -n "$ts" && print -Pn "${ts}%m<$(basename $(tty))> %n ${comm}${tf}"
+	test -n "$ts" && print -Pn "${ts}%m<$(basename $(tty))> %n ${comm} ${PWD}${tf}"
 }
 
 # set prompt
