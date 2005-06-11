@@ -154,6 +154,7 @@ setopt promptpercent
 # set aliases
 alias h='history'
 alias j='jobs -l'
+ls --help >&/dev/null && alias ls='ls --color=auto'
 alias l='ls -Fx'
 alias l.='ls -d .*'
 alias la='ls -a'
