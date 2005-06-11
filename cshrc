@@ -44,7 +44,7 @@ unalias vim
 
 # set directories to search for commands
 # add directories to look in first (unless already present)
-foreach d ( /opt/freeware/bin /usr/gnu/bin /usr/local/bin ~/bin )
+foreach d ( /opt/*/bin /usr/gnu/bin /usr/local/bin ~/bin )
 	if ( -d $d ) then
 		foreach p ( $path )
 			# advance to next top level directory

@@ -11,10 +11,7 @@ then
 	fi
 	export ENV
 fi
-if test -n "$ENV"
-then
-	. "$ENV"
-fi
+test -n "$ENV" && . "$ENV"
 
 # set shell options
 shopt -s checkwinsize
@@ -155,7 +152,6 @@ case $- in *i*)
 		complete $COMPDEF -c command >/dev/null 2>&1
 		complete $COMPDEF -c exec >/dev/null 2>&1
 		complete $COMPDEF -c man >/dev/null 2>&1
-		#complete $COMPDEF -c sudo >/dev/null 2>&1
 		complete -e printenv >/dev/null 2>&1
 		complete -G "*.java" javac >/dev/null 2>&1
 	fi

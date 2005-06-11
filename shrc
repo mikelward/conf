@@ -26,9 +26,9 @@ addpath()
 		for d in $dirs
 		do
 			# directory is already in PATH, leave as is
-			[ "${dir:-.}" = "${d:-.}" ] && seen=true
+			test "${dir:-.}" = "${d:-.}" && seen=true
 		done
-		[ -z "$seen" ] && eval $var="\$$var""\${$var:+$sep}""\$dir"
+		test -z "$seen" && eval $var="\$$var""\${$var:+$sep}""\$dir"
 		;;
 	esac
 	IFS="$OIFS"
@@ -52,7 +52,7 @@ delpath()
 	eval dirs=\$$var
 	for d in $dirs
 	do
-		[ "${d:-.}" = "${dir:-.}" ] && continue
+		test "${d:-.}" = "${dir:-.}" && continue
 		path="$path""${path:+$sep}""$d"
 	done
 	eval $var="\$path"
@@ -69,39 +69,39 @@ rgrep()
 
 # set directories to search for commands
 # add preferred locations at start
-for dir in /opt/freeware/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
+for dir in /opt/*/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
 do
-	[ -d $dir ] && addpath "$dir" start
+	test -d "$dir" && addpath "$dir" start
 done
 # add standard locations if they're not there
 for dir in /usr/bin /bin
 do
-	[ -d $dir ] && addpath "$dir"
+	test -d "$dir" && addpath "$dir"
 done
 # add the current directory to the end
 for dir in .
 do
-	[ -d $dir ] && addpath "$dir" end
+	test -d "$dir" && addpath "$dir" end
 done
 export PATH
 
 # set directories to search for documentation
 for dir in /opt/freeware/info /usr/local/share/info /usr/local/info "$HOME"/info
 do
-	[ -d "$dir" ] && addpath "$dir" start INFOPATH
+	test -d "$dir" && addpath "$dir" start INFOPATH
 done
 for dir in /usr/share/info /usr/info
 do
-	[ -d "$dir" ] && addpath "$dir" end INFOPATH
+	test -d "$dir" && addpath "$dir" end INFOPATH
 done
 export INFOPATH
 for dir in /opt/freeware/man /usr/local/share/man /usr/local/man "$HOME"/man
 do
-	[ -d "$dir" ] && addpath "$dir" start MANPATH
+	test -d "$dir" && addpath "$dir" start MANPATH
 done
 for dir in /usr/share/man /usr/man
 do
-	[ -d "$dir" ] && addpath "$dir" end MANPATH
+	test -d "$dir" && addpath "$dir" end MANPATH
 done
 export MANPATH
 
@@ -143,10 +143,7 @@ case $- in *i*)
 
 	# set program configuration
 	CLICOLOR=true
-	if test -r "$HOME"/.inputrc
-	then
-		INPUTRC="$HOME"/.inputrc
-	fi
+	test -r "$HOME"/.inputrc && INPUTRC="$HOME"/.inputrc
 	FIGNORE=
 	LESS=-Ej3MX
 	TOP=-I
@@ -175,7 +172,8 @@ case $- in *i*)
 		alias g='egrep'
 		alias h='history'
 		alias j='jobs -l'
-		alias l='ls -Fx'
+                ls --help >/dev/null 2>&1 && alias ls='ls --color=auto'
+                alias l='ls -Fx'
 		alias la='l -A'
 		alias ll='l -l'
 		alias lt='l -t'
@@ -198,8 +196,5 @@ case $- in *i*)
 esac
 
 # source local settings (company environment, network, etc.)
-if test -r "$HOME"/.shrc.local
-then
-	. "$HOME"/.shrc.local
-fi
+test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
 
