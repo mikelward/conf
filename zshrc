@@ -21,51 +21,51 @@ preexec()
 {
     # get the canonical name of the command just invoked
     case $1 in
-    # resuming an existing job
-    fg*|%*)
-        local spec
-        spec=${1#fg}
-        case $spec in
-        [0-9]*)
-            # process identifier
-            command=$(ps -o comm= -p $spec)
-            ;;
-        *)
-            # job identifier
-            # normalise %, %+, and %% to +, otherwise just strip %
-            spec=$(echo $spec | sed -e 's/^%%\?//')
-            spec=${spec:-+}
+        # resuming an existing job
+        fg*|%*)
+            local spec
+            spec=${1#fg}
             case $spec in
-            +|-)
-                # find job number from zsh's $jobstates array
-                local i=0
-                for jobstate in $jobstates
-                do
-                    i=$(($i+1))
-                    echo $jobstate | IFS=: read state mark pidstate
-                    if test "$mark" = "$spec"
-                    then
-                        job=$i
-                        break
-                    fi
-                done
-                command=$jobtexts[$job]
-                ;;
-            \?*)
-                # job string search unsupported
-                command=unknown
+            [0-9]*)
+                # process identifier
+                command=$(ps -o comm= -p $spec)
                 ;;
             *)
-                command=$jobtexts[$spec]
+                # job identifier
+                # normalise %, %+, and %% to +, otherwise just strip %
+                spec=$(echo $spec | sed -e 's/^%%\?//')
+                spec=${spec:-+}
+                case $spec in
+                +|-)
+                    # find job number from zsh's $jobstates array
+                    local i=0
+                    for jobstate in $jobstates
+                    do
+                        i=$(($i+1))
+                        echo $jobstate | IFS=: read state mark pidstate
+                        if test "$mark" = "$spec"
+                        then
+                            job=$i
+                            break
+                        fi
+                    done
+                    command=$jobtexts[$job]
+                    ;;
+                \?*)
+                    # job string search unsupported
+                    command=unknown
+                    ;;
+                *)
+                    command=$jobtexts[$spec]
+                    ;;
+                esac
                 ;;
             esac
             ;;
-        esac
-        ;;
-    # executing a new command
-    *)
-        command=$1
-        ;;
+        # executing a new command
+        *)
+            command=$1
+            ;;
     esac
 
     # set the window title
