@@ -7,19 +7,9 @@
 # for the initial log in session.
 
 # read login commands
-if test -f "$HOME"/.profile
-then
-	. "$HOME"/.profile
-fi
+test -f "$HOME"/.profile && . "$HOME"/.profile
 
 # read environment
-if test -f "$HOME"/.bashrc
-then
-	BASH_ENV="$HOME"/.bashrc
-fi
-if test -n "$BASH_ENV"
-then
-	export BASH_ENV
-	. "$BASH_ENV"
-fi
+test -f "$HOME"/.bashrc && BASH_ENV="$HOME"/.bashrc
+test -n "$BASH_ENV" && export BASH_ENV && . "$BASH_ENV"
 

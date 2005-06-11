@@ -10,70 +10,68 @@
 
 precmd()
 {
-        command=$0
+    command=$0
 
-        # set the window title
-	[[ -t 1 ]] || return
-	test -n "$titlestart" && print -Pn "${titlestart}${title}${titlefinish}"
+    # set the window title
+    [[ -t 1 ]] || return
+    test -n "$titlestart" && print -Pn "${titlestart}${title}${titlefinish}"
 }
 
 preexec()
 {
-        # get the canonical name of the command just invoked
-	case $1 in
-	# resuming an existing job
-	fg*|%*)
-		local spec
-		spec=${1#fg}
-		case $spec in
-		[0-9]*)
-			# process identifier
-			command=$(ps -o comm= -p $spec)
-			;;
-		*)
-			# job identifier
-			# normalise %, %+, and %% to +, otherwise just strip %
-			spec=$(echo $spec | sed -e 's/^%%\?//')
-			spec=${spec:-+}
-			case $spec in
-			+|-)
-				# find job number from zsh's $jobstates array
-				local i=0
-				for jobstate in $jobstates
-				do
-					i=$(($i+1))
-					echo $jobstate | IFS=: read state mark pidstate
-					if test "$mark" = "$spec"
-					then
-						job=$i
-						break
-					fi
-				done
-				command=$jobtexts[$job]
-				;;
-			\?*)
-				# job string search unsupported
-				command=unknown
-				;;
-			*)
-				command=$jobtexts[$spec]
-				;;
-			esac
-			;;
-		esac
-		;;
-	# executing a new command
-	*)
-		command=$1
-		;;
-	esac
+    # get the canonical name of the command just invoked
+    case $1 in
+    # resuming an existing job
+    fg*|%*)
+        local spec
+        spec=${1#fg}
+        case $spec in
+        [0-9]*)
+            # process identifier
+            command=$(ps -o comm= -p $spec)
+            ;;
+        *)
+            # job identifier
+            # normalise %, %+, and %% to +, otherwise just strip %
+            spec=$(echo $spec | sed -e 's/^%%\?//')
+            spec=${spec:-+}
+            case $spec in
+            +|-)
+                # find job number from zsh's $jobstates array
+                local i=0
+                for jobstate in $jobstates
+                do
+                    i=$(($i+1))
+                    echo $jobstate | IFS=: read state mark pidstate
+                    if test "$mark" = "$spec"
+                    then
+                        job=$i
+                        break
+                    fi
+                done
+                command=$jobtexts[$job]
+                ;;
+            \?*)
+                # job string search unsupported
+                command=unknown
+                ;;
+            *)
+                command=$jobtexts[$spec]
+                ;;
+            esac
+            ;;
+        esac
+        ;;
+    # executing a new command
+    *)
+        command=$1
+        ;;
+    esac
 
-        # set the window title
-	[[ -t 1 ]] || return
-	test -n "$titlestart" && print -Pn "${titlestart}${title}${titlefinish}"
+    # set the window title
+    [[ -t 1 ]] || return
+    test -n "$titlestart" && print -Pn "${titlestart}${title}${titlefinish}"
 }
-
-terminit
 
 # set the prompt and window title
 prompt='

@@ -10,97 +10,97 @@
 # add a directory to the path
 addpath()
 {
-        typeset dir
-        typeset pos
-        typeset var
-        typeset sep
-	dir=$1
-	pos=$2
-	var=${3:-"PATH"}
-	sep=${4:-":"}
-	OIFS="$IFS"
-	IFS="$sep"
+    typeset dir
+    typeset pos
+    typeset var
+    typeset sep
+    dir=$1
+    pos=$2
+    var=${3:-"PATH"}
+    sep=${4:-":"}
+    OIFS="$IFS"
+    IFS="$sep"
 
-	case "$pos" in
-	start)
-		delpath "$dir" "$var" "$sep"
-		eval $var="\$dir""\${$var:+\$sep}""\$$var"
-		;;
-	end)
-		delpath "$dir" "$var" "$sep"
-		eval $var="\$$var""\${$var:+\$sep}""\$dir"
-		;;
-	*)
-                typeset dirs
-                typeset seen
-		eval dirs=\$$var
-		for d in $dirs
-		do
-			# directory is already in PATH, leave as is
-			test "${dir:-.}" = "${d:-.}" && seen=true
-		done
-		test -z "$seen" && eval $var="\$$var""\${$var:+$sep}""\$dir"
-		;;
-	esac
-	IFS="$OIFS"
+    case "$pos" in
+    start)
+        delpath "$dir" "$var" "$sep"
+        eval $var="\$dir""\${$var:+\$sep}""\$$var"
+        ;;
+    end)
+        delpath "$dir" "$var" "$sep"
+        eval $var="\$$var""\${$var:+\$sep}""\$dir"
+        ;;
+    *)
+        typeset dirs
+        typeset seen
+        eval dirs=\$$var
+        for d in $dirs
+        do
+            # directory is already in PATH, leave as is
+            test "${dir:-.}" = "${d:-.}" && seen=true
+        done
+        test -z "$seen" && eval $var="\$$var""\${$var:+$sep}""\$dir"
+        ;;
+    esac
+    IFS="$OIFS"
 }
 
 # remove a directory from the path
 delpath()
 {
-        typeset dir
-        typeset var
-        typeset sep
-	dir=$1
-	var=${2:-"PATH"}
-	sep=${3:-":"}
-	NIFS="$IFS"
-	IFS="$sep"
+    typeset dir
+    typeset var
+    typeset sep
+    dir=$1
+    var=${2:-"PATH"}
+    sep=${3:-":"}
+    NIFS="$IFS"
+    IFS="$sep"
 
-	typeset path
-        typeset dirs
+    typeset path
+    typeset dirs
 
-	eval dirs=\$$var
-	for d in $dirs
-	do
-		test "${d:-.}" = "${dir:-.}" && continue
-		path="$path""${path:+$sep}""$d"
-	done
-	eval $var="\$path"
-	IFS="$NIFS"
+    eval dirs=\$$var
+    for d in $dirs
+    do
+        test "${d:-.}" = "${dir:-.}" && continue
+        path="$path""${path:+$sep}""$d"
+    done
+    eval $var="\$path"
+    IFS="$NIFS"
 }
 
 terminit()
 {
-        # determine the graphics mode escape sequences
+    # determine the graphics mode escape sequences
+    if type tput >/dev/null 2>&1
+    then
+        bold="`tput bold`"
+        underline="`tput smul`"
+        normal="`tput sgr0`"
+    fi
+
+    # determine the window title escape sequences
+    case "$TERM" in
+    aixterm|dtterm|putty|rxvt|xterm*)
+        titlestart="]0;"
+        titlefinish=""
+        ;;
+    screen*)
+        titlestart="]k"
+        titlefinish="]\\"
+        ;;
+    *)
         if type tput >/dev/null 2>&1
         then
-            bold="`tput bold`"
-            underline="`tput smul`"
-            normal="`tput sgr0`"
+            titlestart="`tput tsl`"
+            titlefinish="`tput fsl`"
+        else
+            titlestart=""
+            titlefinish=""
         fi
-
-        # determine the window title escape sequences
-        case "$TERM" in
-        aixterm|dtterm|putty|rxvt|xterm*)
-                titlestart="]0;"
-                titlefinish=""
-                ;;
-        screen*)
-                titlestart="]k"
-                titlefinish="]\\"
-                ;;
-        *)
-                if type tput >/dev/null 2>&1
-                then
-                        titlestart="`tput tsl`"
-                        titlefinish="`tput fsl`"
-                else
-                        titlestart=""
-                        titlefinish=""
-                fi
-                ;;
-        esac
+        ;;
+esac
 }
 
 ### SHELL ENVIRONMENT
@@ -110,37 +110,37 @@ typeset dir
 # add preferred locations at start
 for dir in /opt/*/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
 do
-	test -d "$dir" && addpath "$dir" start
+    test -d "$dir" && addpath "$dir" start
 done
 # add standard locations if they're not there
 for dir in /usr/bin /bin
 do
-	test -d "$dir" && addpath "$dir"
+    test -d "$dir" && addpath "$dir"
 done
 # add the current directory to the end
 for dir in .
 do
-	test -d "$dir" && addpath "$dir" end
+    test -d "$dir" && addpath "$dir" end
 done
 export PATH
 
 # set directories to search for documentation
-for dir in /opt/freeware/info /usr/local/share/info /usr/local/info "$HOME"/info
+for dir in /opt/*/info /usr/local/share/info /usr/local/info "$HOME"/info
 do
-	test -d "$dir" && addpath "$dir" start INFOPATH
+    test -d "$dir" && addpath "$dir" start INFOPATH
 done
 for dir in /usr/share/info /usr/info
 do
-	test -d "$dir" && addpath "$dir" end INFOPATH
+    test -d "$dir" && addpath "$dir" end INFOPATH
 done
 export INFOPATH
-for dir in /opt/freeware/man /usr/local/share/man /usr/local/man "$HOME"/man
+for dir in /opt/*/man /usr/local/share/man /usr/local/man "$HOME"/man
 do
-	test -d "$dir" && addpath "$dir" start MANPATH
+    test -d "$dir" && addpath "$dir" start MANPATH
 done
 for dir in /usr/share/man /usr/man
 do
-	test -d "$dir" && addpath "$dir" end MANPATH
+    test -d "$dir" && addpath "$dir" end MANPATH
 done
 export MANPATH
 
@@ -154,9 +154,9 @@ SAVEHIST=$HISTFILESIZE
 HOST=`hostname`
 if type tty >/dev/null 2>&1
 then
-	TTY=`tty`
+    TTY=`tty`
 else
-	TTY='?'
+    TTY='?'
 fi
 if test -z "$UID"
 then
@@ -195,32 +195,32 @@ if ! type rgrep >/dev/null 2>&1
 then
     rgrep()
     {
-            typeset pattern
-            typeset dirs
-            typeset args
+        typeset pattern
+        typeset dirs
+        typeset args
 
-            args=
-            while true
-            do
-                case $1 in
-                -*)
-                    args="${args:+$args }$1"
-                    shift
-                    ;;
-                *)
-                    break
-                    ;;
-                esac
-            done
-            pattern=$1
-            if test $# -gt 1
-            then
+        args=
+        while true
+        do
+            case $1 in
+            -*)
+                args="${args:+$args }$1"
                 shift
-                dirs=$*
-            else
-                dirs=.
-            fi
-            find $dirs -type f -print | xargs -i grep $args $pattern {} /dev/null
+                ;;
+            *)
+                break
+                ;;
+            esac
+        done
+        pattern=$1
+        if test $# -gt 1
+        then
+            shift
+            dirs=$*
+        else
+            dirs=.
+        fi
+        find $dirs -type f -print | xargs -i grep $args $pattern {} /dev/null
     }
 fi
 
@@ -233,38 +233,60 @@ where()
 ### INTERACTIVE SETTINGS
 if tty >/dev/null 2>&1
 then
-        # get the terminal characteristics
-        terminit
+    # get the terminal characteristics
+    terminit
 
-        # set prompt and window title
-        if test "$UID" -eq 0
-        then
-                promptchars='# '
-        else
-                promptchars='$ '
-        fi
-        promptinfo='${HOST%%.*}:${PWD##*/}'
-        prompt="${promptinfo}"'${promptchars}'
-        title='${HOST%%.*}<${TTY##/*/}> ${USER} ${0##/*/} ${PWD}'
-        PS1=${titlestart}${title}${titlefinish}${prompt}
+    # set prompt and window title
+    if test "$UID" -eq 0
+    then
+        promptchars='# '
+    else
+        promptchars='$ '
+    fi
+    promptinfo='${HOST%%.*}:${PWD##*/}'
+    prompt="${promptinfo}"'${promptchars}'
+    title='${HOST%%.*}<${TTY##/*/}> ${USER} ${0##/*/} ${PWD}'
+    PS1=${titlestart}${title}${titlefinish}${prompt}
 
-        # set command line editing key bindings
-        set -o emacs 2>/dev/null
+    # set command line editing key bindings
+    set -o emacs 2>/dev/null
 fi
 
 ### PROGRAM SETTINGS
 # set preferred generic utilities
-export BROWSER=lynx
-type links >/dev/null 2>&1 && export BROWSER=links
-export CVS_RSH=rsh
-type ssh >/dev/null 2>&1 && export CVS_RSH=ssh
-export EDITOR=vi
-type nvi >/dev/null 2>&1 && export EDITOR=nvi
-type elvis >/dev/null 2>&1 && export EDITOR=elvis
-type vim >/dev/null 2>&1 && export EDITOR=vim
-export PAGER=more
-type less > /dev/null 2>&1 && export PAGER=less
+if type links >/dev/null 2>&1
+then
+    export BROWSER=links
+elif type lynx >/dev/null 2>&1
+then
+    export BROWSER=lynx
+fi
+
+if type ssh >/dev/null 2>&1
+then
+    export CVS_RSH=ssh
+elif type rsh >/dev/null 2>&1
+then
+    export CVS_RSH=rsh
+fi
+
+if type vim >/dev/null 2>&1
+then
+    export EDITOR=vim
+elif type vi >/dev/null 2>&1
+then
+    export EDITOR=vi
+fi
+
+if type less >/dev/null 2>&1
+then
+    export PAGER=less
+elif type more >/dev/null 2>&1
+then
+    export PAGER=more
+fi
 export VISUAL="$EDITOR"
+
 export WINTERM=xterm
 
 # set preferred program options
@@ -275,13 +297,12 @@ export LESS=-Ej3MX
 export TOP=-I
 if alias >/dev/null 2>&1
 then
-        echo -n " " | grep --count --color=auto --quiet "" >/dev/null 2>&1 && alias grep='grep --color=auto'
-        ls --help >/dev/null 2>&1 && alias ls='ls --color=auto'
+    echo -n " " | grep --count --color=auto --quiet "" >/dev/null 2>&1 && alias grep='grep --color=auto'
+    ls --help >/dev/null 2>&1 && alias ls='ls --color=auto'
 fi
 
 # set file locations
-test -r "$HOME"/.inputrc && INPUTRC="$HOME"/.inputrc
-export INPUTRC
+test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
 
 ### LAST COMMANDS
 # source local settings (company environment, network, etc.)
