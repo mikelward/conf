@@ -1,6 +1,10 @@
 # -*- mode: sh -*-
 # $Id$
-# Bash login session startup commands
+#
+# Bourne Again Shell login session startup commands
+#
+# This script contains bash-specific customizations and enhancements
+# for the initial log in session.
 
 # read login commands
 if test -f "$HOME"/.profile

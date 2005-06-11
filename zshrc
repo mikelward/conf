@@ -1,37 +1,25 @@
 # -*- mode: sh -*-
 # $Id$
-# Z Shell interactive session startup commands
+#
+# Z Shell interactive startup commands
+#
+# This script contains zsh-specific customizations and enhancements
+# for interactive sessions.
+# Functions and settings for all sessions are automatically included from
+# .zshenv.
 
-# update the xterm title after every command
 precmd()
 {
+        command=$0
+
+        # set the window title
 	[[ -t 1 ]] || return
-	local ts
-	local tf
-	case $TERM in
-	aixterm|dtterm|putty|rxvt|xterm*)
-		ts="\e]0;"
-		tf="\a"
-		;;
-	screen*)
-		ts="\e]k"
-		tf="\e]\\"
-		;;
-	*)
-		ts="`tput tsl`"
-		tf="`tput fsl`"
-		;;
-	esac
-	test -n "$ts" && print -Pn "${ts}%m<$(basename $(tty))> %n $0 ${PWD}${tf}"
+	test -n "$titlestart" && print -Pn "${titlestart}${title}${titlefinish}"
 }
 
-# update the xterm title when running a command
 preexec()
 {
-	[[ -t 1 ]] || return
-	local ts
-	local tf
-	local comm
+        # get the canonical name of the command just invoked
 	case $1 in
 	# resuming an existing job
 	fg*|%*)
@@ -40,7 +28,7 @@ preexec()
 		case $spec in
 		[0-9]*)
 			# process identifier
-			comm=$(ps -o comm= -p $spec)
+			command=$(ps -o comm= -p $spec)
 			;;
 		*)
 			# job identifier
@@ -61,14 +49,14 @@ preexec()
 						break
 					fi
 				done
-				comm=$jobtexts[$job]
+				command=$jobtexts[$job]
 				;;
 			\?*)
 				# job string search unsupported
-				comm=unknown
+				command=unknown
 				;;
 			*)
-				comm=$jobtexts[$spec]
+				command=$jobtexts[$spec]
 				;;
 			esac
 			;;
@@ -76,30 +64,23 @@ preexec()
 		;;
 	# executing a new command
 	*)
-		comm=$1
+		command=$1
 		;;
 	esac
-	case $TERM in
-	aixterm|dtterm|putty|rxvt|xterm*)
-		ts="\e]0;"
-		tf="\a"
-		;;
-	screen*)
-		ts="\e]k"
-		tf="\e]\\"
-		;;
-	*)
-		ts="`tput tsl`"
-		tf="`tput fsl`"
-		;;
-	esac
-	test -n "$ts" && print -Pn "${ts}%m<$(basename $(tty))> %n ${comm} ${PWD}${tf}"
+
+        # set the window title
+	[[ -t 1 ]] || return
+	test -n "$titlestart" && print -Pn "${titlestart}${title}${titlefinish}"
 }
 
-# set prompt
+terminit
+
+# set the prompt and window title
 prompt='
 %B%n@%m `dirs`
 %#%b '
+
+title='%m<$(basename $(tty))> %n ${command} ${PWD}'
 
 # set non-alphanumeric characters that constitute a word
 # (remove / so Alt-Backspace deletes only one path component)
@@ -150,18 +131,6 @@ setopt numericglobsort
 #setopt nullglob
 setopt pathdirs
 setopt promptpercent
-
-# set aliases
-alias h='history'
-alias j='jobs -l'
-ls --help >&/dev/null && alias ls='ls --color=auto'
-alias l='ls -Fx'
-alias l.='ls -d .*'
-alias la='ls -a'
-alias ll='ls -l'
-alias lt='ls -t'
-alias latest='ls -lt | head'
-alias psme='ps -fU $USER'
 
 # set command completions
 compctl -a {,un}alias

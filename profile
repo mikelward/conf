@@ -1,6 +1,10 @@
 # -*- mode: sh -*-
 # $Id$
-# Bourne Shell login session startup commands
+#
+# POSIX shell login session startup commands
+#
+# This scripts contains common initialization commands for the initial
+# log in session for all POSIX-compatible shells.
 
 # read environment
 if test -f "$HOME"/.shrc

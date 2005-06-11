@@ -1,10 +1,19 @@
 # -*- mode: sh -*-
 # $Id$
-# Bourne Shell environment commands
+#
+# POSIX shell startup commands
+#
+# This script contains functions and settings that are common for all
+# POSIX-compatible shells including bash and ksh.
 
+### HELPER FUNCTIONS
 # add a directory to the path
 addpath()
 {
+        typeset dir
+        typeset pos
+        typeset var
+        typeset sep
 	dir=$1
 	pos=$2
 	var=${3:-"PATH"}
@@ -22,6 +31,8 @@ addpath()
 		eval $var="\$$var""\${$var:+\$sep}""\$dir"
 		;;
 	*)
+                typeset dirs
+                typeset seen
 		eval dirs=\$$var
 		for d in $dirs
 		do
@@ -37,18 +48,18 @@ addpath()
 # remove a directory from the path
 delpath()
 {
-	# these variables might be set in the calling function but we
-	# can't guarantee we have typeset and the parent probably uses
-	# the same values
+        typeset dir
+        typeset var
+        typeset sep
 	dir=$1
 	var=${2:-"PATH"}
 	sep=${3:-":"}
 	NIFS="$IFS"
 	IFS="$sep"
 
-	# reconstruct the variable's value, omitting $dir
 	typeset path
-	#path=
+        typeset dirs
+
 	eval dirs=\$$var
 	for d in $dirs
 	do
@@ -59,14 +70,42 @@ delpath()
 	IFS="$NIFS"
 }
 
-# search for a lines matching the specified pattern in a directory tree
-rgrep()
+terminit()
 {
-	pattern=$1
-	path=${2:-.}
-	find "$path" -type f -print | xargs -i grep "$pattern" {} /dev/null
+        # determine the graphics mode escape sequences
+        if type tput >/dev/null 2>&1
+        then
+            bold="`tput bold`"
+            underline="`tput smul`"
+            normal="`tput sgr0`"
+        fi
+
+        # determine the window title escape sequences
+        case "$TERM" in
+        aixterm|dtterm|putty|rxvt|xterm*)
+                titlestart="]0;"
+                titlefinish=""
+                ;;
+        screen*)
+                titlestart="]k"
+                titlefinish="]\\"
+                ;;
+        *)
+                if type tput >/dev/null 2>&1
+                then
+                        titlestart="`tput tsl`"
+                        titlefinish="`tput fsl`"
+                else
+                        titlestart=""
+                        titlefinish=""
+                fi
+                ;;
+        esac
 }
 
+### SHELL ENVIRONMENT
+#
+typeset dir
 # set directories to search for commands
 # add preferred locations at start
 for dir in /opt/*/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
@@ -105,96 +144,146 @@ do
 done
 export MANPATH
 
-# set environment for all sessions
+# set shell options and environment
 CDPATH=".:~"
 HISTFILE="$HOME/.sh_history"
 HISTIGNORE="bg:fg:l:ll:ls: *"
 HISTSIZE=10000
 HISTFILESIZE=10000
 SAVEHIST=$HISTFILESIZE
-HOSTNAME=`hostname`
+HOST=`hostname`
 if type tty >/dev/null 2>&1
 then
 	TTY=`tty`
 else
 	TTY='?'
 fi
+if test -z "$UID"
+then
+    UID=`id -u`
+fi
 USER=`id -un`
-export CDPATH HOSTNAME TTY USER
 
-# set environment for interactive sessions
-case $- in *i*)
+### ALIASES AND FUNCTIONS
+# create aliases for commonly invoked commands
+alias apt='aptitude'
+alias bell='echo "\a"'
+alias l='ls -Fx'
+alias la='l -A'
+alias ll='l -l'
+alias lt='l -t'
+alias h='history'
+alias j='jobs -l'
+alias pd='pushd'
+alias po='popd'
+alias psme='ps -f -U $USER'
 
-	# set preferred programs
-	BROWSER=lynx
-	type links > /dev/null 2>&1 && BROWSER=links
-	CVS_RSH=rsh
-	type ssh > /dev/null 2>&1 && CVS_RSH=ssh
-	EDITOR=vi
-	type nvi > /dev/null 2>&1 && EDITOR=nvi
-	type elvis > /dev/null 2>&1 && EDITOR=elvis
-	type vim > /dev/null 2>&1 && EDITOR=vim
-	GREP_COLOR=1
-	PAGER=more
-	type less > /dev/null 2>&1 && PAGER=less
-	VISUAL="$EDITOR"
-	WINTERM=xterm
-	export BROWSER CVS_RSH EDITOR GREP_COLOR PAGER VISUAL WINTERM
+# show the most recently changed files
+latest()
+{
+    ls -t "$@" | head
+}
 
-	# set program configuration
-	CLICOLOR=true
-	test -r "$HOME"/.inputrc && INPUTRC="$HOME"/.inputrc
-	FIGNORE=
-	LESS=-Ej3MX
-	TOP=-I
-	export CLICOLOR FIGNORE INPUTRC LESS TOP
+# make with an automatic log and pager
+make()
+{
+    command make "$@" 2>&1 | tee make.log | ${PAGER:-more}
+}
 
-	# set key bindings
-	set -o emacs 2> /dev/null
+# search for a pattern in text files in a directory tree
+if ! type rgrep >/dev/null 2>&1
+then
+    rgrep()
+    {
+            typeset pattern
+            typeset dirs
+            typeset args
 
-	# set the prompt
-	if test `id -u` -eq 0
-	then
-		PS1='${HOSTNAME%%.*}:${PWD##*/}# '
-	else
-		PS1='${HOSTNAME%%.*}:${PWD##*/}$ '
-	fi
+            args=
+            while true
+            do
+                case $1 in
+                -*)
+                    args="${args:+$args }$1"
+                    shift
+                    ;;
+                *)
+                    break
+                    ;;
+                esac
+            done
+            pattern=$1
+            if test $# -gt 1
+            then
+                shift
+                dirs=$*
+            else
+                dirs=.
+            fi
+            find $dirs -type f -print | xargs -i grep $args $pattern {} /dev/null
+    }
+fi
 
-	# create aliases
-	if alias a='alias' 2>/dev/null
-	then
-                alias apt='aptitude'
-		alias b='echo "\a"'
-		alias cs='cscope -R'
-		alias d='dirs'
-		alias e='emacs'
-		alias f='finger'
-		alias g='egrep'
-		alias h='history'
-		alias j='jobs -l'
-                ls --help >/dev/null 2>&1 && alias ls='ls --color=auto'
-                alias l='ls -Fx'
-		alias la='l -A'
-		alias ll='l -l'
-		alias lt='l -t'
-		alias latest='ls -t $* | head'
-		alias m='make'
-		alias p='$PAGER'
-		alias pd='pushd'
-		alias po='popd'
-		alias psc='env UNIX95=true ps -f -o pid,args'
-		alias psf='env UNIX95=true ps -o user,pid,ppid,c,stime,tty,time,args'
-		alias psj='env UNIX95=true ps -o ppid,pid,pgid,sid,tty,stat,uid,time,args'
-		alias psme='env UNIX95=true ps -fU $USER'
-		alias psu='env UNIX95=true ps -o user,pid,pcpu,vsz,tty,stat,start,time,args'
-		alias r='fc -e -'
-		alias s='ssh'
-		alias v='vi'
-		alias where='type -pa'
-	fi
-	;;
-esac
+# list all instances of a command
+where()
+{
+    type -a "$@"
+}
 
+### INTERACTIVE SETTINGS
+if tty >/dev/null 2>&1
+then
+        # get the terminal characteristics
+        terminit
+
+        # set prompt and window title
+        if test "$UID" -eq 0
+        then
+                promptchars='# '
+        else
+                promptchars='$ '
+        fi
+        promptinfo='${HOST%%.*}:${PWD##*/}'
+        prompt="${promptinfo}"'${promptchars}'
+        title='${HOST%%.*}<${TTY##/*/}> ${USER} ${0##/*/} ${PWD}'
+        PS1=${titlestart}${title}${titlefinish}${prompt}
+
+        # set command line editing key bindings
+        set -o emacs 2>/dev/null
+fi
+
+### PROGRAM SETTINGS
+# set preferred generic utilities
+export BROWSER=lynx
+type links >/dev/null 2>&1 && export BROWSER=links
+export CVS_RSH=rsh
+type ssh >/dev/null 2>&1 && export CVS_RSH=ssh
+export EDITOR=vi
+type nvi >/dev/null 2>&1 && export EDITOR=nvi
+type elvis >/dev/null 2>&1 && export EDITOR=elvis
+type vim >/dev/null 2>&1 && export EDITOR=vim
+export PAGER=more
+type less > /dev/null 2>&1 && export PAGER=less
+export VISUAL="$EDITOR"
+export WINTERM=xterm
+
+# set preferred program options
+export CLICOLOR=true
+export FIGNORE=
+export GREP_COLOR=1
+export LESS=-Ej3MX
+export TOP=-I
+if alias >/dev/null 2>&1
+then
+        echo -n " " | grep --count --color=auto --quiet "" >/dev/null 2>&1 && alias grep='grep --color=auto'
+        ls --help >/dev/null 2>&1 && alias ls='ls --color=auto'
+fi
+
+# set file locations
+test -r "$HOME"/.inputrc && INPUTRC="$HOME"/.inputrc
+export INPUTRC
+
+### LAST COMMANDS
 # source local settings (company environment, network, etc.)
 test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
 

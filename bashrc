@@ -1,6 +1,11 @@
 # -*- mode: sh -*-
 # $Id$
-# Bash startup commands
+#
+# Bourne Again Shell startup commands
+#
+# This script contains bash-specific customizations and enhancements.
+# Common POSIX-compatible functions and settings are included from
+# .shrc.
 
 # source the user's environment file
 if test -z "$ENV"
@@ -98,44 +103,12 @@ whence()
 	done
 }
 
-# set the window title
-settitle()
-{
-	if test -n "$TITLESTART"
-	then
-		eval echo -n \""${TITLESTART}${TITLESTRING}${TITLEFINISH}"\"
-	fi
-	if test -n "$ICONSTART"
-	then
-		eval echo -n \""${ICONSTART}${ICONSTRING}${ICONFINISH}"\"
-	fi
-}
+# set the prompt and title
+PS1='\[${bold}\]\n\u@\h `dirs`\n\$\[${normal}\] '
+PROMPT_COMMAND="echo \"${titlestart}${title}${titlefinish}\""
 
 # set environment for interactive sessions
 case $- in *i*)
-
-	# set the prompt
-	if type tput >/dev/null 2>&1
-	then
-		BOLD="`tput bold`"
-		NORMAL="`tput sgr0`"
-	fi
-	PS1='\[$BOLD\]\n\u@\h `dirs`\n\$\[$NORMAL\] '
-
-	# set the xterm title
-	ICONSTRING='${HOSTNAME%%.*}<${TTY##/*/}>'
-	TITLESTRING='${HOSTNAME%%.*}<${TTY##/*/}> ${USER} ${0##/*/} ${PWD}'
-	STATUSSTRING='${0##/*/}'
-	case "$TERM" in
-	aixterm|dtterm|putty|rxvt|xterm*)
-		ICONSTART="]1;"
-		ICONFINISH=""
-		TITLESTART="]2;"
-		TITLEFINISH=""
-		;;
-	esac
-	PROMPT_COMMAND='settitle'
-
 	# set command completions
 	if type complete >/dev/null 2>&1
 	then
