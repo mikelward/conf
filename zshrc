@@ -96,38 +96,32 @@ bindkey '^[n' history-beginning-search-forward
 # enable some options originally from csh
 setopt banghist
 setopt braceexpand
-#setopt chasedots
 setopt correct
-#setopt cshnullglob
-setopt extendedglob
-#setopt extendedhistory
 setopt histignorespace
 setopt histreduceblanks
 setopt nohup
-#setopt nomatch
 setopt noksharrays
 
 # set some options originally from ksh
 setopt interactivecomments
-#setopt kshglob
+setopt kshglob
 setopt markdirs
-#setopt shwordsplit
 setopt promptsubst
 
 # set some zsh-specific options
 setopt appendhistory
 setopt autocd
 setopt autolist
-#setopt autopushd
 setopt automenu
-setopt nobeep
+setopt beep
+setopt extendedhistory
 setopt incappendhistory
-#unsetopt listbeep
+setopt listbeep
+setopt nolistambiguous
 setopt listrowsfirst
 setopt magicequalsubst
 setopt numericglobsort
-#setopt nullglob
-setopt pathdirs
+setopt nullglob
 setopt promptpercent
 
 # set command completions
