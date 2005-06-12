@@ -74,10 +74,10 @@ preexec()
 }
 
 # set the prompt and window title
-prompt='
-%B%n@%m `dirs`
-%#%b '
-
+#prompt='
+#%B%n@%m `dirs`
+#%#%b '
+prompt='%# '
 title='%m<$(basename $(tty))> %n ${command} ${PWD}'
 
 # set non-alphanumeric characters that constitute a word
@@ -103,6 +103,7 @@ setopt nohup
 setopt noksharrays
 
 # set some options originally from ksh
+setopt checkjobs
 setopt interactivecomments
 setopt kshglob
 setopt markdirs

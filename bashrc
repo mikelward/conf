@@ -117,7 +117,8 @@ whence()
 }
 
 # set the prompt and title
-PS1='\[${bold}\]\n\u@\h `dirs`\n\$\[${normal}\] '
+#PS1='\[${bold}\]\n\u@\h `dirs`\n\$\[${normal}\] '
+PS1='\$ '
 PROMPT_COMMAND="echo \"${titlestart}${title}${titlefinish}\""
 
 # set environment for interactive sessions

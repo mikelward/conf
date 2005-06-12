@@ -243,7 +243,8 @@ then
     else
         promptchars='$ '
     fi
-    promptinfo='${HOST%%.*}:${PWD##*/}'
+    #promptinfo='${HOST%%.*}:${PWD##*/}'
+    promptinfo=
     prompt="${promptinfo}"'${promptchars}'
     title='${HOST%%.*}<${TTY##/*/}> ${USER} ${0##/*/} ${PWD}'
     PS1=${titlestart}${title}${titlefinish}${prompt}
