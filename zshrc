@@ -113,11 +113,10 @@ setopt appendhistory
 setopt autocd
 setopt autolist
 setopt automenu
-setopt beep
 setopt extendedhistory
 setopt incappendhistory
-setopt listbeep
 setopt nolistambiguous
+setopt nolistbeep
 setopt listrowsfirst
 setopt magicequalsubst
 setopt numericglobsort
