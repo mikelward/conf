@@ -26,6 +26,19 @@ shopt -s histappend
 shopt -u huponexit
 shopt -s xpg_echo
 
+# ksh style aliases
+alias command='command '
+alias autoload='typeset -fu'
+alias float='typeset -E'
+alias functions='typeset -f'
+alias integer='typeset -i'
+alias nameref='typeset -n'
+alias nohup='nohup '
+alias r='fc -s'
+alias redirect='command exec'
+alias stop='kill -s STOP'
+alias sudo='sudo '
+
 # ksh style cd
 cd()
 {
