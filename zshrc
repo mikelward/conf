@@ -105,7 +105,6 @@ setopt noksharrays
 setopt checkjobs
 setopt interactivecomments
 setopt kshglob
-setopt markdirs
 setopt promptsubst
 
 # set some zsh-specific options
