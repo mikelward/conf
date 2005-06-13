@@ -286,7 +286,7 @@ then
     terminit
 
     # set prompt and window title
-    connectioninfo='${HOST%%.*}<${TTY##/*/}> ${USER}'
+    connectioninfo='${HOST%%.*} ${USER}'
     commandinfo='${command:-$0}'
     shellinfo='${PWD}'
     if test "$UID" -eq 0
