@@ -146,7 +146,6 @@ export MANPATH
 
 # set shell options and environment
 CDPATH=".:~"
-COMMAND=$0
 HISTFILE=
 HISTIGNORE="bg:fg:l:ll:ls: *"
 HOST=`hostname`
@@ -288,7 +287,7 @@ then
 
     # set prompt and window title
     connectioninfo='${HOST%%.*}<${TTY##/*/}> ${USER}'
-    commandinfo='${COMMAND##/*/}'
+    commandinfo='${${command:-$0}##/*/}'
     shellinfo='${PWD}'
     if test "$UID" -eq 0
     then
