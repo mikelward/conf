@@ -140,17 +140,39 @@ case $- in *i*)
         then
             COMPDEF="-o complete"
         fi
-        complete -a {,un}alias >/dev/null 2>&1
-        complete -d {c,p,push,pop}d,po >/dev/null 2>&1
-        complete $COMPDEF -g chgrp >/dev/null 2>&1
-        complete $COMPDEF -u chown >/dev/null 2>&1
-        complete -j fg >/dev/null 2>&1
-        complete -j kill >/dev/null 2>&1
-        complete $COMPDEF -c command >/dev/null 2>&1
-        complete $COMPDEF -c exec >/dev/null 2>&1
-        complete $COMPDEF -c man >/dev/null 2>&1
-        complete -e printenv >/dev/null 2>&1
-        complete -G "*.java" javac >/dev/null 2>&1
+        complete -a {,un}alias
+        complete -d {c,p,push,pop}d,po
+        complete $COMPDEF -g chgrp
+        complete $COMPDEF -u chown
+        complete -j fg
+        complete -j kill
+        complete $COMPDEF -c command
+        complete $COMPDEF -c exec
+        complete $COMPDEF -c man
+        complete -e printenv
+        complete -G "*.java" javac
+        complete -F complete_runner nohup
+        complete -F complete_runner sudo
+
+        # completion function for commands such as sudo that take a
+        # command as the first argument but should revert to file
+        # completion for subsequent arguments
+        complete_runner()
+        {
+            if test "$1" = "$3"
+            then
+                set -- `compgen -c $2`
+            else
+                set -- `compgen -f $2`
+            fi
+            i=0
+            for arg
+            do
+                COMPREPLY[$i]=$arg
+                i=`expr $i + 1`
+            done
+                
+        }
     fi
     ;;
 esac
