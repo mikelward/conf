@@ -227,29 +227,6 @@ where()
     type -a "$@"
 }
 
-### INTERACTIVE SETTINGS
-if tty >/dev/null 2>&1
-then
-    # get the terminal characteristics
-    terminit
-
-    # set prompt and window title
-    if test "$UID" -eq 0
-    then
-        promptchars='# '
-    else
-        promptchars='$ '
-    fi
-    #promptinfo='${HOST%%.*}:${PWD##*/}'
-    promptinfo=
-    prompt="${promptinfo}"'${promptchars}'
-    title='${HOST%%.*}<${TTY##/*/}> ${USER} ${0##/*/} ${PWD}'
-    PS1=${titlestart}${title}${titlefinish}${prompt}
-
-    # set command line editing key bindings
-    set -o emacs 2>/dev/null
-fi
-
 ### PROGRAM SETTINGS
 # set preferred generic utilities
 if type links >/dev/null 2>&1
@@ -301,6 +278,30 @@ fi
 
 # set file locations
 test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
+
+### INTERACTIVE SETTINGS
+if tty >/dev/null 2>&1
+then
+    # get the terminal characteristics
+    terminit
+
+    # set prompt and window title
+    if test "$UID" -eq 0
+    then
+        promptchars='# '
+    else
+        promptchars='$ '
+    fi
+    #promptinfo='${HOST%%.*}:${PWD##*/}'
+    promptinfo=
+    prompt="${promptinfo}"'${promptchars}'
+    title='${HOST%%.*}<${TTY##/*/}> ${USER} ${0##/*/} ${PWD}'
+    PS1=${titlestart}${title}${titlefinish}${prompt}
+
+    # set command line editing key bindings
+    # this must be after the EDITOR and VISUAL settings
+    set -o emacs 2>/dev/null
+fi
 
 ### LAST COMMANDS
 # source local settings (company environment, network, etc.)
