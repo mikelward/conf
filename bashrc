@@ -23,8 +23,6 @@ shopt -s checkwinsize
 shopt -s cmdhist
 shopt -s dotglob
 shopt -s extglob
-shopt -s histappend
-shopt -u huponexit
 shopt -s nullglob
 shopt -s xpg_echo
 
