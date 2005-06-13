@@ -181,7 +181,7 @@ then
     alias sudo='sudo '  # expand aliases after sudo
 
     # set default flags
-    echo -n " " | grep --count --color=auto --quiet "" >/dev/null 2>&1 && alias grep='grep --color=always'
+    echo -n " " | grep --count --color=auto --quiet "" >/dev/null 2>&1 && alias grep='grep --color=auto'
     ls --help >/dev/null 2>&1 && alias ls='ls --color=always'
 fi
 
