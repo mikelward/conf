@@ -13,8 +13,7 @@ precmd()
     command=$0
 
     # set the window title
-    [[ -t 1 ]] || return
-    test -n "$titlestart" && print -Pn "${titlestart}${title}${titlefinish}"
+    [[ -t 1 ]] && settitle
 }
 
 preexec()
@@ -69,16 +68,16 @@ preexec()
     esac
 
     # set the window title
-    [[ -t 1 ]] || return
+    [[ -t 1 ]] && settitle
+}
+
+settitle()
+{
     test -n "$titlestart" && print -Pn "${titlestart}${title}${titlefinish}"
 }
 
-# set the prompt and window title
-#prompt='
-#%B%n@%m `dirs`
-#%#%b '
-prompt='%# '
-title='%m<$(basename $(tty))> %n ${command} ${PWD}'
+# set prompt and window title format
+promptchars='%# '
 
 # set non-alphanumeric characters that constitute a word
 # (remove / so Alt-Backspace deletes only one path component)

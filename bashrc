@@ -116,10 +116,20 @@ whence()
     done
 }
 
-# set the prompt and title
-#PS1='\[${bold}\]\n\u@\h `dirs`\n\$\[${normal}\] '
-PS1='\$ '
-PROMPT_COMMAND="echo \"${titlestart}${title}${titlefinish}\""
+# set prompt and window title
+promptchars='$ '
+
+# test whether this temrinal supports a title or status bar
+if test -n "$titlestart"
+then
+    # prompt and window title
+    PS1=${prompt}
+    PROMPT_COMMAND="echo -n \"${titlestart}${title}${titlefinish}\""
+else
+    # prompt only
+    PS1=${prompt}
+    PROMPT_COMMAND=
+fi
 
 # set environment for interactive sessions
 case $- in *i*)

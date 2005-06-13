@@ -146,6 +146,7 @@ export MANPATH
 
 # set shell options and environment
 CDPATH=".:~"
+COMMAND=$0
 HISTFILE=
 HISTIGNORE="bg:fg:l:ll:ls: *"
 HOST=`hostname`
@@ -286,17 +287,29 @@ then
     terminit
 
     # set prompt and window title
+    connectioninfo='${HOST%%.*}<${TTY##/*/}> ${USER}'
+    commandinfo='${COMMAND##/*/}'
+    shellinfo='${PWD}'
     if test "$UID" -eq 0
     then
         promptchars='# '
     else
         promptchars='$ '
     fi
-    #promptinfo='${HOST%%.*}:${PWD##*/}'
-    promptinfo=
-    prompt="${promptinfo}"'${promptchars}'
-    title='${HOST%%.*}<${TTY##/*/}> ${USER} ${0##/*/} ${PWD}'
-    PS1=${titlestart}${title}${titlefinish}${prompt}
+    newline='
+'
+
+    prompt=\${promptchars}
+    title=${connectioninfo}\ ${commandinfo}\ ${shellinfo}
+    # test whether this terminal supports a title or status bar
+    if test -n "$titlestart"
+    then
+        # prompt and window title
+        PS1=${titlestart}${title}${titlefinish}${prompt}
+    else
+        # prompt only
+        PS1=${prompt}
+    fi
 
     # set command line editing key bindings
     # this must be after the EDITOR and VISUAL settings
