@@ -174,6 +174,7 @@ alias j='jobs'
 alias pd='pushd'
 alias po='popd'
 alias psme='ps -f -U $USER'
+alias sudo='sudo '
 
 # show the most recently changed files
 latest()
