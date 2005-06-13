@@ -268,7 +268,7 @@ export WINTERM=xterm
 export CLICOLOR=true
 export FIGNORE=
 export GREP_COLOR=1
-export LESS=-Ej3MX
+export LESS=-Fj3MX
 export TOP=-I
 if alias >/dev/null 2>&1
 then
