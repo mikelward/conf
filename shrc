@@ -148,7 +148,7 @@ export MANPATH
 CDPATH=".:~"
 HISTFILE=
 HISTSIZE=128
-HISTIGNORE="bg:fg:l:ll:ls: *"
+HISTIGNORE="bg:fg: *"
 HOST=`hostname`
 if type tty >/dev/null 2>&1
 then
@@ -166,7 +166,7 @@ USER=`id -un`
 # create aliases for commonly invoked commands
 alias apt='aptitude'
 alias bell='echo "\a"'
-alias l='ls -Fx'
+alias l.='l -d .*'
 alias la='l -A'
 alias ll='l -l'
 alias lt='l -t'
@@ -177,10 +177,21 @@ alias po='popd'
 alias psme='ps -f -U $USER'
 alias sudo='sudo '
 
+# list files
+l()
+{
+    if ls --help >/dev/null 2>&1
+    then
+        ls --color=always --classify "$@" | ${PAGER:-more}
+    else
+        ls -F "$@" | ${PAGER:-more}
+    fi
+}
+
 # show the most recently changed files
 latest()
 {
-    ls -t "$@" | head
+    l -t "$@" | head
 }
 
 # make with an automatic log and pager
@@ -270,7 +281,7 @@ export WINTERM=xterm
 export CLICOLOR=true
 export FIGNORE=
 export GREP_COLOR=1
-export LESS=-Fj3MX
+export LESS=-eFj3MRX
 export TOP=-I
 if alias >/dev/null 2>&1
 then
