@@ -115,6 +115,7 @@ setopt autocd
 setopt autolist
 setopt automenu
 setopt extendedhistory
+setopt globdots
 setopt incappendhistory
 setopt nolistambiguous
 setopt nolistbeep
