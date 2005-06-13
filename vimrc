@@ -7,11 +7,6 @@ set nocompatible                " make Vim default to nicer options
 " READING OPTIONS
 set modeline                    " use settings from file being edited
 
-" INPUT OPTIONS
-if has("mouse")
-    "set mouse=a                " uncomment to enable extended mouse support
-endif
-
 " COMMAND OPTIONS
 set wildmenu                    " ambiguous filename completion shows menu
 set wildmode=longest:full       " filename completion lists when ambiguous
