@@ -5,8 +5,8 @@
 #
 # This script contains zsh-specific customizations and enhancements
 # for interactive sessions.
-# Functions and settings for all sessions are automatically included from
-# .zshenv.
+# Common POSIX-compatible functions and settings are included from
+# .shrc.
 
 precmd()
 {
@@ -75,6 +75,20 @@ settitle()
 {
     test -n "$titlestart" && print -Pn "${titlestart}${title}${titlefinish}"
 }
+
+# read the common environment for all POSIX shells
+# (must be a function so the emulate command only affects the
+# execution of statements from ~/.shrc)
+source_common_commands()
+{
+    emulate -L ksh
+    if test -f ~/.shrc
+    then
+        source ~/.shrc
+    fi
+}
+
+source_common_commands
 
 # set prompt and window title format
 promptchars='%# '
