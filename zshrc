@@ -99,7 +99,6 @@ setopt braceexpand
 setopt correct
 setopt histignorespace
 setopt histreduceblanks
-setopt nohup
 setopt noksharrays
 
 # set some options originally from ksh
