@@ -83,24 +83,26 @@ terminit()
     # determine the window title escape sequences
     case "$TERM" in
     aixterm|dtterm|putty|rxvt|xterm*)
-        titlestart=']0;'
-        titlefinish=''
+        # window title
+        statusstart=']0;'
+        statusfinish=''
         ;;
     screen*)
         # status line
-        titlestart='_'
+        statusstart='_'
+        statusfinish='\'
         # window title
-        #titlestart='k'
+        titlestart='k'
         titlefinish='\'
         ;;
     *)
         if type tput >/dev/null 2>&1
         then
-            titlestart=`tput tsl`
-            titlefinish=`tput fsl`
+            statusstart="`tput tsl`"
+            statusfinish="`tput fsl`"
         else
-            titlestart=''
-            titlefinish=''
+            statusstart=''
+            statusfinish=''
         fi
         ;;
     esac
@@ -310,7 +312,7 @@ then
     # get the terminal characteristics
     terminit
 
-    # set prompt and window title
+    # set prompt, status, and window title
     connectioninfo='${HOST%%.*} ${USER}'
     commandinfo='${command:-$0}'
     shellinfo='${PWD}'
@@ -323,17 +325,14 @@ then
     newline='
 '
 
-    prompt=\${promptchars}
-    title=${connectioninfo}\ ${commandinfo}\ ${shellinfo}
+    promptstring=\${promptchars}
+    statusstring=${connectioninfo}\ ${commandinfo}\ ${shellinfo}
+    titlestring=${commandinfo}
     # test whether this terminal supports a title or status bar
-    if test -n "$titlestart"
-    then
-        # prompt and window title
-        PS1=${titlestart}${title}${titlefinish}${prompt}
-    else
-        # prompt only
-        PS1=${prompt}
-    fi
+    PS1=
+    test -n "$statusstart" && PS1=${PS1}${statusstart}${statusstring}${statusfinish}
+    test -n "$titlestart" && PS1=${PS1}${titlestart}${titlestring}${titlefinish}
+    PS1=${PS1}${prompt}
 
     # set command line editing key bindings
     # this must be after the EDITOR and VISUAL settings

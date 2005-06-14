@@ -120,14 +120,14 @@ whence()
 promptchars='$ '
 
 # test whether this temrinal supports a title or status bar
-if test -n "$titlestart"
+if test -n "$statusstart"
 then
     # prompt and window title
-    PS1=${prompt}
-    PROMPT_COMMAND="echo -n \${titlestart}${title}\${titlefinish}"
+    PS1=${promptstring}
+    PROMPT_COMMAND="echo -n \${statusstart}${statusstring}\${statusfinish}"
 else
     # prompt only
-    PS1=${prompt}
+    PS1=${promptstring}
     PROMPT_COMMAND=
 fi
 
