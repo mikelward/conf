@@ -8,7 +8,7 @@
 
 # read environment
 test -f "$HOME"/.bashrc && BASH_ENV="$HOME"/.bashrc
-test -n "$BASH_ENV" && export BASH_ENV && . "$BASH_ENV"
+test -n "$BASH_ENV" && . "$BASH_ENV"
 
 # read login commands
 test -f "$HOME"/.profile && . "$HOME"/.profile
