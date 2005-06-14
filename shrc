@@ -83,21 +83,24 @@ terminit()
     # determine the window title escape sequences
     case "$TERM" in
     aixterm|dtterm|putty|rxvt|xterm*)
-        titlestart="]0;"
-        titlefinish=""
+        titlestart=']0;'
+        titlefinish=''
         ;;
     screen*)
-        titlestart="]k"
-        titlefinish="]\\"
+        # status line
+        titlestart='_'
+        # window title
+        #titlestart='k'
+        titlefinish='\'
         ;;
     *)
         if type tput >/dev/null 2>&1
         then
-            titlestart="`tput tsl`"
-            titlefinish="`tput fsl`"
+            titlestart=`tput tsl`
+            titlefinish=`tput fsl`
         else
-            titlestart=""
-            titlefinish=""
+            titlestart=''
+            titlefinish=''
         fi
         ;;
     esac

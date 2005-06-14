@@ -124,7 +124,7 @@ if test -n "$titlestart"
 then
     # prompt and window title
     PS1=${prompt}
-    PROMPT_COMMAND="echo -n \"${titlestart}${title}${titlefinish}\""
+    PROMPT_COMMAND="echo -n \${titlestart}${title}\${titlefinish}"
 else
     # prompt only
     PS1=${prompt}
