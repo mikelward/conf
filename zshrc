@@ -13,7 +13,7 @@ precmd()
     command=$0
 
     # set the window title
-    [[ -t 1 ]] && setstatus && settitle
+    [[ -t 1 ]] && settitle
 }
 
 preexec()
@@ -68,17 +68,12 @@ preexec()
     esac
 
     # set the window title
-    [[ -t 1 ]] && setstatus && settitle
-}
-
-setstatus()
-{
-    test -n "$statusstart" && print -P "${statusstart}${statusstring}${statusfinish}"
+    [[ -t 1 ]] && settitle
 }
 
 settitle()
 {
-    test -n "$titlestart" && print -Pn "${titlestart}${titlestring}${titlefinish}"
+    test -n "$titlestart" && print -Pn "${titlestart}${title}${titlefinish}"
 }
 
 # read the common environment for all POSIX shells
