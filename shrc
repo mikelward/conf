@@ -312,7 +312,8 @@ then
 
     # set prompt and window title
     connectioninfo='${HOST%%.*} ${USER}'
-    commandinfo='${command:-$0}'
+    command=$0
+    commandinfo='${command%% *}'
     shellinfo='${PWD}'
     if test "$UID" -eq 0
     then
