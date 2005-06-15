@@ -111,12 +111,12 @@ terminit()
 typeset dir
 # set directories to search for commands
 # add preferred locations at start
-for dir in /opt/*/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
+for dir in /usr/X11R6/bin /usr/X11R5/bin /opt/*/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
 do
     test -d "$dir" && addpath "$dir" start
 done
 # add standard locations if they're not there
-for dir in /usr/bin /bin
+for dir in /usr/bin/X11 /usr/bin /bin
 do
     test -d "$dir" && addpath "$dir"
 done
@@ -137,7 +137,7 @@ do
     test -d "$dir" && addpath "$dir" end INFOPATH
 done
 export INFOPATH
-for dir in /opt/*/man /usr/local/share/man /usr/local/man "$HOME"/man
+for dir in /usr/X11R6/man /usr/X11R5/man /opt/*/man /usr/local/share/man /usr/local/man "$HOME"/man
 do
     test -d "$dir" && addpath "$dir" start MANPATH
 done
