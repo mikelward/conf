@@ -86,6 +86,10 @@ terminit()
         titlestart=']0;'
         titlefinish=''
         ;;
+    cygwin)
+        titlestart='];'
+        titlefinish=''
+        ;;
     screen*)
         # status line
         titlestart='_'
