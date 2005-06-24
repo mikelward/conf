@@ -74,30 +74,32 @@ if ( $?prompt ) then
 		case "putty":
 		case "rxvt":
 		case "xterm*":
-			set TITLESTART="]0;"
-			set TITLEFINISH=""
+			set titlestart="]0;"
+			set titlefinish=""
 			breaksw
 		case "screen*":
-			set TITLESTART="k"
-			set TITLEFINISH="\\"
+			set titlestart="_"
+			set titlefinish="\\"
 			breaksw
 		case "cygwin":
-			set TITLESTART="];"
-			set TITLEFINISH="\a"
+			set titlestart="];"
+			set titlefinish=""
 			breaksw
 		default:
-			set TITLESTART=""
-			set TITLEFINISH=""
+			set titlestart=""
+			set titlefinish=""
 			breaksw
 		endsw
-		set TITLESTRING='${HOST:ar}<${TTY:t}> ${USER} ${0:t} ${PWD}'
-		if ( $?TITLESTART ) then
-			alias precmd eval echo -n '\"${TITLESTART}${TITLESTRING}${TITLEFINISH}\"'
+                set connectioninfo='${HOST:ar} ${USER}'
+                set commandinfo='${0:t}'
+                set shellinfo='${PWD}'
+		set title="${connectioninfo} ${commandinfo} ${shellinfo}"
+		if ( $?titlestart ) then
+			alias precmd eval \'echo -n \"${titlestart}${title}${titlefinish}\"\'
 		endif
 	endif
 
 	# set the prompt format
 	set promptchars=">#"
-	set prompt='\n%B%n@%m %$dirstack\n%#%b '
 endif
 

@@ -2,6 +2,9 @@
 # $Id$
 # C Shell startup commands
 
+# set shell options for all sessions
+set nonomatch
+
 # set command aliases
 alias apt	'aptitude'
 alias bell	'echo "\a"'
@@ -128,13 +131,13 @@ if ( $?prompt ) then
 	setenv VISUAL "$EDITOR"
 	setenv WINTERM xterm
 
-	# set shell options
+	# set shell options for interactive sessions
 	set cdpath=( . ~ )
 	set color
 	set noding
 	set filec
 	set history=(1000)
-	#set prompt="% "
+	set prompt="% "
 	set savehist=(1000 merge)
 endif
 
