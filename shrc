@@ -298,8 +298,8 @@ export CLICOLOR=true
 export FIGNORE=
 export GREP_COLOR=1
 export LESS=-eFj3MRX
-export LSCOLORS='exgxcxcxbxdxdx'
-export LS_COLORS='no=00:fi=00:di=00;34:ln=00;36:or=07;36:so=00;32:do=00;32:pi=00;32:ex=00;31:bd=00;33:cd=00;33:'
+export LSCOLORS='exfxcxcxbxdxdx'
+export LS_COLORS='no=00:fi=00:di=00;34:ln=00;35:or=07;35:so=00;32:do=00;32:pi=00;32:ex=00;31:bd=00;33:cd=00;33:'
 export TOP=-I
 
 # set file locations
