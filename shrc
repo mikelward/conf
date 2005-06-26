@@ -175,7 +175,6 @@ if alias >/dev/null 2>&1
 then
     alias apt='aptitude'
     alias bell='echo "\a"'
-    alias ls='echo'
     alias l.='l -d .*'
     alias la='l -A'
     alias ll='l -l'
@@ -188,7 +187,7 @@ then
 
     # set default flags
     echo -n " " | grep --count --color=auto --quiet "" >/dev/null 2>&1 && alias grep='grep --color=auto'
-    ls --help >/dev/null 2>&1 && alias ls='ls --color=always'
+    ls --directory --color=always / >/dev/null 2>&1 && alias ls='ls --color=always'
 fi
 
 # show the command history
