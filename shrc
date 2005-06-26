@@ -189,8 +189,19 @@ then
     alias sudo='sudo '  # expand aliases after sudo
 
     # set default flags
-    echo -n " " | grep --count --color=auto --quiet "" >/dev/null 2>&1 && alias grep='grep --color=auto'
-    ls --directory --color=always / >/dev/null 2>&1 && alias ls='ls --color=always'
+    if echo -n " " | grep --count --color=auto --quiet "" >/dev/null 2>&1
+    then
+        alias grep='grep --color=auto'
+    fi
+    if ls --directory --color=always / >/dev/null 2>&1
+    then
+        alias l='ls --color=always'
+    elif ls -dG / >/dev/null 2>&1
+    then
+        alias l='CLICOLOR_FORCE=true ls -G'
+    else
+        alias l='ls -F'
+    fi
 fi
 
 # show the most recently changed files
@@ -287,6 +298,8 @@ export CLICOLOR=true
 export FIGNORE=
 export GREP_COLOR=1
 export LESS=-eFj3MRX
+export LSCOLORS='exfxcxcxbxdxdx'
+export LS_COLORS='no=00:fi=00:di=00;34:ln=00;35:or=00;36:so=00;32:do=00;32:pi=00;32:ex=00;31:bd=00;33:cd=00;33:'
 export TOP=-I
 
 # set file locations
