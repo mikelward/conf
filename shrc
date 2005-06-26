@@ -175,6 +175,8 @@ if alias >/dev/null 2>&1
 then
     alias apt='aptitude'
     alias bell='echo "\a"'
+    alias h='history'
+    alias l='ls'
     alias l.='l -d .*'
     alias la='l -A'
     alias ll='l -l'
@@ -183,24 +185,13 @@ then
     alias nohup='nohup '
     alias pd='pushd'
     alias po='popd'
+    alias psme='ps -f -U "${USER:-${LOGNAME}}"'
     alias sudo='sudo '  # expand aliases after sudo
 
     # set default flags
     echo -n " " | grep --count --color=auto --quiet "" >/dev/null 2>&1 && alias grep='grep --color=auto'
     ls --directory --color=always / >/dev/null 2>&1 && alias ls='ls --color=always'
 fi
-
-# show the command history
-h()
-{
-    history "$@" | ${PAGER:-more}
-}
-
-# list files
-l()
-{
-    ls -F "$@" | ${PAGER:-more}
-}
 
 # show the most recently changed files
 latest()
@@ -212,12 +203,6 @@ latest()
 make()
 {
     command make "$@" 2>&1 | tee make.log | ${PAGER:-more}
-}
-
-# show all processes running as the current user
-psme()
-{
-    ps -f -U "${USER:-${LOGNAME}}" "$@" | ${PAGER:-more}
 }
 
 # search for a pattern in text files in a directory tree
