@@ -327,15 +327,6 @@ then
 
     prompt=\${promptchars}
     title=${connectioninfo}\ ${commandinfo}\ ${shellinfo}
-    # test whether this terminal supports a title or status bar
-    if test -n "$titlestart"
-    then
-        # prompt and window title
-        PS1=${titlestart}${title}${titlefinish}${prompt}
-    else
-        # prompt only
-        PS1=${prompt}
-    fi
 
     # set command line editing key bindings
     # this must be after the EDITOR and VISUAL settings
@@ -345,4 +336,14 @@ fi
 ### LAST COMMANDS
 # source local settings (company environment, network, etc.)
 test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
+
+# apply the user's settings for prompt, title, etc.
+if test -n "$titlestart"
+then
+    # prompt and window title
+    PS1=${titlestart}${title}${titlefinish}${prompt}
+else
+    # prompt only
+    PS1=${prompt}
+fi
 
