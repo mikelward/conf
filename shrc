@@ -194,6 +194,8 @@ then
     alias pd='pushd'
     alias po='popd'
     alias psme='ps -f -U "${USER:-${LOGNAME}}"'
+    alias rcslog='rlog'
+    alias rdiff='rcsdiff'
     alias sudo='sudo '  # expand aliases after sudo
 
     # set default flags
