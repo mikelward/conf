@@ -116,9 +116,6 @@ whence()
     done
 }
 
-# set prompt and window title
-promptchars='$ '
-
 # test whether this temrinal supports a title or status bar
 if test -n "$titlestart"
 then

@@ -184,7 +184,7 @@ then
     alias apt='aptitude'
     alias bell='echo "\a"'
     alias h='history'
-    alias l='ls'
+    alias l='ls -x'
     alias l.='l -d .*'
     alias la='l -A'
     alias ll='l -l'
@@ -203,12 +203,12 @@ then
     fi
     if ls --directory --color=always / >/dev/null 2>&1
     then
-        alias l='ls --color=always'
+        alias l='ls --color=always --format=across'
     elif ls -dG / >/dev/null 2>&1
     then
-        alias l='CLICOLOR_FORCE=true ls -G'
+        alias l='CLICOLOR_FORCE=true ls -Gx'
     else
-        alias l='ls -F'
+        alias l='ls -Fx'
     fi
 fi
 
@@ -333,7 +333,7 @@ then
     newline='
 '
 
-    prompt=\${promptchars}
+    prompt=${promptchars}
     title=${connectioninfo}\ ${commandinfo}\ ${shellinfo}
 
     # set command line editing key bindings
