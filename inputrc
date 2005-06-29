@@ -1,6 +1,8 @@
 # $Id$
 # Readline configuration
 
+$include /etc/inputrc
+
 set bell-style visible
 set completion-ignore-case on
 set horizontal-scroll-mode on
@@ -9,10 +11,6 @@ set prefer-visible-bell on
 set print-completions-horizontally on
 set show-all-if-ambiguous on
 set visible-stats on
-
-set convert-meta off
-set input-meta on
-set output-meta on
 
 set editing-mode emacs
 
@@ -32,4 +30,10 @@ $if mode=emacs
 "\ep": history-search-backward
 "\en": history-search-forward
 $endif
+
+"\e[1~": beginning-of-line
+"\e[4~": end-of-line
+"\e[3~": delete-char
+"\e[5~": previous-history
+"\e[6~": next-history
 
