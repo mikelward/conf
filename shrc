@@ -217,7 +217,7 @@ fi
 # show the most recently changed files
 latest()
 {
-    l -t "$@" | head
+    l -t -1 "$@" | head
 }
 
 # make with an automatic log and pager
