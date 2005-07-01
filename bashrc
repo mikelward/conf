@@ -116,17 +116,9 @@ whence()
     done
 }
 
-# test whether this temrinal supports a title or status bar
-if test -n "$titlestart"
-then
-    # prompt and window title
-    PS1=${prompt}
-    PROMPT_COMMAND="echo -n \${titlestart}${title}\${titlefinish}"
-else
-    # prompt only
-    PS1=${prompt}
-    PROMPT_COMMAND=
-fi
+# set the prompt and window title
+PS1=${prompt}
+PROMPT_COMMAND="settitle ${title}"
 
 # set environment for interactive sessions
 case $- in *i*)

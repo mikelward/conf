@@ -70,6 +70,14 @@ delpath()
     IFS="$NIFS"
 }
 
+# set the xterm title
+settitle()
+{
+    test -z "${titlestart}" && return 0
+
+    echo -n "${titlestart}$*${titlefinish}"
+}
+
 terminit()
 {
     # determine the graphics mode escape sequences
@@ -348,12 +356,5 @@ fi
 test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
 
 # apply the user's settings for prompt, title, etc.
-if test -n "$titlestart"
-then
-    # prompt and window title
-    PS1=${titlestart}${title}${titlefinish}${prompt}
-else
-    # prompt only
-    PS1=${prompt}
-fi
+PS1="`settitle ${title}`${prompt}"
 
