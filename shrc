@@ -344,7 +344,7 @@ then
 '
 
     prompt=${promptchars}
-    title=${connectioninfo}\ ${commandinfo}\ ${shellinfo}
+    title=${connectioninfo}\ ${commandinfo}
 
     # set command line editing key bindings
     # this must be after the EDITOR and VISUAL settings
