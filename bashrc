@@ -118,7 +118,7 @@ whence()
 
 # set the prompt and window title
 PS1=${prompt}
-PROMPT_COMMAND="settitle ${title}"
+PROMPT_COMMAND='eval settitle "${title}"'
 
 # set environment for interactive sessions
 case $- in *i*)
