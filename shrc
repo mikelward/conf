@@ -222,10 +222,15 @@ then
     fi
 fi
 
-# show the most recently changed files
+# show the most recently changed file
 latest()
 {
-    l -t -1 "$@" | head
+    if test $# -ne 0
+    then
+        ls -t -1 -d "$@" | head -n 1
+    else
+        ls -t -1 -d * | head -n 1
+    fi
 }
 
 # make with an automatic log and pager
