@@ -8,15 +8,13 @@
 # .shrc.
 
 # source the user's environment file
-if test -z "$ENV"
+if test -f "$HOME"/.shrc
 then
-    if test -f "$HOME"/.shrc
-    then
-        ENV="$HOME"/.shrc
-    fi
-    export ENV
+    export ENV="$HOME"/.shrc
+    . "$ENV"
+else
+    ENV=
 fi
-test -n "$ENV" && . "$ENV"
 
 # set shell options
 shopt -s checkwinsize

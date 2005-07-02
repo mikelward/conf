@@ -84,7 +84,10 @@ source_common_commands()
     emulate -L ksh
     if test -f ~/.shrc
     then
+        export ENV=~/.shrc
         source ~/.shrc
+    else
+        export ENV=
     fi
 }
 
