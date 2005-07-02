@@ -231,7 +231,7 @@ latest()
 # make with an automatic log and pager
 make()
 {
-    command make "$@" 2>&1 | tee make.log | ${PAGER:-more}
+    command make "$@" 2>&1 | tee make.log
 }
 
 # search for a pattern in text files in a directory tree
