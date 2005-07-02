@@ -90,12 +90,16 @@ if ( $?prompt ) then
 			set titlefinish=""
 			breaksw
 		endsw
+                if ( $?titlestart ) then
+                        alias settitle echo -n '${titlestart}\!*${titlefinish}'
+                endif
                 set connectioninfo='${HOST:ar} ${USER}'
                 set commandinfo='${0:t}'
                 set shellinfo='${PWD}'
-		set title="${connectioninfo} ${commandinfo} ${shellinfo}"
+		set title="${connectioninfo} ${commandinfo}"
 		if ( $?titlestart ) then
-			alias precmd eval \'echo -n \"${titlestart}${title}${titlefinish}\"\'
+			alias precmd eval settitle '$title'
+                        #alias postcmd eval settitle '$title'
 		endif
 	endif
 
@@ -103,4 +107,5 @@ if ( $?prompt ) then
 	set promptchars="%#"
         set prompt="%# "
 endif
+
 
