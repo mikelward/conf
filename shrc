@@ -75,7 +75,7 @@ settitle()
 {
     test -z "${titlestart}" && return 0
 
-    echo -n "${titlestart}$*${titlefinish}"
+    printf "${titlestart}$*${titlefinish}"
 }
 
 terminit()
@@ -207,7 +207,7 @@ then
     alias sudo='sudo '  # expand aliases after sudo
 
     # set default flags
-    if echo -n " " | grep --count --color=auto --quiet "" >/dev/null 2>&1
+    if printf " " | grep --count --color=auto --quiet "" >/dev/null 2>&1
     then
         alias grep='grep --color=auto'
     fi
