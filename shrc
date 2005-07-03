@@ -168,7 +168,7 @@ done
 export MANPATH
 
 # set shell options and environment
-CDPATH=".:~"
+CDPATH=":~"
 HISTFILE=
 HISTSIZE=128
 HISTIGNORE="bg:fg: *"
@@ -316,6 +316,7 @@ then
     command=$0
     commandinfo='${command%% *}'
     shellinfo='${PWD}'
+    shellinfo='${PWD##/*/}'
     if test "$UID" -eq 0
     then
         promptchars='# '
@@ -325,7 +326,7 @@ then
     newline='
 '
 
-    prompt=${promptchars}
+    prompt=${shellinfo}\ ${promptchars}
     title=${connectioninfo}\ ${commandinfo}
 
     # set command line editing key bindings
