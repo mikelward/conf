@@ -191,8 +191,10 @@ if alias >/dev/null 2>&1
 then
     alias apt='aptitude'
     alias bell='echo "\a"'
+    alias cx='chmod +x'
+    alias g='egrep'
     alias h='history'
-    alias l='ls -x'
+    alias l='ls'
     alias l.='l -d .*'
     alias la='l -A'
     alias ll='l -l'
@@ -207,18 +209,15 @@ then
     alias sudo='sudo '  # expand aliases after sudo
 
     # set default flags
-    if printf " " | grep --count --color=auto --quiet "" >/dev/null 2>&1
+    if grep --color=auto --quiet "" "$HOME"/.shrc >/dev/null 2>&1
     then
         alias grep='grep --color=auto'
     fi
-    if ls --directory --color=always / >/dev/null 2>&1
+    if ls --color=auto --format=across --directory / >/dev/null 2>&1
     then
-        alias l='ls --color=always --format=across'
-    elif ls -dG / >/dev/null 2>&1
-    then
-        alias l='CLICOLOR_FORCE=true ls -Gx'
+        alias ls='ls --color=auto --format=across'
     else
-        alias l='ls -Fx'
+        alias ls='ls -x'
     fi
 fi
 
@@ -281,52 +280,30 @@ where()
 
 ### PROGRAM SETTINGS
 # set preferred generic utilities
-if type links >/dev/null 2>&1
-then
-    export BROWSER=links
-elif type lynx >/dev/null 2>&1
-then
-    export BROWSER=lynx
-fi
-
-if type ssh >/dev/null 2>&1
-then
-    export CVS_RSH=ssh
-elif type rsh >/dev/null 2>&1
-then
-    export CVS_RSH=rsh
-fi
-
-if type vim >/dev/null 2>&1
-then
-    export EDITOR=vim
-elif type vi >/dev/null 2>&1
-then
-    export EDITOR=vi
-fi
-
-if type less >/dev/null 2>&1
-then
-    export PAGER=less
-elif type more >/dev/null 2>&1
-then
-    export PAGER=more
-fi
+type lynx >/dev/null 2>/dev/null && export BROWSER=lynx
+type links >/dev/null 2>/dev/null && export BROWSER=links
+type elinks >/dev/null 2>/dev/null && export BROWSER=elinks
+type rsh >/dev/null 2>/dev/null && export CVS_RSH=rsh
+type ssh >/dev/null 2>/dev/null && export CVS_RSH=ssh
+type vi >/dev/null 2>/dev/null && export EDITOR=vi
+type vim >/dev/null 2>/dev/null && export EDITOR=vim
+type more >/dev/null 2>/dev/null && export PAGER=more
+type less >/dev/null 2>/dev/null && export PAGER=less
 export VISUAL="$EDITOR"
-
 export WINTERM=xterm
+
+# set file locations
+test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
 
 # set preferred program options
 export CLICOLOR=true
 export FIGNORE=
 export GREP_COLOR=1
 export LESS=-eFj3MRX
+test -n "$TABSIZE" && export LESS="${LESS}x${TABSIZE}"
 export LSCOLORS='exfxcxcxbxdxdx'
 export LS_COLORS='no=00:fi=00:di=00;34:ln=00;35:or=07;35:so=00;32:pi=00;32:ex=00;31:bd=00;33:cd=00;33:'
 export TOP=-I
-
-# set file locations
-test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
 
 ### INTERACTIVE SETTINGS
 if tty >/dev/null 2>&1

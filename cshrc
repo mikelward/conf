@@ -17,7 +17,7 @@ alias g		'egrep'
 alias h		'history'
 alias helpcommand 'man'
 alias j		'jobs -l'
-alias l		'ls -Fpx'
+alias l		'ls'
 alias la	'l -A'
 alias latest    'ls -t -1 \!* | head -n 1'
 alias ll	'l -l'
@@ -45,6 +45,16 @@ alias retags	'find . \( -name "*.c" -o -name "*.h" \
 alias v		'vi'
 unalias vi
 unalias vim
+
+# set default flags
+if ( { grep --color=auto --quiet "" ~/.cshrc } ) >&/dev/null then
+    alias grep 'grep --color=auto'
+endif
+if ( { ls --color=auto --format=across --directory / } ) >&/dev/null then
+    alias ls 'ls --color=auto --format=across'
+else
+    alias ls 'ls -x'
+endif
 
 # set directories to search for commands
 # add directories to look in first (unless already present)
@@ -96,41 +106,39 @@ end
 
 # set environment for interactive sessions
 if ( $?prompt ) then
-	# set program configuration variables
+	# set preferred programs
+	which lynx >&/dev/null && setenv BROWSER lynx
+	which links >&/dev/null && setenv BROWSER links
+	which elinks >&/dev/null && setenv BROWSER elinks
+	which rsh >&/dev/null && setenv CVS_RSH ssh
+	which ssh >&/dev/null && setenv CVS_RSH ssh
+	which ed >&/dev/null && setenv EDITOR ed
+	which vi >&/dev/null && setenv EDITOR vi
+	which nvi >&/dev/null && setenv EDITOR nvi
+	which vim >&/dev/null && setenv EDITOR vim
+        which more >&/dev/null && setenv PAGER more
+	which less >&/dev/null && setenv PAGER less
+	setenv VISUAL "$EDITOR"
+	setenv WINTERM xterm
+
+        # set file locations
 	if ( -r ~/.vimrc ) then
 		setenv VIMINIT "source ~/.vimrc"
 	endif
 	if ( -r ~/.inputrc ) then
 		setenv INPUTRC ~/.inputrc
 	endif
+
+        # set preferred program options
 	setenv CLICOLOR true
-	which dircolors >& /dev/null && eval "`dircolors -c`"
-	if ( $?LS_COLORS ) then
-		alias l	`alias l`\ --color=auto
-	endif
-	setenv LESS -Ej3MX
+	setenv GREP_COLOR 1
+	setenv LESS -eFj3MRX
+        setenv LSCOLORS 'exfxcxcxbxdxdx'
+        setenv LS_COLORS 'no=00:fi=00:di=00;34:ln=00;35:or=07;35:so=00;32:pi=00;32:ex=00;31:bd=00;33:cd=00;33:'
 	if ( $?TABSIZE ) then
 		setenv LESS "${LESS}x${TABSIZE}"
 	endif
 	setenv TOP -I
-
-	# set preferred programs
-	setenv BROWSER lynx
-	which links >& /dev/null && setenv BROWSER links
-	which elinks >& /dev/null && setenv BROWSER elinks
-	setenv CVS_RSH ssh
-	which ssh >& /dev/null && setenv CVS_RSH ssh
-	setenv EDITOR ed
-	which vi >& /dev/null && setenv EDITOR vi
-	which nvi >& /dev/null && setenv EDITOR nvi
-	which vim >& /dev/null && setenv EDITOR vim
-	#which pico >& /dev/null && setenv EDITOR pico
-	#which nano >& /dev/null && setenv EDITOR nano
-	setenv GREP_COLOR 1
-	setenv PAGER more
-	which less >& /dev/null && setenv PAGER less
-	setenv VISUAL "$EDITOR"
-	setenv WINTERM xterm
 
 	# set shell options for interactive sessions
 	set cdpath=( . ~ )
