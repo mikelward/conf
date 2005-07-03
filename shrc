@@ -339,5 +339,5 @@ fi
 test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
 
 # apply the user's settings for prompt, title, etc.
-PS1="`settitle ${title}`${prompt}"
+PS1='`eval settitle ${title}`'"${prompt}"
 
