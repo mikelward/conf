@@ -103,7 +103,6 @@ if ( $?prompt ) then
 		if ( $?titlestart ) then
 			alias precmd eval settitle '$title'
                         #alias postcmd eval settitle '$commandtitle'
-                        alias postcmd settitle "${connectioninfo} '\!#'"
 		endif
 	endif
 
