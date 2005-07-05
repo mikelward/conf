@@ -10,7 +10,7 @@
 test -f "$HOME"/.shrc && export ENV="$HOME"/.shrc
 
 # start the ssh agent if one isn't already running
-if test -z "$SSH_AUTH_SOCK"
+if test -z "$SSH_AUTH_SOCK" -a -n "$WANT_SSH_AGENT"
 then
     type ssh-agent >/dev/null 2>&1 && eval `ssh-agent -s`
     type ssh-add >/dev/null 2>&1 && ssh-add </dev/null
