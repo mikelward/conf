@@ -239,38 +239,40 @@ make()
 }
 
 # search for a pattern in text files in a directory tree
-if ! type rgrep >/dev/null 2>&1
-then
-    rgrep()
-    {
-        typeset pattern
-        typeset dirs
-        typeset args
+rgrep()
+{
+    typeset pattern
+    typeset dirs
+    typeset args
 
-        args=
-        while true
-        do
-            case $1 in
-            -*)
-                args="${args:+$args }$1"
-                shift
-                ;;
-            *)
-                break
-                ;;
-            esac
-        done
-        pattern=$1
-        if test $# -gt 1
-        then
+    args=
+    while true
+    do
+        case $1 in
+        -*)
+            args="${args:+$args }$1"
             shift
-            dirs=$*
-        else
-            dirs=.
-        fi
-        find $dirs -type f -print | xargs -i grep $args $pattern {} /dev/null
-    }
-fi
+            ;;
+        *)
+            break
+            ;;
+        esac
+    done
+    if test $# -gt 0
+    then
+        pattern="$1"
+        shift
+    else
+        pattern=
+    fi
+
+    if grep -HRq "" .
+    then
+        grep -HR "$pattern" "${@:-.}"
+    else
+        find "${@:-.}" -type f -print | xargs -i grep $args "$pattern" {} /dev/null
+    fi
+}
 
 # list all instances of a command
 where()
