@@ -9,23 +9,29 @@
 # read environment
 test -f "$HOME"/.shrc && export ENV="$HOME"/.shrc
 
-# start the ssh agent if one isn't already running
-if test -z "$SSH_AUTH_SOCK" -a -n "$WANT_SSH_AGENT"
+# start an SSH agent if necessary
+if test -z "$SSH_AUTH_SOCK"
 then
-    type ssh-agent >/dev/null 2>&1 && eval `ssh-agent -s`
-    type ssh-add >/dev/null 2>&1 && ssh-add </dev/null
-    type ssh-add >/dev/null 2>&1 && ssh-add -l >/dev/null 2>&1
-    if test $? -ne 0
-    then
-        echo "No SSH identities" 1>&2
-    fi
+    exists ssh-agent && eval `ssh-agent -s`
 fi
 
 # interactive commands
-if type tty >/dev/null 2>&1 && tty >/dev/null 2>&1
+if exists tty && quiet tty
 then
-    # disable output control so applications can use ^Q and ^S
-    type stty >/dev/null 2>&1 && stty -ixon
+    # disable flow control so applications can use ^Q and ^S
+    exists stty && stty -ixon
+
+    # obtain SSH credentials
+    if exists ssh-add && ! quiet ssh-add -l
+    then
+        ssh-add </dev/null
+    fi
+
+    # obtain Kerberos credentials
+    if exists klist && ! klist -s
+    then
+        exists kinit && kinit
+    fi
 fi
 
 # set a script that will be sourced on exiting the shell

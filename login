@@ -4,21 +4,30 @@
 # set environment script in case a Bourne-like shell is invoked within csh
 test -f "$HOME"/.shrc && setenv ENV "$HOME"/.shrc
 
+# start the ssh agent
+if ! ( $?SSH_AUTH_SOCK ) then
+    eval `ssh-agent`
+endif
+
 # commands that only work when running on a terminal
-if ( { tty -s } ) then
+if ( { tty } ) >& /dev/null then
+    # disable flow control so applications can use ^Q and ^S
+    if ( { which stty } ) >& /dev/null stty -ixon
 
-	# disable output control so applications can use ^S and ^Q
-	stty -ixon
+    # obtain SSH credentials
+    if ( { which ssh-add } && ! { ssh-add -l ) >& /dev/null then
+        ssh-add < /dev/null
+    endif
 
-	# start the ssh agent
-	if ! ( $?SSH_AUTH_SOCK ) then
-		eval `ssh-agent`
-		ssh-add < /dev/null
-	endif
+    # obtain Kerberos credentials
+    if ( { which klist } && ! { klist -s } ) >&/dev/null then
+        if ( { which kinit } ) kinit
+    endif
+
 endif
 
 # read local settings (company environment, etc.)
 if ( -r ~/.login.local ) then
-	source ~/.login.local
+    source ~/.login.local
 endif
 

@@ -70,6 +70,27 @@ delpath()
     IFS="$NIFS"
 }
 
+# return true if the command can be found, false otherwise
+exists()
+{
+    typeset cmd
+    cmd="$1"
+
+    if type "$cmd" >/dev/null 2>&1
+    then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# run a simple command quietly
+quiet()
+{
+    "$@" >/dev/null 2>&1
+    return $?
+}
+
 # set the xterm title
 settitle()
 {
@@ -81,7 +102,7 @@ settitle()
 terminit()
 {
     # determine the graphics mode escape sequences
-    if type tput >/dev/null 2>&1
+    if exists tput
     then
         bold="`tput bold`"
         underline="`tput smul`"
@@ -114,7 +135,7 @@ terminit()
         titlefinish='\'
         ;;
     *)
-        if type tput >/dev/null 2>&1
+        if exists tput
         then
             titlestart=`tput tsl`
             titlefinish=`tput fsl`
@@ -173,7 +194,7 @@ HISTFILE=
 HISTSIZE=128
 HISTIGNORE="bg:fg: *"
 HOST=`hostname`
-if type tty >/dev/null 2>&1
+if exists tty
 then
     TTY=`tty`
 else
@@ -187,7 +208,7 @@ USER=`id -un`
 
 ### ALIASES AND FUNCTIONS
 # create aliases for commonly invoked commands
-if alias >/dev/null 2>&1
+if quiet alias
 then
     alias apt='aptitude'
     alias bell='echo "\a"'
@@ -209,11 +230,11 @@ then
     alias sudo='sudo '  # expand aliases after sudo
 
     # set default flags
-    if grep --color=auto --quiet "" "$HOME"/.shrc >/dev/null 2>&1
+    if quiet grep --color=auto --quiet "" "$HOME"/.shrc
     then
         alias grep='grep --color=auto'
     fi
-    if ls --color=auto --format=across --directory / >/dev/null 2>&1
+    if quiet ls --color=auto --format=across --directory /
     then
         alias ls='ls --color=auto --format=across'
     else
@@ -282,15 +303,15 @@ where()
 
 ### PROGRAM SETTINGS
 # set preferred generic utilities
-type lynx >/dev/null 2>/dev/null && export BROWSER=lynx
-type links >/dev/null 2>/dev/null && export BROWSER=links
-type elinks >/dev/null 2>/dev/null && export BROWSER=elinks
-type rsh >/dev/null 2>/dev/null && export CVS_RSH=rsh
-type ssh >/dev/null 2>/dev/null && export CVS_RSH=ssh
-type vi >/dev/null 2>/dev/null && export EDITOR=vi
-type vim >/dev/null 2>/dev/null && export EDITOR=vim
-type more >/dev/null 2>/dev/null && export PAGER=more
-type less >/dev/null 2>/dev/null && export PAGER=less
+exists lynx && export BROWSER=lynx
+exists links && export BROWSER=links
+exists elinks && export BROWSER=elinks
+exists rsh && export CVS_RSH=rsh
+exists ssh && export CVS_RSH=ssh
+exists vi && export EDITOR=vi
+exists vim && export EDITOR=vim
+exists more && export PAGER=more
+exists less && export PAGER=less
 export VISUAL="$EDITOR"
 export WINTERM=xterm
 
