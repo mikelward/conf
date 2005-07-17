@@ -22,9 +22,12 @@ then
     exists stty && stty -ixon
 
     # obtain SSH credentials
-    if exists ssh-add && ! quiet ssh-add -l
+    if test -n "$SSH_AUTH_SOCK"
     then
-        ssh-add </dev/null
+        if exists ssh-add && ! quiet ssh-add -l
+        then
+            ssh-add </dev/null
+        fi
     fi
 
     # obtain Kerberos credentials
