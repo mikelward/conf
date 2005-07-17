@@ -63,11 +63,18 @@ if ( $?prompt ) then
 	complete where		'C/*/c/'
 	complete which		'C/*/c/'
 
-	# set the window title on supported terminals
 	setenv HOST `hostname`
 	setenv TTY `tty`
 	setenv USER `whoami`
 	if ( $?TERM ) then
+                # set the format for titles and prompts
+                set connectioninfo='${HOST:ar} ${USER}'
+                set commandinfo='\!#'
+                set shellinfo='${PWD}'
+		set title="${connectioninfo} $0"
+                set commandtitle="${connectioninfo} '\!#'"
+
+                # set the window title on supported terminals
 		switch ( $TERM )
 		case "aixterm":
 		case "dtterm":
@@ -95,20 +102,15 @@ if ( $?prompt ) then
                 else
                         alias settitle ''
                 endif
-                set connectioninfo='${HOST:ar} ${USER}'
-                set commandinfo='\!#'
-                set shellinfo='${PWD}'
-		set title="${connectioninfo} $0"
-                set commandtitle="${connectioninfo} '\!#'"
 		if ( $?titlestart ) then
 			alias precmd eval settitle '$title'
                         #alias postcmd eval settitle '$commandtitle'
 		endif
-	endif
 
-	# set the prompt format
-	set promptchars="%#"
-        set prompt="%# "
+                # set the prompt
+                set promptchars="%#"
+                set prompt="%# "
+	endif
 endif
 
 

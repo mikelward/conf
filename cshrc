@@ -1,4 +1,4 @@
-# -*- mode: sh -*-
+# vim: set noet sw=8 ts=8: -*- sh -*-
 # $Id$
 # C Shell startup commands
 
@@ -58,7 +58,7 @@ endif
 
 # set directories to search for commands
 # add directories to look in first (unless already present)
-foreach d ( /opt/*/bin /usr/gnu/bin /usr/local/bin ~/bin )
+foreach d ( /usr/X11R6/bin /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin ~/bin )
 	if ( -d $d ) then
 		foreach p ( $path )
 			# advance to next top level directory
@@ -71,7 +71,17 @@ end
 foreach d ( /usr/bin /bin )
 	if ( -d $d ) then
 		foreach p ( $path )
-			# advance to next top level directory
+			# this directory already present, skip it
+			if ( $d == $p ) break; continue
+		end
+		set path=( $path $d )
+	endif
+end
+# add optional locations at end
+foreach d ( /opt/*/bin )
+	if ( -d $d ) then
+		foreach p ( $path )
+			# this directory already present, skip it
 			if ( $d == $p ) break; continue
 		end
 		set path=( $path $d )

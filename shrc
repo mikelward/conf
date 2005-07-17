@@ -152,7 +152,7 @@ terminit()
 typeset dir
 # set directories to search for commands
 # add preferred locations at start
-for dir in /usr/X11R6/bin /usr/X11R5/bin /opt/*/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
+for dir in /usr/X11R6/bin /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
 do
     test -d "$dir" && addpath "$dir" start
 done
@@ -160,6 +160,11 @@ done
 for dir in /usr/bin/X11 /usr/bin /bin
 do
     test -d "$dir" && addpath "$dir"
+done
+# add optional locations at end
+for dir in /opt/*/bin
+do
+    test -d "$dir" && addpath "$dir" end
 done
 # add the current directory to the end
 for dir in .
