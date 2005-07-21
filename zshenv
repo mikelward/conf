@@ -13,7 +13,7 @@ precmd()
     command=$0
 
     # set the window title
-    [[ -t 1 ]] && eval settitle "$title"
+    [[ -t 1 ]] && eval settitle "\"$title\""
 }
 
 preexec()
@@ -68,7 +68,7 @@ preexec()
     esac
 
     # set the window title
-    [[ -t 1 ]] && eval settitle "$title"
+    [[ -t 1 ]] && eval settitle "\"$title\""
 }
 
 settitle()
