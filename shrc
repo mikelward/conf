@@ -104,17 +104,17 @@ terminit()
     # determine the graphics mode escape sequences
     if exists tput
     then
-        bold="`tput bold`"
-        underline="`tput smul`"
-        normal="`tput sgr0`"
-        black="`tput setaf 0`"
-        red="`tput setaf 1`"
-        green="`tput setaf 2`"
-        yellow="`tput setaf 3`"
-        blue="`tput setaf 4`"
-        magenta="`tput setaf 5`"
-        cyan="`tput setaf 6`"
-        white="`tput setaf 7`"
+        bold="$(tput bold)"
+        underline="$(tput smul)"
+        normal="$(tput sgr0)"
+        black="$(tput setaf 0)"
+        red="$(tput setaf 1)"
+        green="$(tput setaf 2)"
+        yellow="$(tput setaf 3)"
+        blue="$(tput setaf 4)"
+        magenta="$(tput setaf 5)"
+        cyan="$(tput setaf 6)"
+        white="$(tput setaf 7)"
     fi
 
     # determine the window title escape sequences
@@ -345,18 +345,11 @@ then
     command=$0
     commandinfo='${command%% *}'
     shellinfo='${PWD}'
-    shellinfo='${PWD##/*/}'
-    if test "$UID" -eq 0
-    then
-        promptchars='# '
-    else
-        promptchars='$ '
-    fi
-    newline='
-'
-
-    prompt=${shellinfo}\ ${promptchars}
-    title=${connectioninfo}\ ${commandinfo}
+    promptchars='$(eval test "${UID}" -eq 0 && echo \# || echo \$)'
+promptstring='
+$(eval echo "${connectioninfo} ${shellinfo}")
+$(eval echo "${promptchars}") '
+    title='$(eval echo "${connectioninfo} ${commandinfo}")'
 
     # set command line editing key bindings
     # this must be after the EDITOR and VISUAL settings
@@ -368,5 +361,5 @@ fi
 test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
 
 # apply the user's settings for prompt, title, etc.
-PS1='`eval settitle ${title}`'"${prompt}"
+PS1='$(eval settitle "\"${title}\"")''$(eval echo "\"${bold}${promptstring}${normal}\"")'
 
