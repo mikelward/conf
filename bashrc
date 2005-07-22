@@ -115,7 +115,6 @@ whence()
 }
 
 # set the prompt and window title
-promptchars='\$'
 shellinfo='$(dirs)'
 PS1='$(eval echo "\"${bold}${promptstring}${normal}\"")'
 PROMPT_COMMAND='eval settitle "\"${title}\""'
