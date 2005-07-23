@@ -96,7 +96,7 @@ source_common_commands
 # set prompt and window title format
 promptchars='%#'
 shellinfo='$(dirs)'
-PS1='$(eval echo "\"${bold}${promptstring}${normal}\"")'
+PS1='$(eval echo "\"%B${promptstring}%b\"")'
 
 # set non-alphanumeric characters that constitute a word
 # (remove / so Alt-Backspace deletes only one path component)
