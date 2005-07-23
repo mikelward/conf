@@ -329,17 +329,25 @@ export FIGNORE=
 export GREP_COLOR=1
 export LESS=-eFj3MRX
 test -n "$TABSIZE" && export LESS="${LESS}x${TABSIZE}"
-export LSCOLORS='exfxcxcxbxdxdx'
-export LS_COLORS='no=00:fi=00:di=00;34:ln=00;35:or=07;35:so=00;32:pi=00;32:ex=00;32:bd=00;33:cd=00;33:'
+case "$TERM" in
+xterm*)
+    # colors for black on white
+    export LSCOLORS='exbxcxcxfxcxcx'
+    export LS_COLORS='no=00:fi=00:di=00;34:ln=00;31:or=07;32:so=00;32:pi=00;32:ex=00;35:bd=00;32:cd=00;32:'
+    ;;
+*)
+    # colors for white on black
+    export LSCOLORS='exgxfxfxcxfxfx'
+    export LS_COLORS='no=00:fi=00:di=00;34:ln=00;36:or=07;36:so=00;35:pi=00;35:ex=00;32:bd=00;35:cd=00;35:'
+    ;;
+esac
 if exists dircolors
 then
     if test -f "$HOME/.dircolors.$TERM"
     then
-        echo "Reading colors from $HOME/.dircolors.$TERM"
         eval $(dircolors "$HOME/.dircolors.$TERM")
     elif test -f "$HOME/.dircolors"
     then
-        echo "Reading colors from $HOME/.dircolors"
         eval $(dircolors "$HOME/.dircolors")
     fi
 fi
