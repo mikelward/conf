@@ -333,7 +333,7 @@ case "$TERM" in
 xterm*)
     # colors for black on white
     export LSCOLORS='exbxcxcxfxcxcx'
-    export LS_COLORS='no=00:fi=00:di=00;34:ln=00;31:or=07;32:so=00;32:pi=00;32:ex=00;35:bd=00;32:cd=00;32:'
+    export LS_COLORS='no=00:fi=00:di=00;34:ln=00;31:or=07;31:so=00;32:pi=00;32:ex=00;35:bd=00;32:cd=00;32:'
     ;;
 *)
     # colors for white on black
