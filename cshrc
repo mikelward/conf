@@ -139,6 +139,21 @@ if ( $?prompt ) then
 		setenv INPUTRC ~/.inputrc
 	endif
 
+	# determine the graphics mode escape sequences
+	if ( { which tput } ) >& /dev/null then
+		set bold="`tput bold`"
+		set underline="`tput smul`"
+		set normal="`tput sgr0`"
+		set black="`tput setaf 0`"
+		set red="`tput setaf 1`"
+		set green="`tput setaf 2`"
+		set yellow="`tput setaf 3`"
+		set blue="`tput setaf 4`"
+		set magenta="`tput setaf 5`"
+		set cyan="`tput setaf 6`"
+		set white="`tput setaf 7`"
+	endif
+
         # set preferred program options
 	setenv CLICOLOR true
 	setenv GREP_COLOR 1
