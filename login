@@ -16,7 +16,7 @@ if ( { tty } ) >& /dev/null then
 
     # obtain SSH credentials
     if ( { which ssh-add } && ! { ssh-add -l ) >& /dev/null then
-        ssh-add < /dev/null
+        ssh-add
     endif
 
     # obtain Kerberos credentials

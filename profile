@@ -26,7 +26,7 @@ then
     then
         if exists ssh-add && ! quiet ssh-add -l
         then
-            ssh-add </dev/null
+            ssh-add
         fi
     fi
 
