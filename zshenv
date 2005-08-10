@@ -1,80 +1,12 @@
 # -*- mode: sh -*-
 # $Id$
 #
-# Z Shell interactive startup commands
+# Z Shell common startup commands
 #
 # This script contains zsh-specific customizations and enhancements
-# for interactive sessions.
+# for all sessions.
 # Common POSIX-compatible functions and settings are included from
 # .shrc.
-
-precmd()
-{
-    command=$0
-
-    # set the window title
-    [[ -t 1 ]] && eval settitle "\"$title\""
-}
-
-preexec()
-{
-    # get the canonical name of the command just invoked
-    case $1 in
-        # resuming an existing job
-        fg*|%*)
-            local spec
-            spec=${1#fg}
-            case $spec in
-            [0-9]*)
-                # process identifier
-                command=$(ps -o comm= -p $spec)
-                ;;
-            *)
-                # job identifier
-                # normalise %, %+, and %% to +, otherwise just strip %
-                spec=$(echo $spec | sed -e 's/^%%\?//')
-                spec=${spec:-+}
-                case $spec in
-                +|-)
-                    # find job number from zsh's $jobstates array
-                    local i=0
-                    for jobstate in $jobstates
-                    do
-                        i=$(($i+1))
-                        echo $jobstate | IFS=: read state mark pidstate
-                        if test "$mark" = "$spec"
-                        then
-                            job=$i
-                            break
-                        fi
-                    done
-                    command=$jobtexts[$job]
-                    ;;
-                \?*)
-                    # job string search unsupported
-                    command=unknown
-                    ;;
-                *)
-                    command=$jobtexts[$spec]
-                    ;;
-                esac
-                ;;
-            esac
-            ;;
-        # executing a new command
-        *)
-            command=$1
-            ;;
-    esac
-
-    # set the window title
-    [[ -t 1 ]] && eval settitle "\"$title\""
-}
-
-settitle()
-{
-    test -n "$titlestart" && print -Pn "${titlestart}$*${titlefinish}"
-}
 
 # read the common environment for all POSIX shells
 # (must be a function so the emulate command only affects the
@@ -92,24 +24,6 @@ source_common_commands()
 }
 
 source_common_commands
-
-# set prompt and window title format
-promptchars='%#'
-shellinfo='$(dirs)'
-PS1='$(eval echo "\"%B${promptstring}%b\"")'
-
-# set non-alphanumeric characters that constitute a word
-# (remove / so Alt-Backspace deletes only one path component)
-# (remove <>& so redirection not part of path)
-# (remove ; so command list separator not part of word)
-#WORDCHARS=
-WORDCHARS="`echo $WORDCHARS | sed -e 's/[/<>&;]\+//'`"
-
-# set key bindings
-bindkey -e
-bindkey '^X?' expand-cmd-path
-bindkey '^[p' history-beginning-search-backward
-bindkey '^[n' history-beginning-search-forward
 
 # enable some options originally from csh
 setopt banghist
@@ -140,18 +54,4 @@ setopt magicequalsubst
 setopt numericglobsort
 setopt nullglob
 setopt promptpercent
-
-# set command completions
-compctl -a {,un}alias
-compctl -b bindkey
-compctl -/ {c,push,pop}d
-compctl -E {print,set,unset}env
-compctl -c exec
-compctl -j fg
-compctl -j kill
-compctl -c man
-compctl -u {ch}own
-compctl -o {set,unset}opt
-compctl -c {whence,where,which}
-compctl -M '' 'm:{a-zA-Z}={A-Za-z}'
 
