@@ -45,6 +45,9 @@
 ;; Add a binding to go to a specified line number
 (global-set-key "\C-xg" 'goto-line)
 
+;; Make Return place point at the appropriate indentation level
+(global-set-key "\C-m" 'newline-and-indent)
+
 ;; Add a binding to kill the current buffer
 (global-set-key "\C-x\C-k" 'kill-this-buffer)
 
@@ -75,6 +78,12 @@
           '(lambda ()
              (setq font-lock-maximum-decoration nil)))
 
+;; Make variants of word motion functions that are more typical
+(defun my-forward-word () (interactive) (forward-word 2) (backward-word 1))
+(defun my-backward-word ())
+(defun my-kill-word ())
+(defun my-backward-kill-word ())
+
 ;; Load any local customisations
-(if (file-exists-p "~/.emacs.local")
-    (load "~/.emacs.local"))
+(if (file-exists-p "~/.emacs.local") (load "~/.emacs.local"))
+
