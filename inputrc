@@ -1,8 +1,10 @@
 # $Id$
 # Readline configuration
 
+# include the system-wide defaults
 $include /etc/inputrc
 
+# general settings
 set bell-style visible
 set completion-ignore-case on
 set horizontal-scroll-mode on
@@ -12,26 +14,19 @@ set print-completions-horizontally on
 set show-all-if-ambiguous on
 set visible-stats on
 
+# use vi mode by default
 #set editing-mode emacs
 set editing-mode vi
 
+# emacs mode customizations
 $if mode=emacs
-"\C-a": beginning-of-line
-"\C-b": backward-char
-"\C-d": delete-char
-"\C-e": end-of-line
-"\C-f": forward-char
-"\C-i": complete
-"\C-k": kill-line
-"\C-u": kill-whole-line
-"\e\C-?": backward-kill-word
 "\eb": backward-word
-"\ed": kill-word
 "\ef": forward-word
 "\ep": history-search-backward
 "\en": history-search-forward
 $endif
 
+# function and editing keys
 "\e[1~": beginning-of-line
 "\e[4~": end-of-line
 "\e[3~": delete-char
