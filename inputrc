@@ -12,7 +12,8 @@ set print-completions-horizontally on
 set show-all-if-ambiguous on
 set visible-stats on
 
-set editing-mode emacs
+#set editing-mode emacs
+set editing-mode vi
 
 $if mode=emacs
 "\C-a": beginning-of-line

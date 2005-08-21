@@ -86,7 +86,7 @@ PS1='$(eval echo "\"%B${promptstring}%b\"")'
 #WORDCHARS="`echo $WORDCHARS | sed -e 's/[/<>&;]\+//'`"
 
 # set key bindings
-bindkey -e
+bindkey -v
 bindkey -M emacs '^[b' emacs-backward-word
 bindkey -M emacs '^[f' emacs-forward-word
 bindkey -M emacs '^[p' history-beginning-search-backward
