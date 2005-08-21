@@ -40,14 +40,16 @@ set backupext=~	" backup files end in ~
 
 " EDITING OPTIONS
 set autoindent	" new line inherits previous line's indentation level
-set backspace=2	" backspaces can go over lines
 set copyindent	" new line inherits previous line's indentation style
-set esckeys	" allow arrow keys in insert mode
-set noerrorbells visualbell	" flash screen instead of ringing bell
 set preserveindent	" current line maintains existing indentation style
 set shiftround	" manual shift aligns on columns
+set smartindent	" indentation level automatically controlled
+inoremap # X<BS>#	" allow # character at current indentation level
+
+set backspace=2	" backspaces can go over lines
+set esckeys	" allow arrow keys in insert mode
+set noerrorbells visualbell	" flash screen instead of ringing bell
 set showmatch	" show matching brackets
-set shiftround	" indentation aligns on columns
 set showbreak=+	" specially mark continued lines with a plus
 
 " SEARCH OPTIONS
