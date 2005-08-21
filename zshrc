@@ -84,13 +84,15 @@ PS1='$(eval echo "\"%B${promptstring}%b\"")'
 # (remove <>& so redirection not part of path)
 # (remove ; so command list separator not part of word)
 #WORDCHARS=
-WORDCHARS="`echo $WORDCHARS | sed -e 's/[/<>&;]\+//'`"
+#WORDCHARS="`echo $WORDCHARS | sed -e 's/[/<>&;]\+//'`"
 
 # set key bindings
 bindkey -e
-bindkey '^X?' expand-cmd-path
-bindkey '^[p' history-beginning-search-backward
-bindkey '^[n' history-beginning-search-forward
+bindkey -M emacs '^[b' emacs-backward-word
+bindkey -M emacs '^[f' emacs-forward-word
+bindkey -M emacs '^[p' history-beginning-search-backward
+bindkey -M emacs '^[n' history-beginning-search-forward
+bindkey -M emacs '^X?' expand-cmd-path
 
 # set command completions
 compctl -a {,un}alias
