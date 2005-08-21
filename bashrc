@@ -1,4 +1,3 @@
-# -*- mode: sh -*-
 # $Id$
 #
 # Bourne Again Shell startup commands
@@ -165,3 +164,4 @@ case $- in *i*)
     ;;
 esac
 
+# vi: set sw=8:

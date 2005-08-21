@@ -1,4 +1,3 @@
-# -*- mode: sh -*-
 # $Id$
 #
 # POSIX shell login session startup commands
@@ -43,3 +42,4 @@ test -f "$HOME"/.exitrc && trap ". $HOME/.exitrc" EXIT
 # read local commands
 test -f "$HOME"/.profile.local && . "$HOME"/.profile.local
 
+# vi: set sw=4 ts=33:

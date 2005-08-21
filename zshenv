@@ -1,4 +1,3 @@
-# -*- mode: sh -*-
 # $Id$
 #
 # Z Shell common startup commands
@@ -55,3 +54,4 @@ setopt numericglobsort
 setopt nullglob
 setopt promptpercent
 
+# vi: set sw=4 ts=33:

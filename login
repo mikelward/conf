@@ -1,4 +1,5 @@
 # $Id$
+#
 # C Shell login session startup commands
 
 # set environment script in case a Bourne-like shell is invoked within csh
@@ -31,3 +32,4 @@ if ( -r ~/.login.local ) then
     source ~/.login.local
 endif
 
+# vi: set sw=4 ts=33:

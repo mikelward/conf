@@ -1,4 +1,3 @@
-# -*- mode: sh -*-
 # $Id: zshenv 174 2005-07-23 04:53:33Z michael $
 #
 # Z Shell interactive startup commands

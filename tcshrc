@@ -1,116 +1,117 @@
-# -*- mode: sh -*-
 # $Id$
 # TCSH startup commands
 
 # source the startup commands common to csh
 if ( -r ~/.cshrc ) then
-	source ~/.cshrc
+    source ~/.cshrc
 endif
 
 # set environment for interactive sessions
 if ( $?prompt ) then
-	# set shell options
-	set addsuffix
-	set autoexpand
-	set autolist
-	set complete
-	set correct=cmd
-	set ellipsis
-	set fignore=()
-	unset ignoreeof
-	set listjobs
-	set symlinks=ignore
-	set visiblebell
+    # set shell options
+    set addsuffix
+    set autoexpand
+    set autolist
+    set complete
+    set correct=cmd
+    set ellipsis
+    set fignore=()
+    unset ignoreeof
+    set listjobs
+    set symlinks=ignore
+    set visiblebell
 
-	# set key bindings
-	bindkey -e
-	bindkey '' i-search-back
-	bindkey '' i-search-fwd
+    # set key bindings
+    bindkey -e
+    bindkey '' i-search-back
+    bindkey '' i-search-fwd
 
-	# set command completions
-	complete alias		'p/1/a/' 'p/2/c/'
-	complete {un}alias	'C/*/a/'
-	complete bindkey	'C/*/b/'
-	complete {c,push,pop}d	'C/*/d/'
-	complete {cc,gcc,xlc}	'c/-I/d/' 'n/-I/d/' 'C/*/f:*.c/'
-	complete {CC,g++,xlC}	'c/-I/d/' 'n/-I/d/' 'C/*/f:*.{c,cc,cpp,cxx,c++,C}/'
-	complete {,un}complete	'C/*/X/'
-	complete {print}env	'C/*/e/'
-	complete {set}env	'n/{LANG,LC_*}/`locale -a`/' 'C/*/e/'
-	complete {unset}env	'C/*/e/'
-	complete exec		'C/*/c/'
-	complete fg		'c/%/j/'
-	complete find		'p/1/d/' 'n/-user/u/' 'n/-group/g/' 'n/-exec/c/'
-	complete gpasswd	'n/-a/u/' 'n/-d/u/' 'C/*/g/'
-	complete group{del}	'C/*/g/'
-	complete {ch}grp	'p/1/g/'
-	complete {new}grp	'C/*/g/'
-	complete java		'C/*/f:*.class/'
-	complete javac		'c/-d/d/' 'c/@/f/' 'C/*/f:*.java/'
-	complete kill		'c/%/j/' 'c/-/S/'
-	complete {,un}limit	'C/*/l/'
-	complete man		'C/./f/' 'C/*/c/'
-	complete nice		'p/1/c/'
-	complete nohup		'p/1/c/'
-	complete notify		'c/%/j/'
-	complete {ch}own	'p/1/u/'
-	complete {,un}set	'C/*/s/'
-	complete stop		'c/%/j/'
-	complete strace		'p/1/c/'
-	complete sudo		'n/-u/u/' 'p/1/c/'
-	complete time		'p/1/c/'
-	complete user{del}	'C/*/u/'
-	complete where		'C/*/c/'
-	complete which		'C/*/c/'
+    # set command completions
+    complete alias               'p/1/a/' 'p/2/c/'
+    complete {un}alias           'C/*/a/'
+    complete bindkey             'C/*/b/'
+    complete {c,push,pop}d       'C/*/d/'
+    complete {cc,gcc,xlc}        'c/-I/d/' 'n/-I/d/' 'C/*/f:*.c/'
+    complete {CC,g++,xlC}        'c/-I/d/' 'n/-I/d/' 'C/*/f:*.{c,cc,cpp,cxx,c++,C}/'
+    complete {,un}complete       'C/*/X/'
+    complete {print}env          'C/*/e/'
+    complete {set}env            'n/{LANG,LC_*}/`locale -a`/' 'C/*/e/'
+    complete {unset}env          'C/*/e/'
+    complete exec                'C/*/c/'
+    complete fg                  'c/%/j/'
+    complete find                'p/1/d/' 'n/-user/u/' 'n/-group/g/' 'n/-exec/c/'
+    complete gpasswd             'n/-a/u/' 'n/-d/u/' 'C/*/g/'
+    complete group{del}          'C/*/g/'
+    complete {ch}grp             'p/1/g/'
+    complete {new}grp            'C/*/g/'
+    complete java                'C/*/f:*.class/'
+    complete javac               'c/-d/d/' 'c/@/f/' 'C/*/f:*.java/'
+    complete kill                'c/%/j/' 'c/-/S/'
+    complete {,un}limit          'C/*/l/'
+    complete man                 'C/./f/' 'C/*/c/'
+    complete nice                'p/1/c/'
+    complete nohup               'p/1/c/'
+    complete notify              'c/%/j/'
+    complete {ch}own             'p/1/u/'
+    complete {,un}set            'C/*/s/'
+    complete stop                'c/%/j/'
+    complete strace              'p/1/c/'
+    complete sudo                'n/-u/u/' 'p/1/c/'
+    complete time                'p/1/c/'
+    complete user{del}           'C/*/u/'
+    complete where               'C/*/c/'
+    complete which               'C/*/c/'
 
-	setenv HOST `hostname`
-	setenv TTY `tty`
-	setenv USER `whoami`
-	if ( $?TERM ) then
-                # set the format for titles and prompts
-                set connectioninfo='${HOST:ar} ${USER}'
-                set commandinfo='\!#'
-                set shellinfo='${PWD}'
-		set title="${connectioninfo} $0"
-                set commandtitle="${connectioninfo} '\!#'"
+    setenv HOST `hostname`
+    setenv TTY `tty`
+    setenv USER `whoami`
 
-                # set the window title on supported terminals
-		switch ( $TERM )
-		case "aixterm":
-		case "dtterm":
-		case "putty":
-		case "rxvt":
-		case "xterm*":
-			set titlestart="]0;"
-			set titlefinish=""
-			breaksw
-		case "screen*":
-			set titlestart="_"
-			set titlefinish="\\"
-			breaksw
-		case "cygwin":
-			set titlestart="];"
-			set titlefinish=""
-			breaksw
-		default:
-			set titlestart=""
-			set titlefinish=""
-			breaksw
-		endsw
-                if ( $?titlestart ) then
-                        alias settitle echo -n '${titlestart}\!*${titlefinish}'
-                else
-                        alias settitle ''
-                endif
-		if ( $?titlestart ) then
-			alias precmd eval settitle '$title'
-                        #alias postcmd eval settitle '$commandtitle'
-		endif
-
-                # set the prompt
-                set promptchars="%#"
-                set prompt="%# "
-	endif
+    # set the prompt
+    set promptchars="%#"
+    set prompt="%# "
 endif
 
+# enhancements for various terminals
+if ( $?TERM ) then
+    # set the format for titles and prompts
+    set connectioninfo='${HOST:ar} ${USER}'
+    set commandinfo='\!#'
+    set shellinfo='${PWD}'
+    set title="${connectioninfo} $0"
+    set commandtitle="${connectioninfo} '\!#'"
 
+    # set the window title on supported terminals
+    switch ( $TERM )
+    case "aixterm":
+    case "dtterm":
+    case "putty":
+    case "rxvt":
+    case "xterm*":
+        set titlestart="]0;"
+        set titlefinish=""
+        breaksw
+    case "screen*":
+        set titlestart="_"
+        set titlefinish="\\"
+        breaksw
+    case "cygwin":
+        set titlestart="];"
+        set titlefinish=""
+        breaksw
+    default:
+        set titlestart=""
+        set titlefinish=""
+        breaksw
+    endsw
+    if ( $?titlestart ) then
+        alias settitle echo -n '${titlestart}\!*${titlefinish}'
+    else
+        alias settitle ''
+    endif
+    if ( $?titlestart ) then
+        alias precmd eval settitle '$title'
+        #alias postcmd eval settitle '$commandtitle'
+    endif
+endif
+
+# vi: set sw=4 ts=33:

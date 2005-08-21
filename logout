@@ -1,9 +1,10 @@
 # $Id$
+#
 # C Shell login session shutdown commands
 
 # kill ssh-agent
 if ( $?SSH_AGENT_PID ) then
-	ssh-agent -k
+    ssh-agent -k
 endif
 
 # clear the screen
@@ -11,6 +12,7 @@ clear
 
 # read local settings (company environment, etc.)
 if ( -r ~/.logout.local ) then
-	source ~/.logout.local
+    source ~/.logout.local
 endif
 
+# vi: set sw=4 ts=33:

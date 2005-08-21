@@ -1,4 +1,3 @@
-# -*- mode: sh -*-
 # $Id$
 #
 # POSIX shell startup commands
@@ -366,7 +365,7 @@ then
     commandinfo='${command%% *}'
     shellinfo='${PWD}'
     promptchars='$(eval test "${UID}" -eq 0 && echo \# || echo \$)'
-promptstring='
+    promptstring='
 $(eval echo "${connectioninfo} ${shellinfo}")
 $(eval echo "${promptchars}") '
     title='$(eval echo "${connectioninfo} ${commandinfo}")'
@@ -383,3 +382,4 @@ test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
 # apply the user's settings for prompt, title, etc.
 PS1='$(eval settitle "\"${title}\"")''$(eval echo "\"${bold}${promptstring}${normal}\"")'
 
+# vi: set sw=4 ts=33:

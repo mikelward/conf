@@ -1,4 +1,3 @@
-# -*- mode: sh -*-
 # $Id$
 #
 # Bourne Again Shell login session startup commands
@@ -13,3 +12,4 @@ test -n "$BASH_ENV" && . "$BASH_ENV"
 # read login commands
 test -f "$HOME"/.profile && . "$HOME"/.profile
 
+# vi: set sw=4 ts=33:
