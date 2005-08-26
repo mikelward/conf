@@ -22,9 +22,9 @@ if ( $?prompt ) then
     set visiblebell
 
     # set key bindings
-    bindkey -v
-    #bindkey '' i-search-back
-    #bindkey '' i-search-fwd
+    bindkey -e
+    bindkey '' i-search-back
+    bindkey '' i-search-fwd
 
     # set command completions
     complete alias               'p/1/a/' 'p/2/c/'

@@ -372,8 +372,7 @@ $(eval echo "${promptchars}") '
 
     # set command line editing key bindings
     # this must be after the EDITOR and VISUAL settings
-    #set -o emacs 2>/dev/null
-    set -o vi 2>/dev/null
+    set -o emacs 2>/dev/null
 fi
 
 ### LAST COMMANDS
