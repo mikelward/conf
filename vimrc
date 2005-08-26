@@ -44,7 +44,8 @@ set copyindent	" new line inherits previous line's indentation style
 set preserveindent	" current line maintains existing indentation style
 set shiftround	" manual shift aligns on columns
 set smartindent	" indentation level automatically controlled
-inoremap # X<BS>#	" allow # character at current indentation level
+" allow # character at current indentation level (must appear on own line)
+inoremap # X<BS>#
 
 set backspace=2	" backspaces can go over lines
 set esckeys	" allow arrow keys in insert mode
