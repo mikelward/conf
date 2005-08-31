@@ -33,6 +33,7 @@ setopt histreduceblanks
 setopt noksharrays
 
 # set some options originally from ksh
+unsetopt bareglobqual
 setopt checkjobs
 setopt interactivecomments
 setopt kshglob
