@@ -8,6 +8,13 @@
 # read environment
 test -f "$HOME"/.shrc && export ENV="$HOME"/.shrc
 
+# interactive commands
+if exists tty && quiet tty
+then
+    # disable flow control so applications can use ^Q and ^S
+    exists stty && stty -ixon
+fi
+
 # set a script that will be sourced on exiting the shell
 test -f "$HOME"/.exitrc && trap ". $HOME/.exitrc" EXIT
 
