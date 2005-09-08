@@ -156,7 +156,7 @@ do
     test -d "$dir" && addpath "$dir" start
 done
 # add standard locations if they're not there
-for dir in /usr/bin/X11 /usr/bin /bin
+for dir in /usr/bin/X11 /usr/bin /bin /usr/sbin /sbin
 do
     test -d "$dir" && addpath "$dir"
 done
