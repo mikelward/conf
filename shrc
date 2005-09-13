@@ -218,7 +218,7 @@ then
     alias l.='l -d .*'
     alias la='l -A'
     alias ll='l -l'
-    alias lt='l -t'
+    alias lt='l -lt'
     alias j='jobs'
     alias nohup='nohup '
     alias pd='pushd'
