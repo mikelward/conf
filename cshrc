@@ -57,7 +57,7 @@ endif
 
 # set directories to search for commands
 # add directories to look in first (unless already present)
-foreach d ( /usr/X11R6/bin /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin ~/bin )
+foreach d ( /opt/*/bin /usr/X11R6/bin /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin ~/bin )
     if ( -d $d ) then
         foreach p ( $path )
             # advance to next top level directory
@@ -68,16 +68,6 @@ foreach d ( /usr/X11R6/bin /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/lo
 end
 # add directories to look in last (unless already present)
 foreach d ( /usr/bin /bin )
-    if ( -d $d ) then
-        foreach p ( $path )
-            # this directory already present, skip it
-            if ( $d == $p ) break; continue
-        end
-        set path=( $path $d )
-    endif
-end
-# add optional locations at end
-foreach d ( /opt/*/bin )
     if ( -d $d ) then
         foreach p ( $path )
             # this directory already present, skip it
@@ -99,7 +89,7 @@ set path=( $path . )
 if ( ! $?INFOPATH ) then
     setenv INFOPATH /usr/share/info:/usr/info
 endif
-foreach dir ( /opt/freeware/info /usr/local/share/info /usr/local/info $HOME/info )
+foreach dir ( /opt/*/info /usr/local/share/info /usr/local/info $HOME/info )
     if ( -d $dir ) then
         setenv INFOPATH ${dir}:${INFOPATH}
     endif
@@ -107,7 +97,7 @@ end
 if ( ! $?MANPATH ) then
     setenv MANPATH /usr/share/man:/usr/man
 endif
-foreach dir ( /opt/freeware/man /usr/local/share/man /usr/local/man $HOME/man )
+foreach dir ( /opt/*/man /usr/local/share/man /usr/local/man $HOME/man )
     if ( -d $dir ) then
         setenv MANPATH ${dir}:${MANPATH}
     endif
