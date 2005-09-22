@@ -253,9 +253,9 @@ latest()
 }
 
 # make with an automatic log and pager
-make()
+m()
 {
-    command make "$@" 2>&1 | tee make.log
+    command make "$@" 2>&1 1>&- 1>make.log | tee -a make.log
 }
 
 # search for a pattern in text files in a directory tree
