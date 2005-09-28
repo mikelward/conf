@@ -34,6 +34,10 @@ if has("syntax")
     syntax on	" use syntax highlighting if available
 endif
 
+if &term == "putty"
+    set background=dark	" PuTTY has a black background by default
+endif
+
 " SAVING OPTIONS
 set backupext=~	" backup files end in ~
 
