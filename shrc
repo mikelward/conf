@@ -214,6 +214,7 @@ then
     alias cx='chmod +x'
     alias g='egrep'
     alias h='history'
+    alias hup='kill -HUP'
     alias l='ls'
     alias l.='l -d .*'
     alias la='l -A'
