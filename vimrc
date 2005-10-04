@@ -42,11 +42,9 @@ endif
 set backupext=~	" backup files end in ~
 
 " EDITING OPTIONS
-set autoindent	" new line inherits previous line's indentation level
-"set copyindent	" new line inherits previous line's indentation style
-"set preserveindent	" current line maintains existing indentation style
-set shiftround	" manual shift aligns on columns
+set autoindent	" indentation level automatically controlled
 set smartindent	" indentation level automatically controlled
+set shiftround	" manual shift aligns on columns
 " allow # character at current indentation level (must appear on own line)
 inoremap # X<BS>#
 
