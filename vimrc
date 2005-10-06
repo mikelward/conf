@@ -25,7 +25,7 @@ set notitle	" don't change terminal's title
 set laststatus=2	" always show status line for each window
 set showmode	" always show command or insert mode
 set shortmess=aoOtTI	" brief messages, no ENTER to continue, no intro
-set nowrap	" don't wrap long lines
+set wrap	" wrap long lines
 if has("cmdline_info")
     set showcmd	" show partial commands
     set ruler	" show line and column information
