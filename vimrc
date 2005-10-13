@@ -18,7 +18,7 @@ set modeline	" use settings from file being edited
 set wildmode=list	" filename completion lists when ambiguous
 
 " DISPLAY OPTIONS
-set listchars=extends:>,precedes:<,tab:>-,trail:-
+set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
 set more	" use a pager for long listings
 set nonumber	" don't show line numbers
 set notitle	" don't change terminal's title
