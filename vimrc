@@ -37,6 +37,9 @@ endif
 if &term == "putty"
     set background=dark	" PuTTY has a black background by default
 endif
+if &term == "cygwin"
+    set background=dark	" Cygwin has a black background by default
+endif
 
 " SAVING OPTIONS
 set backupext=~	" backup files end in ~
