@@ -360,7 +360,8 @@ then
     command=$0
     commandinfo='${command%% *}'
     shellinfo='${PWD}'
-    promptchars='$(eval test "${UID}" -eq 0 && echo \# || echo \$)'
+    promptchars='$(if test "${UID}" -eq 0; then echo \#; else echo \$; fi)'
+    #promptchars='$(false; if test "$?" -ne "0"; then echo \*; else echo \$; fi)'
     promptstring='
 $(eval echo "${connectioninfo} ${shellinfo}")
 $(eval echo "${promptchars}") '

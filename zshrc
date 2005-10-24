@@ -74,7 +74,8 @@ settitle()
 }
 
 # set prompt and window title format
-promptchars='%#'
+#promptchars='%#'
+promptchars='$(echo "%(0?.>.*)")'
 shellinfo='$(dirs)'
 PS1='$(eval echo "\"%B${promptstring}%b\"")'
 
