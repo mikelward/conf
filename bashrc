@@ -116,7 +116,7 @@ whence()
 # set the prompt and window title
 shellinfo='$(dirs)'
 PS1='$(eval echo "\"${bold}${promptstring}${normal}\"")'
-PROMPT_COMMAND='eval settitle "\"${title}\""'
+PROMPT_COMMAND='laststatus="$?"; eval settitle "\"${title}\""'
 
 # set environment for interactive sessions
 case $- in *i*)

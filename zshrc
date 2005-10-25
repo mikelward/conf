@@ -7,6 +7,10 @@
 
 precmd()
 {
+    # store the status of the previous interactive command for use in the prompt
+    laststatus=$?
+
+    # the currently running foreground job is the shell
     command=$0
 
     # set the window title
@@ -74,8 +78,6 @@ settitle()
 }
 
 # set prompt and window title format
-#promptchars='%#'
-promptchars='$(echo "%(0?.>.*)")'
 shellinfo='$(dirs)'
 PS1='$(eval echo "\"%B${promptstring}%b\"")'
 
