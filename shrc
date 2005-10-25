@@ -362,8 +362,11 @@ then
     shellinfo='${PWD}'
     promptchars='$(if test "${UID}" -eq 0; then echo \#; else echo \$; fi)'
     #promptchars='$(false; if test "$?" -ne "0"; then echo \*; else echo \$; fi)'
+    #promptstring='
+#$(eval echo "${connectioninfo} ${shellinfo}")
+#$(eval echo "${promptchars}") '
     promptstring='
-$(eval echo "${connectioninfo} ${shellinfo}")
+$(eval echo "${shellinfo}")
 $(eval echo "${promptchars}") '
     title='$(eval echo "${connectioninfo} ${commandinfo}")'
 
