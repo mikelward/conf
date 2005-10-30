@@ -21,4 +21,7 @@ test -f "$HOME"/.exitrc && trap ". $HOME/.exitrc" EXIT
 # read local commands
 test -f "$HOME"/.profile.local && . "$HOME"/.profile.local
 
+# finish with a zero exit status
+true
+
 # vi: set sw=4 ts=33:
