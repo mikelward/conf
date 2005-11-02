@@ -154,6 +154,7 @@ if ( $?prompt ) then
     setenv LESS "${LESS}x${TABSIZE}"
     endif
     setenv TOP -I
+    setenv WWW_HOME "http://endbracket.net/michael/links"
 
     # set shell options for interactive sessions
     set cdpath=( . ~ )
