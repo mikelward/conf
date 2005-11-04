@@ -78,7 +78,7 @@ settitle()
 }
 
 # set prompt and window title format
-shellinfo='$(dirs)'
+shellinfo='$(dirs -l)'
 PS1='$(eval echo "\"%B${promptstring}%b\"")'
 
 # set non-alphanumeric characters that constitute a word

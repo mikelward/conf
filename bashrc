@@ -114,7 +114,7 @@ whence()
 }
 
 # set the prompt and window title
-shellinfo='$(dirs)'
+shellinfo='$(dirs -l)'
 PROMPT_COMMAND='laststatus="$?"; eval settitle "\"${title}\""'
 PS1='$(eval echo "\"${bold}${promptstring}${normal}\"")'
 
