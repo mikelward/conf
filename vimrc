@@ -58,6 +58,7 @@ set showmatch	" show matching brackets
 set showbreak=+	" specially mark continued lines with a plus
 
 " SEARCH OPTIONS
+set ignorecase	" case is unimportant in search terms
 set tags+=./tags;/	" search up the tree for tags files
 
 " BINARY EDITING
