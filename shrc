@@ -233,11 +233,11 @@ then
     then
         alias grep='grep --color=auto'
     fi
-    if quiet ls --color=auto --format=across --directory /
+    if quiet ls --format=single-column --classify --color=auto --directory /
     then
-        alias ls='ls --color=auto --format=across'
+        alias ls='ls --format=single-column --classify --color=auto'
     else
-        alias ls='ls -x'
+        alias ls='ls -1F'
     fi
 fi
 

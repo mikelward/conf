@@ -50,10 +50,10 @@ unalias vim
 if ( { grep --color=auto --quiet "" ~/.cshrc } ) >&/dev/null then
     alias grep	'grep --color=auto'
 endif
-if ( { ls --color=auto --format=across --directory / } ) >&/dev/null then
-    alias ls	'ls --color=auto --format=across'
+if ( { ls --color=auto --format=single-column --directory / } ) >&/dev/null then
+    alias ls	'ls --color=auto --classify --format=single-column'
 else
-    alias ls	'ls -x'
+    alias ls	'ls -1F'
 endif
 
 # set directories to search for commands
