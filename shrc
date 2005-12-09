@@ -60,6 +60,7 @@ delpath()
     typeset dirs
 
     eval dirs=\$$var
+    path=
     for d in $dirs
     do
         test "${d:-.}" = "${dir:-.}" && continue
