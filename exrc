@@ -3,6 +3,6 @@
 
 :set autoindent
 :set shiftwidth=4
-:set tabstop=33
+:set tabstop=4
 :set showmatch
 :set showmode

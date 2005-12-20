@@ -57,11 +57,12 @@ set noerrorbells visualbell	" flash screen instead of ringing bell
 set showmatch	" show matching brackets
 set showbreak=+	" specially mark continued lines with a plus
 
-" SEARCH OPTIONS
-set ignorecase	" case is unimportant in search terms
-set tags+=./tags;/	" search up the tree for tags files
+" FILE TYPES
+filetype on	" enable per-user file type customizations
+filetype plugin on
+filetype indent on
 
-" BINARY EDITING
+" edit binary files in binary mode using the output of xxd
 augroup Binary
     au!
     au BufReadPre  *.bin,*.exe.*.jpg,*.pcx let &bin=1
@@ -72,5 +73,9 @@ augroup Binary
     au BufWritePost *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd
     au BufWritePost *.bin,*.exe.*.jpg,*.pcx set nomod | endif
 augroup END
+
+" SEARCH OPTIONS
+set ignorecase	" case is unimportant in search terms
+set tags+=./tags;/	" search up the tree for tags files
 
 " vi: set sw=4 ts=33:
