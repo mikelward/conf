@@ -4,8 +4,8 @@
 
 " COMMON OPTIONS
 " read common startup commands for all Vi implementations
-if filereadable(expand("$HOME/.vimrc"))
-    source $HOME/.exrc
+if filereadable(expand("~/.exrc"))
+    source ~/.exrc
 end
 
 " DEFAULT OPTIONS
@@ -77,5 +77,10 @@ augroup END
 " SEARCH OPTIONS
 set ignorecase	" case is unimportant in search terms
 set tags+=./tags;/	" search up the tree for tags files
+
+" LOCAL CUSTOMIZATIONS
+if filereadable(expand("~/.vimrc.local"))
+    source ~/.vimrc.local
+endif
 
 " vi: set sw=4 ts=33:
