@@ -85,7 +85,7 @@ PS1='$(eval echo "\"%B${promptstring}%b\"")'
 # (remove / so Alt-Backspace deletes only one path component)
 # (remove <>& so redirection not part of path)
 # (remove ; so command list separator not part of word)
-#WORDCHARS=
+WORDCHARS=
 #WORDCHARS="`echo $WORDCHARS | sed -e 's/[/<>&;]\+//'`"
 
 # set key bindings
