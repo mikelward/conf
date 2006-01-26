@@ -46,6 +46,7 @@ set backupext=~	" backup files end in ~
 
 " EDITING OPTIONS
 set autoindent	" indentation level automatically controlled
+set expandtab	" use spaces rather than tabs for indentation
 set smartindent	" indentation level automatically controlled
 set shiftround	" manual shift aligns on columns
 " allow # character at current indentation level (must appear on own line)
