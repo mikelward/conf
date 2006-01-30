@@ -24,7 +24,7 @@ set nonumber	" don't show line numbers
 set notitle	" don't change terminal's title
 set highlight=sub,Su	" use a simple underline for the status bar
 set laststatus=2	" always show status line for each window
-set statusline=%t                " only show the file name in the status line
+set statusline=%t%m\ %y%=%l,%c	" show the file name and cursor position
 set showmode	" always show command or insert mode
 set shortmess=I	" no intro message
 set wrap	" wrap long lines
