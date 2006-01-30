@@ -22,9 +22,11 @@ set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
 set more	" use a pager for long listings
 set nonumber	" don't show line numbers
 set notitle	" don't change terminal's title
+set highlight=sub,Su	" use a simple underline for the status bar
 set laststatus=2	" always show status line for each window
+set statusline=%t                " only show the file name in the status line
 set showmode	" always show command or insert mode
-set shortmess=aoOtTI	" brief messages, no ENTER to continue, no intro
+set shortmess=I	" no intro message
 set wrap	" wrap long lines
 if has("cmdline_info")
     set showcmd	" show partial commands
@@ -84,4 +86,4 @@ if filereadable(expand("~/.vimrc.local"))
     source ~/.vimrc.local
 endif
 
-" vi: set sw=4 ts=33:
+" vi: set sw=4 ts=33 noet:
