@@ -212,6 +212,7 @@ then
     alias apt='aptitude'
     alias bell='echo "\a"'
     alias cx='chmod +x'
+    alias e='${EDITOR:-vi}'
     alias g='egrep'
     alias h='history'
     alias hup='kill -HUP'
@@ -228,6 +229,7 @@ then
     alias rcslog='rlog'
     alias rdiff='rcsdiff'
     alias sudo='sudo '  # expand aliases after sudo
+    alias v='${VIEWER:-view}'
 
     # set default flags
     if quiet grep --color=auto --quiet "" "$HOME"/.shrc

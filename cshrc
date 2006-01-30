@@ -4,48 +4,6 @@
 # set shell options for all sessions
 set nonomatch
 
-# set command aliases
-alias apt	'aptitude'
-alias bell	'echo "\a"'
-alias cd..	'cd ..'
-alias cx	'chmod +x'
-alias d	'dirs'
-alias e	'emacs'
-alias f	'find . -type f -name \!1 -print \!2* | $PAGER'
-alias g	'egrep'
-alias h	'history'
-alias hup	'kill -HUP'
-alias helpcommand	'man'
-alias j	'jobs -l'
-alias l	'ls'
-alias la	'l -A'
-alias latest	'ls -t -1 \!* | head -n 1'
-alias ll	'l -l'
-alias lt	'l -lt'
-alias m	'(make \!* > make.log) |& tee -a make.log'
-alias p	'$PAGER'
-alias pd	'pushd'
-alias psme	'ps -f -U $USER'
-alias po	'popd'
-alias qfind	'sh -c "find \!* 2> /dev/null | $PAGER"'
-alias rtags	'ctags -R'
-alias retags	'find . \( -name "*.c" -o -name "*.h" \
-	    -o -name "*.a" -o -name "*.s" \
-	    -o -name "*.C" -o -name "*.H" \
-	    -o -name "*.cc" -o -name "*.hh" \
-	    -o -name "*.cpp" -o -name "*.hpp" \
-	    -o -name "*.cxx" -o -name "*.hxx" \
-	    -o -name "*.c++" -o -name "*.h++" \
-	    -o -name "*.l" \
-	    -o -name "*.p" -o -name "*.pas" \
-	    -o -name "*.pl" -o -name "*.pm" \
-	    -o -name "*.py" \
-	    -o -name "*.y" -o -name "*.yy" \) \
-	    -print | etags -'
-alias v	'vi'
-unalias vi
-unalias vim
-
 # set default flags
 if ( { grep --color=auto --quiet "" ~/.cshrc } ) >&/dev/null then
     alias grep	'grep --color=auto'
@@ -165,6 +123,56 @@ if ( $?prompt ) then
     set prompt="% "
     set savehist=(1000 merge)
 endif
+
+# set command aliases
+alias apt	'aptitude'
+alias bell	'echo "\a"'
+alias cd..	'cd ..'
+alias cx	'chmod +x'
+alias d	'dirs'
+if ( $?EDITOR ) then
+    alias e                      '$EDITOR'
+else
+    alias e                      'vi'
+endif
+alias f	'find . -type f -name \!1 -print \!2* | $PAGER'
+alias g	'egrep'
+alias h	'history'
+alias hup	'kill -HUP'
+alias helpcommand	'man'
+alias j	'jobs -l'
+alias l	'ls'
+alias la	'l -A'
+alias latest	'ls -t -1 \!* | head -n 1'
+alias ll	'l -l'
+alias lt	'l -lt'
+alias m	'(make \!* > make.log) |& tee -a make.log'
+alias p	'$PAGER'
+alias pd	'pushd'
+alias psme	'ps -f -U $USER'
+alias po	'popd'
+alias qfind	'sh -c "find \!* 2> /dev/null | $PAGER"'
+alias rtags	'ctags -R'
+alias retags	'find . \( -name "*.c" -o -name "*.h" \
+	    -o -name "*.a" -o -name "*.s" \
+	    -o -name "*.C" -o -name "*.H" \
+	    -o -name "*.cc" -o -name "*.hh" \
+	    -o -name "*.cpp" -o -name "*.hpp" \
+	    -o -name "*.cxx" -o -name "*.hxx" \
+	    -o -name "*.c++" -o -name "*.h++" \
+	    -o -name "*.l" \
+	    -o -name "*.p" -o -name "*.pas" \
+	    -o -name "*.pl" -o -name "*.pm" \
+	    -o -name "*.py" \
+	    -o -name "*.y" -o -name "*.yy" \) \
+	    -print | etags -'
+if ( $?VIEWER ) then
+    alias v                      '$VIEWER'
+else
+    alias v                      'view'
+endif
+unalias vi
+unalias vim
 
 # read local settings (company environment, network, etc.)
 if ( -r ~/.cshrc.local ) then
