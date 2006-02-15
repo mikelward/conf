@@ -363,7 +363,7 @@ then
     command=$0
     commandinfo='${command%% *}'
     shellinfo='${PWD}'
-    promptchars='$(if test "$laststatus" -ne 0; then echo "*"; elif test $UID -eq 0; then echo "#"; else echo ">"; fi)'
+    promptchars='$(if test "$laststatus" -ne 0; then echo "?"; elif test $UID -eq 0; then echo "#"; else echo ">"; fi)'
     promptstring='
 $(eval echo "${shellinfo}")
 $(date +%H:%M)$(eval echo "\"${promptchars}\"") '
