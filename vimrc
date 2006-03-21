@@ -65,6 +65,8 @@ filetype on	" enable per-user file type customizations
 filetype plugin on
 filetype indent on
 
+let is_bash = 1	" use bash syntax for #!/bin/sh files
+
 " edit binary files in binary mode using the output of xxd
 augroup Binary
     au!
