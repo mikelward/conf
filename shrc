@@ -366,7 +366,7 @@ then
     promptchars='$(if test "$laststatus" -ne 0; then echo "?"; elif test $UID -eq 0; then echo "#"; else echo ">"; fi)'
     promptstring='
 $(eval echo "${shellinfo}")
-$(date +%H:%M)$(eval echo "\"${promptchars}\"") '
+$(eval echo "\"${promptchars}\"") '
     title='$(eval echo "${connectioninfo} ${commandinfo}")'
 
     # set command line editing key bindings
