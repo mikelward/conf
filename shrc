@@ -151,7 +151,7 @@ terminit()
 #
 # set directories to search for commands
 # add preferred locations at start
-for dir in /opt/*/bin /usr/X11R6/bin /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
+for dir in /usr/X11R6/bin /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
 do
     test -d "$dir" && addpath "$dir" start
 done
@@ -168,7 +168,7 @@ done
 export PATH
 
 # set directories to search for documentation
-for dir in /opt/*/info /usr/local/share/info /usr/local/info "$HOME"/info
+for dir in /usr/local/share/info /usr/local/info "$HOME"/info
 do
     test -d "$dir" && addpath "$dir" start INFOPATH
 done
@@ -177,7 +177,7 @@ do
     test -d "$dir" && addpath "$dir" end INFOPATH
 done
 export INFOPATH
-for dir in /opt/*/man /usr/X11R6/man /usr/kerberos/man /usr/posix/man /usr/gnu/man /usr/local/share/man /usr/local/man "$HOME"/man
+for dir in /usr/X11R6/man /usr/kerberos/man /usr/posix/man /usr/gnu/man /usr/local/share/man /usr/local/man "$HOME"/man
 do
     test -d "$dir" && addpath "$dir" start MANPATH
 done
