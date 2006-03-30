@@ -297,6 +297,22 @@ rgrep()
     fi
 }
 
+# print the last screenful of text from a file
+t()
+{
+    typeset lines
+    typeset promptlines
+    promptlines=5                # leave five lines for the prompt
+    if test -n $LINES
+    then
+        lines=$(($LINES - $promptlines))
+    else
+        lines=10
+    fi
+
+    tail -n $lines "$@"
+}
+
 # list all instances of a command
 where()
 {
