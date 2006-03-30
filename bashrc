@@ -20,7 +20,7 @@ shopt -s checkwinsize
 shopt -s cmdhist
 shopt -s dotglob
 shopt -s extglob
-shopt -s nullglob
+shopt -s failglob
 shopt -s xpg_echo
 
 # ksh style aliases

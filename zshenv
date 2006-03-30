@@ -27,6 +27,7 @@ source_common_commands
 # enable some options originally from csh
 setopt banghist
 setopt braceexpand
+setopt cshnullglob
 setopt correct
 setopt histignorespace
 setopt histreduceblanks
@@ -45,14 +46,12 @@ setopt autocd
 setopt autolist
 setopt automenu
 setopt extendedhistory
-setopt globdots
 setopt incappendhistory
 setopt nolistambiguous
 setopt nolistbeep
 setopt listrowsfirst
 setopt magicequalsubst
 setopt numericglobsort
-setopt nullglob
 setopt promptpercent
 
 # vi: set sw=4 ts=33:
