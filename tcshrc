@@ -68,7 +68,7 @@ if ( $?prompt ) then
 
     # set the prompt
     set promptchars="%#"
-    set prompt="%# "
+    set prompt='\012%B%${dirstack}\012%#%b '
 endif
 
 # enhancements for various terminals
