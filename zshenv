@@ -45,6 +45,7 @@ setopt appendhistory
 setopt autocd
 setopt autolist
 setopt automenu
+setopt extendedglob
 setopt extendedhistory
 setopt incappendhistory
 setopt nolistambiguous
