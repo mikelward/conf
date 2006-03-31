@@ -54,4 +54,7 @@ setopt magicequalsubst
 setopt numericglobsort
 setopt promptpercent
 
+# set zsh-specific aliases
+alias h="history -d"
+
 # vi: set sw=4 ts=33:

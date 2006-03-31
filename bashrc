@@ -118,6 +118,9 @@ shellinfo='$(dirs -l)'
 PROMPT_COMMAND='laststatus="$?"; eval settitle "\"${title}\""'
 PS1='$(eval echo "\"${bold}${promptstring}${normal}\"")'
 
+# set up command history
+HISTTIMEFORMAT="%H:%M	"
+
 # set environment for interactive sessions
 case $- in *i*)
     # set command completions
