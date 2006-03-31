@@ -48,6 +48,7 @@ set backupext=~	" backup files end in ~
 
 " EDITING OPTIONS
 set autoindent	" indentation level automatically controlled
+set cinoptions=:0,g0	" labels are not indented (in C/C++ files)
 set expandtab	" use spaces rather than tabs for indentation
 set smartindent	" indentation level automatically controlled
 set shiftround	" manual shift aligns on columns
@@ -78,6 +79,10 @@ augroup Binary
     au BufWritePost *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd
     au BufWritePost *.bin,*.exe.*.jpg,*.pcx set nomod | endif
 augroup END
+
+" per-project rules
+au BufRead,BufNewFile */lics/*.{c,cpp,h} setlocal sw=4 ts=4 expandtab
+au BufRead,BufNewFile */zsh/*.[ch] setlocal sw=4 ts=8 noexpandtab
 
 " SEARCH OPTIONS
 set ignorecase	" case is unimportant in search terms
