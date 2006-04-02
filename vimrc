@@ -60,13 +60,18 @@ set esckeys	" allow arrow keys in insert mode
 set noerrorbells visualbell	" flash screen instead of ringing bell
 set showmatch	" show matching brackets
 set showbreak=+	" specially mark continued lines with a plus
+set textwidth=80	" wrap lines longer than 80 characters
 
-" FILE TYPES
+" per-file type rules
 filetype on	" enable per-user file type customizations
 filetype plugin on
 filetype indent on
 
 let is_bash = 1	" use bash syntax for #!/bin/sh files
+
+" disable line wrapping for program source files
+au BufRead *.{c,cc,cpp,h,hh,hpp} setlocal tw=0
+au BufRead *.{html,shtml,php,php3,php4,php5} setlocal tw=0
 
 " edit binary files in binary mode using the output of xxd
 augroup Binary
