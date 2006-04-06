@@ -91,7 +91,7 @@ au BufRead,BufNewFile */lics/*.{c,cpp,h} setlocal sw=4 ts=4 expandtab
 au BufRead,BufNewFile */zsh/*.[ch] setlocal sw=4 ts=8 noexpandtab
 
 " SEARCH OPTIONS
-set ignorecase	" case is unimportant in search terms
+set noignorecase	" case is important in search terms
 set tags+=./tags;/	" search up the tree for tags files
 
 " LOCAL CUSTOMIZATIONS
