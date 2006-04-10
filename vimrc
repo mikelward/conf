@@ -22,7 +22,12 @@ set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
 set more	" use a pager for long listings
 set nonumber	" don't show line numbers
 set notitle	" don't change terminal's title
-set highlight=sub,Su	" use a simple underline for the status bar
+if &term == "linux"
+    set highlight=sb,Sub	" make the status bar bold
+    "set highlight=sb,Srb	" make the status bar bold
+else
+    set highlight=sub,Su	" make the status bar bold
+endif
 set laststatus=2	" always show status line for each window
 set statusline=%t\ %m%=%l,%c	" show the file name and cursor position
 set showmode	" always show command or insert mode
