@@ -213,7 +213,7 @@ then
     alias bell='echo "\a"'
     alias cx='chmod +x'
     alias e='${EDITOR:-vi}'
-    alias g='egrep'
+    alias g='grep -En'
     alias h='history'
     alias hup='kill -HUP'
     alias l='ls'

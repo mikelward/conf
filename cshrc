@@ -136,7 +136,7 @@ else
     alias e                      'vi'
 endif
 alias f	'find . -type f -name \!1 -print \!2* | $PAGER'
-alias g	'egrep'
+alias g	'grep -En'
 alias h	'history'
 alias hup	'kill -HUP'
 alias helpcommand	'man'
