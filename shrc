@@ -214,6 +214,7 @@ then
     alias cx='chmod +x'
     alias e='${EDITOR:-vi}'
     alias g='grep -En'
+    alias gdb='gdb -q'
     alias h='history'
     alias hup='kill -HUP'
     alias l='ls'
