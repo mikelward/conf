@@ -213,6 +213,7 @@ then
     alias bell='echo "\a"'
     alias cx='chmod +x'
     alias e='${EDITOR:-vi}'
+    alias edit='${EDITOR:-vi}'
     alias g='grep -En'
     alias gdb='gdb -q'
     alias h='history'
@@ -245,14 +246,20 @@ then
     fi
 fi
 
+# edit the most recently changed file
+editlatest()
+{
+    edit $(latest "$@")
+}
+
 # show the most recently changed file
 latest()
 {
     if test $# -ne 0
     then
-        ls -t -1 -d "$@" | head -n 1
+        /bin/ls -t -1 -d "$@" | head -n 1
     else
-        ls -t -1 -d * | head -n 1
+        /bin/ls -t -1 -d * | head -n 1
     fi
 }
 
