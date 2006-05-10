@@ -167,4 +167,7 @@ case $- in *i*)
     ;;
 esac
 
+# source local settings
+test -r "$HOME"/.bashrc.local && . "$HOME"/.bashrc.local
+
 # vi: set sw=8:

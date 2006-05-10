@@ -111,3 +111,7 @@ compctl -c {whence,where,which}
 compctl -M '' 'm:{a-zA-Z}={A-Za-z}'
 zstyle ':completion:*' matcher-list '' 'm:{a-zA-Z}={A-Za-z}'
 
+# source local settings
+test -r "$HOME"/.zshrc.local && . "$HOME"/.zshrc.local
+
+# vi: set sw=4:
