@@ -189,8 +189,6 @@ export MANPATH
 
 # set shell options and environment
 CDPATH=":~"
-HISTFILE=
-HISTSIZE=128
 HISTIGNORE="bg:fg: *"
 HOST=`hostname`
 if exists tty
