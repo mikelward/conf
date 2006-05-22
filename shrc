@@ -344,6 +344,11 @@ exists less && export PAGER=less
 export VISUAL="$EDITOR"
 export WINTERM=xterm
 
+if test -f "$HOME"/.keychain/"$HOST"-sh
+then
+    . "$HOME"/.keychain/"$HOST"-sh
+fi
+
 # set file locations
 test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
 
