@@ -65,7 +65,6 @@ set esckeys	" allow arrow keys in insert mode
 set noerrorbells visualbell	" flash screen instead of ringing bell
 set showmatch	" show matching brackets
 set showbreak=+	" specially mark continued lines with a plus
-set textwidth=80	" wrap lines longer than 80 characters
 
 " per-file type rules
 filetype on	" enable per-user file type customizations
