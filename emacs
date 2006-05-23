@@ -1,3 +1,4 @@
+
 ;; -*- mode: emacs-lisp -*-
 ;; $Id$
 ;; Emacs settings
@@ -72,6 +73,12 @@
              (c-toggle-hungry-state t)
              ;; Make new lines start at current indentation level
              (define-key c-mode-base-map "\C-m" 'c-context-line-break)))
+
+;; Use hex mode for binary files
+(add-to-list 'auto-mode-alist '("\\.bin\\'" . hexl-mode))
+(add-to-list 'auto-mode-alist '("\\.dat\\'" . hexl-mode))
+(add-to-list 'auto-mode-alist '("\\.exe\\'" . hexl-mode))
+(add-to-list 'auto-mode-alist '("\\.o\\'" . hexl-mode))
 
 ;; Remind PHP mode to not get carried away with syntax highlighting
 (add-hook 'php-mode-user-hook
