@@ -80,13 +80,13 @@ au BufRead *.{html,shtml,php,php3,php4,php5,inc} setlocal tw=0
 " edit binary files in binary mode using the output of xxd
 augroup Binary
     au!
-    au BufReadPre  *.bin,*.exe.*.jpg,*.pcx let &bin=1
-    au BufReadPost *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd
-    au BufReadPost *.bin,*.exe.*.jpg,*.pcx set ft=xxd | endif
-    au BufWritePre *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd -r
-    au BufWritePre *.bin,*.exe.*.jpg,*.pcx endif
-    au BufWritePost *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd
-    au BufWritePost *.bin,*.exe.*.jpg,*.pcx set nomod | endif
+    au BufReadPre  *.bin,*.dat,*.exe.*.jpg,*.pcx let &bin=1
+    au BufReadPost *.bin,*.dat,*.exe.*.jpg,*.pcx if &bin | %!xxd
+    au BufReadPost *.bin,*.dat,*.exe.*.jpg,*.pcx set ft=xxd | endif
+    au BufWritePre *.bin,*.dat,*.exe.*.jpg,*.pcx if &bin | %!xxd -r
+    au BufWritePre *.bin,*.dat,*.exe.*.jpg,*.pcx endif
+    au BufWritePost *.bin,*.dat,*.exe.*.jpg,*.pcx if &bin | %!xxd
+    au BufWritePost *.bin,*.dat,*.exe.*.jpg,*.pcx set nomod | endif
 augroup END
 
 " per-project rules
