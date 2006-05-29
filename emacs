@@ -40,6 +40,12 @@
 (setq vc-follow-symlinks t)
 
 ;; KEYS
+;; Make C-a go to the start of the text the first time
+(global-set-key "\C-a" 'my-beginning-of-line)
+
+;; Make forward word work like other editors
+(global-set-key "\M-f" 'my-forward-word)
+
 ;; Add an alternate binding for help in case C-h is unavailable
 (global-set-key "\C-x\?" 'help-for-help)
 
@@ -90,6 +96,11 @@
 (defun my-backward-word ())
 (defun my-kill-word ())
 (defun my-backward-kill-word ())
+(defun my-beginning-of-line () (interactive)
+                               (if (and (eq last-command 'my-beginning-of-line)
+                                        (/= (line-beginning-position) (point)))
+                                   (beginning-of-line)
+                                 (beginning-of-line-text)))
 
 ;; Load any local customisations
 (if (file-exists-p "~/.emacs.local") (load "~/.emacs.local"))
