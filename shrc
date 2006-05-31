@@ -397,7 +397,7 @@ then
     shellinfo='${PWD}'
     promptchars='$(if test "$laststatus" -ne 0; then echo "?"; elif test $UID -eq 0; then echo "#"; else echo ">"; fi)'
     promptstring='
-$(eval echo "${shellinfo}")
+$(eval echo "${connectioninfo}") $(eval echo "${shellinfo}")
 $(eval echo "\"${promptchars}\"") '
     title='$(eval echo "${connectioninfo} ${commandinfo}")'
 
