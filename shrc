@@ -417,6 +417,17 @@ fi
 test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
 
 # apply the user's settings for prompt, title, etc.
-PS1='$(eval settitle "\"${title}\"")''$(eval echo "\"${bold}\$${promptcolor}${promptstring}${normal}\"")'
+# we differentiate here between ksh and sh,
+# prompts for bash and zsh are handled in .bashrc, .zshrc, etc.
+case $0 in
+*ksh*)
+    PS1='$(eval settitle "\"${title}\"")''$(eval echo "\"${bold}\$${promptcolor}${promptstring}${normal}\"")'
+    ;;
+*)
+    PS1="$(eval echo $promptchars) "
+esac
+
+# finish with a 0 exit status
+true
 
 # vi: set sw=4 ts=33:
