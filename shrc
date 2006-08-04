@@ -403,8 +403,8 @@ then
         promptcolor=blue
     fi
     promptstring='
-$(eval echo "$""${promptcolor}")$(eval echo "${connectioninfo}") $(eval echo "${shellinfo}")
-$(eval echo "\"${promptchars}\"")${normal} '
+$(eval echo "${connectioninfo}") $(eval echo "${shellinfo}")
+$(eval echo "\"${promptchars}\"") '
     title='$(eval echo "${connectioninfo} ${commandinfo}")'
 
     # set command line editing key bindings
