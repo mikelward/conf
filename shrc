@@ -417,6 +417,6 @@ fi
 test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
 
 # apply the user's settings for prompt, title, etc.
-PS1='$(eval settitle "\"${title}\"")''$(eval echo "\"${bold}${promptstring}${normal}\"")'
+PS1='$(eval settitle "\"${title}\"")''$(eval echo "\"${bold}\$${promptcolor}${promptstring}${normal}\"")'
 
 # vi: set sw=4 ts=33:
