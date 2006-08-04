@@ -396,9 +396,15 @@ then
     commandinfo='${command%% *}'
     shellinfo='${PWD}'
     promptchars='$(if test "$laststatus" -ne 0; then echo "?"; elif test $UID -eq 0; then echo "#"; else echo ">"; fi)'
+    if test $UID -eq 0
+    then
+        promptcolor=red
+    else
+        promptcolor=blue
+    fi
     promptstring='
-$(eval echo "${connectioninfo}") $(eval echo "${shellinfo}")
-$(eval echo "\"${promptchars}\"") '
+$(eval echo "$""${promptcolor}")$(eval echo "${connectioninfo}") $(eval echo "${shellinfo}")
+$(eval echo "\"${promptchars}\"")${normal} '
     title='$(eval echo "${connectioninfo} ${commandinfo}")'
 
     # set command line editing key bindings
