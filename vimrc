@@ -13,6 +13,7 @@ set nocompatible	" make Vim default to nicer options
 
 " READING OPTIONS
 set modeline	" use settings from file being edited
+set nostartofline	" keep the current cursor position when reediting a file
 
 " COMMAND OPTIONS
 set wildmode=list	" filename completion lists when ambiguous
