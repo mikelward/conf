@@ -9,10 +9,10 @@
 # add a directory to the path
 addpath()
 {
-    typeset dir
-    typeset pos
-    typeset var
-    typeset sep
+    quiet typeset dir
+    quiet typeset pos
+    quiet typeset var
+    quiet typeset sep
     dir=$1
     pos=$2
     var=${3:-"PATH"}
@@ -30,8 +30,8 @@ addpath()
         eval $var="\$$var""\${$var:+\$sep}""\$dir"
         ;;
     *)
-        typeset dirs
-        typeset seen
+        quiet typeset dirs
+        quiet typeset seen
         eval dirs=\$$var
         for d in $dirs
         do
@@ -47,17 +47,17 @@ addpath()
 # remove a directory from the path
 delpath()
 {
-    typeset dir
-    typeset var
-    typeset sep
+    quiet typeset dir
+    quiet typeset var
+    quiet typeset sep
     dir=$1
     var=${2:-"PATH"}
     sep=${3:-":"}
     NIFS="$IFS"
     IFS="$sep"
 
-    typeset path
-    typeset dirs
+    quiet typeset path
+    quiet typeset dirs
 
     eval dirs=\$$var
     path=
@@ -73,7 +73,7 @@ delpath()
 # return true if the command can be found, false otherwise
 exists()
 {
-    typeset cmd
+    quiet typeset cmd
     cmd="$1"
 
     if type "$cmd" >/dev/null 2>&1
@@ -272,9 +272,9 @@ m()
 # search for a pattern in text files in a directory tree
 rgrep()
 {
-    typeset pattern
-    typeset dirs
-    typeset args
+    quiet typeset pattern
+    quiet typeset dirs
+    quiet typeset args
 
     args=
     while true
@@ -308,8 +308,8 @@ rgrep()
 # print the last screenful of text from a file
 t()
 {
-    typeset lines
-    typeset promptlines
+    quiet typeset lines
+    quiet typeset promptlines
     promptlines=5                # leave five lines for the prompt
     if test -n $LINES
     then
