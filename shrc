@@ -4,15 +4,16 @@
 #
 # This script contains functions and settings that are common for all
 # POSIX-compatible shells including bash and ksh.
+#
 
 ### HELPER FUNCTIONS
 # add a directory to the path
 addpath()
 {
-    quiet typeset dir
-    quiet typeset pos
-    quiet typeset var
-    quiet typeset sep
+    typeset dir
+    typeset pos
+    typeset var
+    typeset sep
     dir=$1
     pos=$2
     var=${3:-"PATH"}
@@ -30,8 +31,8 @@ addpath()
         eval $var="\$$var""\${$var:+\$sep}""\$dir"
         ;;
     *)
-        quiet typeset dirs
-        quiet typeset seen
+        typeset dirs
+        typeset seen
         eval dirs=\$$var
         for d in $dirs
         do
@@ -47,17 +48,17 @@ addpath()
 # remove a directory from the path
 delpath()
 {
-    quiet typeset dir
-    quiet typeset var
-    quiet typeset sep
+    typeset dir
+    typeset var
+    typeset sep
     dir=$1
     var=${2:-"PATH"}
     sep=${3:-":"}
     NIFS="$IFS"
     IFS="$sep"
 
-    quiet typeset path
-    quiet typeset dirs
+    typeset path
+    typeset dirs
 
     eval dirs=\$$var
     path=
@@ -73,7 +74,7 @@ delpath()
 # return true if the command can be found, false otherwise
 exists()
 {
-    quiet typeset cmd
+    typeset cmd
     cmd="$1"
 
     if type "$cmd" >/dev/null 2>&1
@@ -272,9 +273,9 @@ m()
 # search for a pattern in text files in a directory tree
 rgrep()
 {
-    quiet typeset pattern
-    quiet typeset dirs
-    quiet typeset args
+    typeset pattern
+    typeset dirs
+    typeset args
 
     args=
     while true
@@ -308,8 +309,8 @@ rgrep()
 # print the last screenful of text from a file
 t()
 {
-    quiet typeset lines
-    quiet typeset promptlines
+    typeset lines
+    typeset promptlines
     promptlines=5                # leave five lines for the prompt
     if test -n $LINES
     then
