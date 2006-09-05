@@ -161,11 +161,14 @@ for dir in /usr/bin/X11 /usr/bin /bin /usr/sbin /sbin
 do
     test -d "$dir" && addpath "$dir"
 done
-# add the current directory to the end
-for dir in .
-do
-    test -d "$dir" && addpath "$dir" end
-done
+# add the current directory to the end for non-root users
+if test $UID -ne 0
+then
+    for dir in .
+    do
+        test -d "$dir" && addpath "$dir" end
+    done
+fi
 export PATH
 
 # set directories to search for documentation
