@@ -425,7 +425,7 @@ test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
 # prompts for bash and zsh are handled in .bashrc, .zshrc, etc.
 case $0 in
 *ksh*)
-    PS1='$(eval settitle "\"${title}\"")''$(eval echo "\"${bold}\$${promptcolor}${promptstring}${normal}\"")'
+    PS1='$(eval settitle "\"${title}\"")''$(eval echo "\"${bold}\$${promptcolor:-blue}${promptstring}${normal}\"")'
     ;;
 *)
     PS1="$(eval echo $promptchars) "

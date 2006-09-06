@@ -20,7 +20,7 @@ shopt -s checkwinsize
 shopt -s cmdhist
 shopt -s dotglob
 shopt -s extglob
-shopt -s failglob
+quiet shopt -s failglob
 shopt -s xpg_echo
 
 # ksh style aliases
@@ -116,7 +116,7 @@ whence()
 # set the prompt and window title
 shellinfo='$(dirs -l)'
 PROMPT_COMMAND='laststatus="$?"; eval settitle "\"${title}\""'
-PS1='$(eval echo "\"${bold}\$${promptcolor}${promptstring}${normal}\"")'
+PS1='$(eval echo "\"${bold}\$${promptcolor:-blue}${promptstring}${normal}\"")'
 
 # set up command history
 HISTTIMEFORMAT="%H:%M	"
