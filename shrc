@@ -6,40 +6,52 @@
 # POSIX-compatible shells including bash and ksh.
 #
 
+# ensure this shell supports local variables using either local
+# (from bash and zsh) or typeset (from ksh)
+if ! type local >/dev/null 2>/dev/null
+then
+    if type typeset >/dev/null 2>/dev/null
+    then
+        alias local='typeset'
+    else
+        echo "Cannot find local or typeset shell command, some features in .shrc will not work" 1>&2
+    fi
+fi
+
 ### HELPER FUNCTIONS
 # add a directory to the path
 addpath()
 {
-    typeset dir
-    typeset pos
-    typeset var
-    typeset sep
-    dir=$1
-    pos=$2
-    var=${3:-"PATH"}
-    sep=${4:-":"}
+    local _adddir
+    local _position
+    local _pathvar
+    local _separator
+    _adddir=$1
+    _position=$2
+    _pathvar=${3:-"PATH"}
+    _separator=${4:-":"}
     OIFS="$IFS"
-    IFS="$sep"
+    IFS="$_separator"
 
-    case "$pos" in
+    case "$_position" in
     start)
-        delpath "$dir" "$var" "$sep"
-        eval $var="\$dir""\${$var:+\$sep}""\$$var"
+        delpath "$_adddir" "$_pathvar" "$_separator"
+        eval $_pathvar="\$_adddir""\${$_pathvar:+\$_separator}""\$$_pathvar"
         ;;
     end)
-        delpath "$dir" "$var" "$sep"
-        eval $var="\$$var""\${$var:+\$sep}""\$dir"
+        delpath "$_adddir" "$_pathvar" "$_separator"
+        eval $_pathvar="\$$_pathvar""\${$_pathvar:+\$_separator}""\$_adddir"
         ;;
     *)
-        typeset dirs
-        typeset seen
-        eval dirs=\$$var
+        local dirs
+        local seen
+        eval dirs=\$$_pathvar
         for d in $dirs
         do
             # directory is already in PATH, leave as is
-            test "${dir:-.}" = "${d:-.}" && seen=true
+            test "${_adddir:-.}" = "${d:-.}" && seen=true
         done
-        test -z "$seen" && eval $var="\$$var""\${$var:+$sep}""\$dir"
+        test -z "$seen" && eval $_pathvar="\$$_pathvar""\${$_pathvar:+$_separator}""\$_adddir"
         ;;
     esac
     IFS="$OIFS"
@@ -48,33 +60,33 @@ addpath()
 # remove a directory from the path
 delpath()
 {
-    typeset dir
-    typeset var
-    typeset sep
-    dir=$1
-    var=${2:-"PATH"}
-    sep=${3:-":"}
+    local _deldir
+    local _pathvar
+    local _separator
+    _deldir=$1
+    _pathvar=${2:-"PATH"}
+    _separator=${3:-":"}
     NIFS="$IFS"
-    IFS="$sep"
+    IFS="$_separator"
 
-    typeset path
-    typeset dirs
+    local _newdirs
+    local _olddirs
 
-    eval dirs=\$$var
-    path=
-    for d in $dirs
+    eval _olddirs=\$$_pathvar
+    _newdirs=
+    for d in $_olddirs
     do
-        test "${d:-.}" = "${dir:-.}" && continue
-        path="$path""${path:+$sep}""$d"
+        test "${d:-.}" = "${_deldir:-.}" && continue
+        _newdirs="$_newdirs""${_newdirs:+$_separator}""$d"
     done
-    eval $var="\$path"
+    eval $_pathvar="\$_newdirs"
     IFS="$NIFS"
 }
 
 # return true if the command can be found, false otherwise
 exists()
 {
-    typeset cmd
+    local cmd
     cmd="$1"
 
     if type "$cmd" >/dev/null 2>&1
@@ -149,7 +161,24 @@ terminit()
 }
 
 ### SHELL ENVIRONMENT
-#
+# set shell options and environment
+CDPATH=":~"
+HISTFILE=
+HISTSIZE=128
+HISTIGNORE="bg:fg: *"
+HOST=`hostname`
+if exists tty
+then
+    TTY=`tty`
+else
+    TTY='?'
+fi
+if test -z "$UID"
+then
+    UID=`id -u`
+fi
+USER=`id -un`
+
 # set directories to search for commands
 # add preferred locations at start
 for dir in /opt/*/bin /usr/X11R6/bin /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
@@ -190,24 +219,6 @@ do
     test -d "$dir" && addpath "$dir" end MANPATH
 done
 export MANPATH
-
-# set shell options and environment
-CDPATH=":~"
-HISTFILE=
-HISTSIZE=128
-HISTIGNORE="bg:fg: *"
-HOST=`hostname`
-if exists tty
-then
-    TTY=`tty`
-else
-    TTY='?'
-fi
-if test -z "$UID"
-then
-    UID=`id -u`
-fi
-USER=`id -un`
 
 ### ALIASES AND FUNCTIONS
 # create aliases for commonly invoked commands
@@ -276,9 +287,9 @@ m()
 # search for a pattern in text files in a directory tree
 rgrep()
 {
-    typeset pattern
-    typeset dirs
-    typeset args
+    local pattern
+    local dirs
+    local args
 
     args=
     while true
@@ -312,8 +323,8 @@ rgrep()
 # print the last screenful of text from a file
 t()
 {
-    typeset lines
-    typeset promptlines
+    local lines
+    local promptlines
     promptlines=5                # leave five lines for the prompt
     if test -n $LINES
     then
