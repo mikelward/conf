@@ -97,6 +97,12 @@ exists()
     fi
 }
 
+# print an error message
+error()
+{
+    echo "$@" 1>&2
+}
+
 # run a simple command quietly
 quiet()
 {
@@ -117,17 +123,20 @@ terminit()
     # determine the graphics mode escape sequences
     if exists tput
     then
-        bold="$(tput bold)"
-        underline="$(tput smul)"
-        normal="$(tput sgr0)"
-        black="$(tput setaf 0)"
-        red="$(tput setaf 1)"
-        green="$(tput setaf 2)"
-        yellow="$(tput setaf 3)"
-        blue="$(tput setaf 4)"
-        magenta="$(tput setaf 5)"
-        cyan="$(tput setaf 6)"
-        white="$(tput setaf 7)"
+        if quiet tput longname
+        then
+            bold="$(tput bold)"
+            underline="$(tput smul)"
+            normal="$(tput sgr0)"
+            black="$(tput setaf 0)"
+            red="$(tput setaf 1)"
+            green="$(tput setaf 2)"
+            yellow="$(tput setaf 3)"
+            blue="$(tput setaf 4)"
+            magenta="$(tput setaf 5)"
+            cyan="$(tput setaf 6)"
+            white="$(tput setaf 7)"
+        fi
     fi
 
     # determine the window title escape sequences
@@ -150,8 +159,11 @@ terminit()
     *)
         if exists tput
         then
-            titlestart=`tput tsl`
-            titlefinish=`tput fsl`
+            if quiet tput longname
+            then
+                titlestart=`tput tsl`
+                titlefinish=`tput fsl`
+            fi
         else
             titlestart=''
             titlefinish=''
