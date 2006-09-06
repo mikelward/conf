@@ -151,9 +151,9 @@ terminit()
         ;;
     screen*)
         # status line
-        titlestart='_'
+        #titlestart='_'
         # window title
-        #titlestart='k'
+        titlestart='k'
         titlefinish='\'
         ;;
     *)
@@ -432,7 +432,14 @@ then
     promptstring='
 $(eval echo "${shellinfo}")
 $(eval echo "\"${promptchars}\"") '
-    title='$(eval echo "${connectioninfo} ${commandinfo}")'
+    case "${TERM}" in
+    screen*)
+        title='$(eval echo "${commandinfo}")'
+        ;;
+    *)
+        title='$(eval echo "${connectioninfo} ${commandinfo}")'
+        ;;
+    esac
 
     # set command line editing key bindings
     # this must be after the EDITOR and VISUAL settings
