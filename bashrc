@@ -173,4 +173,4 @@ test -r "$HOME"/.bashrc.local && . "$HOME"/.bashrc.local
 # finish with a 0 exit status
 true
 
-# vi: set sw=8:
+# vi: set sw=4:
