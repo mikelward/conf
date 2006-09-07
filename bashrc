@@ -143,6 +143,7 @@ case $- in *i*)
         complete -G "*.java" javac
         complete -F complete_runner nohup
         complete -F complete_runner sudo
+        complete -F complete_services service
 
         # completion function for commands such as sudo that take a
         # command as the first argument but should revert to file
@@ -162,6 +163,22 @@ case $- in *i*)
                 i=`expr $i + 1`
             done
                 
+        }
+
+        # completion function for Red Hat service command
+        complete_services()
+        {
+            OIFS="$IFS"
+            IFS='
+'
+            local i=0
+            for file in $(find /etc/init.d/ -type f -name "$2*" -perm -u+rx)
+            do
+                file=${file##*/}
+                COMPREPLY[$i]=$file
+                i=$(($i + 1))
+            done
+            IFS="$OIFS"
         }
     fi
     ;;
