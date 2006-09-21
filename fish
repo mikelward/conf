@@ -12,9 +12,13 @@ end
 
 function fish_prompt
     if test $status -eq 0
+        #set_color --bold
         printf '> '
+        #set_color normal
     else
+        #set_color --bold
         printf '? '
+        #set_color normal
     end
 end
 
