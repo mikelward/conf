@@ -54,6 +54,7 @@ if ( $?prompt ) then
     complete notify              'c/%/j/'
     complete {ch}own             'p/1/u/'
     complete {,un}set            'C/*/s/'
+    complete service             'p@*@F:/etc/init.d/@'
     complete stop                'c/%/j/'
     complete strace              'p/1/c/'
     complete sudo                'n/-u/u/' 'p/1/c/'
