@@ -3,7 +3,7 @@
 # $Id$
 
 function l
-    ls -Fx $argv
+    ls -F1 $argv
 end
 
 function j
