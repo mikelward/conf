@@ -10,6 +10,15 @@ function j
     jobs
 end
 
-set fish_prompt "echo '> '"
-set fish_title "hostname -s; echo '<'; tty | sed -e 's#/.*/\(.*\)#\1#'; echo '>'; echo ' '; id -un; echo ' '; echo $_; echo ' '; echo $PWD"
+function fish_prompt
+    if test $status -eq 0
+        printf '> '
+    else
+        printf '? '
+    end
+end
+
+function fish_title
+    printf '%s %s %s' (hostname -s) (id -un) $_
+end
 
