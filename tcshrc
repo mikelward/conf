@@ -25,6 +25,7 @@ if ( $?prompt ) then
     bindkey -e
     bindkey '' i-search-back
     bindkey '' i-search-fwd
+    bindkey '.' insert-last-word
 
     # set command completions
     complete alias               'p/1/a/' 'p/2/c/'
