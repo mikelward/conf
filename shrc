@@ -175,12 +175,21 @@ terminit()
 ### SHELL ENVIRONMENT
 # set directories to search for commands
 # add preferred locations at start
-for dir in /opt/*/bin /usr/X11R6/bin /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
+# X Window system directories are deprecated on most Linux distributions
+# where they are now just symlinks to /usr/bin
+# if we add the symlink versions before the standard directories such as
+# /usr/bin, some utilities get confused, so only add them to PATH if
+# they're not symlinks
+for dir in /usr/X11R6/bin /usr/bin/X11
+do
+    test -d "$dir" && test ! -L "$dir" && addpath "$dir" start
+done
+for dir in /opt/*/bin /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
 do
     test -d "$dir" && addpath "$dir" start
 done
 # add standard locations if they're not there
-for dir in /usr/bin/X11 /usr/bin /bin /usr/sbin /sbin
+for dir in /usr/bin /bin /usr/sbin /sbin
 do
     test -d "$dir" && addpath "$dir"
 done
