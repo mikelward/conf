@@ -173,6 +173,27 @@ terminit()
 }
 
 ### SHELL ENVIRONMENT
+# set shell options and environment
+CDPATH=":~"
+HISTFILE=
+HISTSIZE=128
+HISTIGNORE="bg:fg: *"
+HOST=`hostname`
+if exists tty
+then
+    TTY=`tty`
+else
+    TTY='?'
+fi
+if test -z "$UID"
+then
+    UID=`id -u`
+fi
+if test -z "$USER"
+then
+    USER=`id -un`
+fi
+
 # set directories to search for commands
 # add preferred locations at start
 # X Window system directories are deprecated on most Linux distributions
@@ -222,24 +243,6 @@ do
     test -d "$dir" && addpath "$dir" end MANPATH
 done
 export MANPATH
-
-# set shell options and environment
-CDPATH=":~"
-HISTFILE=
-HISTSIZE=128
-HISTIGNORE="bg:fg: *"
-HOST=`hostname`
-if exists tty
-then
-    TTY=`tty`
-else
-    TTY='?'
-fi
-if test -z "$UID"
-then
-    UID=`id -u`
-fi
-USER=`id -un`
 
 ### ALIASES AND FUNCTIONS
 # create aliases for commonly invoked commands
