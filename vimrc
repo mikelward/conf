@@ -93,7 +93,8 @@ augroup END
 " per-project rules
 au BufRead,BufNewFile */cvs/*.{c,h} setlocal sw=4 ts=8 noexpandtab
 au BufRead,BufNewFile */lics/*.{c,cpp,h} setlocal sw=4 ts=4 expandtab
-au BufRead,BufNewFile */postfix/*.{c,cpp,h} setlocal sw=4 ts=8 expandtab
+au BufRead,BufNewFile */postfix/*.{c,h} setlocal sw=4 ts=8 noexpandtab
+au BufRead,BufNewFile */procmail/*.{c,h} setlocal sw=3 ts=8 noexpandtab
 au BufRead,BufNewFile */putty/*.{c,h} setlocal sw=4 ts=8 noexpandtab
 au BufRead,BufNewFile */zsh/*.[ch] setlocal sw=4 ts=8 noexpandtab
 
