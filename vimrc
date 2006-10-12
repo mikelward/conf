@@ -30,7 +30,6 @@ else
     set highlight=sub,Su	" make the status bar bold
 endif
 set laststatus=2	" always show status line for each window
-set statusline=%t\ %m%=%l,%c	" show the file name and cursor position
 set showmode	" always show command or insert mode
 set shortmess=IA	" no intro or swap file found messages
 	" after opening a file already being edited
