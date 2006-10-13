@@ -11,6 +11,10 @@ end
 " DEFAULT OPTIONS
 set nocompatible	" make Vim default to nicer options
 
+" INITIALIZATION OPTIONS
+set exrc	" read extra commands from .vimrc in the current directory
+set secure	" don't allow .vimrc to spawn shells or write files
+
 " READING OPTIONS
 set modeline	" use settings from file being edited
 set nostartofline	" keep the current cursor position when reediting a file
