@@ -6,7 +6,7 @@
 #----------------------------------------
 # Account settings
 #----------------------------------------
-#set realname="Michael Wardle"
+set realname="Mikel Ward"
 #set imap_user=$LOGNAME
 #set folder="imaps://mbwardle@sent.com@mail.messagingengine.com/"
 #set folder="imaps://mbwardle@mail.mailsnare.net/"
@@ -52,7 +52,7 @@ set strict_threads
 set pgp_replysign=yes	# automatically sign replies to signed messages
 set pgp_verify_sig	# automatically verify signatures
 ignore *
-unignore Subject: Date: From: To: Cc: X-Spam-Status:
+unignore Subject: Date: From: To: Cc:
 #unignore X-Priority: Importance: X-Mailer: User-Agent: X-Spam-Flag: X-Spam-Level: X-Spam-Status: X-Spam-Report
 
 #----------------------------------------
@@ -100,16 +100,10 @@ mono indicator reverse
 #----------------------------------------
 # Key bindings
 #----------------------------------------
-#macro pager "S" "<pipe-message>sa-learn --spam<enter><delete-message>" "learn as spam and delete"
-macro pager "S" "<pipe-message>spamassassin -r<enter><delete-message>" "learn as spam and delete"
-#macro index "S" "<pipe-message>sa-learn --spam<enter><delete-message>" "learn as spam and delete"
-macro index "S" "<pipe-message>spamassassin -r<enter><delete-message>" "learn as spam and delete"
-#macro pager "H" "<pipe-message>sa-learn --ham<enter><save-message>!<enter>" "learn as not spam and move to INBOX"
-macro pager "H" "<pipe-message>spamassassin -k<enter><save-message>!<enter>" "learn as not spam and move to INBOX"
-#macro pager "H" "<pipe-message>sa-learn --ham<enter><pipe-message>spamassassin -d | /usr/lib/sendmail michael<enter>" "learn as not spam, clean, and resend to self"
-#macro index "H" "<pipe-message>sa-learn --ham<enter><save-message>!<enter>" "learn as not spam and move to INBOX"
-macro index "H" "<pipe-message>spamassassin -k<enter><save-message>!<enter>" "learn as not spam and move to INBOX"
-#macro index "H" "<pipe-message>sa-learn --ham<enter><pipe-message>spamassassin -d | /usr/lib/sendmail michael<enter>" "learn as not spam, clean, and resend to self"
+macro pager "S" "<pipe-message>bogofilter -s<enter><delete-message>" "Learn as spam and delete"
+macro index "S" "<pipe-message>bogofilter -s<enter><delete-message>" "Learn as spam and delete"
+macro pager "H" "<pipe-message>bogofilter -n<enter><save-message>!<enter>" "Learn as not spam and move to inbox"
+macro index "H" "<pipe-message>bogofilter -n<enter><save-message>!<enter>" "Learn as not spam and move to inbox"
 
 #----------------------------------------
 # Miscellaneous settings
