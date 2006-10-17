@@ -6,19 +6,21 @@
 #----------------------------------------
 # Account settings
 #----------------------------------------
-#set imap_user=$LOGNAME
-set folder=~/mail
-#set folder="imaps://michael@mail.endbracket.net/"
-# determined from $MAIL
-set spoolfile=~/mail/inbox
-#set spoolfile="imaps://michael@mail.endbracket.net/INBOX"
-#set imap_home_namespace="INBOX."
 set from="michael@endbracket.net"
 set realname="Mikel Ward"
-# Sent messages are stored in the Sent folder (relative to the server root)
-set record==Sent
-set mail_check=5
 alternates "(mbw|mical|michael|mikel|mwardle)@(endbracket\.net|micalward\.com|mikelward\.com)"
+
+#set imap_user=$LOGNAME
+set folder=~/mail
+set postponed=+Drafts
+set record=+Sent
+set spoolfile=+inbox
+#set folder="imaps://michael@mail.endbracket.net/"
+#set postponed="imaps://michael@mail.endbracket.net/Drafts"
+#set spoolfile="imaps://michael@mail.endbracket.net/INBOX"
+#set imap_home_namespace="INBOX."
+# Sent messages are stored in the Sent folder (relative to the server root)
+set mail_check=5
 
 #----------------------------------------
 # Composition settings
