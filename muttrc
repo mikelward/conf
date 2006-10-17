@@ -6,22 +6,19 @@
 #----------------------------------------
 # Account settings
 #----------------------------------------
-set realname="Mikel Ward"
 #set imap_user=$LOGNAME
-#set folder="imaps://mbwardle@sent.com@mail.messagingengine.com/"
-#set folder="imaps://mbwardle@mail.mailsnare.net/"
-#set folder="imap://michael@mail.endbracket.net/"
 set folder=~/mail
-#set spoolfile="imaps://mbwardle@sent.com@mail.messagingengine.com/INBOX"
-#set spoolfile="imaps://mbwardle@mail.mailsnare.net/INBOX"
-#set spoolfile="imap://michael@mail.endbracket.net/INBOX"
+#set folder="imaps://michael@mail.endbracket.net/"
 # determined from $MAIL
-#set spoolfile=~/mail/inbox
+set spoolfile=~/mail/inbox
+#set spoolfile="imaps://michael@mail.endbracket.net/INBOX"
 #set imap_home_namespace="INBOX."
+set from="michael@endbracket.net"
+set realname="Mikel Ward"
+# Sent messages are stored in the Sent folder (relative to the server root)
 set record==Sent
-#set mail_check=60
 set mail_check=5
-alternates "(mbw|michael|mwardle)@(endbracket.net|leighmardon.com.au)"
+alternates "(mbw|mical|michael|mikel|mwardle)@(endbracket\.net|micalward\.com|mikelward\.com)"
 
 #----------------------------------------
 # Composition settings
@@ -52,7 +49,9 @@ set move=no         # do not ask for confirmation when moving messages
 #set date_format="%b %e"
 set date_format="(%y-%m-%d %H:%M %Z)"	# international date format
 #set index_format="%S  %{%b %d}  %-20.20L  %s"
-set index_format="%S  %s %> %-20.20L %{%b %d}"
+#set index_format="%S %T %-24.24L %s"
+set index_format="%4C %S %T %-25.25L %s"
+set to_chars=" >TC<L"
 set markers=yes
 set sort=threads
 set strict_threads
