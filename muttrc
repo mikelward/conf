@@ -26,6 +26,7 @@ alternates "(mbw|michael|mwardle)@(endbracket.net|leighmardon.com.au)"
 #----------------------------------------
 # Composition settings
 #----------------------------------------
+set attribution="%n wrote:"
 set fast_reply=yes
 set forward_format="Fwd: %s"
 set include=yes
@@ -39,13 +40,19 @@ set text_flowed=yes
 #----------------------------------------
 # Message settings
 #----------------------------------------
-set delete=yes		# automatically purge messages marked for deletion
-set move=no		# do not ask for confirmation when moving messages
+set auto_tag=yes    # apply commands to all tagged messages by default
+set delete=yes      # automatically purge messages marked for deletion
+set move=no         # do not ask for confirmation when moving messages
 
 #----------------------------------------
 # Display settings
 #----------------------------------------
 #auto_view text/html
+#set index_format="%S %s %> %F %D"
+#set date_format="%b %e"
+set date_format="(%y-%m-%d %H:%M %Z)"	# international date format
+#set index_format="%S  %{%b %d}  %-20.20L  %s"
+set index_format="%S  %s %> %-20.20L %{%b %d}"
 set markers=yes
 set sort=threads
 set strict_threads
@@ -108,7 +115,6 @@ macro index "H" "<pipe-message>bogofilter -n<enter><save-message>!<enter>" "Lear
 #----------------------------------------
 # Miscellaneous settings
 #----------------------------------------
-set date_format="(%y-%m-%d %H:%M %Z)"	# international date format
 set nowait_key				# don't prompt if pipeline exits successfully
 set print=ask-yes			# ask before printing
 
