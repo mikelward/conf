@@ -129,6 +129,8 @@ case $- in *i*)
         if complete -o >/dev/null 2>&1
         then
             COMPDEF="-o complete"
+        else
+            COMPDEF="-o default"
         fi
         complete -a {,un}alias
         complete -d {c,p,push,pop}d,po
