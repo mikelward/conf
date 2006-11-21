@@ -116,7 +116,7 @@ whence()
 # set the prompt and window title
 shellinfo='$(dirs -l)'
 PROMPT_COMMAND='laststatus="$?"; eval settitle "\"${title}\""'
-PS1='$(eval echo "\"${bold}""$""${promptcolor:-blue}${promptstring}${normal}\"")'
+PS1='$(eval echo "\"${bold}""$""${promptcolor:-bold}${promptstring}${normal}\"")'
 
 # set up command history
 HISTTIMEFORMAT="%H:%M	"

@@ -5,6 +5,7 @@
 # This script contains functions and settings that are common for all
 # POSIX-compatible shells including bash and ksh.
 #
+#
 
 # ensure this shell supports local variables using either local
 # (from bash and zsh) or typeset (from ksh)
@@ -439,7 +440,7 @@ then
     then
         promptcolor=red
     else
-        promptcolor=blue
+        promptcolor=
     fi
     promptstring='
 $(eval echo "${shellinfo}")
