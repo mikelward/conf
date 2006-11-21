@@ -9,6 +9,7 @@
 set attribution="%n wrote:"
 set fast_reply=yes
 set forward_format="Fwd: %s"
+set hidden_host=yes
 set include=yes
 #set indent_string=" >"
 set metoo=yes
@@ -36,6 +37,7 @@ set date_format="(%y-%m-%d %H:%M %Z)"	# international date format
 set index_format="%4C %S %T %-25.25L %s"
 set to_chars=" >TC<L"
 set markers=yes
+set reverse_name=yes
 set sort=threads
 set strict_threads
 set pgp_replysign=yes	# automatically sign replies to signed messages
