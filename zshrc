@@ -79,7 +79,7 @@ settitle()
 
 # set prompt and window title format
 shellinfo='$(dirs -l)'
-PS1='$(eval echo "\"%B%{\$${promptcolor:-bold}%}${promptstring}%b\"")'
+PS1='$(eval echo "\"%{\$${promptcolor:-normal}%}${promptstring}%{${normal}%}%b\"")'
 
 # set non-alphanumeric characters that constitute a word
 # (remove / so Alt-Backspace deletes only one path component)

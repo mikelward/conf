@@ -440,11 +440,10 @@ then
     then
         promptcolor=red
     else
-        promptcolor=
+        promptcolor=normal
     fi
     promptstring='
-$(eval echo "${shellinfo}")
-$(eval echo "\"${promptchars}\"") '
+$(eval echo "${shellinfo}")$(eval echo "\"${promptchars}\"") '
     case "${TERM}" in
     screen*)
         title='$(eval echo "${commandinfo}")'
@@ -468,7 +467,7 @@ test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
 # prompts for bash and zsh are handled in .bashrc, .zshrc, etc.
 case $0 in
 *ksh*)
-    PS1='$(eval settitle "\"${title}\"")''$(eval echo "\"${bold}\$${promptcolor:-blue}${promptstring}${normal}\"")'
+    PS1='$(eval settitle "\"${title}\"")''$(eval echo "\"\$${promptcolor:-normal}${promptstring}${normal}\"")'
     ;;
 *)
     PS1="$(eval echo $promptchars) "
