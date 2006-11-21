@@ -38,6 +38,7 @@ unsetopt bareglobqual
 setopt checkjobs
 setopt interactivecomments
 setopt kshglob
+setopt posixbuiltins
 setopt promptsubst
 
 # set some zsh-specific options
@@ -54,6 +55,7 @@ setopt listrowsfirst
 setopt magicequalsubst
 setopt numericglobsort
 setopt promptpercent
+setopt pushdsilent
 
 # set zsh-specific aliases
 alias h="history -d"
