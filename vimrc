@@ -81,6 +81,9 @@ let is_bash = 1	" use bash syntax for #!/bin/sh files
 au BufRead *.{c,cc,cpp,h,hh,hpp} setlocal tw=0
 au BufRead *.{html,shtml,php,php3,php4,php5,inc} setlocal tw=0
 
+" treat unknown file types as text files
+au BufRead,BufNewFile * setfiletype text
+
 " edit binary files in binary mode using the output of xxd
 augroup Binary
     au!
