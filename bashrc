@@ -60,6 +60,19 @@ cd()
     esac
 }
 
+# pop a directory without printing the directory stack
+popd()
+{
+    command popd "$@" >/dev/null
+}
+
+# push a directory without printing the directory stack
+pushd()
+{
+    command pushd "$@" >/dev/null
+}
+
+
 # ksh style whence
 whence()
 {
