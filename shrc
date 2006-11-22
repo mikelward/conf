@@ -438,7 +438,7 @@ then
 
     # set prompt and window title
     connectioninfo='${HOST%%.*} ${USER}'
-    command=$0
+    command=${0#-}
     commandinfo='${command%% *}'
     shellinfo='${PWD}'
     promptchars='$(if test ${laststatus:-0} -ne 0; then echo "?"; elif test $UID -eq 0; then echo "#"; else echo ">"; fi)'
