@@ -10,8 +10,8 @@ precmd()
     # store the status of the previous interactive command for use in the prompt
     laststatus=$?
 
-    # the currently running foreground job is the shell
-    command=$0
+    # the currently running foreground job is the shell (without any leading minus)
+    command=${0#-}
 
     # set the window title
     [[ -t 1 ]] && eval settitle "\"$title\""
