@@ -58,12 +58,6 @@ addpath()
     IFS="$OIFS"
 }
 
-# change directory without printing the destination directory's name
-cd()
-{
-    command cd "$@" >/dev/null
-}
-
 # remove a directory from the path
 delpath()
 {
