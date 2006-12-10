@@ -80,6 +80,25 @@ settitle()
 # set prompt and window title format
 PS1='$(eval echo "\"%{\$${promptcolor:-normal}%}${promptstring}%{${normal}%}%b\"")'
 
+# replace the word before the cursor with its realpath
+# (resolves symlinks if the word is a file name)
+expand-word-path ()
+{
+    CUTBUFFER=
+    zle backward-word
+    zle set-mark-command
+    zle forward-word
+    zle copy-region-as-kill
+    local word=$CUTBUFFER
+
+    local realpath=$(realpath $word 2>/dev/null)
+    if test -n "$realpath"
+    then
+        zle backward-kill-word
+        zle -U "$realpath"
+    fi
+}
+
 # set non-alphanumeric characters that constitute a word
 # (remove / so Alt-Backspace deletes only one path component)
 # (remove <>& so redirection not part of path)
@@ -94,6 +113,8 @@ bindkey -M emacs '^[f' forward-word
 bindkey -M emacs '^[p' history-beginning-search-backward
 bindkey -M emacs '^[n' history-beginning-search-forward
 bindkey -M emacs '^X?' expand-cmd-path
+zle -N expand-word-path
+bindkey -M emacs '^X/' expand-word-path
 
 # set command completions
 compctl -a {,un}alias
