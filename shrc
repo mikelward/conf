@@ -269,6 +269,7 @@ then
     alias rcslog='rlog'
     alias rdiff='rcsdiff'
     alias sudo='sudo '  # expand aliases after sudo
+    alias today='date "+%Y%m%d"'
     alias v='${VIEWER:-view}'
 
     # set default flags
