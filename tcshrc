@@ -70,7 +70,7 @@ if ( $?prompt ) then
 
     # set the prompt
     set promptchars="%#"
-    set prompt='\012%B%${dirstack}\012%#%b '
+    set prompt='\012%B%${cwd}%#%b '
 endif
 
 # enhancements for various terminals
