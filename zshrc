@@ -24,7 +24,7 @@ preexec()
         # resuming an existing job
         fg*|%*)
             local spec
-            spec=${1#fg}
+            spec=${1#fg }
             case $spec in
             [0-9]*)
                 # process identifier
@@ -52,11 +52,31 @@ preexec()
                     command=$jobtexts[$job]
                     ;;
                 \?*)
-                    # job string search unsupported
-                    command=unknown
+                    # job name contains $spec
+                    # string the leading ?
+                    spec=$(echo $spec | sed -e 's/^\?//')
+                    for jobtext in $jobtexts
+                    do
+                        stripped=$(echo "$jobtext" | sed -e "s/$spec//")
+                        if test "$jobtext" != "$stripped"
+                        then
+                            command=$jobtext
+                            break
+                        fi
+                    done
+                    #command=unknown
                     ;;
                 *)
-                    command=$jobtexts[$spec]
+                    # job name begins with $spec
+                    for jobtext in $jobtexts
+                    do
+                        stripped=$(echo "$jobtext" | sed -e "s/^$spec//")
+                        if test "$jobtext" != "$stripped"
+                        then
+                            command=$jobtext
+                            break
+                        fi
+                    done
                     ;;
                 esac
                 ;;
