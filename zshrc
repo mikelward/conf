@@ -24,7 +24,8 @@ preexec()
         # resuming an existing job
         fg*|%*)
             local spec
-            spec=${1#fg }
+            spec=${1#fg}
+            spec=${spec# }
             case $spec in
             [0-9]*)
                 # process identifier
