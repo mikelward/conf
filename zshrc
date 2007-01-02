@@ -91,6 +91,10 @@ preexec()
 
     # set the window title
     [[ -t 1 ]] && eval settitle "\"$title\""
+
+    # reset the terminal attributes (disable bold, underline, reverse, etc.)
+    # in case these were set in promptstring or commandstring
+    print -n "${normal}"
 }
 
 settitle()
@@ -99,7 +103,7 @@ settitle()
 }
 
 # set prompt and window title format
-PS1='$(eval echo "\"%{\$${promptcolor:-normal}%}${promptstring}%{${normal}%}%b\"")'
+PS1='$(eval print -n "\"%{\$${promptcolor:-normal}%}${promptstring}%{${normal}%}%b${commandstring}\"")'
 
 # replace the word before the cursor with its realpath
 # (resolves symlinks if the word is a file name)
