@@ -79,8 +79,9 @@ if ( $?TERM ) then
     set connectioninfo='${HOST:ar} ${USER}'
     set commandinfo='\!#'
     set shellinfo='${PWD}'
-    set title="${connectioninfo} $0"
-    set commandtitle="${connectioninfo} '\!#'"
+    set title="$0 ${connectioninfo}"
+    #set commandtitle="'\!#' ${connectioninfo}"
+    set commandtitle="'\!#' ${HOST:ar} ${USER}"
 
     # set the window title on supported terminals
     switch ( $TERM )
@@ -111,10 +112,11 @@ if ( $?TERM ) then
         alias settitle ''
     endif
     if ( $?titlestart ) then
-        alias precmd eval settitle '$title'
-        # postcmd doesn't work the way I want it to
+        alias precmd eval settitle '${title}'
+        # postcmd doesn't work with eval, so we have to take its current value,
+        # which means the user can't change commandtitle during the session
         # http://mx.gw.com/pipermail/tcsh-bugs/2005-July/000382.html
-        #alias postcmd eval settitle '$commandtitle'
+        alias postcmd settitle "${commandtitle}"
     endif
 endif
 
