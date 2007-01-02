@@ -70,7 +70,7 @@ if ( $?prompt ) then
 
     # set the prompt
     set promptchars="%#"
-    set prompt='\012%B%${cwd}%#%b '
+    set prompt='\012%${cwd}%# '
 endif
 
 # enhancements for various terminals
@@ -112,6 +112,8 @@ if ( $?TERM ) then
     endif
     if ( $?titlestart ) then
         alias precmd eval settitle '$title'
+        # postcmd doesn't work the way I want it to
+        # http://mx.gw.com/pipermail/tcsh-bugs/2005-July/000382.html
         #alias postcmd eval settitle '$commandtitle'
     endif
 endif
