@@ -175,7 +175,6 @@ terminit()
 
 ### SHELL ENVIRONMENT
 # set shell options and environment
-CDPATH=":~"
 HISTIGNORE="bg:fg: *"
 HOST=`hostname`
 if exists tty
