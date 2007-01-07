@@ -72,8 +72,6 @@ if ( $?prompt ) then
     which ssh >&/dev/null && setenv CVS_RSH ssh
     which ed >&/dev/null && setenv EDITOR ed
     which vi >&/dev/null && setenv EDITOR vi
-    which nvi >&/dev/null && setenv EDITOR nvi
-    which vim >&/dev/null && setenv EDITOR vim
     which more >&/dev/null && setenv PAGER more
     which less >&/dev/null && setenv PAGER less
     setenv VISUAL "$EDITOR"
