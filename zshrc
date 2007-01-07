@@ -102,6 +102,8 @@ settitle()
     test -n "$titlestart" && print -Pn "${titlestart}$*${titlefinish}"
 }
 
+commandstring="%{${bold}%}"
+
 # set prompt and window title format
 PS1='$(eval print -n "\"%{\$${promptcolor:-normal}%}${promptstring}%{${normal}%}%b${commandstring}\"")'
 
