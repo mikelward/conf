@@ -9,4 +9,5 @@
 " disable running of external commands
 :set secure
 " read .exrc in the current directory
+:set wraplen=66
 :set exrc
