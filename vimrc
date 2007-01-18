@@ -23,7 +23,9 @@ set nostartofline	" keep the current cursor position when reediting a file
 set wildmode=list:longest	" filename completion lists when ambiguous
 
 " DISPLAY OPTIONS
-set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
+"set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
+set listchars=extends:>,precedes:<,tab:>·,trail:·
+set list	" display non printing characters
 set more	" use a pager for long listings
 set nonumber	" don't show line numbers
 set notitle	" don't change terminal's title
@@ -50,6 +52,11 @@ if &term == "putty"
 endif
 if &term == "cygwin"
     set background=dark	" Cygwin has a black background by default
+endif
+
+if &background == "light"
+    highlight SpecialKey ctermfg=LightGrey
+    highlight NonText ctermfg=LightGrey
 endif
 
 " SAVING OPTIONS
