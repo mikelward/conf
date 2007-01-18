@@ -24,8 +24,11 @@ set wildmode=list:longest	" filename completion lists when ambiguous
 
 " DISPLAY OPTIONS
 "set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
-set listchars=extends:>,precedes:<,tab:>·,trail:·
+"set listchars=extends:>,precedes:<,tab:>-,trail:-,eol:$
+"set listchars=extends:>,precedes:<,tab:>·,trail:·,eol:$
+set listchars=extends:>,precedes:<,tab:··,trail:·
 set list	" display non printing characters
+set nowrap	" don't wrap long lines (show extends character instead)
 set more	" use a pager for long listings
 set nonumber	" don't show line numbers
 set notitle	" don't change terminal's title
