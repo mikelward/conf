@@ -138,7 +138,7 @@ else
     alias editlatest             'vi `latest \!*`'
 endif
 alias f	'find . -type f -name \!1 -print \!2* | $PAGER'
-alias g	'grep -En'
+alias g	'grep -EHIin'
 alias gdb                        'gdb -q'
 alias h	'history'
 alias hup	'kill -HUP'

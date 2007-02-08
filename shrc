@@ -251,7 +251,7 @@ then
     alias cx='chmod +x'
     alias e='${EDITOR:-vi}'
     alias edit='${EDITOR:-vi}'
-    alias g='grep -En'
+    alias g='grep -EHIin'        # -H and -I are non-POSIX but are widely supported
     alias gdb='gdb -q '
     alias h='history'
     alias hup='kill -HUP'
@@ -261,14 +261,14 @@ then
     alias ll='l -l'
     alias lt='l -lt'
     alias j='jobs'
-    alias nohup='nohup ' # expand aliases after nohup
+    alias nohup='nohup '         # expand aliases after nohup
     alias pd='pushd'
     alias po='popd'
     alias psme='ps -f -U "${USER:-${LOGNAME}}"'
     alias rcslog='rlog'
     alias rdiff='rcsdiff'
-    alias strace='strace ' # expand aliases after strace
-    alias sudo='sudo '  # expand aliases after sudo
+    alias strace='strace '       # expand aliases after strace
+    alias sudo='sudo '           # expand aliases after sudo
     alias today='date "+%Y%m%d"'
     alias v='${VIEWER:-view}'
 
@@ -394,7 +394,7 @@ test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
 # set preferred program options
 export CLICOLOR=true
 export FIGNORE=
-export GREP_COLOR=1
+export GREP_COLOR=4
 export LESS=-eFj3MRX
 test -n "$TABSIZE" && export LESS="${LESS}x${TABSIZE}"
 case "$TERM" in
