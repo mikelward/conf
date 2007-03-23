@@ -1,0 +1,25 @@
+set autoindent
+set backup
+set cut
+set multibuffer
+set nohelp
+set nowrap
+unset preserve
+set regexp
+set suspend
+set smarthome
+set tabsize 4
+set whitespace "» "
+
+syntax "c" ".*\.[ch]$"
+#color red "\b(auto|int|float|double|char|void|long)\b"
+#color yellow "\b(if|else|continue|break|return|goto|while|do|switch|const|static|sizeof)\b"
+color blue "\".*?\""
+color white start="/\*" end="\*/"
+
+syntax "sh" ".*\.sh$"
+#color yellow "\b(if|elif|then|fi|case|in|do|done|while|continue|break|return|exit)\b"
+color blue "\".*?\""
+color red "\$[_A-Za-z0-9]+"
+color red start="\$\{" end="\}"
+color white "^[^\"]*#.*$"
