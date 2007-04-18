@@ -269,6 +269,7 @@ then
     alias rdiff='rcsdiff'
     alias strace='strace '       # expand aliases after strace
     alias sudo='sudo '           # expand aliases after sudo
+    alias tailmail='tail "$HOME/.proclog"'
     alias today='date "+%Y%m%d"'
     alias v='${VIEWER:-view}'
 

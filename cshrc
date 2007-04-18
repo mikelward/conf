@@ -169,6 +169,7 @@ alias retags	'find . \( -name "*.c" -o -name "*.h" \
 	    -o -name "*.py" \
 	    -o -name "*.y" -o -name "*.yy" \) \
 	    -print | etags -'
+alias tailmail                   'tail ~/.proclog'
 alias today                      'date "+%Y%m%d"'
 if ( $?VIEWER ) then
     alias v                      '$VIEWER'
