@@ -434,7 +434,7 @@ then
     # set prompt and window title
     connectioninfo='${HOST%%.*} ${USER}'
     command=${0#-}
-    commandinfo='$(echo "$command" | sed -e "s/^-//" -e "s#^[^ ]*/##")'
+    commandinfo='$(echo "$command" | sed -e "s/^-//" -e "s#^[^ ]*/##" -e "s/ .*$//")'
     shellinfo='${PWD}'
     promptchars='$(if test ${laststatus:-0} -ne 0; then echo "?"; elif test $UID -eq 0; then echo "#"; else echo ">"; fi)'
     if test $UID -eq 0
