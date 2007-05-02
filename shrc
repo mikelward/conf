@@ -423,7 +423,7 @@ then
 fi
 export TOP=-I
 export WANT_SSH_AGENT=1
-export WWW_HOME=http://endbracket.net/michael/links
+export WWW_HOME=http://google.com
 
 ### INTERACTIVE SETTINGS
 if tty >/dev/null 2>&1
