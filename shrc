@@ -176,7 +176,10 @@ terminit()
 ### SHELL ENVIRONMENT
 # set shell options and environment
 HISTIGNORE="bg:fg: *"
-HOST=`hostname`
+if test -z "$HOST"
+then
+    HOST=`hostname`
+fi
 if exists tty
 then
     TTY=`tty`
