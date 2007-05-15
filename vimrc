@@ -23,11 +23,16 @@ set nostartofline	" keep the current cursor position when reediting a file
 set wildmode=list:longest	" filename completion lists when ambiguous
 
 " DISPLAY OPTIONS
-"set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
-"set listchars=extends:>,precedes:<,tab:>-,trail:-,eol:$
-"set listchars=extends:>,precedes:<,tab:>·,trail:·,eol:$
-set listchars=extends:>,precedes:<,tab:··,trail:·
-set list	" display non printing characters
+if version >= 600
+    "set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
+    "set listchars=extends:>,precedes:<,tab:>-,trail:-,eol:$
+    "set listchars=extends:>,precedes:<,tab:>·,trail:·,eol:$
+    set listchars=extends:>,precedes:<,tab:··,trail:·
+    set list	" display non printing characters
+elseif version >= 500
+    set listchars=tab:__,trail:_
+    set list	" display non printing characters
+endif
 set nowrap	" don't wrap long lines (show extends character instead)
 set more	" use a pager for long listings
 set nonumber	" don't show line numbers
@@ -87,12 +92,14 @@ filetype indent on
 
 let is_bash = 1	" use bash syntax for #!/bin/sh files
 
-" disable line wrapping for program source files
-au BufRead *.{c,cc,cpp,h,hh,hpp} setlocal tw=0
-au BufRead *.{html,shtml,php,php3,php4,php5,inc} setlocal tw=0
+if version >= 600
+    " disable line wrapping for program source files
+    au BufRead *.{c,cc,cpp,h,hh,hpp} setlocal tw=0
+    au BufRead *.{html,shtml,php,php3,php4,php5,inc} setlocal tw=0
 
-" treat unknown file types as text files
-au BufRead,BufNewFile * setfiletype text
+    " treat unknown file types as text files
+    au BufRead,BufNewFile * setfiletype text
+endif
 
 " edit binary files in binary mode using the output of xxd
 augroup Binary
