@@ -447,7 +447,8 @@ then
         promptcolor=normal
     fi
     promptstring='
-$(eval echo "${shellinfo}")$(eval echo "\"${promptchars}\"") '
+$(echo "${bold}")$(eval echo "${connectioninfo}") $(eval echo "${shellinfo}")
+$(eval echo "\"${promptchars}\"")$(echo "${normal}") '
     case "${TERM}" in
     #screen*)
     #    title='$(eval echo "${commandinfo}")'
