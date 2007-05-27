@@ -169,8 +169,11 @@ alias retags	'find . \( -name "*.c" -o -name "*.h" \
 	    -o -name "*.py" \
 	    -o -name "*.y" -o -name "*.yy" \) \
 	    -print | etags -'
+alias t                          'tail -n `expr 24 - 5`'                     # ideally 'tail -n `expr ``tput lines`` - 3`'
 alias tailmail                   'tail ~/.proclog'
+alias tm                         't -f /var/log/mail'
 alias today                      'date "+%Y%m%d"'
+alias tp                         't ~/.proclog'
 if ( $?VIEWER ) then
     alias v                      '$VIEWER'
 else

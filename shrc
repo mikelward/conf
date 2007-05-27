@@ -273,7 +273,8 @@ then
     alias strace='strace '       # expand aliases after strace
     alias sudo='sudo '           # expand aliases after sudo
     alias tailmail='tail "$HOME/.proclog"'
-    alias tm='t "$HOME/.proclog"'
+    alias tm='t -f /var/log/mail'
+    alias tp='t "$HOME/.proclog"'
     alias today='date "+%Y%m%d"'
     alias v='${VIEWER:-view}'
 
@@ -359,7 +360,11 @@ t()
     then
         lines=$(($LINES - $promptlines))
     else
-        lines=10
+        lines=$(tput lines)
+        if test -z $lines
+        then
+            lines=24
+        fi
     fi
 
     tail -n $lines "$@"
@@ -447,8 +452,7 @@ then
         promptcolor=normal
     fi
     promptstring='
-$(echo "${bold}")$(eval echo "${connectioninfo}") $(eval echo "${shellinfo}")
-$(eval echo "\"${promptchars}\"")$(echo "${normal}") '
+$(eval echo "${shellinfo}")$(eval echo "\"${promptchars}\"") '
     case "${TERM}" in
     #screen*)
     #    title='$(eval echo "${commandinfo}")'
