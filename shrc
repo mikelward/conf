@@ -176,6 +176,7 @@ terminit()
 ### SHELL ENVIRONMENT
 # set shell options and environment
 HISTIGNORE="bg:fg: *"
+HISTSIZE=128
 if test -z "$HOST"
 then
     HOST=`hostname`
