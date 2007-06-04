@@ -435,10 +435,13 @@ export WANT_SSH_AGENT=1
 export WWW_HOME=http://google.com
 
 ### INTERACTIVE SETTINGS
-if tty >/dev/null 2>&1
-then
-    # get the terminal characteristics
-    terminit
+case $- in
+*i*)
+    if tty >/dev/null 2>&1
+    then
+        # get the terminal characteristics
+        terminit
+    fi
 
     # set prompt and window title
     connectioninfo='${HOST%%.*} ${USER}'
@@ -466,22 +469,23 @@ $(eval echo "${shellinfo}")$(eval echo "\"${promptchars}\"") '
     # set command line editing key bindings
     # this must be after the EDITOR and VISUAL settings
     set -o emacs 2>/dev/null
-fi
+
+    # apply the user's settings for prompt, title, etc.
+    # we differentiate here between ksh and sh,
+    # prompts for bash and zsh are handled in .bashrc, .zshrc, etc.
+    case $0 in
+    *ksh*)
+        PS1='$(eval settitle "\"${title}\"")''$(eval echo "\"\$${promptcolor:-normal}${promptstring}${normal}\"")'
+        ;;
+    *)
+        PS1="$(eval echo $promptchars) "
+    esac
+    ;;
+esac
 
 ### LAST COMMANDS
 # source local settings (company environment, network, etc.)
 test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
-
-# apply the user's settings for prompt, title, etc.
-# we differentiate here between ksh and sh,
-# prompts for bash and zsh are handled in .bashrc, .zshrc, etc.
-case $0 in
-*ksh*)
-    PS1='$(eval settitle "\"${title}\"")''$(eval echo "\"\$${promptcolor:-normal}${promptstring}${normal}\"")'
-    ;;
-*)
-    PS1="$(eval echo $promptchars) "
-esac
 
 # finish with a 0 exit status
 true

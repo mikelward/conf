@@ -9,10 +9,10 @@
 test -f "$HOME"/.shrc && export ENV="$HOME"/.shrc
 
 # interactive commands
-if exists tty && quiet tty
+if type tty >/dev/null 2>/dev/null && tty >/dev/null
 then
     # disable flow control so applications can use ^Q and ^S
-    exists stty && stty -ixon
+    type stty >/dev/null 2>/dev/null && stty -ixon
 fi
 
 # set a script that will be sourced on exiting the shell
