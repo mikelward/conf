@@ -102,8 +102,10 @@ settitle()
     test -n "$titlestart" && print -Pn "${titlestart}$*${titlefinish}"
 }
 
+commandstring="%{${bold}%}"
+
 # set prompt and window title format
-PS1='$(eval print -n "\"%{\$${promptcolor:-normal}%}${promptstring}%{${normal}%}%b${commandstring}\"")'
+PS1='$(eval print -n "\"%{\$${promptcolor:-normal}%}${promptstring}%{${normal}%}${commandstring}\"")'
 
 # replace the word before the cursor with its realpath
 # (resolves symlinks if the word is a file name)
