@@ -24,10 +24,10 @@ set wildmode=list:longest	" filename completion lists when ambiguous
 
 " DISPLAY OPTIONS
 if version >= 600
-    "set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
+    set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
     "set listchars=extends:>,precedes:<,tab:>-,trail:-,eol:$
     "set listchars=extends:>,precedes:<,tab:>·,trail:·,eol:$
-    set listchars=extends:>,precedes:<,tab:··,trail:·
+    "set listchars=extends:>,precedes:<,tab:··,trail:·
     set list	" display non printing characters
 elseif version >= 500
     set listchars=tab:__,trail:_
