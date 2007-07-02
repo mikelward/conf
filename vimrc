@@ -24,14 +24,15 @@ set wildmode=list:longest	" filename completion lists when ambiguous
 
 " DISPLAY OPTIONS
 if version >= 600
-    set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
+    "set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
+    set listchars=extends:>,precedes:<,tab:>\ ,trail:_
     "set listchars=extends:>,precedes:<,tab:>-,trail:-,eol:$
     "set listchars=extends:>,precedes:<,tab:>·,trail:·,eol:$
     "set listchars=extends:>,precedes:<,tab:··,trail:·
     "set list	" display non printing characters
 elseif version >= 500
-    set listchars=tab:__,trail:_
-    set list	" display non printing characters
+    set listchars=tab:>\ ,trail:_
+    "set list	" display non printing characters
 endif
 set nowrap	" don't wrap long lines (show extends character instead)
 set more	" use a pager for long listings
