@@ -40,6 +40,7 @@ setopt interactivecomments
 setopt kshglob
 setopt posixbuiltins
 setopt promptsubst
+setopt shwordsplit
 
 # set some zsh-specific options
 setopt appendhistory
