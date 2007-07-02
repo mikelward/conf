@@ -447,7 +447,7 @@ case $- in
     connectioninfo='${HOST%%.*} ${USER}'
     command=${0#-}
     commandinfo='$(echo "$command" | sed -e "s/^-//" -e "s#^[^ ]*/##" -e "s/ .*$//")'
-    shellinfo='${PWD}'
+    shellinfo='$(pwd | sed -e "s#$HOME#~#")'
     promptchars='$(if test ${laststatus:-0} -ne 0; then echo "?"; elif test $UID -eq 0; then echo "#"; else echo ">"; fi)'
     if test $UID -eq 0
     then
@@ -458,11 +458,11 @@ case $- in
     promptstring='
 $(eval echo "${shellinfo}")$(eval echo "\"${promptchars}\"") '
     case "${TERM}" in
-    #screen*)
-    #    title='$(eval echo "${commandinfo}")'
-    #    ;;
+    screen*)
+        title='$(eval echo "${commandinfo}")'
+        ;;
     *)
-        title='$(eval echo "${commandinfo} ${connectioninfo}")'
+        title='$(eval echo "${connectioninfo}")'
         ;;
     esac
 
