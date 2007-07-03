@@ -155,6 +155,8 @@ alias pd	'pushd'
 alias psme	'ps -f -U $USER'
 alias po	'popd'
 alias qfind	'sh -c "find \!* 2> /dev/null | $PAGER"'
+alias rb	'reportblocked'
+alias rg	'reportgraylist'
 alias rtags	'ctags -R'
 alias retags	'find . \( -name "*.c" -o -name "*.h" \
 	    -o -name "*.a" -o -name "*.s" \

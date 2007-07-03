@@ -269,8 +269,10 @@ then
     alias pd='pushd'
     alias po='popd'
     alias psme='ps -f -U "${USER:-${LOGNAME}}"'
+    alias rb='reportblocked'
     alias rcslog='rlog'
     alias rdiff='rcsdiff'
+    alias rg='reportgraylist'
     alias strace='strace '       # expand aliases after strace
     alias sudo='sudo '           # expand aliases after sudo
     alias tailmail='tail "$HOME/.proclog"'
