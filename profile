@@ -18,10 +18,30 @@ fi
 # set a script that will be sourced on exiting the shell
 test -f "$HOME"/.exitrc && trap ". $HOME/.exitrc" EXIT
 
+# start the SSH agent if desired
+if test $WANT_SSH_AGENT
+then
+    if test -z $SSH_AUTH_SOCK
+	then
+		if type ssh-agent >/dev/null 2>/dev/null
+		then
+			eval `ssh-agent`
+		fi
+	fi
+	if test -n $SSH_AUTH_SOCK
+	then
+		if type ssh-add >/dev/null 2>dev/null
+		then
+			if ! ssh-add -l
+			then
+				ssh-add
+			fi
+		fi
+	fi
+fi
+
 # read local commands
 test -f "$HOME"/.profile.local && . "$HOME"/.profile.local
 
 # finish with a zero exit status
 true
-
-# vi: set sw=4 ts=33:
