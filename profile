@@ -30,7 +30,7 @@ then
 	fi
 	if test -n $SSH_AUTH_SOCK
 	then
-		if type ssh-add >/dev/null 2>dev/null
+		if type ssh-add >/dev/null 2>/dev/null
 		then
 			if ! ssh-add -l
 			then
