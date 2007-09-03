@@ -24,8 +24,8 @@ set wildmode=list:longest	" filename completion lists when ambiguous
 
 " DISPLAY OPTIONS
 if version >= 600
-    "set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
-    set listchars=extends:>,precedes:<,tab:>\ ,trail:_
+    set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
+    "set listchars=extends:>,precedes:<,tab:>\ ,trail:_
     "set listchars=extends:>,precedes:<,tab:>-,trail:-,eol:$
     "set listchars=extends:>,precedes:<,tab:>·,trail:·,eol:$
     "set listchars=extends:>,precedes:<,tab:··,trail:·
@@ -113,6 +113,10 @@ augroup Binary
     au BufWritePost *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd
     au BufWritePost *.bin,*.exe.*.jpg,*.pcx set nomod | endif
 augroup END
+
+" per file-type rules
+au BufRead,BufNewFile * if &filetype == 'vim' || &filetype == 'fstab' | set listchars+=tab:>\  | set list | endif
+au BufRead,BufNewFile * if &filetype == 'c' || &filetype == 'cpp' || &filetype == 'make' || &filetype == 'perl' || &filetype == 'python' || &filetype == 'ruby' | set listchars+=tab:\|\  | set list | endif 
 
 " per-project rules
 au BufRead,BufNewFile */cvs/*.{c,h} setlocal sw=4 ts=8 noexpandtab
