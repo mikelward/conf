@@ -114,8 +114,9 @@ augroup Binary
 augroup END
 
 " per file-type rules
+au BufRead,BufNewFile * if &filetype == 'c' || &filetype == 'cpp' || &filetype == 'perl' || &filetype == 'python' || &filetype == 'ruby' | set listchars+=tab:\|\  | endif
+au BufRead,BufNewFile * if &filetype == 'make' | set listchars+=tab:\|\  | set list | endif
 au BufRead,BufNewFile * if &filetype == 'vim' || &filetype == 'fstab' | set listchars+=tab:>\  | set list | endif
-au BufRead,BufNewFile * if &filetype == 'c' || &filetype == 'cpp' || &filetype == 'make' || &filetype == 'perl' || &filetype == 'python' || &filetype == 'ruby' | set listchars+=tab:\|\  | set list | endif 
 
 au FileType perl set cindent cinkeys-=0#
 
