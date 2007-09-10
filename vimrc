@@ -83,7 +83,6 @@ inoremap # X<BS>#
 set backspace=2	" backspaces can go over lines
 set esckeys	" allow arrow keys in insert mode
 set noerrorbells visualbell	" flash screen instead of ringing bell
-set showmatch	" show matching brackets
 set showbreak=+	" specially mark continued lines with a plus
 
 " per-file type rules
@@ -118,8 +117,11 @@ augroup END
 au BufRead,BufNewFile * if &filetype == 'vim' || &filetype == 'fstab' | set listchars+=tab:>\  | set list | endif
 au BufRead,BufNewFile * if &filetype == 'c' || &filetype == 'cpp' || &filetype == 'make' || &filetype == 'perl' || &filetype == 'python' || &filetype == 'ruby' | set listchars+=tab:\|\  | set list | endif 
 
+au FileType perl set cindent cinkeys-=0#
+
 " per-project rules
 au BufRead,BufNewFile */cvs/*.{c,h} setlocal sw=4 ts=8 noexpandtab
+au BufRead,BufNewFile */fam/*{.c++,h} setlocal sw=4 ts=8 noexpandtab
 au BufRead,BufNewFile */lics/*.{c,cpp,h} setlocal sw=4 ts=4 expandtab
 au BufRead,BufNewFile */postfix/*.{c,h} setlocal sw=4 ts=8 noexpandtab
 au BufRead,BufNewFile */procmail/*.{c,h} setlocal sw=3 ts=8 noexpandtab
