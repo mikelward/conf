@@ -117,6 +117,7 @@ augroup END
 au BufRead,BufNewFile * if &filetype == 'c' || &filetype == 'cpp' || &filetype == 'perl' || &filetype == 'python' || &filetype == 'ruby' | set listchars+=tab:\|\  | endif
 au BufRead,BufNewFile * if &filetype == 'make' | set listchars+=tab:\|\  | set list | endif
 au BufRead,BufNewFile * if &filetype == 'vim' || &filetype == 'fstab' | set listchars+=tab:>\  | set list | endif
+au BufRead,BufNewFile * if &filetype == 'text' || &filetype == 'svn' | set textwidth=66 | endif
 
 au FileType perl set cindent cinkeys-=0#
 
