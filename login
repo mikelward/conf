@@ -19,12 +19,6 @@ if ( { tty } ) >& /dev/null then
     if ( { which ssh-add } && ! { ssh-add -l ) >& /dev/null then
         ssh-add
     endif
-
-    # obtain Kerberos credentials
-    if ( { which klist } && ! { klist -s } ) >&/dev/null then
-        if ( { which kinit } ) kinit
-    endif
-
 endif
 
 # read local settings (company environment, etc.)
