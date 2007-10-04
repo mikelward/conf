@@ -46,7 +46,7 @@ else
 endif
 set laststatus=2	" always show status line for each window
 set showmode	" always show command or insert mode
-set shortmess=IA	" no intro or swap file found messages
+set shortmess=I	" no intro or swap file found messages
 	" after opening a file already being edited
 if has("cmdline_info")
     set showcmd	" show partial commands
