@@ -150,6 +150,10 @@ terminit()
         titlestart='];'
         titlefinish=''
         ;;
+    konsole)
+        titlestart=']30;'
+        titlefinish=''
+        ;;
     screen*)
         # status line
         #titlestart='_'
@@ -446,7 +450,7 @@ case $- in
     fi
 
     # set prompt and window title
-    connectioninfo='${HOST%%.*} ${USER}'
+    connectioninfo='${HOST%%.*}'
     command=${0#-}
     commandinfo='$(echo "$command" | sed -e "s/^-//" -e "s#^[^ ]*/##" -e "s/ .*$//")'
     shellinfo='$(pwd | sed -e "s#$HOME#~#")'
@@ -464,7 +468,7 @@ $(eval echo "${shellinfo}")$(eval echo "\"${promptchars}\"") '
         title='$(eval echo "${commandinfo}")'
         ;;
     *)
-        title='$(eval echo "${connectioninfo}")'
+        title='$(eval echo "${connectioninfo} ${commandinfo}")'
         ;;
     esac
 
