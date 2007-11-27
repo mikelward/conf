@@ -144,8 +144,8 @@ case $- in *i*)
         else
             COMPDEF="-o default"
         fi
-        complete -a {,un}alias
-        complete -d {c,p,push,pop}d,po
+        complete -a alias unalias
+        complete -d cd pushd popd pd po
         complete $COMPDEF -g chgrp
         complete $COMPDEF -u chown
         complete -j fg
