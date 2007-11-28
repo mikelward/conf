@@ -257,6 +257,7 @@ then
     alias apt='aptitude'
     alias bell='echo "\a"'
     alias cx='chmod +x'
+    alias d='dirs'	# only supported by bash and zsh
     alias e='${EDITOR:-vi}'
     alias edit='${EDITOR:-vi}'
     alias g='grep -EHIin'        # -H and -I are non-POSIX but are widely supported
