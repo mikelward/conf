@@ -131,6 +131,7 @@ au BufRead,BufNewFile */putty/*.{c,h} setlocal sw=4 ts=8 noexpandtab
 au BufRead,BufNewFile */zsh/*.[ch] setlocal sw=4 ts=8 noexpandtab
 
 " SEARCH OPTIONS
+set nohlsearch	" disable highlighting of matches
 set noignorecase	" case is important in search terms
 set tags+=./tags;/	" search up the tree for tags files
 
