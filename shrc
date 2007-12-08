@@ -281,6 +281,7 @@ then
     alias strace='strace '       # expand aliases after strace
     alias sudo='sudo '           # expand aliases after sudo
     alias tailmail='tail "$HOME/.proclog"'
+    alias tf='tail -n 0 -F'
     alias tm='t -f /var/log/mail'
     alias tp='t "$HOME/.proclog"'
     alias today='date "+%Y%m%d"'

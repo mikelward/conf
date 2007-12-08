@@ -173,6 +173,7 @@ alias retags	'find . \( -name "*.c" -o -name "*.h" \
 	    -print | etags -'
 alias t                          'tail -n `expr 24 - 5`'                     # ideally 'tail -n `expr ``tput lines`` - 3`'
 alias tailmail                   'tail ~/.proclog'
+alias tf	'tail -n 0 -F'
 alias tm                         't -f /var/log/mail'
 alias today                      'date "+%Y%m%d"'
 alias tp                         't ~/.proclog'
