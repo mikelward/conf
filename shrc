@@ -473,7 +473,7 @@ case $- in
     fi
 
     # set prompt and window title
-    connectioninfo='${HOST%%.*}'
+    connectioninfo='$(short_hostname)'
     command=${0#-}
     commandinfo='$(echo "$command" | sed -e "s/^-//" -e "s#^[^ ]*/##" -e "s/ .*$//")'
     shellinfo='$(if test $UID -eq 0; then pwd; else pwd | sed -e "s#$HOME#~#"; fi)'
