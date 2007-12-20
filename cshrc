@@ -176,7 +176,7 @@ alias tailmail                   'tail ~/.proclog'
 alias tf	'tail -n 0 -F'
 alias tm                         't -f /var/log/mail'
 alias today                      'date "+%Y%m%d"'
-alias tp                         't ~/.proclog'
+alias tp                         't -f ~/.proclog'
 if ( $?VIEWER ) then
     alias v                      '$VIEWER'
 else
