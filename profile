@@ -32,7 +32,7 @@ then
 	then
 		if type ssh-add >/dev/null 2>/dev/null
 		then
-			if ! ssh-add -l
+			if ! ssh-add -l >/dev/null
 			then
 				ssh-add
 			fi

@@ -16,7 +16,7 @@ if ( { tty } ) >& /dev/null then
     if ( { which stty } ) >& /dev/null stty -ixon
 
     # obtain SSH credentials
-    if ( { which ssh-add } && ! { ssh-add -l ) >& /dev/null then
+    if ( { which ssh-add } && ! { ssh-add -l ) > /dev/null then
         ssh-add
     endif
 endif
