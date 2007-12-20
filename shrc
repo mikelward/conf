@@ -6,7 +6,6 @@
 # POSIX-compatible shells including bash, ksh, and zsh.
 #
 #
-
 # ensure this shell supports local variables using either local
 # (from bash and zsh) or typeset (from ksh)
 if ! type local >/dev/null 2>/dev/null
@@ -278,6 +277,8 @@ then
     alias rcslog='rlog'
     alias rdiff='rcsdiff'
     alias rg='reportgraylist'
+    type assh >/dev/null 2>/dev/null && alias ssh='assh'
+    type ascp >/dev/null 2>/dev/null && alias scp='ascp'
     alias strace='strace '       # expand aliases after strace
     alias sudo='sudo '           # expand aliases after sudo
     alias tf='tail -n 0 -F'
