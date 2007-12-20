@@ -280,10 +280,9 @@ then
     alias rg='reportgraylist'
     alias strace='strace '       # expand aliases after strace
     alias sudo='sudo '           # expand aliases after sudo
-    alias tailmail='tail "$HOME/.proclog"'
     alias tf='tail -n 0 -F'
     alias tm='t -f /var/log/mail'
-    alias tp='t "$HOME/.proclog"'
+    alias tp='t -f "$HOME/.proclog"'
     alias today='date "+%Y%m%d"'
     alias v='${VIEWER:-view}'
 
@@ -455,7 +454,7 @@ case $- in
     connectioninfo='${HOST%%.*}'
     command=${0#-}
     commandinfo='$(echo "$command" | sed -e "s/^-//" -e "s#^[^ ]*/##" -e "s/ .*$//")'
-    shellinfo='$(pwd | sed -e "s#$HOME#~#")'
+    shellinfo='$(if test $UID -eq 0; then pwd; else pwd | sed -e "s#$HOME#~#"; fi)'
     promptchars='$(if test ${laststatus:-0} -ne 0; then echo "!"; elif test $UID -eq 0; then echo "#"; else echo "$"; fi)'
     if test $UID -eq 0
     then
