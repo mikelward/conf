@@ -358,6 +358,28 @@ rgrep()
     fi
 }
 
+# get a short version of the hostname for use in the prompt or window title
+short_hostname()
+{
+    typeset domains
+    # domain that we want to keep the subdomain for
+    domain="acx"
+
+    if test -n "$HOST"
+    then
+        if echo "$HOST" | grep -q "\.$domain"
+        then
+            echo "$HOST" | sed -e "s/\.$domain//"
+        else
+            echo "$HOST" | sed -e "s/\..*//"
+        fi
+        return 0
+    else
+        echo "unknown"
+        return 1
+    fi
+}
+
 # print the last screenful of text from a file
 t()
 {
