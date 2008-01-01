@@ -70,18 +70,17 @@ if ( $?prompt ) then
 
     # set the prompt
     set promptchars="%#"
-    set prompt='\012%${cwd}%# '
+    set prompt='\012%~%# '
 endif
 
 # enhancements for various terminals
 if ( $?TERM ) then
     # set the format for titles and prompts
-    set connectioninfo='${HOST:ar} ${USER}'
-    set commandinfo='\!#'
-    set shellinfo='${PWD}'
-    set title="$0 ${connectioninfo}"
-    #set commandtitle="'\!#' ${connectioninfo}"
-    set commandtitle="'\!#' ${HOST:ar} ${USER}"
+    #set connectioninfo='${HOST:ar}'
+    #set commandinfo='\!#'
+    #set shellinfo='echo "${PWD}" | sed "s#^${HOME}#~#"'
+    set title="${HOST:ar} $0"
+    set commandtitle="${HOST:ar} '\!#'"
 
     # set the window title on supported terminals
     switch ( $TERM )
