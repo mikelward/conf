@@ -123,7 +123,8 @@ if ( $?prompt ) then
 endif
 
 # set command aliases
-alias apt	'aptitude'
+which apt-get >&/dev/null && alias apt 'apt-get'
+which aptitude >&/dev/null && alias apt 'aptitude'
 alias bell	'echo "\a"'
 alias cd..	'cd ..'
 alias cx	'chmod +x'
