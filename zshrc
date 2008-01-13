@@ -107,6 +107,9 @@ commandstring="%{${bold}%}"
 # set prompt and window title format
 PS1='$(eval print -n "\"%{\$${promptcolor:-normal}%}${promptstring}%{${normal}%}${commandstring}\"")'
 
+HISTFILE=~/.zsh_history
+SAVEHIST=${HISTSIZE:-128}
+
 # replace the word before the cursor with its realpath
 # (resolves symlinks if the word is a file name)
 expand-word-path ()
