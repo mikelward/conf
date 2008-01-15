@@ -10,170 +10,170 @@
 # (from bash and zsh) or typeset (from ksh)
 if ! type local >/dev/null 2>/dev/null
 then
-    if type typeset >/dev/null 2>/dev/null
-    then
-        alias local='typeset'
-    else
-        echo "Cannot find local or typeset shell command, some features in .shrc will not work" 1>&2
-    fi
+	if type typeset >/dev/null 2>/dev/null
+	then
+		alias local='typeset'
+	else
+		echo "Cannot find local or typeset shell command, some features in .shrc will not work" 1>&2
+	fi
 fi
 
 ### HELPER FUNCTIONS
 # add a directory to the path
 addpath()
 {
-    local _adddir
-    local _position
-    local _pathvar
-    local _separator
-    _adddir=$1
-    _position=$2
-    _pathvar=${3:-"PATH"}
-    _separator=${4:-":"}
-    OIFS="$IFS"
-    IFS="$_separator"
+	local _adddir
+	local _position
+	local _pathvar
+	local _separator
+	_adddir=$1
+	_position=$2
+	_pathvar=${3:-"PATH"}
+	_separator=${4:-":"}
+	OIFS="$IFS"
+	IFS="$_separator"
 
-    case "$_position" in
-    start)
-        delpath "$_adddir" "$_pathvar" "$_separator"
-        eval $_pathvar="\$_adddir""\${$_pathvar:+\$_separator}""\$$_pathvar"
-        ;;
-    end)
-        delpath "$_adddir" "$_pathvar" "$_separator"
-        eval $_pathvar="\$$_pathvar""\${$_pathvar:+\$_separator}""\$_adddir"
-        ;;
-    *)
-        local dirs
-        local seen
-        eval dirs=\$$_pathvar
-        for d in $dirs
-        do
-            # directory is already in PATH, leave as is
-            test "${_adddir:-.}" = "${d:-.}" && seen=true
-        done
-        test -z "$seen" && eval $_pathvar="\$$_pathvar""\${$_pathvar:+$_separator}""\$_adddir"
-        ;;
-    esac
-    IFS="$OIFS"
+	case "$_position" in
+	start)
+		delpath "$_adddir" "$_pathvar" "$_separator"
+		eval $_pathvar="\$_adddir""\${$_pathvar:+\$_separator}""\$$_pathvar"
+		;;
+	end)
+		delpath "$_adddir" "$_pathvar" "$_separator"
+		eval $_pathvar="\$$_pathvar""\${$_pathvar:+\$_separator}""\$_adddir"
+		;;
+	*)
+		local dirs
+		local seen
+		eval dirs=\$$_pathvar
+		for d in $dirs
+		do
+			# directory is already in PATH, leave as is
+			test "${_adddir:-.}" = "${d:-.}" && seen=true
+		done
+		test -z "$seen" && eval $_pathvar="\$$_pathvar""\${$_pathvar:+$_separator}""\$_adddir"
+		;;
+	esac
+	IFS="$OIFS"
 }
 
 # remove a directory from the path
 delpath()
 {
-    local _deldir
-    local _pathvar
-    local _separator
-    _deldir=$1
-    _pathvar=${2:-"PATH"}
-    _separator=${3:-":"}
-    NIFS="$IFS"
-    IFS="$_separator"
+	local _deldir
+	local _pathvar
+	local _separator
+	_deldir=$1
+	_pathvar=${2:-"PATH"}
+	_separator=${3:-":"}
+	NIFS="$IFS"
+	IFS="$_separator"
 
-    local _newdirs
-    local _olddirs
+	local _newdirs
+	local _olddirs
 
-    eval _olddirs=\$$_pathvar
-    _newdirs=
-    for d in $_olddirs
-    do
-        test "${d:-.}" = "${_deldir:-.}" && continue
-        _newdirs="$_newdirs""${_newdirs:+$_separator}""$d"
-    done
-    eval $_pathvar="\$_newdirs"
-    IFS="$NIFS"
+	eval _olddirs=\$$_pathvar
+	_newdirs=
+	for d in $_olddirs
+	do
+		test "${d:-.}" = "${_deldir:-.}" && continue
+		_newdirs="$_newdirs""${_newdirs:+$_separator}""$d"
+	done
+	eval $_pathvar="\$_newdirs"
+	IFS="$NIFS"
 }
 
 # return true if the command can be found, false otherwise
 exists()
 {
-    local cmd
-    cmd="$1"
+	local cmd
+	cmd="$1"
 
-    if type "$cmd" >/dev/null 2>&1
-    then
-        return 0
-    else
-        return 1
-    fi
+	if type "$cmd" >/dev/null 2>&1
+	then
+		return 0
+	else
+		return 1
+	fi
 }
 
 # print an error message
 error()
 {
-    echo "$@" 1>&2
+	echo "$@" 1>&2
 }
 
 # run a simple command quietly
 quiet()
 {
-    "$@" >/dev/null 2>&1
-    return $?
+	"$@" >/dev/null 2>&1
+	return $?
 }
 
 # set the xterm title
 settitle()
 {
-    test -z "${titlestart}" && return 0
+	test -z "${titlestart}" && return 0
 
-    printf "${titlestart}$*${titlefinish}"
+	printf "${titlestart}$*${titlefinish}"
 }
 
 terminit()
 {
-    # determine the graphics mode escape sequences
-    if exists tput
-    then
-        if quiet tput longname
-        then
-            bold="$(tput bold)"
-            underline="$(tput smul)"
-            normal="$(tput sgr0)"
-            black="$(tput setaf 0)"
-            red="$(tput setaf 1)"
-            green="$(tput setaf 2)"
-            yellow="$(tput setaf 3)"
-            blue="$(tput setaf 4)"
-            magenta="$(tput setaf 5)"
-            cyan="$(tput setaf 6)"
-            white="$(tput setaf 7)"
-        fi
-    fi
+	# determine the graphics mode escape sequences
+	if exists tput
+	then
+		if quiet tput longname
+		then
+			bold="$(tput bold)"
+			underline="$(tput smul)"
+			normal="$(tput sgr0)"
+			black="$(tput setaf 0)"
+			red="$(tput setaf 1)"
+			green="$(tput setaf 2)"
+			yellow="$(tput setaf 3)"
+			blue="$(tput setaf 4)"
+			magenta="$(tput setaf 5)"
+			cyan="$(tput setaf 6)"
+			white="$(tput setaf 7)"
+		fi
+	fi
 
-    # determine the window title escape sequences
-    case "$TERM" in
-    aixterm|dtterm|putty|rxvt|xterm*)
-        titlestart=']0;'
-        titlefinish=''
-        ;;
-    cygwin)
-        titlestart='];'
-        titlefinish=''
-        ;;
-    konsole)
-        titlestart=']30;'
-        titlefinish=''
-        ;;
-    screen*)
-        # status line
-        #titlestart='_'
-        # window title
-        titlestart='k'
-        titlefinish='\'
-        ;;
-    *)
-        if exists tput
-        then
-            if quiet tput longname
-            then
-                titlestart=`tput tsl`
-                titlefinish=`tput fsl`
-            fi
-        else
-            titlestart=''
-            titlefinish=''
-        fi
-        ;;
-    esac
+	# determine the window title escape sequences
+	case "$TERM" in
+	aixterm|dtterm|putty|rxvt|xterm*)
+		titlestart=']0;'
+		titlefinish=''
+		;;
+	cygwin)
+		titlestart='];'
+		titlefinish=''
+		;;
+	konsole)
+		titlestart=']30;'
+		titlefinish=''
+		;;
+	screen*)
+		# status line
+		#titlestart='_'
+		# window title
+		titlestart='k'
+		titlefinish='\'
+		;;
+	*)
+		if exists tput
+		then
+			if quiet tput longname
+			then
+				titlestart=`tput tsl`
+				titlefinish=`tput fsl`
+			fi
+		else
+			titlestart=''
+			titlefinish=''
+		fi
+		;;
+	esac
 }
 
 ### SHELL ENVIRONMENT
@@ -182,21 +182,21 @@ HISTIGNORE="bg:fg: *"
 HISTSIZE=128
 if test -z "$HOST"
 then
-    HOST=`hostname`
+	HOST=`hostname`
 fi
 if exists tty
 then
-    TTY=`tty`
+	TTY=`tty`
 else
-    TTY='?'
+	TTY='?'
 fi
 if test -z "$UID"
 then
-    UID=`id -u`
+	UID=`id -u`
 fi
 if test -z "$USER"
 then
-    USER=`id -un`
+	USER=`id -un`
 fi
 
 # set directories to search for commands
@@ -208,44 +208,44 @@ fi
 # they're not symlinks
 for dir in /usr/X11R6/bin /usr/bin/X11
 do
-    test -d "$dir" && test ! -L "$dir" && addpath "$dir" start
+	test -d "$dir" && test ! -L "$dir" && addpath "$dir" start
 done
 for dir in /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
 do
-    test -d "$dir" && addpath "$dir" start
+	test -d "$dir" && addpath "$dir" start
 done
 # add standard locations if they're not there
 for dir in /usr/bin /bin /usr/sbin /sbin
 do
-    test -d "$dir" && addpath "$dir"
+	test -d "$dir" && addpath "$dir"
 done
 # add the current directory to the end for non-root users
 if test $UID -ne 0
 then
-    for dir in .
-    do
-        test -d "$dir" && addpath "$dir" end
-    done
+	for dir in .
+	do
+		test -d "$dir" && addpath "$dir" end
+	done
 fi
 export PATH
 
 # set directories to search for documentation
 for dir in /usr/local/share/info /usr/local/info "$HOME"/info
 do
-    test -d "$dir" && addpath "$dir" start INFOPATH
+	test -d "$dir" && addpath "$dir" start INFOPATH
 done
 for dir in /usr/share/info /usr/info
 do
-    test -d "$dir" && addpath "$dir" end INFOPATH
+	test -d "$dir" && addpath "$dir" end INFOPATH
 done
 export INFOPATH
 for dir in /usr/X11R6/man /usr/kerberos/man /usr/posix/man /usr/gnu/man /usr/local/share/man /usr/local/man "$HOME"/man
 do
-    test -d "$dir" && addpath "$dir" start MANPATH
+	test -d "$dir" && addpath "$dir" start MANPATH
 done
 for dir in /usr/share/man /usr/man
 do
-    test -d "$dir" && addpath "$dir" end MANPATH
+	test -d "$dir" && addpath "$dir" end MANPATH
 done
 export MANPATH
 
@@ -253,160 +253,190 @@ export MANPATH
 # create aliases for commonly invoked commands
 if quiet alias
 then
-    # aliase apt to aptitude or apt-get (in that order)
-    type apt-get >/dev/null 2>/dev/null && alias apt='apt-get'
-    type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
-    alias bell='echo "\a"'
-    alias cx='chmod +x'
-    alias d='dirs'	# only supported by bash and zsh
-    alias e='${EDITOR:-vi}'
-    alias edit='${EDITOR:-vi}'
-    alias g='grep -EHIin'        # -H and -I are non-POSIX but are widely supported
-    alias gdb='gdb -q '
-    alias h='history'
-    alias hup='kill -HUP'
-    alias l='ls'
-    alias l.='l -d .*'
-    alias la='l -A'
-    alias ll='l -l'
-    alias lt='l -lt'
-    alias j='jobs'
-    alias nohup='nohup '         # expand aliases after nohup
-    alias pd='pushd'
-    alias po='popd'
-    alias psme='ps -f -U "${USER:-${LOGNAME}}"'
-    alias rb='reportblocked'
-    alias rcslog='rlog'
-    alias rdiff='rcsdiff'
-    alias rg='reportgraylist'
-    type assh >/dev/null 2>/dev/null && alias ssh='assh'
-    type ascp >/dev/null 2>/dev/null && alias scp='ascp'
-    alias strace='strace '       # expand aliases after strace
-    alias sudo='sudo '           # expand aliases after sudo
-    alias tf='tail -n 0 -F'
-    alias tm='t -f /var/log/mail'
-    alias tp='t -f "$HOME/.proclog"'
-    alias today='date "+%Y%m%d"'
-    alias v='${VIEWER:-view}'
+	# aliase apt to aptitude or apt-get (in that order)
+	type apt-get >/dev/null 2>/dev/null && alias apt='apt-get'
+	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
+	alias bell='echo "\a"'
+	alias cx='chmod +x'
+	alias d='dirs'	# only supported by bash and zsh
+	alias e='${EDITOR:-vi}'
+	alias edit='${EDITOR:-vi}'
+	alias g='grep -EHIin'		 # -H and -I are non-POSIX but are widely supported
+	alias gdb='gdb -q '
+	alias h='history'
+	alias hup='kill -HUP'
+	alias l='ls'
+	alias l.='l -d .*'
+	alias la='l -A'
+	alias ll='l -l'
+	alias lt='l -lt'
+	alias j='jobs'
+	alias nohup='nohup '		 # expand aliases after nohup
+	alias pd='pushd'
+	alias po='popd'
+	alias psme='ps -f -U "${USER:-${LOGNAME}}"'
+	alias rb='reportblocked'
+	alias rcslog='rlog'
+	alias rdiff='rcsdiff'
+	alias rg='reportgraylist'
+	type assh >/dev/null 2>/dev/null && alias ssh='assh'
+	type ascp >/dev/null 2>/dev/null && alias scp='ascp'
+	alias strace='strace '		 # expand aliases after strace
+	alias sudo='sudo '			 # expand aliases after sudo
+	alias tf='tail -n 0 -F'
+	alias tm='t -f /var/log/mail'
+	alias tp='t -f "$HOME/.proclog"'
+	alias today='date "+%Y%m%d"'
+	alias v='${VIEWER:-view}'
 
-    # set default flags
-    if quiet grep --color=auto --quiet "" "$HOME"/.shrc
-    then
-        alias grep='grep --color=auto'
-    fi
-    if quiet ls --format=single-column --classify --color=auto --directory /
-    then
-        alias ls='ls --format=single-column --classify --color=auto'
-    else
-        alias ls='ls -1F'
-    fi
+	# set default flags
+	if quiet grep --color=auto --quiet "" "$HOME"/.shrc
+	then
+		alias grep='grep --color=auto'
+	fi
+	if quiet ls --format=single-column --classify --color=auto --directory /
+	then
+		alias ls='ls --format=single-column --classify --color=auto'
+	else
+		alias ls='ls -1F'
+	fi
 fi
 
 # edit the most recently changed file
 editlatest()
 {
-    edit $(latest "$@")
+	edit $(latest "$@")
 }
 
 # show the most recently changed file
 latest()
 {
-    if test $# -ne 0
-    then
-        /bin/ls -t -1 -d "$@" | head -n 1
-    else
-        /bin/ls -t -1 -d * | head -n 1
-    fi
+	if test $# -ne 0
+	then
+		/bin/ls -t -1 -d "$@" | head -n 1
+	else
+		/bin/ls -t -1 -d * | head -n 1
+	fi
 }
 
 # make with an automatic log and pager
 m()
 {
-    command make "$@" 2>&1 1>&- 1>make.log | tee -a make.log
+	command make "$@" 2>&1 1>&- 1>make.log | tee -a make.log
 }
 
 # search for a pattern in text files in a directory tree
 rgrep()
 {
-    local pattern
-    local dirs
-    local args
+	local pattern
+	local dirs
+	local args
 
-    args=
-    while true
-    do
-        case $1 in
-        -*)
-            args="${args:+$args }$1"
-            shift
-            ;;
-        *)
-            break
-            ;;
-        esac
-    done
-    if test $# -gt 0
-    then
-        pattern="$1"
-        shift
-    else
-        pattern=
-    fi
+	args=
+	while true
+	do
+		case $1 in
+		-*)
+			args="${args:+$args }$1"
+			shift
+			;;
+		*)
+			break
+			;;
+		esac
+	done
+	if test $# -gt 0
+	then
+		pattern="$1"
+		shift
+	else
+		pattern=
+	fi
 
-    if grep -HRq "" .
-    then
-        grep -HR "$pattern" "${@:-.}"
-    else
-        find "${@:-.}" -type f -print | xargs -i grep $args "$pattern" {} /dev/null
-    fi
+	if grep -HRq "" .
+	then
+		grep -HR "$pattern" "${@:-.}"
+	else
+		find "${@:-.}" -type f -print | xargs -i grep $args "$pattern" {} /dev/null
+	fi
+}
+
+# get a short version of the current command (strips path and arguments)
+short_command()
+{
+	typeset command
+	command=$1
+
+	echo "$command" | sed -e "s/^-//" -e "s#^[^ ]*/##" -e "s/ .*$//"
 }
 
 # get a short version of the hostname for use in the prompt or window title
 short_hostname()
 {
-    typeset domains
-    # domain that we want to keep the subdomain for
-    domain="acx"
+	typeset domains
+	# domain that we want to keep the subdomain for
+	domain="acx"
 
-    if test -n "$HOST"
-    then
-        if echo "$HOST" | grep -q "\.$domain"
-        then
-            echo "$HOST" | sed -e "s/\.$domain//"
-        else
-            echo "$HOST" | sed -e "s/\..*//"
-        fi
-        return 0
-    else
-        echo "unknown"
-        return 1
-    fi
+	if test -n "$HOST"
+	then
+		if echo "$HOST" | grep -q "\.$domain"
+		then
+			echo "$HOST" | sed -e "s/\.$domain//"
+		else
+			echo "$HOST" | sed -e "s/\..*//"
+		fi
+		return 0
+	else
+		echo "unknown"
+		return 1
+	fi
+}
+
+prompt_character()
+{
+	if test ${laststatus:-0} -ne 0; then
+		echo "!"
+	elif test $UID -eq 0; then
+		echo "#"
+	else
+		echo "$"
+	fi
 }
 
 # print the last screenful of text from a file
 t()
 {
-    local lines
-    local promptlines
-    promptlines=5                # leave five lines for the prompt
-    if test -n $LINES
-    then
-        lines=$(($LINES - $promptlines))
-    else
-        lines=$(tput lines)
-        if test -z $lines
-        then
-            lines=24
-        fi
-    fi
+	local lines
+	local promptlines
+	promptlines=5				 # leave five lines for the prompt
+	if test -n $LINES
+	then
+		lines=$(($LINES - $promptlines))
+	else
+		lines=$(tput lines)
+		if test -z $lines
+		then
+			lines=24
+		fi
+	fi
 
-    tail -n $lines "$@"
+	tail -n $lines "$@"
+}
+
+# print the current directory with $HOME changed to ~
+tilde_directory()
+{
+	if test $UID -eq 0; then
+		pwd
+	else
+		pwd | sed -e "s#$HOME#~#"
+	fi
 }
 
 # list all instances of a command
 where()
 {
-    type -a "$@"
+	type -a "$@"
 }
 
 ### PROGRAM SETTINGS
@@ -428,7 +458,7 @@ export WINTERM=xterm
 
 if test -f "$HOME"/.keychain/"$HOST"-sh
 then
-    . "$HOME"/.keychain/"$HOST"-sh
+	. "$HOME"/.keychain/"$HOST"-sh
 fi
 
 # set file locations
@@ -442,25 +472,25 @@ export LESS=-eFj3MRX
 test -n "$TABSIZE" && export LESS="${LESS}x${TABSIZE}"
 case "$TERM" in
 xterm*)
-    # colors for black on white
-    export LSCOLORS='exbxcxcxfxcxcx'
-    export LS_COLORS='no=00:fi=00:di=00;34:ln=00;31:or=07;31:so=00;32:pi=00;32:ex=00;35:bd=00;32:cd=00;32:'
-    ;;
+	# colors for black on white
+	export LSCOLORS='exbxcxcxfxcxcx'
+	export LS_COLORS='no=00:fi=00:di=00;34:ln=00;31:or=07;31:so=00;32:pi=00;32:ex=00;35:bd=00;32:cd=00;32:'
+	;;
 *)
-    # colors for white on black
-    export LSCOLORS='exgxfxfxcxfxfx'
-    export LS_COLORS='no=00:fi=00:di=00;33:ln=00;36:or=07;36:so=00;35:pi=00;35:ex=00;32:bd=00;35:cd=00;35:'
-    ;;
+	# colors for white on black
+	export LSCOLORS='exgxfxfxcxfxfx'
+	export LS_COLORS='no=00:fi=00:di=00;33:ln=00;36:or=07;36:so=00;35:pi=00;35:ex=00;32:bd=00;35:cd=00;35:'
+	;;
 esac
 if exists dircolors
 then
-    if test -f "$HOME/.dircolors.$TERM"
-    then
-        eval $(dircolors "$HOME/.dircolors.$TERM")
-    elif test -f "$HOME/.dircolors"
-    then
-        eval $(dircolors "$HOME/.dircolors")
-    fi
+	if test -f "$HOME/.dircolors.$TERM"
+	then
+		eval $(dircolors "$HOME/.dircolors.$TERM")
+	elif test -f "$HOME/.dircolors"
+	then
+		eval $(dircolors "$HOME/.dircolors")
+	fi
 fi
 export TOP=-I
 export WANT_SSH_AGENT=1
@@ -469,50 +499,50 @@ export WWW_HOME=http://google.com
 ### INTERACTIVE SETTINGS
 case $- in
 *i*)
-    if tty >/dev/null 2>&1
-    then
-        # get the terminal characteristics
-        terminit
-    fi
+	if tty >/dev/null 2>&1
+	then
+		# get the terminal characteristics
+		terminit
+	fi
 
-    # set prompt and window title
-    connectioninfo='$(short_hostname)'
-    command=${0#-}
-    commandinfo='$(echo "$command" | sed -e "s/^-//" -e "s#^[^ ]*/##" -e "s/ .*$//")'
-    shellinfo='$(if test $UID -eq 0; then pwd; else pwd | sed -e "s#$HOME#~#"; fi)'
-    promptchars='$(if test ${laststatus:-0} -ne 0; then echo "!"; elif test $UID -eq 0; then echo "#"; else echo "$"; fi)'
-    if test $UID -eq 0
-    then
-        promptcolor=red
-    else
-        promptcolor=normal
-    fi
-    promptstring='
+	# set prompt and window title
+	connectioninfo='$(short_hostname)'
+	command=${0#-}
+	commandinfo='$(short_command "$command")'
+	shellinfo='$(tilde_directory)'
+	promptchars='$(prompt_character)'
+	if test $UID -eq 0
+	then
+		promptcolor=red
+	else
+		promptcolor=normal
+	fi
+	promptstring='
 $(eval echo "${shellinfo}")$(eval echo "\"${promptchars}\"") '
-    case "${TERM}" in
-    screen*)
-        title='$(eval echo "${commandinfo}")'
-        ;;
-    *)
-        title='$(eval echo "${connectioninfo} ${commandinfo}")'
-        ;;
-    esac
+	case "${TERM}" in
+	screen*)
+		title='$(eval echo "${commandinfo}")'
+		;;
+	*)
+		title='$(eval echo "${connectioninfo} ${commandinfo}")'
+		;;
+	esac
 
-    # set command line editing key bindings
-    # this must be after the EDITOR and VISUAL settings
-    set -o emacs 2>/dev/null
+	# set command line editing key bindings
+	# this must be after the EDITOR and VISUAL settings
+	set -o emacs 2>/dev/null
 
-    # apply the user's settings for prompt, title, etc.
-    # we differentiate here between ksh and sh,
-    # prompts for bash and zsh are handled in .bashrc, .zshrc, etc.
-    case $0 in
-    *ksh*)
-        PS1='$(eval settitle "\"${title}\"")''$(eval echo "\"\$${promptcolor:-normal}${promptstring}${normal}\"")'
-        ;;
-    *)
-        PS1="$(eval echo $promptchars) "
-    esac
-    ;;
+	# apply the user's settings for prompt, title, etc.
+	# we differentiate here between ksh and sh,
+	# prompts for bash and zsh are handled in .bashrc, .zshrc, etc.
+	case $0 in
+	*ksh*)
+		PS1='$(eval settitle "\"${title}\"")''$(eval echo "\"\$${promptcolor:-normal}${promptstring}${normal}\"")'
+		;;
+	*)
+		PS1="$(eval echo $promptchars) "
+	esac
+	;;
 esac
 
 ### LAST COMMANDS
@@ -522,4 +552,4 @@ test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
 # finish with a 0 exit status
 true
 
-# vi: set sw=4 ts=33:
+# vi: set sw=4 ts=4:
