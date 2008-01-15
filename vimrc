@@ -63,9 +63,27 @@ if &term == "cygwin"
     set background=dark	" Cygwin has a black background by default
 endif
 
+hi clear
+
+hi clear Constant
+hi clear Number
+hi clear Statement
+hi clear PreProc
+hi clear Type
+hi clear Special
+hi clear Identifier
+
 if &background == "light"
     highlight SpecialKey ctermfg=LightGrey
     highlight NonText ctermfg=LightGrey
+
+    highlight String term=underline cterm=NONE ctermfg=DarkGreen
+    highlight Comment term=bold cterm=NONE ctermfg=DarkBlue
+    highlight Error term=reverse cterm=NONE ctermfg=DarkRed
+else
+    highlight String term=underline cterm=NONE ctermfg=Green
+    highlight Comment term=bold cterm=NONE ctermfg=Blue
+    highlight Error term=reverse cterm=NONE ctermfg=Red
 endif
 
 " SAVING OPTIONS
