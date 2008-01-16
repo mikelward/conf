@@ -23,26 +23,15 @@ set nostartofline	" keep the current cursor position when reediting a file
 set wildmode=list:longest	" filename completion lists when ambiguous
 
 " DISPLAY OPTIONS
+set listchars=tab:>\ ,trail:-	" how to display tabs and trailing spaces
 if version >= 600
-    "set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
-    set listchars=extends:>,precedes:<,tab:>\ ,trail:-
-    "set listchars=extends:>,precedes:<,tab:>-,trail:-,eol:$
-    "set listchars=extends:>,precedes:<,tab:>·,trail:·,eol:$
-    "set listchars=extends:>,precedes:<,tab:··,trail:·
-elseif version >= 500
-    set listchars=tab:>\ ,trail:-
+    set listchars+=extends:>,precedes:<
 endif
 set nowrap	" don't wrap long lines (show extends character instead)
 set more	" use a pager for long listings
 set nolist	" don't display non-printing characters
 set nonumber	" don't show line numbers
 set notitle	" don't change terminal's title
-if &term == "linux"
-    set highlight=sb,Sub	" make the status bar bold
-    "set highlight=sb,Srb	" make the status bar bold
-else
-    set highlight=sub,Su	" make the status bar bold
-endif
 set laststatus=2	" always show status line for each window
 set showmode	" always show command or insert mode
 set shortmess=I	" no intro or swap file found messages
@@ -62,37 +51,8 @@ if &term == "cygwin"
     set background=dark	" Cygwin has a black background by default
 endif
 
-" Set up some simple non-intrusive colors
-highlight clear Constant
-highlight clear Number
-highlight clear Statement
-highlight clear PreProc
-highlight clear Type
-highlight clear Special
-highlight clear Identifier
-
-highlight clear String
-highlight clear Comment
-highlight clear Error
-highlight clear LineNo
-highlight clear NonText
-highlight clear SpecialKey
-
-if &background == "light"
-    highlight String term=underline cterm=NONE ctermfg=DarkGreen
-    highlight Comment term=bold cterm=NONE ctermfg=DarkBlue
-    highlight Error term=reverse cterm=NONE ctermfg=DarkRed
-    highlight LineNo term=bold cterm=NONE ctermfg=DarkYellow
-    highlight NonText term=bold cterm=NONE ctermfg=DarkYellow
-    highlight SpecialKey term=bold cterm=NONE ctermfg=DarkYellow
-else
-    highlight String term=underline cterm=NONE ctermfg=Green
-    highlight Comment term=bold cterm=NONE ctermfg=Blue
-    highlight Error term=reverse cterm=NONE ctermfg=Red
-    highlight LineNo term=bold cterm=NONE ctermfg=Yellow
-    highlight NonText term=bold cterm=NONE ctermfg=Yellow
-    highlight SpecialKey term=bold cterm=NONE ctermfg=Yellow
-endif
+" Load simple color scheme that turns off some of the colors
+color basic
 
 " SAVING OPTIONS
 set backupext=~	" backup files end in ~
