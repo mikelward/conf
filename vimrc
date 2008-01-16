@@ -24,18 +24,17 @@ set wildmode=list:longest	" filename completion lists when ambiguous
 
 " DISPLAY OPTIONS
 if version >= 600
-    set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
-    "set listchars=extends:>,precedes:<,tab:>\ ,trail:_
+    "set listchars=extends:>,precedes:<,tab:\|\ ,trail:-
+    set listchars=extends:>,precedes:<,tab:>\ ,trail:-
     "set listchars=extends:>,precedes:<,tab:>-,trail:-,eol:$
     "set listchars=extends:>,precedes:<,tab:>·,trail:·,eol:$
     "set listchars=extends:>,precedes:<,tab:··,trail:·
-    "set list	" display non printing characters
 elseif version >= 500
-    set listchars=tab:>\ ,trail:_
-    "set list	" display non printing characters
+    set listchars=tab:>\ ,trail:-
 endif
 set nowrap	" don't wrap long lines (show extends character instead)
 set more	" use a pager for long listings
+set nolist	" don't display non-printing characters
 set nonumber	" don't show line numbers
 set notitle	" don't change terminal's title
 if &term == "linux"
@@ -63,27 +62,36 @@ if &term == "cygwin"
     set background=dark	" Cygwin has a black background by default
 endif
 
-hi clear
+" Set up some simple non-intrusive colors
+highlight clear Constant
+highlight clear Number
+highlight clear Statement
+highlight clear PreProc
+highlight clear Type
+highlight clear Special
+highlight clear Identifier
 
-hi clear Constant
-hi clear Number
-hi clear Statement
-hi clear PreProc
-hi clear Type
-hi clear Special
-hi clear Identifier
+highlight clear String
+highlight clear Comment
+highlight clear Error
+highlight clear LineNo
+highlight clear NonText
+highlight clear SpecialKey
 
 if &background == "light"
-    highlight SpecialKey ctermfg=LightGrey
-    highlight NonText ctermfg=LightGrey
-
     highlight String term=underline cterm=NONE ctermfg=DarkGreen
     highlight Comment term=bold cterm=NONE ctermfg=DarkBlue
     highlight Error term=reverse cterm=NONE ctermfg=DarkRed
+    highlight LineNo term=bold cterm=NONE ctermfg=DarkYellow
+    highlight NonText term=bold cterm=NONE ctermfg=DarkYellow
+    highlight SpecialKey term=bold cterm=NONE ctermfg=DarkYellow
 else
     highlight String term=underline cterm=NONE ctermfg=Green
     highlight Comment term=bold cterm=NONE ctermfg=Blue
     highlight Error term=reverse cterm=NONE ctermfg=Red
+    highlight LineNo term=bold cterm=NONE ctermfg=Yellow
+    highlight NonText term=bold cterm=NONE ctermfg=Yellow
+    highlight SpecialKey term=bold cterm=NONE ctermfg=Yellow
 endif
 
 " SAVING OPTIONS
@@ -132,9 +140,8 @@ augroup Binary
 augroup END
 
 " per file-type rules
-au BufRead,BufNewFile * if &filetype == 'c' || &filetype == 'cpp' || &filetype == 'perl' || &filetype == 'python' || &filetype == 'ruby' | set listchars+=tab:\|\  | endif
-au BufRead,BufNewFile * if &filetype == 'make' | set listchars+=tab:\|\  | set list | endif
-au BufRead,BufNewFile * if &filetype == 'vim' || &filetype == 'fstab' | set listchars+=tab:>\  | set list | endif
+"au BufRead,BufNewFile * if &filetype == 'c' || &filetype == 'cpp' || &filetype == 'perl' || &filetype == 'python' || &filetype == 'ruby' | set listchars+=tab:\|\  | endif
+"au BufRead,BufNewFile * if &filetype == 'fstab' | set listchars+=tab:>\  | endif
 au BufRead,BufNewFile * if &filetype == 'text' || &filetype == 'svn' | set textwidth=66 | endif
 
 au FileType perl set cindent cinkeys-=0#
