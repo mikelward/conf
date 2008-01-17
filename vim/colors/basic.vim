@@ -32,15 +32,15 @@ highlight clear SpecialKey
 if &background == "light"
 	highlight String term=underline cterm=NONE ctermfg=DarkGreen
 	highlight Comment term=bold cterm=NONE ctermfg=DarkBlue
-	highlight Error term=reverse cterm=NONE ctermfg=DarkRed
-	highlight LineNr term=bold cterm=NONE ctermfg=DarkYellow
+	highlight Error term=standout cterm=NONE ctermfg=DarkRed
+	highlight LineNr term=reverse cterm=NONE ctermfg=DarkYellow
 	highlight NonText term=bold cterm=NONE ctermfg=DarkYellow
 	highlight SpecialKey term=bold cterm=NONE ctermfg=DarkYellow
 else
 	highlight String term=underline cterm=NONE ctermfg=Magenta
 	highlight Comment term=bold cterm=NONE ctermfg=Cyan
-	highlight Error term=reverse cterm=NONE ctermbg=Red
-	highlight LineNr term=bold cterm=NONE ctermfg=Yellow
+	highlight Error term=standout cterm=NONE ctermbg=Red
+	highlight LineNr term=reverse cterm=NONE ctermfg=Yellow
 	highlight NonText term=bold cterm=NONE ctermfg=Yellow
 	highlight SpecialKey term=bold cterm=NONE ctermfg=Yellow
 endif
