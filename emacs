@@ -105,3 +105,15 @@
 ;; Load any local customisations
 (if (file-exists-p "~/.emacs.local") (load "~/.emacs.local"))
 
+;; Use my standard minimal highlighting
+(custom-set-faces
+ '(font-lock-builtin-face ((((class color) (min-colors 8) (background light)) nil)))
+ '(font-lock-comment-face ((((class color) (min-colors 8) (background light)) (:foreground "Blue"))))
+ '(font-lock-comment-delimiter-face ((((class color) (min-colors 8) (background light)) (:foreground "Blue"))))
+ '(font-lock-constant-face ((((class color) (min-colors 8) (background light)) nil)))
+ '(font-lock-function-name-face ((((class color) (min-colors 8) (background light)) nil)))
+ '(font-lock-keyword-face ((((class color) (min-colors 8) (background light)) nil)))
+ '(font-lock-string-face ((((class color) (min-colors 8) (background light)) (:foreground "DarkGreen"))))
+ '(font-lock-type-face ((((class color) (min-colors 8) (background light)) nil)))
+ '(font-lock-variable-name-face ((((class color) (min-colors 8) (background light)) nil)))
+ '(font-lock-warning-face ((((class color) (min-colors 8) (background light)) (:foreground "Red")))))
