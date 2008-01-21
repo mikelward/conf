@@ -536,14 +536,7 @@ case $- in
 	fi
 	promptstring='
 $(eval echo "${shellinfo}")$(eval echo "\"${promptchars}\"") '
-	case "${TERM}" in
-	screen*)
-		title='$(eval echo "${commandinfo}")'
-		;;
-	*)
-		title='$(eval echo "${connectioninfo} ${commandinfo}")'
-		;;
-	esac
+	title='$(eval echo "${connectioninfo} ${commandinfo}")'
 
 	# set command line editing key bindings
 	# this must be after the EDITOR and VISUAL settings

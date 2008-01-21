@@ -5,7 +5,7 @@ escape ^]^]
 #other ^]]
 startup_message off
 hardstatus on
-hardstatus lastline
+hardstatus alwayslastline
 hardstatus string " %w %=%M %d %c "
 vbell off
 bind = resize =
