@@ -130,11 +130,8 @@ expand-word-path ()
 }
 
 # set non-alphanumeric characters that constitute a word
-# (remove / so Alt-Backspace deletes only one path component)
-# (remove <>& so redirection not part of path)
-# (remove ; so command list separator not part of word)
+# use defaults (words are separated by whitespace)
 #WORDCHARS=
-WORDCHARS="`echo $WORDCHARS | sed -e 's/[/<>&;]\+//'`"
 
 # set key bindings
 bindkey -e
@@ -142,6 +139,7 @@ bindkey -M emacs '^[b' backward-word
 bindkey -M emacs '^[f' forward-word
 bindkey -M emacs '^[p' history-beginning-search-backward
 bindkey -M emacs '^[n' history-beginning-search-forward
+bindkey -M emacs '^[=' list-choices
 bindkey -M emacs '^X?' expand-cmd-path
 zle -N expand-word-path
 bindkey -M emacs '^X/' expand-word-path
