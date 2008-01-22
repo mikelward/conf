@@ -51,8 +51,7 @@ if &term == "cygwin"
     set background=dark	" Cygwin has a black background by default
 endif
 
-" Load simple color scheme that turns off some of the colors
-color basic
+colorscheme basic	" Use my own basic syntax highlighting
 
 " SAVING OPTIONS
 set backupext=~	" backup files end in ~
