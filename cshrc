@@ -8,10 +8,10 @@ set nonomatch
 if ( { grep --color=auto --quiet "" ~/.cshrc } ) >&/dev/null then
     alias grep	'grep --color=auto'
 endif
-if ( { ls --color=auto --format=single-column --directory / } ) >&/dev/null then
-    alias ls	'ls --color=auto --classify --format=single-column'
+if ( { ls --color=auto --classify --directory / } ) >&/dev/null then
+    alias ls	'ls --color=auto --classify'
 else
-    alias ls	'ls -1F'
+    alias ls	'ls -F'
 endif
 
 # set directories to search for commands
