@@ -294,11 +294,9 @@ then
 	then
 		alias grep='grep --color=auto'
 	fi
-	if quiet ls --classify --color=auto --directory /
+	if quiet ls --color=auto --directory /
 	then
-		alias ls='ls --classify --color=auto'
-	else
-		alias ls='ls -F'
+		alias ls='ls --color=auto'
 	fi
 fi
 
