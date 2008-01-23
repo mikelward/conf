@@ -6,7 +6,3 @@
 :set tabstop=4
 :set showmatch
 :set showmode
-" disable running of external commands
-:set secure
-" read .exrc in the current directory
-:set exrc
