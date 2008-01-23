@@ -8,13 +8,13 @@ set nonomatch
 if ( { grep --color=auto --quiet "" ~/.cshrc } ) >&/dev/null then
     alias grep	'grep --color=auto'
 endif
-if ( { ls --color=auto --directory / } ) >&/dev/null then
-    alias ls	'ls --color=auto'
+if ( { /bin/ls --color=auto --directory / } ) >&/dev/null then
+    alias ls	'/bin/ls --color=auto'
 endif
 
 # set directories to search for commands
 # add directories to look in first (unless already present)
-foreach d ( /opt/*/bin /usr/X11R6/bin /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin ~/bin )
+foreach d ( /usr/X11R6/bin /usr/bin/X11 /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin ~/bin )
     if ( -d $d ) then
         foreach p ( $path )
             # advance to next top level directory
@@ -24,7 +24,7 @@ foreach d ( /opt/*/bin /usr/X11R6/bin /usr/kerberos/bin /usr/posix/bin /usr/gnu/
     endif
 end
 # add directories to look in last (unless already present)
-foreach d ( /usr/bin /bin )
+foreach d ( /usr/bin /bin /usr/sbin /sbin )
     if ( -d $d ) then
         foreach p ( $path )
             # this directory already present, skip it

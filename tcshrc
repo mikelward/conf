@@ -101,8 +101,6 @@ if ( $?TERM ) then
         set titlefinish=""
         breaksw
     default:
-        set titlestart=""
-        set titlefinish=""
         breaksw
     endsw
     if ( $?titlestart ) then
