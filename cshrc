@@ -102,8 +102,19 @@ if ( $?prompt ) then
     setenv CLICOLOR true
     setenv GREP_COLOR 1
     setenv LESS -eFj3MRX
-    setenv LSCOLORS 'exfxcxcxbxdxdx'
-    setenv LS_COLORS 'no=00:fi=00:di=00;34:ln=00;35:or=07;35:so=00;32:pi=00;32:ex=00;31:bd=00;33:cd=00;33:'
+    switch ( $TERM )
+    case xterm*:
+        setenv LSCOLORS 'exfxxxxxcxxxxx'
+        setenv LS_COLORS 'no=00:fi=00:di=00;34:ln=00;35:or=00;00:so=00;00:pi=00;00:ex=00;32:bd=00;00:cd=00;00:'
+        breaksw
+    default:
+        #setenv LSCOLORS 'gxcxxxxxfxxxxx'
+        setenv LSCOLORS 'ExFxxxxxCxxxxx'
+        #setenv LS_COLORS 'no=00:fi=00:di=00;33:ln=00;31:or=00;00:so=00;00:pi=00;00:ex=00;35:bd=00;00:cd=00;00:'
+        setenv LS_COLORS 'no=00:fi=00:di=01;34:ln=01;35:or=00;00:so=00;00:pi=00;00:ex=01;32:bd=00;00:cd=00;00:'
+        breaksw
+    endsw
+
     if ( $?TABSIZE ) then
     setenv LESS "${LESS}x${TABSIZE}"
     endif

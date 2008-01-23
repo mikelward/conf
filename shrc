@@ -499,13 +499,15 @@ test -n "$TABSIZE" && export LESS="${LESS}x${TABSIZE}"
 case "$TERM" in
 xterm*)
 	# colors for black on white
-	export LSCOLORS='exbxcxcxfxcxcx'
-	export LS_COLORS='no=00:fi=00:di=00;34:ln=00;31:or=07;31:so=00;32:pi=00;32:ex=00;35:bd=00;32:cd=00;32:'
+	export LSCOLORS='exfxxxxxcxxxxx'
+	export LS_COLORS='no=00:fi=00:di=00;34:ln=00;35:or=00;00:so=00;00:pi=00;00:ex=00;32:bd=00;00:cd=00;00:'
 	;;
 *)
 	# colors for white on black
-	export LSCOLORS='exgxfxfxcxfxfx'
-	export LS_COLORS='no=00:fi=00:di=00;33:ln=00;36:or=07;36:so=00;35:pi=00;35:ex=00;32:bd=00;35:cd=00;35:'
+	#export LSCOLORS='gxcxxxxxfxxxxx'
+	export LSCOLORS='ExFxxxxxCxxxxx'
+	#export LS_COLORS='no=00:fi=00:di=00;33:ln=00;31:or=00;00:so=00;00:pi=00;00:ex=00;35:bd=00;00:cd=00;00:'
+    export LS_COLORS='no=00:fi=00:di=01;34:ln=01;35:or=00;00:so=00;00:pi=00;00:ex=01;32:bd=00;00:cd=00;00:'
 	;;
 esac
 if exists dircolors
