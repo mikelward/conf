@@ -103,9 +103,10 @@ settitle()
 }
 
 commandstring="%{${bold}%}"
+commandcolor=bold
 
 # set prompt and window title format
-PS1='$(eval print -n "\"%{\$${promptcolor:-normal}%}${promptstring}%{${normal}%}${commandstring}\"")'
+PS1='%{$(setcolor ${promptcolor})%}$(eval echo -n "\"${promptstring}\"")%{$(setcolor "normal")%}%{$(setcolor ${commandcolor})%}'
 
 HISTFILE=~/.zsh_history
 SAVEHIST=${HISTSIZE:-128}

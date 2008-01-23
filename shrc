@@ -378,10 +378,21 @@ rgrep()
 	fi
 }
 
+# print the escape sequence for the named color (e.g. setcolor "blue")
+setcolor()
+{
+	local color
+	color="$1"
+	if test -n "$color"
+	then
+		eval echo -n "\$$color"
+	fi
+}
+
 # get a short version of the current command (strips path and arguments)
 short_command()
 {
-	typeset command
+	local command
 	command=$1
 
 	echo "$command" | sed -e "s/^-//" -e "s#^[^ ]*/##" -e "s/ .*$//"
@@ -390,7 +401,7 @@ short_command()
 # get a short version of the hostname for use in the prompt or window title
 short_hostname()
 {
-	typeset domains
+	local domains
 	# domain that we want to keep the subdomain for
 	domain="acx"
 
@@ -545,13 +556,7 @@ $(eval echo "${shellinfo}")$(eval echo "\"${promptchars}\"") '
 	# apply the user's settings for prompt, title, etc.
 	# we differentiate here between ksh and sh,
 	# prompts for bash and zsh are handled in .bashrc, .zshrc, etc.
-	case $0 in
-	*ksh*)
-		PS1='$(eval settitle "\"${title}\"")''$(eval echo "\"\$${promptcolor:-normal}${promptstring}${normal}\"")'
-		;;
-	*)
-		PS1="$(eval echo $promptchars) "
-	esac
+	PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval echo "\"${promptstring}\"")$(setcolor "normal")'
 	;;
 esac
 

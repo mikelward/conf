@@ -128,7 +128,7 @@ whence()
 
 # set the prompt and window title
 PROMPT_COMMAND='laststatus="$?"; eval settitle "\"${title}\""'
-PS1='$(eval echo "\"""$""${promptcolor:-normal}${promptstring}${normal}\"")'
+PS1='$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")'
 
 # set up command history
 HISTTIMEFORMAT="%H:%M	"
