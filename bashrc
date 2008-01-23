@@ -195,6 +195,12 @@ case $- in *i*)
             IFS="$OIFS"
         }
     fi
+
+	bind -m vi-command '"!"':history-expand-line
+	# for some reason glob-expand-word doesn't work here,
+	# but insert-completions is fine
+	bind -m vi-command '"*"':insert-completions
+
     ;;
 esac
 

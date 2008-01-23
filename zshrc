@@ -133,16 +133,23 @@ expand-word-path ()
 # use defaults (words are separated by whitespace)
 #WORDCHARS=
 
-# set key bindings
-bindkey -e
+# customize built-in key bindings
 bindkey -M emacs '^[b' backward-word
 bindkey -M emacs '^[f' forward-word
 bindkey -M emacs '^[p' history-beginning-search-backward
 bindkey -M emacs '^[n' history-beginning-search-forward
+bindkey -M emacs '^[^' expand-history
+bindkey -M emacs '^[*' expand-word
 bindkey -M emacs '^[=' list-choices
 bindkey -M emacs '^X?' expand-cmd-path
-zle -N expand-word-path
 bindkey -M emacs '^X/' expand-word-path
+
+bindkey -M vicmd '!' expand-history
+bindkey -M vicmd '*' expand-word
+bindkey -M vicmd '=' list-choices
+
+# use emacs bindings
+bindkey -e
 
 # set command completions
 compctl -a {,un}alias
