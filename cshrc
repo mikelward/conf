@@ -166,6 +166,7 @@ alias psme	'ps -f -U $USER'
 alias po	'popd'
 alias qfind	'sh -c "find \!* 2> /dev/null | $PAGER"'
 alias rb	'reportblocked'
+alias recent	'/bin/ls -t -1 \!* | head -n 10'
 alias rg	'reportgraylist'
 alias rtags	'ctags -R'
 alias retags	'find . \( -name "*.c" -o -name "*.h" \
