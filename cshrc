@@ -105,13 +105,13 @@ if ( $?prompt ) then
     switch ( $TERM )
     case xterm*:
         setenv LSCOLORS 'exfxxxxxcxxxxx'
-        setenv LS_COLORS 'no=00:fi=00:di=00;34:ln=00;35:or=00;00:so=00;00:pi=00;00:ex=00;32:bd=00;00:cd=00;00:'
+        setenv LS_COLORS 'no=00:fi=00:di=00;34:tw=00;34:ow=00;34:st=00;34:ln=00;35:or=00;00:so=00;00:pi=00;00:ex=00;32:bd=00;00:cd=00;00'
         breaksw
     default:
         #setenv LSCOLORS 'gxcxxxxxfxxxxx'
         setenv LSCOLORS 'ExFxxxxxCxxxxx'
         #setenv LS_COLORS 'no=00:fi=00:di=00;33:ln=00;31:or=00;00:so=00;00:pi=00;00:ex=00;35:bd=00;00:cd=00;00:'
-        setenv LS_COLORS 'no=00:fi=00:di=01;34:ln=01;35:or=00;00:so=00;00:pi=00;00:ex=01;32:bd=00;00:cd=00;00:'
+        setenv LS_COLORS 'no=00:fi=00:di=01;34:tw=01;34:ow=01;34:st=01;34:ln=01;35:or=00;00:so=00;00:pi=00;00:ex=01;32:bd=00;00:cd=00;00'
         breaksw
     endsw
 
