@@ -115,24 +115,28 @@ if ( $?prompt ) then
         breaksw
     endsw
     if ( -r ~/.dircolors.$TERM ) then
-        eval `dircolors -c ~/.dircolors.$TERM`
+        set dircolorsconf=~/.dircolors.$TERM
     else
         switch ( $TERM )
         case xterm*:
             if ( -r ~/.dircolors.light ) then
-                eval `dircolors -c ~/.dircolors.light`
-            else if ( -r ~/.dircolors ) then
-                eval `dircolors -c ~/.dircolors`
+                set dircolorsconf=~/.dircolors.light
             endif
             breaksw
         default:
             if ( -r ~/.dircolors.dark ) then
-                eval `dircolors -c ~/.dircolors.dark`
-            else if ( -r ~/.dircolors ) then
-                eval `dircolors -c ~/.dircolors`
+                set dircolorsconf=~/.dircolors.dark`
             endif
             breaksw
         endsw
+    endif
+    if ( ! $?dircolorsconf ) then
+        if ( -r ~/.dircolors ) then
+            set dircolorsconf=~/.dircolors
+        endif
+    endif
+    if ( $?dircolorsconf ) then
+        eval `dircolors -c $dircolorsconf`
     endif
 
     if ( $?TABSIZE ) then

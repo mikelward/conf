@@ -550,7 +550,7 @@ then
 	fi
 	if test -n "$dircolors"
 	then
-		eval $(dircolors -b "$dircolors")
+		eval $(dircolors -b "$dircolors" 2>/dev/null)
 	fi
 fi
 export TOP=-I
