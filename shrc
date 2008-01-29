@@ -512,15 +512,11 @@ xterm*)
 	# colors for black on white
 	export LSCOLORS='exfxxxxxcxxxxx'
 	export LS_COLORS='no=00:fi=00:di=00;34:ln=00;35:so=00;00:bd=00;00:cd=00;00:or=00;31:pi=00;00:ex=00;32'
-	# for coreutils 6.9
-	#export LS_COLORS='no=00:fi=00:di=00;34:ln=00;35:so=00;00:do=00;00:bd=00;00:cd=00;00:or=00;31:su=00;00:sg=00;00:tw=00;34:ow=00;34:st=00;34:pi=00;00:ex=00;32:'
 	;;
 *)
 	# colors for white on black
 	#export LSCOLORS='gxcxxxxxfxxxxx'
 	export LSCOLORS='ExFxxxxxCxxxxx'
-	#export LS_COLORS='no=00:fi=00:di=00;33:ln=00;31:or=00;00:so=00;00:pi=00;00:ex=00;35:bd=00;00:cd=00;00:'
-    #export LS_COLORS='no=00:fi=00:di=01;34:ln=01;35:so=00;00:do=00;00:bd=00;00:cd=00;00:or=01;31:su=00;00:sg=00;00:tw=01;34:ow=01;34:st=01;34:pi=00;00:ex=01;32:'
     export LS_COLORS='no=00:fi=00:di=01;34:ln=01;35:so=00;00:bd=00;00:cd=00;00:or=01;31:pi=00;00:ex=01;32'
 	;;
 esac
@@ -528,10 +524,33 @@ if exists dircolors
 then
 	if test -f "$HOME/.dircolors.$TERM"
 	then
-		eval $(dircolors "$HOME/.dircolors.$TERM")
-	elif test -f "$HOME/.dircolors"
+		dircolors="$HOME/.dircolors.$TERM"
+	else
+		case "$TERM" in
+		xterm*)
+			if test -f "$HOME"/.dircolors.light
+			then
+				dircolors="$HOME"/.dircolors.light
+			fi
+			;;
+		*)
+			if test -f "$HOME"/.dircolors.dark
+			then
+				dircolors="$HOME"/.dircolors.dark
+			fi
+			;;
+		esac
+	fi
+	if test -z "$dircolors"
 	then
-		eval $(dircolors "$HOME/.dircolors")
+		if test -f "$HOME"/.dircolors
+		then
+			dircolors="$HOME"/.dircolors
+		fi
+	fi
+	if test -n "$dircolors"
+	then
+		eval $(dircolors -b "$dircolors")
 	fi
 fi
 export TOP=-I

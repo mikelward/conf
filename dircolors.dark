@@ -1,0 +1,35 @@
+# Configuration file for dircolors, a utility to help you set the
+# LS_COLORS environment variable used by GNU ls with the --color option.
+# Copyright (C) 1996, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006
+# Free Software Foundation, Inc.
+# Copying and distribution of this file, with or without modification,
+# are permitted provided the copyright notice and this notice are preserved.
+# The keywords COLOR, OPTIONS, and EIGHTBIT (honored by the
+# slackware version of dircolors) are recognized but ignored.
+# Below, there should be one TERM entry for each termtype that is colorizable
+TERM vt220
+TERM linux
+# Below are the color init strings for the basic file types. A color init
+# string consists of one or more of the following numeric codes:
+# Attribute codes:
+# 00=none 01=bold 04=underscore 05=blink 07=reverse 08=concealed
+# Text color codes:
+# 30=black 31=red 32=green 33=yellow 34=blue 35=magenta 36=cyan 37=white
+# Background color codes:
+# 40=black 41=red 42=green 43=yellow 44=blue 45=magenta 46=cyan 47=white
+NORMAL 00
+FILE 00
+DIR 01;34
+LINK 01;35
+FIFO 00;00
+SOCK 00;00
+DOOR 00;00
+BLK 00;00
+CHR 00;00
+ORPHAN 01;31
+SETUID 00;00
+SETGID 00;00
+STICKY_OTHER_WRITABLE 01;34
+OTHER_WRITABLE 01;34
+STICKY 01;34
+EXEC 01;32
