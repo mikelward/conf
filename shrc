@@ -345,9 +345,9 @@ recent()
 {
 	if test $# -ne 0
 	then
-		/bin/ls -t -1 -d "$@" | head -n 10
+		/bin/ls -t -1 "$@" | head -n 10
 	else
-		/bin/ls -t -1 -d * | head -n 10
+		/bin/ls -t -1 . | head -n 10
 	fi
 }
 
