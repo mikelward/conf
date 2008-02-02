@@ -7,13 +7,15 @@
 # The keywords COLOR, OPTIONS, and EIGHTBIT (honored by the
 # slackware version of dircolors) are recognized but ignored.
 # Below, there should be one TERM entry for each termtype that is colorizable
+TERM cygwin
+TERM konsole
+TERM rxvt
 TERM xterm
 TERM xterm-16color
 TERM xterm-256color
 TERM xterm-88color
 TERM xterm-color
 TERM xterm-debian
-TERM rxvt
 # Below are the color init strings for the basic file types. A color init
 # string consists of one or more of the following numeric codes:
 # Attribute codes:

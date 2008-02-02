@@ -45,3 +45,14 @@ else
 	highlight SpecialKey term=bold cterm=NONE ctermfg=Yellow
 endif
 
+"au BufReadPost * syntax keyword String contained Constant
+"au BufReadPost * syntax keyword String contained Number
+"au BufReadPost * syntax keyword String contained Statement
+"au BufReadPost * syntax keyword String contained PreProc
+"au BufReadPost * syntax keyword String contained Type
+"au BufReadPost * syntax keyword String contained Special
+"au BufReadPost * syntax keyword String contained Identifier
+"au BufReadPost * syntax match Identifier transparent
+"
+
+

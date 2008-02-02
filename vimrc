@@ -48,7 +48,7 @@ if &term == "putty"
     set background=dark	" PuTTY has a black background by default
 endif
 if &term == "cygwin"
-    set background=dark	" Cygwin has a black background by default
+    set background=light	" My Cygwin has a white background
 endif
 
 colorscheme basic	" Use my own basic syntax highlighting

@@ -103,29 +103,31 @@ if ( $?prompt ) then
     setenv GREP_COLOR 1
     setenv LESS -eFj3MRX
     switch ( $TERM )
-    case xterm*:
-        setenv LSCOLORS 'exfxxxxxcxxxxx'
-        setenv LS_COLORS 'no=00:fi=00:di=00;34:ln=00;35:so=00;00:bd=00;00:cd=00;00:or=00;31:pi=00;00:ex=00;32'
-        breaksw
-    default:
+    case linux:
+    case vt220:
         #setenv LSCOLORS 'gxcxxxxxfxxxxx'
         setenv LSCOLORS 'ExFxxxxxCxxxxx'
         #setenv LS_COLORS 'no=00:fi=00:di=00;33:ln=00;31:or=00;00:so=00;00:pi=00;00:ex=00;35:bd=00;00:cd=00;00:'
         setenv LS_COLORS 'no=00:fi=00:di=01;34:ln=01;35:so=00;00:bd=00;00:cd=00;00:or=01;31:pi=00;00:ex=01;32'
+        breaksw
+    case default:
+        setenv LSCOLORS 'exfxxxxxcxxxxx'
+        setenv LS_COLORS 'no=00:fi=00:di=00;34:ln=00;35:so=00;00:bd=00;00:cd=00;00:or=00;31:pi=00;00:ex=00;32'
         breaksw
     endsw
     if ( -r ~/.dircolors.$TERM ) then
         set dircolorsconf=~/.dircolors.$TERM
     else
         switch ( $TERM )
-        case xterm*:
-            if ( -r ~/.dircolors.light ) then
-                set dircolorsconf=~/.dircolors.light
+        case linux:
+        case vt220:
+            if ( -r ~/.dircolors.dark ) then
+                set dircolorsconf=~/.dircolors.dark`
             endif
             breaksw
         default:
-            if ( -r ~/.dircolors.dark ) then
-                set dircolorsconf=~/.dircolors.dark`
+            if ( -r ~/.dircolors.light ) then
+                set dircolorsconf=~/.dircolors.light
             endif
             breaksw
         endsw

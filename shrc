@@ -508,16 +508,16 @@ export GREP_COLOR=4
 export LESS=-eFj3MRX
 test -n "$TABSIZE" && export LESS="${LESS}x${TABSIZE}"
 case "$TERM" in
-xterm*)
-	# colors for black on white
-	export LSCOLORS='exfxxxxxcxxxxx'
-	export LS_COLORS='no=00:fi=00:di=00;34:ln=00;35:so=00;00:bd=00;00:cd=00;00:or=00;31:pi=00;00:ex=00;32'
-	;;
-*)
+linux|vt220)
 	# colors for white on black
 	#export LSCOLORS='gxcxxxxxfxxxxx'
 	export LSCOLORS='ExFxxxxxCxxxxx'
     export LS_COLORS='no=00:fi=00:di=01;34:ln=01;35:so=00;00:bd=00;00:cd=00;00:or=01;31:pi=00;00:ex=01;32'
+	;;
+*)
+	# colors for black on white
+	export LSCOLORS='exfxxxxxcxxxxx'
+	export LS_COLORS='no=00:fi=00:di=00;34:ln=00;35:so=00;00:bd=00;00:cd=00;00:or=00;31:pi=00;00:ex=00;32'
 	;;
 esac
 if exists dircolors
@@ -527,18 +527,18 @@ then
 		dircolors="$HOME/.dircolors.$TERM"
 	else
 		case "$TERM" in
-		xterm*)
-			if test -f "$HOME"/.dircolors.light
-			then
-				dircolors="$HOME"/.dircolors.light
-			fi
-			;;
-		*)
+		linux|vt220)
 			if test -f "$HOME"/.dircolors.dark
 			then
 				dircolors="$HOME"/.dircolors.dark
 			fi
 			;;
+		*)
+			;;
+			if test -f "$HOME"/.dircolors.light
+			then
+				dircolors="$HOME"/.dircolors.light
+			fi
 		esac
 	fi
 	if test -z "$dircolors"
@@ -550,6 +550,7 @@ then
 	fi
 	if test -n "$dircolors"
 	then
+		echo "Setting dircolors using $dircolors"
 		eval $(dircolors -b "$dircolors" 2>/dev/null)
 	fi
 fi
