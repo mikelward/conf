@@ -9,5 +9,8 @@ then
 fi
 
 # clear the screen
-clear
+if type clear >/dev/null 2>&1
+then
+	clear
+fi
 
