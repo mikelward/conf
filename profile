@@ -25,7 +25,7 @@ then
 	then
 		if type ssh-agent >/dev/null 2>/dev/null
 		then
-			eval `ssh-agent`
+			eval $(ssh-agent)
 		fi
 	fi
 	if test -n $SSH_AUTH_SOCK
