@@ -534,11 +534,11 @@ then
 			fi
 			;;
 		*)
-			;;
 			if test -f "$HOME"/.dircolors.light
 			then
 				dircolors="$HOME"/.dircolors.light
 			fi
+			;;
 		esac
 	fi
 	if test -z "$dircolors"
