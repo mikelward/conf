@@ -6,10 +6,12 @@ set nonomatch
 
 # set default flags
 if ( { grep --color=auto --quiet "" ~/.cshrc } ) >&/dev/null then
-    alias grep  'grep --color=auto'
+    alias grep	'grep --color=auto'
 endif
-if ( { /bin/ls --color=auto --directory / } ) >&/dev/null then
-    alias ls    '/bin/ls --color=auto'
+if ( { /bin/ls --color=auto --directory --format=across / } ) >&/dev/null then
+    alias ls	'/bin/ls --color=auto --format=across'
+else
+    alias ls	'/bin/ls -x'
 endif
 
 # set directories to search for commands
@@ -160,10 +162,10 @@ endif
 # set command aliases
 which apt-get >&/dev/null && alias apt 'apt-get'
 which aptitude >&/dev/null && alias apt 'aptitude'
-alias bell  'echo "\a"'
-alias cd..  'cd ..'
-alias cx    'chmod +x'
-alias d 'dirs'
+alias bell	'echo "\a"'
+alias cd..	'cd ..'
+alias cx	'chmod +x'
+alias d	'dirs'
 if ( $?EDITOR ) then
     alias e	'$EDITOR'
     alias edit	'$EDITOR'
@@ -177,37 +179,37 @@ alias f 'find . -type f -name \!1 -print \!2* | $PAGER'
 alias g 'grep -EHIin'
 alias gdb	'gdb -q'
 alias h 'history'
-alias hup   'kill -HUP'
-alias helpcommand   'man'
-alias j 'jobs -l'
-alias l 'ls'
-alias la    'l -A'
-alias latest    '/bin/ls -t -1 \!* | head -n 1'
-alias ll    'l -l'
-alias lt    'l -lt'
-alias m '(make \!* > make.log) |& tee -a make.log'
-alias p '$PAGER'
-alias pd    'pushd'
-alias psme  'ps -f -U $USER'
-alias po    'popd'
-alias qfind 'sh -c "find \!* 2> /dev/null | $PAGER"'
-alias rb    'reportblocked'
-alias recent    '/bin/ls -t -1 \!* | head -n 10'
-alias rg    'reportgraylist'
-alias rtags 'ctags -R'
-alias retags    'find . \( -name "*.c" -o -name "*.h" \
-        -o -name "*.a" -o -name "*.s" \
-        -o -name "*.C" -o -name "*.H" \
-        -o -name "*.cc" -o -name "*.hh" \
-        -o -name "*.cpp" -o -name "*.hpp" \
-        -o -name "*.cxx" -o -name "*.hxx" \
-        -o -name "*.c++" -o -name "*.h++" \
-        -o -name "*.l" \
-        -o -name "*.p" -o -name "*.pas" \
-        -o -name "*.pl" -o -name "*.pm" \
-        -o -name "*.py" \
-        -o -name "*.y" -o -name "*.yy" \) \
-        -print | etags -'
+alias hup	'kill -HUP'
+alias helpcommand	'man'
+alias j	'jobs -l'
+alias l	'ls'
+alias la	'l -A'
+alias latest	'/bin/ls -t -1 \!* | head -n 1'
+alias ll	'l -l'
+alias lt	'l -lt'
+alias m	'(make \!* > make.log) |& tee -a make.log'
+alias p	'$PAGER'
+alias pd	'pushd'
+alias psme	'ps -f -U $USER'
+alias po	'popd'
+alias qfind	'sh -c "find \!* 2> /dev/null | $PAGER"'
+alias rb	'reportblocked'
+alias recent	'/bin/ls -t -1 \!* | head -n 10'
+alias rg	'reportgraylist'
+alias rtags	'ctags -R'
+alias retags	'find . \( -name "*.c" -o -name "*.h" \
+	           -o -name "*.a" -o -name "*.s" \
+	           -o -name "*.C" -o -name "*.H" \
+	           -o -name "*.cc" -o -name "*.hh" \
+	           -o -name "*.cpp" -o -name "*.hpp" \
+	           -o -name "*.cxx" -o -name "*.hxx" \
+	           -o -name "*.c++" -o -name "*.h++" \
+	           -o -name "*.l" \
+	           -o -name "*.p" -o -name "*.pas" \
+	           -o -name "*.pl" -o -name "*.pm" \
+	           -o -name "*.py" \
+	           -o -name "*.y" -o -name "*.yy" \) \
+	           -print | etags -'
 alias t	'tail -n `expr 24 - 5`'	           # ideally 'tail -n `expr ``tput lines`` - 3`'
 alias tailmail	'tail ~/.proclog'
 alias tf	'tail -n 0 -F'
