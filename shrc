@@ -302,6 +302,12 @@ then
 	fi
 fi
 
+# do some floating point arithmetic
+calc()
+{
+	echo "scale=3; $*" | bc
+}
+
 # edit the most recently changed file
 editlatest()
 {

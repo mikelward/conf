@@ -163,6 +163,7 @@ endif
 which apt-get >&/dev/null && alias apt 'apt-get'
 which aptitude >&/dev/null && alias apt 'aptitude'
 alias bell	'echo "\a"'
+alias calc	'echo "scale=3; \!*" | bc'
 alias cd..	'cd ..'
 alias cx	'chmod +x'
 alias d	'dirs'
