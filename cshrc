@@ -224,6 +224,7 @@ else
 endif
 unalias vi
 unalias vim
+alias yumpolicy	'repoquery -a --qf "%-20{repoid} %{name}-%{version}" \!*'
 
 # read local settings (company environment, network, etc.)
 if ( -r ~/.cshrc.local ) then

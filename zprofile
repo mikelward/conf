@@ -1,7 +1,5 @@
 
 if test -f ~/.profile
 then
-        source ~/.profile
+	source ~/.profile
 fi
-
-# vi: set sw=8:

@@ -484,6 +484,13 @@ where()
 	type -a "$@"
 }
 
+# show which YUM repository/repositories have the named package
+# (a bit like apt-cache policy)
+yumpolicy()
+{
+	repoquery -a --qf "%-20{repoid} %{name}-%{version}" "$@"
+}
+
 ### PROGRAM SETTINGS
 # set preferred generic utilities
 exists lynx && export BROWSER=lynx

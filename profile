@@ -5,7 +5,7 @@
 # This scripts contains common initialization commands for the initial
 # log in session for all POSIX-compatible shells.
 
-# read environment
+# interactive sub-shells run .shrc
 test -f "$HOME"/.shrc && export ENV="$HOME"/.shrc
 
 # interactive commands

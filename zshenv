@@ -4,61 +4,11 @@
 #
 # This script contains zsh-specific customizations and enhancements
 # for all sessions.
-# Common POSIX-compatible functions and settings are included from
-# .shrc.
+#
+# Note that is inconsistent with bash (since bash doesn't offer this)
+# and that /etc/profile in some distributions may override these settings,
+# since /etc/profile runs after this script.
+#
+# For these reasons, this script is currently left empty.
+# See ~/.zshrc.
 
-# read the common environment for all POSIX shells
-# (must be a function so the emulate command only affects the
-# execution of statements from ~/.shrc)
-source_common_commands()
-{
-    emulate -L ksh
-    if test -f ~/.shrc
-    then
-        export ENV=~/.shrc
-        source ~/.shrc
-    else
-        export ENV=
-    fi
-}
-
-source_common_commands
-
-# enable some options originally from csh
-setopt banghist
-setopt braceexpand
-setopt cshnullglob
-setopt correct
-setopt histignorespace
-setopt histreduceblanks
-setopt noksharrays
-
-# set some options originally from ksh
-unsetopt bareglobqual
-setopt checkjobs
-setopt interactivecomments
-setopt kshglob
-setopt posixbuiltins
-setopt promptsubst
-setopt shwordsplit
-
-# set some zsh-specific options
-setopt appendhistory
-setopt autocd
-setopt autolist
-setopt automenu
-setopt extendedglob
-setopt extendedhistory
-setopt incappendhistory
-setopt nolistambiguous
-setopt nolistbeep
-setopt listrowsfirst
-setopt magicequalsubst
-setopt numericglobsort
-setopt promptpercent
-setopt pushdsilent
-
-# set zsh-specific aliases
-alias h="history -d"
-
-# vi: set sw=4 ts=33:
