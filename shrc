@@ -437,6 +437,35 @@ short_hostname()
 	fi
 }
 
+# look up the password for a user@host combination
+pass()
+{
+	typeset user
+	typeset host
+
+	if test -z "$PASSFILE"
+	then
+		error "PASSFILE not set"
+		return 1
+	fi
+
+	if expr "$1" : "..*@..*" >/dev/null
+	then
+		user=${1%%@*}
+		host=${1##*@}
+	else
+		host="$1"
+		user="$2"
+	fi
+
+	if test -n "$user"
+	then
+		awk "\$1 == \"$host\" && \$2 == \"$user\" { printf \"%s\n\", \$3 }" "$PASSFILE"
+	else
+		awk "\$1 == \"$host\" { printf \"%s\t%s\n\", \$2, \$3 }" "$PASSFILE"
+	fi
+}
+
 prompt_character()
 {
 	if test ${laststatus:-0} -ne 0; then
