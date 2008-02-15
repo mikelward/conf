@@ -45,6 +45,10 @@
 "/home/mward/firefox/firefox"
 	Mod4 + f
 
+# home folder
+"thunar"
+	Mod4 + h
+
 # lock screen
 "gnome-screensaver-command -l"
 	Mod4 + l
@@ -62,8 +66,12 @@
 "pidgin"
 	Mod4 + p
 
+# rhythmbox music player
+"rhythmbox"
+	Mod4 + r
+
 # terminal
-"xfterm4"
+"gnome-terminal --geometry 1600x1200"
 	Mod4 + t
 
 # word
