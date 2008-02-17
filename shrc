@@ -379,17 +379,15 @@ rgrep()
 			;;
 		esac
 	done
-	if test $# -gt 0
+	if test $# -ge 1
 	then
 		pattern="$1"
 		shift
-	else
-		pattern=
 	fi
 
 	if grep -HRq "" .
 	then
-		grep -HR "$pattern" "${@:-.}"
+		grep -HR "$pattern" "$@"
 	else
 		find "${@:-.}" -type f -print | xargs -i grep $args "$pattern" {} /dev/null
 	fi
