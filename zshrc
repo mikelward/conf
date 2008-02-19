@@ -165,6 +165,10 @@ PS1='%{$(setcolor ${promptcolor})%}$(eval echo -n "\"${promptstring}\"")%{$(setc
 HISTFILE=~/.zsh_history
 SAVEHIST=${HISTSIZE:-128}
 
+# set non-alphanumeric characters that constitute a word
+# use defaults (words are separated by whitespace)
+#WORDCHARS=
+#
 # replace the word before the cursor with its realpath
 # (resolves symlinks if the word is a file name)
 expand-word-path ()
@@ -184,11 +188,10 @@ expand-word-path ()
     fi
 }
 
-# set non-alphanumeric characters that constitute a word
-# use defaults (words are separated by whitespace)
-#WORDCHARS=
+zle -N expand-word-path expand-word-path
 
 # customize built-in key bindings
+#
 bindkey -M emacs '^[b' backward-word
 bindkey -M emacs '^[f' forward-word
 bindkey -M emacs '^[p' history-beginning-search-backward
