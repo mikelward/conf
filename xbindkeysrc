@@ -42,10 +42,12 @@
 	Mod4 + c
 
 # firefox
+#"firefox"
 "/home/mward/firefox/firefox"
 	Mod4 + f
 
 # home folder
+#"nautilus"
 "thunar"
 	Mod4 + h
 
@@ -71,24 +73,32 @@
 	Mod4 + r
 
 # terminal
-"gnome-terminal --geometry 1600x1200"
+"gnome-terminal --geometry 1680x1050"
 	Mod4 + t
 
 # word
-"oowriter"
+#"oowriter"
+"abiword"
 	Mod4 + w
 
-# excel
-"oocalc"
+# spreadsheet (x = excel)
+#"oocalc"
+"gnumeric"
 	Mod4 + x
 
 # mute
 "amixer set Master toggle"
 	Mod4 + KP_Delete
 
+"amixer set Master toggle"
+	Mod4 + Delete
+
 # play/pause
 "rhythmbox-client --play-pause"
 	Mod4 + KP_Insert
+
+"rhythmbox-client --play-pause"
+	Mod4 + Insert
 
 # volume down
 "amixer set Master 10%-"
@@ -106,6 +116,10 @@
 # previous song
 "rhythmbox-client --previous"
 	Mod4 + Left
+
+# screen shot (print screen)
+"gnome-screenshot"
+	Print
 
 ##################################
 # End of xbindkeys configuration #
