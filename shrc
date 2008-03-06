@@ -118,6 +118,21 @@ settitle()
 	printf "${titlestart}$*${titlefinish}"
 }
 
+start()
+{
+	sudo /etc/init.d/"$1" start
+}
+
+status()
+{
+	sudo /etc/init.d/"$1" status
+}
+
+stop()
+{
+	sudo /etc/init.d/"$1" stop
+}
+
 terminit()
 {
 	# determine the graphics mode escape sequences

@@ -211,6 +211,9 @@ alias retags	'find . \( -name "*.c" -o -name "*.h" \
 	           -o -name "*.py" \
 	           -o -name "*.y" -o -name "*.yy" \) \
 	           -print | etags -'
+alias start	'sudo /etc/init.d/\!* start'
+alias status	'sudo /etc/init.d/\!* status'
+alias stop	'sudo /etc/init.d/\!* stop'
 alias t	'tail -n `expr 24 - 5`'	           # ideally 'tail -n `expr ``tput lines`` - 3`'
 alias tailmail	'tail ~/.proclog'
 alias tf	'tail -n 0 -F'
