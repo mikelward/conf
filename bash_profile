@@ -6,7 +6,7 @@ if test -f ~/.bashrc
 then
 	. ~/.bashrc
 fi
-    
+
 # common login commands
 if test -f ~/.profile
 then
