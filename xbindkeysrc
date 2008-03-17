@@ -64,6 +64,10 @@
 "gedit"
 	Mod4 + n
 
+# opera browser
+"opera"
+	Mod4 + o
+
 # pidgin im
 "pidgin"
 	Mod4 + p
