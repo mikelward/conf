@@ -1,16 +1,17 @@
 # $Id$
 # bash-specific commands for login sessions.
 
-# read environment
+# environment and common interactive commands
 if test -f ~/.bashrc
 then
 	. ~/.bashrc
 fi
     
-# read common login commands
+# common login commands
 if test -f ~/.profile
 then
 	. ~/.profile
 fi
 
-# vi: set sw=4 ts=4:
+# finish with a zero exit status
+true
