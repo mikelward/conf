@@ -4,7 +4,7 @@
 # read environment
 if test -f ~/.bashrc
 then
-	~/.bashrc
+	. ~/.bashrc
 fi
     
 # read common login commands
