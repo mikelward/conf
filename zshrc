@@ -1,60 +1,10 @@
 # $Id: zshenv 174 2005-07-23 04:53:33Z michael $
-#
-# Z Shell interactive startup commands
-#
-# This script contains zsh-specific customizations and enhancements
-# for interactive sessions.
+# zsh-specific commands for interactive sessions.
 
-# read the common environment for all POSIX shells
-# (must be a function so the emulate command only affects the
-# execution of statements from ~/.shrc)
-source_common_commands()
-{
-    emulate -L ksh
-    if test -f ~/.shrc
-    then
-        export ENV=~/.shrc
-        source ~/.shrc
-    else
-        export ENV=
-    fi
-}
-
-source_common_commands
-
-# enable some options originally from csh
-setopt banghist
-setopt braceexpand
-setopt cshnullglob
-setopt correct
-setopt histignorespace
-setopt histreduceblanks
-setopt noksharrays
-
-# set some options originally from ksh
-unsetopt bareglobqual
-setopt checkjobs
-setopt interactivecomments
-setopt kshglob
-setopt posixbuiltins
-setopt promptsubst
-setopt shwordsplit
-
-# set some zsh-specific options
-setopt appendhistory
-setopt autocd
-setopt autolist
-setopt automenu
-setopt extendedglob
-setopt extendedhistory
-setopt incappendhistory
-setopt nolistambiguous
-setopt nolistbeep
-setopt listrowsfirst
-setopt magicequalsubst
-setopt numericglobsort
-setopt promptpercent
-setopt pushdsilent
+if test -f ~/.shrc
+then
+	. ~/.shrc
+fi
 
 # set zsh-specific aliases
 alias h="history -d"
@@ -160,7 +110,10 @@ commandstring="%{${bold}%}"
 commandcolor=bold
 
 # set prompt and window title format
-PS1='%{$(setcolor ${promptcolor})%}$(eval echo -n "\"${promptstring}\"")%{$(setcolor "normal")%}%{$(setcolor ${commandcolor})%}'
+if test -n "$promptstring"
+then
+	PS1='%{$(setcolor ${promptcolor})%}$(eval echo -n "\"${promptstring}\"")%{$(setcolor "normal")%}%{$(setcolor ${commandcolor})%}'
+fi
 
 HISTFILE=~/.zsh_history
 SAVEHIST=${HISTSIZE:-128}
@@ -226,10 +179,5 @@ compctl -M '' 'm:{a-zA-Z}={A-Za-z}'
 # make file name completion case-insensitive
 zstyle ':completion:*' matcher-list '' 'm:{a-zA-Z}={A-Za-z}'
 
-# source local settings
-test -r "$HOME"/.zshrc.local && . "$HOME"/.zshrc.local
-
 # finish with a zero exit status
 true
-
-# vi: set sw=4:

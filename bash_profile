@@ -1,15 +1,16 @@
 # $Id$
-#
-# Bourne Again Shell login session startup commands
-#
-# This script contains bash-specific customizations and enhancements
-# for the initial log in session.
+# bash-specific commands for login sessions.
 
 # read environment
-test -f "$HOME"/.bashrc && BASH_ENV="$HOME"/.bashrc
-test -n "$BASH_ENV" && . "$BASH_ENV"
+if test -f ~/.bashrc
+then
+	~/.bashrc
+fi
+    
+# read common login commands
+if test -f ~/.profile
+then
+	. ~/.profile
+fi
 
-# read login commands
-test -f "$HOME"/.profile && . "$HOME"/.profile
-
-# vi: set sw=4 ts=33:
+# vi: set sw=4 ts=4:

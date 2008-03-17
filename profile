@@ -1,12 +1,22 @@
 # $Id$
-#
-# POSIX shell login session startup commands
-#
-# This scripts contains common initialization commands for the initial
-# log in session for all POSIX-compatible shells.
+# Commands to run for any POSIX shell when the user logs in.
 
-# interactive sub-shells run .shrc
-test -f "$HOME"/.shrc && export ENV="$HOME"/.shrc
+# interactive sub-shells run .env, unless this is bash or zsh, because they already ran .env in .bashrc or .zshrc
+if test -z "$BASH_VERSION" -a -z "$ZSH_VERSION" || test -n "$BASH_VERSION" -a \( "${BASH##*/}" = "sh" \)
+then
+	if test -f "$HOME"/.env
+	then
+		. "$HOME"/.env
+	fi
+fi
+
+# the name is confusing, but POSIX says $ENV will be automatically run after .profile,
+# whereas we want .env to run before the rest of .profile (for $PATH, etc.)
+# (bash and zsh don't run $ENV, but this is needed in case sh is started from inside bash or zsh)
+if test -f "$HOME"/.shrc
+then
+	export ENV="$HOME"/.shrc
+fi
 
 # interactive commands
 if type tty >/dev/null 2>/dev/null && tty >/dev/null

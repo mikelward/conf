@@ -1,629 +1,20 @@
 # $Id$
-#
-# POSIX shell startup commands
-#
-# This script contains functions and settings that are common for all
-# POSIX-compatible shells including bash, ksh, and zsh.
-#
-#
-# ensure this shell supports local variables using either local
-# (from bash and zsh) or typeset (from ksh)
-if ! type local >/dev/null 2>/dev/null
-then
-	if type typeset >/dev/null 2>/dev/null
-	then
-		alias local='typeset'
-	else
-		echo "Cannot find local or typeset shell command, some features in .shrc will not work" 1>&2
-	fi
-fi
+# Commands to run for any interactive POSIX shell.
+# Examples include the prompt and any terminal-specific code.
+# It is called by sh via $ENV, bash via .bashrc, and zsh via .zshrc.
 
-### HELPER FUNCTIONS
-# add a directory to the path
-addpath()
-{
-	local _adddir
-	local _position
-	local _pathvar
-	local _separator
-	_adddir=$1
-	_position=$2
-	_pathvar=${3:-"PATH"}
-	_separator=${4:-":"}
-	OIFS="$IFS"
-	IFS="$_separator"
-
-	case "$_position" in
-	start)
-		delpath "$_adddir" "$_pathvar" "$_separator"
-		eval $_pathvar="\$_adddir""\${$_pathvar:+\$_separator}""\$$_pathvar"
-		;;
-	end)
-		delpath "$_adddir" "$_pathvar" "$_separator"
-		eval $_pathvar="\$$_pathvar""\${$_pathvar:+\$_separator}""\$_adddir"
-		;;
-	*)
-		local dirs
-		local seen
-		eval dirs=\$$_pathvar
-		for d in $dirs
-		do
-			# directory is already in PATH, leave as is
-			test "${_adddir:-.}" = "${d:-.}" && seen=true
-		done
-		test -z "$seen" && eval $_pathvar="\$$_pathvar""\${$_pathvar:+$_separator}""\$_adddir"
-		;;
-	esac
-	IFS="$OIFS"
-}
-
-# remove a directory from the path
-delpath()
-{
-	local _deldir
-	local _pathvar
-	local _separator
-	_deldir=$1
-	_pathvar=${2:-"PATH"}
-	_separator=${3:-":"}
-	NIFS="$IFS"
-	IFS="$_separator"
-
-	local _newdirs
-	local _olddirs
-
-	eval _olddirs=\$$_pathvar
-	_newdirs=
-	for d in $_olddirs
-	do
-		test "${d:-.}" = "${_deldir:-.}" && continue
-		_newdirs="$_newdirs""${_newdirs:+$_separator}""$d"
-	done
-	eval $_pathvar="\$_newdirs"
-	IFS="$NIFS"
-}
-
-# return true if the command can be found, false otherwise
-exists()
-{
-	local cmd
-	cmd="$1"
-
-	if type "$cmd" >/dev/null 2>&1
-	then
-		return 0
-	else
-		return 1
-	fi
-}
-
-# print an error message
-error()
-{
-	echo "$@" 1>&2
-}
-
-# run a simple command quietly
-quiet()
-{
-	"$@" >/dev/null 2>&1
-	return $?
-}
-
-# set the xterm title
-settitle()
-{
-	test -z "${titlestart}" && return 0
-
-	printf "${titlestart}$*${titlefinish}"
-}
-
-start()
-{
-	sudo /etc/init.d/"$1" start
-}
-
-status()
-{
-	sudo /etc/init.d/"$1" status
-}
-
-stop()
-{
-	sudo /etc/init.d/"$1" stop
-}
-
-terminit()
-{
-	# determine the graphics mode escape sequences
-	if exists tput
-	then
-		if quiet tput longname
-		then
-			bold="$(tput bold)"
-			underline="$(tput smul)"
-			normal="$(tput sgr0)"
-			black="$(tput setaf 0)"
-			red="$(tput setaf 1)"
-			green="$(tput setaf 2)"
-			yellow="$(tput setaf 3)"
-			blue="$(tput setaf 4)"
-			magenta="$(tput setaf 5)"
-			cyan="$(tput setaf 6)"
-			white="$(tput setaf 7)"
-		fi
-	fi
-
-	# determine the window title escape sequences
-	case "$TERM" in
-	aixterm|dtterm|putty|rxvt|xterm*)
-		titlestart=']0;'
-		titlefinish=''
-		;;
-	cygwin)
-		titlestart='];'
-		titlefinish=''
-		;;
-	konsole)
-		titlestart=']30;'
-		titlefinish=''
-		;;
-	screen*)
-		# status line
-		#titlestart='_'
-		# window title
-		titlestart='k'
-		titlefinish='\'
-		;;
-	*)
-		if exists tput
-		then
-			if quiet tput longname
-			then
-				titlestart=`tput tsl`
-				titlefinish=`tput fsl`
-			fi
-		else
-			titlestart=''
-			titlefinish=''
-		fi
-		;;
-	esac
-}
-
-### SHELL ENVIRONMENT
-# set shell options and environment
-HISTIGNORE="bg:fg: *"
-HISTSIZE=128
-if test -z "$HOST"
-then
-	HOST=`hostname`
-fi
-if exists tty
-then
-	TTY=`tty`
-else
-	TTY='?'
-fi
-if test -z "$UID"
-then
-	UID=`id -u`
-fi
-if test -z "$USER"
-then
-	USER=`id -un`
-fi
-
-# set directories to search for commands
-# add preferred locations at start
-# X Window system directories are deprecated on most Linux distributions
-# where they are now just symlinks to /usr/bin
-# if we add the symlink versions before the standard directories such as
-# /usr/bin, some utilities get confused, so only add them to PATH if
-# they're not symlinks
-for dir in /usr/X11R6/bin /usr/bin/X11
-do
-	test -d "$dir" && test ! -L "$dir" && addpath "$dir" start
-done
-for dir in /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
-do
-	test -d "$dir" && addpath "$dir" start
-done
-# add standard locations if they're not there
-for dir in /usr/bin /bin /usr/sbin /sbin
-do
-	test -d "$dir" && addpath "$dir"
-done
-# add the current directory to the end for non-root users
-if test $UID -ne 0
-then
-	for dir in .
-	do
-		test -d "$dir" && addpath "$dir" end
-	done
-fi
-export PATH
-
-# set directories to search for documentation
-for dir in /usr/local/share/info /usr/local/info "$HOME"/info
-do
-	test -d "$dir" && addpath "$dir" start INFOPATH
-done
-for dir in /usr/share/info /usr/info
-do
-	test -d "$dir" && addpath "$dir" end INFOPATH
-done
-export INFOPATH
-for dir in /usr/X11R6/man /usr/kerberos/man /usr/posix/man /usr/gnu/man /usr/local/share/man /usr/local/man "$HOME"/man
-do
-	test -d "$dir" && addpath "$dir" start MANPATH
-done
-for dir in /usr/share/man /usr/man
-do
-	test -d "$dir" && addpath "$dir" end MANPATH
-done
-export MANPATH
-
-### ALIASES AND FUNCTIONS
-# create aliases for commonly invoked commands
-if quiet alias
-then
-	# aliase apt to aptitude or apt-get (in that order)
-	type apt-get >/dev/null 2>/dev/null && alias apt='apt-get'
-	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
-	alias bell='echo "\a"'
-	alias cx='chmod +x'
-	alias d='dirs'	# only supported by bash and zsh
-	alias e='${EDITOR:-vi}'
-	alias edit='${EDITOR:-vi}'
-	alias g='grep -EHIin'		 # -H and -I are non-POSIX but are widely supported
-	alias gdb='gdb -q '
-	alias h='history'
-	alias hup='kill -HUP'
-	alias l='ls'
-	alias l.='l -d .*'
-	alias la='l -A'
-	alias ll='l -l'
-	alias lt='l -lt'
-	alias j='jobs'
-	alias nohup='nohup '		 # expand aliases after nohup
-	alias pd='pushd'
-	alias po='popd'
-	alias psme='ps -f -U "${USER:-${LOGNAME}}"'
-	alias rb='reportblocked'
-	alias rcslog='rlog'
-	alias rdiff='rcsdiff'
-	alias rg='reportgraylist'
-	type assh >/dev/null 2>/dev/null && alias ssh='assh'
-	type ascp >/dev/null 2>/dev/null && alias scp='ascp'
-	alias strace='strace '		 # expand aliases after strace
-	alias sudo='sudo '			 # expand aliases after sudo
-	alias tf='tail -n 0 -F'
-	alias tm='t -f /var/log/mail'
-	alias tp='t -f "$HOME/.proclog"'
-	alias today='date "+%Y%m%d"'
-	alias v='${VIEWER:-view}'
-
-	# set default flags
-	if quiet grep --color=auto --quiet "" "$HOME"/.shrc
-	then
-		alias grep='grep --color=auto'
-	fi
-	if quiet ls --color=auto --directory --format=across /
-	then
-		alias ls='ls --color=auto --format=across'
-	else
-		alias ls='ls -x'
-	fi
-fi
-
-# do some floating point arithmetic
-calc()
-{
-	echo "scale=3; $*" | bc
-}
-
-# edit the most recently changed file
-editlatest()
-{
-	edit $(latest "$@")
-}
-
-# show the most recently changed file
-latest()
-{
-	if test $# -ne 0
-	then
-		/bin/ls -t -1 -d "$@" | head -n 1
-	else
-		/bin/ls -t -1 -d * | head -n 1
-	fi
-}
-
-# make with an automatic log and pager
-m()
-{
-	command make "$@" 2>&1 1>&- 1>make.log | tee -a make.log
-}
-
-# keep trying a command until it works
-# (e.g. ping -c 1 host)
-notify()
-{
-	while true
-	do
-		"$@"
-		if test $? -eq 0
-		then
-			bell
-			break
-		else
-			sleep 10
-		fi
-	done
-}
-
-# show the 10 most recently changed files
-recent()
-{
-	if test $# -ne 0
-	then
-		/bin/ls -t -1 "$@" | head -n 10
-	else
-		/bin/ls -t -1 . | head -n 10
-	fi
-}
-
-# search for a pattern in text files in a directory tree
-rgrep()
-{
-	local pattern
-	local dirs
-	local args
-
-	args=
-	while true
-	do
-		case $1 in
-		-*)
-			args="${args:+$args }$1"
-			shift
-			;;
-		*)
-			break
-			;;
-		esac
-	done
-	if test $# -ge 1
-	then
-		pattern="$1"
-		shift
-	fi
-
-	if grep -HRq "" .
-	then
-		grep -HR "$pattern" "$@"
-	else
-		find "${@:-.}" -type f -print | xargs -i grep $args "$pattern" {} /dev/null
-	fi
-}
-
-# print the escape sequence for the named color (e.g. setcolor "blue")
-setcolor()
-{
-	local color
-	color="$1"
-	if test -n "$color"
-	then
-		eval echo -n "\$$color"
-	fi
-}
-
-# get a short version of the current command (strips path and arguments)
-short_command()
-{
-	local command
-	command=$1
-
-	echo "$command" | sed -e "s/^-//" -e "s#^[^ ]*/##" -e "s/ .*$//"
-}
-
-# get a short version of the hostname for use in the prompt or window title
-short_hostname()
-{
-	local domains
-	# domain that we want to keep the subdomain for
-	domain="acx"
-
-	if test -n "$HOST"
-	then
-		if echo "$HOST" | grep -q "\.$domain"
-		then
-			echo "$HOST" | sed -e "s/\.$domain//"
-		else
-			echo "$HOST" | sed -e "s/\..*//"
-		fi
-		return 0
-	else
-		echo "unknown"
-		return 1
-	fi
-}
-
-# look up the password for a user@host combination
-pass()
-{
-	typeset user
-	typeset host
-
-	if test -z "$PASSFILE"
-	then
-		error "PASSFILE not set"
-		return 1
-	fi
-
-	if expr "$1" : "..*@..*" >/dev/null
-	then
-		user=${1%%@*}
-		host=${1##*@}
-	else
-		host="$1"
-		user="$2"
-	fi
-
-	if test -n "$user"
-	then
-		awk "\$1 == \"$host\" && \$2 == \"$user\" { printf \"%s\n\", \$3 }" "$PASSFILE"
-	else
-		awk "\$1 == \"$host\" { printf \"%s\t%s\n\", \$2, \$3 }" "$PASSFILE"
-	fi
-}
-
-prompt_character()
-{
-	if test ${laststatus:-0} -ne 0; then
-		echo "!"
-	elif test $UID -eq 0; then
-		echo "#"
-	else
-		echo "$"
-	fi
-}
-
-# print the last screenful of text from a file
-t()
-{
-	local lines
-	local promptlines
-	promptlines=5				 # leave five lines for the prompt
-	if test -n $LINES
-	then
-		lines=$(($LINES - $promptlines))
-	else
-		lines=$(tput lines)
-		if test -z $lines
-		then
-			lines=24
-		fi
-	fi
-
-	tail -n $lines "$@"
-}
-
-# print the current directory with $HOME changed to ~
-tilde_directory()
-{
-	if test $UID -eq 0; then
-		pwd
-	else
-		pwd | sed -e "s#$HOME#~#"
-	fi
-}
-
-# list all instances of a command
-where()
-{
-	type -a "$@"
-}
-
-# show which YUM repository/repositories have the named package
-# (a bit like apt-cache policy)
-yumpolicy()
-{
-	repoquery -a --qf "%-20{repoid} %{name}-%{version}" "$@"
-}
-
-### PROGRAM SETTINGS
-# set preferred generic utilities
-exists lynx && export BROWSER=lynx
-exists links && export BROWSER=links
-exists elinks && export BROWSER=elinks
-exists rsh && export CVS_RSH=rsh
-exists ssh && export CVS_RSH=ssh
-exists ed && export EDITOR=ed
-exists vi && export EDITOR=vi
-exists more && export VIEWER=more
-exists less && export VIEWER=less
-exists view && export VIEWER=view
-exists more && export PAGER=more
-exists less && export PAGER=less
-export VISUAL="$EDITOR"
-export WINTERM=xterm
-
-if test -f "$HOME"/.keychain/"$HOST"-sh
-then
-	. "$HOME"/.keychain/"$HOST"-sh
-fi
-
-# set file locations
-test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
-
-# set preferred program options
-export CLICOLOR=true
-export FIGNORE=
-export GREP_COLOR=4
-export LESS=-eFj3MRX
-test -n "$TABSIZE" && export LESS="${LESS}x${TABSIZE}"
-case "$TERM" in
-linux|vt220)
-	# colors for white on black
-	#export LSCOLORS='gxcxxxxxfxxxxx'
-	export LSCOLORS='ExFxxxxxCxxxxx'
-    export LS_COLORS='no=00:fi=00:di=01;34:ln=01;35:so=00;00:bd=00;00:cd=00;00:or=01;31:pi=00;00:ex=01;32'
-	;;
-*)
-	# colors for black on white
-	export LSCOLORS='exfxxxxxcxxxxx'
-	export LS_COLORS='no=00:fi=00:di=00;34:ln=00;35:so=00;00:bd=00;00:cd=00;00:or=00;31:pi=00;00:ex=00;32'
-	;;
-esac
-if exists dircolors
-then
-	if test -f "$HOME/.dircolors.$TERM"
-	then
-		dircolors="$HOME/.dircolors.$TERM"
-	else
-		case "$TERM" in
-		linux|vt220)
-			if test -f "$HOME"/.dircolors.dark
-			then
-				dircolors="$HOME"/.dircolors.dark
-			fi
-			;;
-		*)
-			if test -f "$HOME"/.dircolors.light
-			then
-				dircolors="$HOME"/.dircolors.light
-			fi
-			;;
-		esac
-	fi
-	if test -z "$dircolors"
-	then
-		if test -f "$HOME"/.dircolors
-		then
-			dircolors="$HOME"/.dircolors
-		fi
-	fi
-	if test -n "$dircolors"
-	then
-		eval $(dircolors -b "$dircolors" 2>/dev/null)
-	fi
-fi
-export TOP=-I
-export WANT_SSH_AGENT=1
-export WWW_HOME=http://google.com
-
-### INTERACTIVE SETTINGS
 case $- in
 *i*)
-	if tty >/dev/null 2>&1
+	# common environment
+	if test -f "$HOME/.env"
 	then
-		# get the terminal characteristics
-		terminit
+		. "$HOME/.env"
 	fi
 
-	# set prompt and window title
+	# terminal colors, etc.
+	terminit
+
+	# prompt and window title
 	connectioninfo='$(short_hostname)'
 	command=${0#-}
 	commandinfo='$(short_command "$command")'
@@ -638,23 +29,63 @@ case $- in
 	promptstring='
 $(eval echo "${shellinfo}")$(eval echo "\"${promptchars}\"") '
 	title='$(eval echo "${connectioninfo} ${commandinfo}")'
+	PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval echo "\"${promptstring}\"")$(setcolor "normal")'
 
-	# set command line editing key bindings
-	# this must be after the EDITOR and VISUAL settings
+	# command line editing key bindings (must be set after EDITOR and VISUAL)
 	set -o emacs 2>/dev/null
 
-	# apply the user's settings for prompt, title, etc.
-	# we differentiate here between ksh and sh,
-	# prompts for bash and zsh are handled in .bashrc, .zshrc, etc.
-	PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval echo "\"${promptstring}\"")$(setcolor "normal")'
+	# colors for ls
+	case "$TERM" in
+	linux|vt220)
+		# colors for white on black
+		#export LSCOLORS='gxcxxxxxfxxxxx'
+		export LSCOLORS='ExFxxxxxCxxxxx'
+		export LS_COLORS='no=00:fi=00:di=01;34:ln=01;35:so=00;00:bd=00;00:cd=00;00:or=01;31:pi=00;00:ex=01;32'
+		;;
+	*)
+		# colors for black on white
+		export LSCOLORS='exfxxxxxcxxxxx'
+		export LS_COLORS='no=00:fi=00:di=00;34:ln=00;35:so=00;00:bd=00;00:cd=00;00:or=00;31:pi=00;00:ex=00;32'
+		;;
+	esac
+	if exists dircolors
+	then
+		if test -f "$HOME/.dircolors.$TERM"
+		then
+			dircolors="$HOME/.dircolors.$TERM"
+		else
+			case "$TERM" in
+			linux|vt220)
+				if test -f "$HOME"/.dircolors.dark
+				then
+					dircolors="$HOME"/.dircolors.dark
+				fi
+				;;
+			*)
+				if test -f "$HOME"/.dircolors.light
+				then
+					dircolors="$HOME"/.dircolors.light
+				fi
+				;;
+			esac
+		fi
+		if test -z "$dircolors"
+		then
+			if test -f "$HOME"/.dircolors
+			then
+				dircolors="$HOME"/.dircolors
+			fi
+		fi
+		if test -n "$dircolors"
+		then
+			eval $(dircolors -b "$dircolors" 2>/dev/null)
+		fi
+	fi
+
+	# local settings (company environment, network, etc.)
+	test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
 	;;
 esac
 
-### LAST COMMANDS
-# source local settings (company environment, network, etc.)
-test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
-
-# finish with a 0 exit status
+# finish with a zero exit status
 true
-
-# vi: set sw=4 ts=4:

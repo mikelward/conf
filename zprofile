@@ -1,5 +1,2 @@
-
-if test -f ~/.profile
-then
-	source ~/.profile
-fi
+# $Id$
+# keep this empty.  use .zlogin instead.

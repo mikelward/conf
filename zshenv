@@ -1,14 +1,29 @@
 # $Id$
-#
-# Z Shell common startup commands
-#
-# This script contains zsh-specific customizations and enhancements
-# for all sessions.
-#
-# Note that is inconsistent with bash (since bash doesn't offer this)
-# and that /etc/profile in some distributions may override these settings,
-# since /etc/profile runs after this script.
-#
-# For these reasons, this script is currently left empty.
-# See ~/.zshrc.
+# zsh-specific commands for all sessions.
 
+# Red Hat's /etc/zshrc and /etc/zprofile break things
+unsetopt GLOBAL_RCS
+
+emulate ksh
+
+setopt banghist
+setopt braceexpand
+setopt correct
+setopt histignorespace
+setopt histreduceblanks
+
+unsetopt bareglobqual
+setopt checkjobs
+setopt interactivecomments
+setopt kshglob
+setopt posixbuiltins
+setopt promptsubst
+setopt shwordsplit
+
+setopt autolist
+setopt automenu
+setopt listrowsfirst
+setopt promptsubst
+setopt pushdsilent
+
+# read .env in .zshrc for compatibility with other POSIX shells

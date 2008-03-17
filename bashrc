@@ -1,26 +1,16 @@
 # $Id$
-#
-# Bourne Again Shell startup commands
-#
-# This script contains bash-specific customizations and enhancements.
-# Common POSIX-compatible functions and settings are included from
-# .shrc.
+# bash-specific commands to run for all interactive shells.
 
-# source the user's environment file
-if test -f "$HOME"/.shrc
+# commands common to all sh-like shells
+if test -f ~/.shrc
 then
-    export ENV="$HOME"/.shrc
-    . "$ENV"
-else
-    ENV=
+	. ~/.shrc
 fi
 
-# set shell options
+# bash options
 shopt -s checkwinsize
 shopt -s cmdhist
-shopt -s dotglob
 shopt -s extglob
-quiet shopt -s failglob
 shopt -s xpg_echo
 
 # ksh style aliases
@@ -126,88 +116,83 @@ whence()
     done
 }
 
-# set the prompt and window title
-PROMPT_COMMAND='laststatus="$?"; eval settitle "\"${title}\""'
-PS1='$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")'
+# prompt and window title
+if test -n "${title}"
+then
+	PROMPT_COMMAND='laststatus="$?"; eval settitle "\"${title}\""'
+fi
+if test -n "${promptstring}"
+then
+    PS1='$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")'
+fi
 
-# set up command history
+# history format
 HISTTIMEFORMAT="%H:%M	"
 
-# set environment for interactive sessions
-case $- in *i*)
-    # set command completions
-    if type complete >/dev/null 2>&1
-    then
-        if complete -o >/dev/null 2>&1
-        then
-            COMPDEF="-o complete"
-        else
-            COMPDEF="-o default"
-        fi
-        complete -a alias unalias
-        complete -d cd pushd popd pd po
-        complete $COMPDEF -g chgrp
-        complete $COMPDEF -u chown
-        complete -j fg
-        complete -j kill
-        complete $COMPDEF -c command
-        complete $COMPDEF -c exec
-        complete $COMPDEF -c man
-        complete -e printenv
-        complete -G "*.java" javac
-        complete -F complete_runner nohup
-        complete -F complete_runner sudo
-        complete -F complete_services service
+# custom tab completions
+if type complete >/dev/null 2>&1
+then
+if complete -o >/dev/null 2>&1
+then
+	COMPDEF="-o complete"
+else
+	COMPDEF="-o default"
+fi
+complete -a alias unalias
+complete -d cd pushd popd pd po
+complete $COMPDEF -g chgrp
+complete $COMPDEF -u chown
+complete -j fg
+complete -j kill
+complete $COMPDEF -c command
+complete $COMPDEF -c exec
+complete $COMPDEF -c man
+complete -e printenv
+complete -G "*.java" javac
+complete -F complete_runner nohup
+complete -F complete_runner sudo
+complete -F complete_services service
 
-        # completion function for commands such as sudo that take a
-        # command as the first argument but should revert to file
-        # completion for subsequent arguments
-        complete_runner()
-        {
-            if test "$1" = "$3"
-            then
-                set -- `compgen -c $2`
-            else
-                set -- `compgen -f $2`
-            fi
-            i=0
-            for arg
-            do
-                COMPREPLY[$i]=$arg
-                i=`expr $i + 1`
-            done
-                
-        }
+# completion function for commands such as sudo that take a
+# command as the first argument but should revert to file
+# completion for subsequent arguments
+complete_runner()
+{
+	if test "$1" = "$3"
+	then
+	set -- `compgen -c $2`
+	else
+	set -- `compgen -f $2`
+	fi
+	i=0
+	for arg
+	do
+	COMPREPLY[$i]=$arg
+	i=`expr $i + 1`
+	done
+	
+}
 
-        # completion function for Red Hat service command
-        complete_services()
-        {
-            OIFS="$IFS"
-            IFS='
+# completion function for Red Hat service command
+complete_services()
+{
+	OIFS="$IFS"
+	IFS='
 '
-            local i=0
-            for file in $(find /etc/init.d/ -type f -name "$2*" -perm -u+rx)
-            do
-                file=${file##*/}
-                COMPREPLY[$i]=$file
-                i=$(($i + 1))
-            done
-            IFS="$OIFS"
-        }
-    fi
+	local i=0
+	for file in $(find /etc/init.d/ -type f -name "$2*" -perm -u+rx)
+	do
+	file=${file##*/}
+	COMPREPLY[$i]=$file
+	i=$(($i + 1))
+	done
+	IFS="$OIFS"
+}
+fi
 
-	bind -m vi-command '"!"':history-expand-line
-	# for some reason glob-expand-word doesn't work here,
-	# but insert-completions is fine
-	bind -m vi-command '"*"':insert-completions
+bind -m vi-command '"!"':history-expand-line
+# for some reason glob-expand-word doesn't work here, but insert-completions is fine
+bind -m vi-command '"*"':insert-completions
 
-    ;;
-esac
-
-# source local settings
-test -r "$HOME"/.bashrc.local && . "$HOME"/.bashrc.local
-
-# finish with a 0 exit status
+# finish with a zero exit status
 true
-
-# vi: set sw=4:
