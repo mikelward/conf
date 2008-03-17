@@ -11,7 +11,6 @@ then
 fi
 
 # the name is confusing, but POSIX says $ENV will be automatically run after .profile,
-# whereas we want .env to run before the rest of .profile (for $PATH, etc.)
 # (bash and zsh don't run $ENV, but this is needed in case sh is started from inside bash or zsh)
 if test -f "$HOME"/.shrc
 then
