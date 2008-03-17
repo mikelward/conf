@@ -20,8 +20,8 @@ fi
 # interactive commands
 if type tty >/dev/null 2>/dev/null && tty >/dev/null
 then
-    # disable flow control so applications can use ^Q and ^S
-    type stty >/dev/null 2>/dev/null && stty -ixon
+	# disable flow control so applications can use ^Q and ^S
+	type stty >/dev/null 2>/dev/null && stty -ixon
 fi
 
 # set a script that will be sourced on exiting the shell
@@ -30,7 +30,7 @@ test -f "$HOME"/.exitrc && trap ". $HOME/.exitrc" EXIT
 # start the SSH agent if desired
 if test $WANT_SSH_AGENT
 then
-    if test -z $SSH_AUTH_SOCK
+	if test -z $SSH_AUTH_SOCK
 	then
 		if type ssh-agent >/dev/null 2>/dev/null
 		then
