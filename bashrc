@@ -31,20 +31,20 @@ cd()
 {
 	opts=
 	case $1 in
-		-*)
+	-*)
 		opts=$1
 		shift
 		;;
 	esac
 
 	case $# in
-		2)
+	2)
 		builtin cd $opts "${PWD/$1/$2}" >/dev/null
 		;;
-		1)
+	1)
 		builtin cd $opts "$1" >/dev/null
 		;;
-		0)
+	0)
 		builtin cd $opts "$HOME" >/dev/null
 		;;
 	esac
@@ -71,13 +71,13 @@ whence()
 	while getopts pv flag
 	do
 		case $flag in
-			p)
+		p)
 			pathonly=true
 			;;
-			v)
+		v)
 			verbose=true
 			;;
-			*)
+		*)
 			echo "Unknown option $1"
 			return
 			;;
