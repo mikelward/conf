@@ -14,16 +14,21 @@ setopt histreduceblanks
 
 unsetopt bareglobqual
 setopt checkjobs
+setopt globsubst
 setopt interactivecomments
+setopt ksharrays
 setopt kshglob
 setopt posixbuiltins
 setopt promptsubst
+setopt shglob
 setopt shwordsplit
 
 setopt autolist
 setopt automenu
+setopt equals
 setopt listrowsfirst
-setopt promptsubst
+setopt numericglobsort
+setopt promptpercent
 setopt pushdsilent
 
 # read .env in .zshrc for compatibility with other POSIX shells
