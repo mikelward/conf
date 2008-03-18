@@ -20,12 +20,7 @@ case $- in
 	commandinfo='$(short_command "$command")'
 	shellinfo='$(tilde_directory)'
 	promptchars='$(prompt_character)'
-	if test $UID -eq 0
-	then
-		promptcolor=red
-	else
-		promptcolor=normal
-	fi
+	promptcolor=normal
 #	promptstring='
 #$(eval echo "${shellinfo}")$(eval echo -n "\"${promptchars}\"") '
 	promptstring='$(eval echo -n "\"${promptchars}\"") '
