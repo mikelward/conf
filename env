@@ -502,7 +502,7 @@ tilde_directory()
 	if test $UID -eq 0; then
 		pwd
 	else
-		pwd | sed -e "s#$HOME#~#"
+		pwd | sed -e 's#'"$HOME"'#~#'
 	fi
 }
 
@@ -516,7 +516,7 @@ where()
 # (a bit like apt-cache policy)
 yumpolicy()
 {
-	repoquery -a --qf "%-20{repoid} %{name}-%{version}" "$@"
+	repoquery -a --qf '%-20{repoid} %{name}-%{version}' "$@"
 }
 
 ### PROGRAM SETTINGS

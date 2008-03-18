@@ -4,7 +4,7 @@
 # Red Hat's /etc/zshrc and /etc/zprofile break things
 unsetopt GLOBAL_RCS
 
-emulate ksh
+#emulate ksh
 
 setopt banghist
 setopt braceexpand
@@ -20,6 +20,7 @@ setopt ksharrays
 setopt kshglob
 setopt posixbuiltins
 setopt promptsubst
+setopt shfileexpansion
 setopt shglob
 setopt shwordsplit
 
