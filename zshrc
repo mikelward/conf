@@ -25,26 +25,26 @@ preexec()
 {
 	# get the canonical name of the command just invoked
 	case $1 in
-		# resuming an existing job
-		fg*|%*)
+	# resuming an existing job
+	fg*|%*)
 		local spec
 		spec=${1#fg}
 		spec=${spec# }
 		case $spec in
-			[0-9]*)
+		[0-9]*)
 			# process identifier
 			command=$(ps -o comm= -p $spec)
 			;;
-			*)
+		*)
 			# job identifier
 			# normalise %, %+, and %% to +, otherwise just strip %
 			spec=$(echo $spec | sed -e 's/^%%\?//')
 			spec=${spec:-+}
 			case $spec in
-				+|-)
+			+|-)
 				# find job number from zsh's $jobstates array
 				local i=0
-				for jobstate in $jobstates
+				for jobstate in "${jobstates[@]}"
 				do
 					i=$(($i+1))
 					echo $jobstate | IFS=: read state mark pidstate
@@ -54,9 +54,9 @@ preexec()
 						break
 					fi
 				done
-				command=$jobtexts[$job]
+				command="${jobtexts[$job]}"
 				;;
-				\?*)
+			\?*)
 				# job name contains $spec
 				# string the leading ?
 				spec=$(echo $spec | sed -e 's/^\?//')
@@ -71,7 +71,7 @@ preexec()
 				done
 				#command=unknown
 				;;
-				*)
+			*)
 				# job name begins with $spec
 				for jobtext in $jobtexts
 				do
@@ -88,7 +88,7 @@ preexec()
 		esac
 		;;
 		# executing a new command
-		*)
+	*)
 		command=$1
 		;;
 	esac
