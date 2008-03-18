@@ -528,6 +528,7 @@ exists rsh && export CVS_RSH=rsh
 exists ssh && export CVS_RSH=ssh
 exists ed && export EDITOR=ed
 exists vi && export EDITOR=vi
+exists nano && export EDITOR=nano
 exists more && export VIEWER=more
 exists less && export VIEWER=less
 exists view && export VIEWER=view
