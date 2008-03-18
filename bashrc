@@ -9,8 +9,8 @@ fi
 
 # bash options
 shopt -s checkwinsize
-shopt -s cmdhist
-shopt -s extglob
+shopt -s lithist
+shopt -s extglob	# ksh-like globbing
 shopt -s xpg_echo
 
 # ksh style aliases
