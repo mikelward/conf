@@ -143,6 +143,8 @@ terminit()
 	aixterm|dtterm|putty|rxvt|xterm*)
 		titlestart=']0;'
 		titlefinish=''
+		#titlestart='\033]0;'
+		#titlefinish='\007'
 		;;
 	cygwin)
 		titlestart='];'
@@ -164,8 +166,8 @@ terminit()
 		then
 			if quiet tput longname
 			then
-				titlestart=`tput tsl`
-				titlefinish=`tput fsl`
+				titlestart="$(tput tsl)"
+				titlefinish="$(tput fsl)"
 			fi
 		else
 			titlestart=''
@@ -181,21 +183,21 @@ HISTIGNORE="bg:fg: *"
 HISTSIZE=128
 if test -z "$HOST"
 then
-	HOST=`hostname`
+	HOST=$(hostname)
 fi
 if exists tty
 then
-	TTY=`tty`
+	TTY=$(tty)
 else
 	TTY='?'
 fi
 if test -z "$UID"
 then
-	UID=`id -u`
+	UID=$(id -u)
 fi
 if test -z "$USER"
 then
-	USER=`id -un`
+	USER=$(id -un)
 fi
 
 # set directories to search for commands
@@ -399,7 +401,7 @@ setcolor()
 	color="$1"
 	if test -n "$color"
 	then
-		eval echo -n "\$$color"
+		eval echo -n "\"\$$color\""
 	fi
 }
 
