@@ -26,10 +26,11 @@ case $- in
 	else
 		promptcolor=normal
 	fi
-	promptstring='
-$(eval echo "${shellinfo}")$(eval echo "\"${promptchars}\"") '
-	title='$(eval echo "${connectioninfo} ${commandinfo}")'
-	PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval echo "\"${promptstring}\"")$(setcolor "normal")'
+#	promptstring='
+#$(eval echo "${shellinfo}")$(eval echo -n "\"${promptchars}\"") '
+	promptstring='$(eval echo -n "\"${promptchars}\"") '
+	title='$(eval echo -n "${connectioninfo} ${commandinfo}")'
+	PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")'
 
 	# command line editing key bindings (must be set after EDITOR and VISUAL)
 	set -o emacs 2>/dev/null
