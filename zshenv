@@ -12,8 +12,6 @@ setopt correct
 setopt histignorespace
 setopt histreduceblanks
 
-unsetopt bareglobqual
-setopt checkjobs
 setopt globsubst
 setopt interactivecomments
 setopt ksharrays
@@ -26,6 +24,9 @@ setopt shwordsplit
 
 setopt autolist
 setopt automenu
+unsetopt bareglobqual
+setopt checkjobs
+setopt extendedglob
 setopt equals
 setopt listrowsfirst
 setopt numericglobsort
