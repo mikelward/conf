@@ -347,6 +347,15 @@ m()
 	command make "$@" 2>&1 1>&- 1>make.log | tee -a make.log
 }
 
+# flash the screen ("visible bell")
+flash()
+{
+	if exists tput
+	then
+		tput flash
+	fi
+}
+
 # keep trying a command until it works
 # (e.g. ping -c 1 host)
 notify()
