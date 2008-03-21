@@ -487,8 +487,8 @@ prompt_character()
 	if test $UID -eq 0; then
 		echo "#"
 	else
-		#echo "$"
-		echo ">"
+		echo "$"
+		#echo ">"
 	fi
 }
 
