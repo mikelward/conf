@@ -19,6 +19,9 @@ precmd()
 
 	# set the window title
 	[[ -t 1 ]] && eval settitle "\"$title\""
+
+	# raise/flash the window
+	#bell
 }
 
 preexec()

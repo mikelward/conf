@@ -102,6 +102,21 @@ error()
 	echo "$@" 1>&2
 }
 
+# return the last component of the path
+# (like basename, but guaranteed to be available)
+last_part_of_path()
+{
+        local full_path="$1"
+	full_path="${full_path%/}"
+
+	if test -n "$full_path"
+	then
+		echo "${full_path##*/}"
+        else
+                echo "/"
+        fi
+}
+
 # run a simple command quietly
 quiet()
 {
@@ -472,7 +487,8 @@ prompt_character()
 	if test $UID -eq 0; then
 		echo "#"
 	else
-		echo "$"
+		#echo "$"
+		echo ">"
 	fi
 }
 
