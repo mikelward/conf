@@ -106,15 +106,15 @@ error()
 # (like basename, but guaranteed to be available)
 last_part_of_path()
 {
-        local full_path="$1"
+	local full_path="$1"
 	full_path="${full_path%/}"
 
 	if test -n "$full_path"
 	then
 		echo "${full_path##*/}"
-        else
-                echo "/"
-        fi
+	else
+		echo "/"
+	fi
 }
 
 # run a simple command quietly
@@ -436,14 +436,6 @@ short_command()
 	command=$1
 
 	echo "$command" | sed -e "s/^-//" -e "s#^[^ ]*/##" -e "s/ .*$//"
-}
-
-short_directory()
-{
-	local directory
-	directory=$1
-
-	echo "$directory" | sed -e 's#.*/##' -e 's#^$#/#'
 }
 
 # get a short version of the hostname for use in the prompt or window title
