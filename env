@@ -438,6 +438,14 @@ short_command()
 	echo "$command" | sed -e "s/^-//" -e "s#^[^ ]*/##" -e "s/ .*$//"
 }
 
+short_directory()
+{
+	local directory
+	directory=$1
+
+	echo "$directory" | sed -e 's#.*/##' -e 's#^$#/#'
+}
+
 # get a short version of the hostname for use in the prompt or window title
 short_hostname()
 {

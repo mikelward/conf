@@ -24,6 +24,7 @@ case $- in
 #	promptstring='
 #$(eval echo "${shellinfo}")$(eval echo -n "\"${promptchars}\"") '
 	promptstring='$(eval echo -n "\"${promptchars}\"") '
+	#promptstring='$(short_directory "$PWD")$(eval echo -n "\"${promptchars}\"") '
 	title='$(eval echo -n "${connectioninfo} ${commandinfo}")'
 	PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")'
 
