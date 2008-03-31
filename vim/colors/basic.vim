@@ -30,18 +30,18 @@ highlight clear SpecialKey
 
 " Set up some simple non-intrusive colors
 if &background == "light"
-	highlight String term=underline cterm=NONE ctermfg=DarkGreen
-	highlight Comment term=bold cterm=NONE ctermfg=DarkBlue
-	highlight Error term=standout cterm=NONE ctermfg=DarkRed
-	highlight LineNr term=reverse cterm=NONE ctermfg=DarkYellow
-	highlight NonText term=bold cterm=NONE ctermfg=DarkYellow
-	highlight SpecialKey term=bold cterm=NONE ctermfg=DarkYellow
+	highlight String term=underline cterm=NONE ctermfg=DarkGreen guifg=DarkGreen
+	highlight Comment term=bold cterm=NONE ctermfg=DarkBlue guifg=DarkBlue
+	highlight Error term=standout cterm=NONE ctermfg=DarkRed guifg=DarkRed
+	highlight LineNr term=reverse cterm=NONE ctermfg=DarkYellow guifg=DarkYellow
+	highlight NonText term=bold cterm=NONE ctermfg=DarkYellow guifg=DarkYellow
+	highlight SpecialKey term=bold cterm=NONE ctermfg=DarkYellow guifg=DarkYellow
 else
-	highlight String term=underline cterm=NONE ctermfg=Magenta
-	highlight Comment term=bold cterm=NONE ctermfg=Cyan
-	highlight Error term=standout cterm=NONE ctermbg=Red
-	highlight LineNr term=reverse cterm=NONE ctermfg=Yellow
-	highlight NonText term=bold cterm=NONE ctermfg=Yellow
-	highlight SpecialKey term=bold cterm=NONE ctermfg=Yellow
+	highlight String term=underline cterm=NONE ctermfg=Magenta guifg=Magenta
+	highlight Comment term=bold cterm=NONE ctermfg=Cyan guifg=Cyan
+	highlight Error term=standout cterm=NONE ctermbg=Red guifg=Red
+	highlight LineNr term=reverse cterm=NONE ctermfg=Yellow guifg=Yellow
+	highlight NonText term=bold cterm=NONE ctermfg=Yellow guifg=Yellow
+	highlight SpecialKey term=bold cterm=NONE ctermfg=Yellow guifg=Yellow
 endif
 
