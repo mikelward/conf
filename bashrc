@@ -123,7 +123,7 @@ then
 fi
 if test -n "${promptstring}"
 then
-	PS1='$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")'
+	PS1='\[$(setcolor ${promptcolor})\]$(eval echo -n "\"${promptstring}\"")\[$(setcolor "normal")\]'
 fi
 
 # history format
