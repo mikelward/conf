@@ -37,8 +37,8 @@
 #keystate_capslock = enable
 #keystate_scrolllock= enable
 
-# calendar
-"evolution -c calendar"
+# calculator
+"gnome-calculator"
 	Mod4 + c
 
 # firefox
@@ -76,6 +76,10 @@
 "rhythmbox"
 	Mod4 + r
 
+# desktop search
+"beagle-search"
+	Mod4 + s
+
 # terminal
 "gnome-terminal --geometry 1680x1050"
 	Mod4 + t
@@ -89,6 +93,10 @@
 #"oocalc"
 "gnumeric"
 	Mod4 + x
+
+# desktop search
+#"beagle-search"
+#	Mod4 + space
 
 # mute
 "amixer set Master toggle"
