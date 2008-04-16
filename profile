@@ -17,13 +17,6 @@ then
 	export ENV="$HOME"/.shrc
 fi
 
-# interactive commands
-if type tty >/dev/null 2>/dev/null && tty >/dev/null
-then
-	# disable flow control so applications can use ^Q and ^S
-	type stty >/dev/null 2>/dev/null && stty -ixon
-fi
-
 # set a script that will be sourced on exiting the shell
 test -f "$HOME"/.exitrc && trap ". $HOME/.exitrc" EXIT
 
@@ -51,6 +44,15 @@ fi
 
 # read local commands
 test -f "$HOME"/.profile.local && . "$HOME"/.profile.local
+
+if type tty >/dev/null 2>/dev/null && tty >/dev/null
+then
+	# disable flow control so applications can use ^Q and ^S
+	type stty >/dev/null 2>/dev/null && stty -ixon
+
+	# use screen if possible
+	type screen >/dev/null 2>/dev/null && exec screen -R
+fi
 
 # finish with a zero exit status
 true

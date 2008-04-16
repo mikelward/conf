@@ -4,9 +4,10 @@
 escape ^]^]
 #other ^]]
 startup_message off
-hardstatus on
-hardstatus alwayslastline
-hardstatus string " %w %=%M %d %c "
+#hardstatus on
+#hardstatus alwayslastline
+#hardstatus string " %w %= %C%a "
+hardstatus string "%t"
 vbell off
 bind = resize =
 bind + resize +1

@@ -172,6 +172,7 @@ terminit()
 	screen*)
 		# status line
 		#titlestart='_'
+		#titlefinish='\'
 		# window title
 		titlestart='k'
 		titlefinish='\'
@@ -295,8 +296,14 @@ then
 	alias rcslog='rlog'
 	alias rdiff='rcsdiff'
 	alias rg='reportgraylist'
-	type assh >/dev/null 2>/dev/null && alias ssh='assh'
-	type ascp >/dev/null 2>/dev/null && alias scp='ascp'
+	if command -v assh >/dev/null 2>/dev/null
+	then
+		alias ssh='assh'
+	fi
+	if command -v ascp >/dev/null 2>/dev/null
+	then
+		alias scp='ascp'
+	fi
 	alias strace='strace '		 # expand aliases after strace
 	alias sudo='sudo '			 # expand aliases after sudo
 	alias tf='tail -n 0 -F'
