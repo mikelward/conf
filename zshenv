@@ -16,6 +16,7 @@ setopt globsubst
 setopt interactivecomments
 setopt ksharrays
 setopt kshglob
+unsetopt nomatch
 setopt posixbuiltins
 setopt promptsubst
 setopt shfileexpansion
@@ -23,12 +24,13 @@ setopt shglob
 setopt shwordsplit
 
 setopt autolist
-setopt automenu
+unsetopt automenu
 unsetopt bareglobqual
 setopt checkjobs
 setopt extendedglob
 setopt equals
 setopt listrowsfirst
+unsetopt menucomplete
 setopt numericglobsort
 setopt promptpercent
 setopt pushdsilent
