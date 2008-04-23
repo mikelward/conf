@@ -194,5 +194,8 @@ bind -m vi-command '"!"':history-expand-line
 # for some reason glob-expand-word doesn't work here, but insert-completions is fine
 bind -m vi-command '"*"':insert-completions
 
+# disable Ctrl+D = EOF
+IGNOREEOF=yes
+
 # finish with a zero exit status
 true

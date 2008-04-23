@@ -182,5 +182,8 @@ compctl -M '' 'm:{a-zA-Z}={A-Za-z}'
 # make file name completion case-insensitive
 zstyle ':completion:*' matcher-list '' 'm:{a-zA-Z}={A-Za-z}'
 
+# disable Ctrl+D = EOF
+setopt ignoreeof
+
 # finish with a zero exit status
 true
