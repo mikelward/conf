@@ -77,7 +77,10 @@
 	Mod4 + r
 
 # desktop search
-"beagle-search"
+#"beagle-search"
+#	Mod4 + s
+# Skype chat
+"skype"
 	Mod4 + s
 
 # terminal
