@@ -10,6 +10,7 @@
 TERM cygwin
 TERM konsole
 TERM rxvt
+TERM screen
 TERM xterm
 TERM xterm-16color
 TERM xterm-256color
