@@ -17,6 +17,13 @@ escape ^]^]
 #hardstatus string " %w %= %C%a "
 
 # disable screen's scrolling, etc., so it acts like a plain old terminal
-hardstatus string "%t"
-altscreen on
 termcapinfo * ti@:te@
+
+# enable alternate screen mode so Vim leaves the screen the way it found it
+altscreen on
+
+# this is going to the xterm title, so use the current window title
+hardstatus string "%t"
+
+# make the "New screen..." message disappear more quickly
+msgwait 1
