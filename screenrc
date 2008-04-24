@@ -1,15 +1,22 @@
 # $Id$
 # Screen configuration file
 
-escape ^]^]
-#other ^]]
 startup_message off
-#hardstatus on
-#hardstatus alwayslastline
-#hardstatus string " %w %= %C%a "
-hardstatus string "%t"
+
 vbell off
+
 bind = resize =
 bind + resize +1
 bind - resize -1
 bind _ resize max
+
+escape ^]^]
+
+#hardstatus on
+#hardstatus alwayslastline
+#hardstatus string " %w %= %C%a "
+
+# disable screen's scrolling, etc., so it acts like a plain old terminal
+hardstatus string "%t"
+altscreen on
+termcapinfo * ti@:te@
