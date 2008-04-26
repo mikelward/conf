@@ -162,6 +162,17 @@ bindkey -M vicmd '!' expand-history
 bindkey -M vicmd '*' expand-word
 bindkey -M vicmd '=' list-choices
 
+if test -n "$home"
+then
+	bindkey -M emacs "$home" "beginning-of-line"
+	bindkey -M vicmd "$home" "beginning-of-line"
+fi
+if test -n "$end"
+then
+	bindkey -M emacs "$end" "end-of-line"
+	bindkey -M vicmd "$end" "end-of-line"
+fi
+
 # use emacs bindings
 bindkey -e
 
