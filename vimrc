@@ -108,12 +108,14 @@ au BufRead,BufNewFile * if &filetype == 'text' || &filetype == 'svn' | set textw
 au FileType perl set cindent cinkeys-=0#
 
 " per-project rules
+au BufRead,BufNewFile */acxpcp/*.{c,h} setlocal sw=4 ts=8 noexpandtab
 au BufRead,BufNewFile */cvs/*.{c,h} setlocal sw=4 ts=8 noexpandtab
 au BufRead,BufNewFile */fam/*{.c++,h} setlocal sw=4 ts=8 noexpandtab
 au BufRead,BufNewFile */lics/*.{c,cpp,h} setlocal sw=4 ts=4 expandtab
 au BufRead,BufNewFile */postfix/*.{c,h} setlocal sw=4 ts=8 noexpandtab
 au BufRead,BufNewFile */procmail/*.{c,h} setlocal sw=3 ts=8 noexpandtab
 au BufRead,BufNewFile */putty/*.{c,h} setlocal sw=4 ts=8 noexpandtab
+au BufRead,BufNewFile */terminal/*.{c,h} setlocal sw=4 ts=8 expandtab
 au BufRead,BufNewFile */zsh/*.[ch] setlocal sw=4 ts=8 noexpandtab
 
 " SEARCH OPTIONS
