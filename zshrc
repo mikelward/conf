@@ -109,8 +109,7 @@ settitle()
 	test -n "$titlestart" && print -Pn "${titlestart}$*${titlefinish}"
 }
 
-commandstring="%{${bold}%}"
-commandcolor=bold
+commandcolor=
 
 # set prompt and window title format
 if test -n "$promptstring"
