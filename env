@@ -102,6 +102,28 @@ error()
 	echo "$@" 1>&2
 }
 
+# print lines from a file 
+# starting with the line matching $1 
+# finishing with the line matching $2 
+from_to() 
+{ 
+    local from 
+    local to 
+    from=$1 
+    to=$2 
+    shift 2 
+ 
+    sed -ne "/$from/ b INSIDE 
+d 
+: INSIDE { 
+p 
+/$to/ q 
+n 
+b INSIDE 
+} 
+: END" "$@" 
+}
+
 # return the last component of the path
 # (like basename, but guaranteed to be available)
 last_part_of_path()
