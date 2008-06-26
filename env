@@ -556,9 +556,17 @@ yumpolicy()
 
 ### PROGRAM SETTINGS
 # set preferred generic utilities
-exists lynx && export BROWSER=lynx
-exists links && export BROWSER=links
-exists elinks && export BROWSER=elinks
+if test -n "$DISPLAY"
+then
+	exists netscape && export BROWSER=netscape
+	exists mozilla && export BROWSER=mozilla
+	exists opera && export BROWSER=opera
+	exists firefox && export BROWSER=firefox
+else
+	exists lynx && export BROWSER=lynx
+	exists links && export BROWSER=links
+	exists elinks && export BROWSER=elinks
+fi
 exists rsh && export CVS_RSH=rsh
 exists ssh && export CVS_RSH=ssh
 exists ed && export EDITOR=ed
