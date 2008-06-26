@@ -43,7 +43,7 @@ if has("cmdline_info")
     set ruler	" show line and column information
 endif
 if has("syntax")
-    syntax on	" use syntax highlighting if available
+    syntax off	" don't ever use syntax highlighting
 endif
 
 if &term == "putty"
