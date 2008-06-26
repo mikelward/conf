@@ -51,7 +51,7 @@ then
 	type stty >/dev/null 2>/dev/null && stty -ixon
 
 	# use screen if possible
-	type screen >/dev/null 2>/dev/null && exec screen -R
+	#type screen >/dev/null 2>/dev/null && exec screen -R
 fi
 
 # finish with a zero exit status
