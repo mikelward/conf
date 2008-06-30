@@ -28,7 +28,7 @@ set wildmode=list:longest	" filename completion lists when ambiguous
 
 " DISPLAY OPTIONS
 if has("multi_byte")
-    if version >= 530
+    if version >= 503
         set listchars=tab:↦⇢,trail:˽,eol:↵
     endif
     if version >= 600
@@ -38,7 +38,7 @@ if has("multi_byte")
         set listchars+=nbsp:⍽
     endif
 else
-    if version >= 530
+    if version >= 503
         set listchars=tab:>-,trail:_,eol:$
     endif
     if version >= 600
@@ -75,7 +75,9 @@ if &term == "cygwin"
     set background=light	" My Cygwin has a white background
 endif
 
-colorscheme basic	" Use my own basic syntax highlighting
+if version >= 600
+    colorscheme basic	" Use my own basic syntax highlighting
+endif
 
 " SAVING OPTIONS
 set backupext=~	" backup files end in ~
@@ -94,20 +96,27 @@ set esckeys	" allow arrow keys in insert mode
 set noerrorbells visualbell	" flash screen instead of ringing bell
 set showbreak=+	" specially mark continued lines with a plus
 
-" per-file type rules
-filetype on	" enable per-user file type customizations
-filetype plugin on
-filetype indent on
-
 let is_bash = 1	" use bash syntax for #!/bin/sh files
 
 if version >= 600
+    " per-file type rules
+    filetype on	" enable per-user file type customizations
+    filetype plugin on
+    filetype indent on
+
     " disable line wrapping for program source files
     au BufRead *.{c,cc,cpp,h,hh,hpp} setlocal tw=0
     au BufRead *.{html,shtml,php,php3,php4,php5,inc} setlocal tw=0
 
     " treat unknown file types as text files
     au BufRead,BufNewFile * setfiletype text
+
+    " per file-type rules
+    "au BufRead,BufNewFile * if &filetype == 'c' || &filetype == 'cpp' || &filetype == 'perl' || &filetype == 'python' || &filetype == 'ruby' | set listchars+=tab:\|\  | endif
+    "au BufRead,BufNewFile * if &filetype == 'fstab' | set listchars+=tab:>\  | endif
+    au BufRead,BufNewFile * if &filetype == 'text' || &filetype == 'svn' | set textwidth=66 | endif
+
+    au FileType perl set cindent cinkeys-=0#
 endif
 
 " edit binary files in binary mode using the output of xxd
@@ -121,13 +130,6 @@ augroup Binary
     au BufWritePost *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd
     au BufWritePost *.bin,*.exe.*.jpg,*.pcx set nomod | endif
 augroup END
-
-" per file-type rules
-"au BufRead,BufNewFile * if &filetype == 'c' || &filetype == 'cpp' || &filetype == 'perl' || &filetype == 'python' || &filetype == 'ruby' | set listchars+=tab:\|\  | endif
-"au BufRead,BufNewFile * if &filetype == 'fstab' | set listchars+=tab:>\  | endif
-au BufRead,BufNewFile * if &filetype == 'text' || &filetype == 'svn' | set textwidth=66 | endif
-
-au FileType perl set cindent cinkeys-=0#
 
 " per-project rules
 au BufRead,BufNewFile */acxpcp/*.{c,h} setlocal sw=4 ts=8 noexpandtab
