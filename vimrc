@@ -1,6 +1,11 @@
 " $Id$
 "
 " Vim startup commands
+"
+
+" this file is encoded in UTF-8
+let &termencoding = &encoding
+set encoding=utf-8
 
 " COMMON OPTIONS
 " read common startup commands for all Vi implementations
@@ -23,9 +28,15 @@ set nostartofline	" keep the current cursor position when reediting a file
 set wildmode=list:longest	" filename completion lists when ambiguous
 
 " DISPLAY OPTIONS
-set listchars=tab:>\ ,trail:-	" how to display tabs and trailing spaces
+"set listchars=tab:>\ ,trail:_	" how to display tabs and trailing spaces
+set listchars=tab:↦\ ,trail:˽	" how to display tabs and trailing spaces
 if version >= 600
-    set listchars+=extends:>,precedes:<
+    "set listchars+=extends:>,precedes:<
+    set listchars+=extends:…,precedes:…
+    "set listchars+=eol:$
+    set listchars+=eol:↵
+    "set listchars+=nbsp:%
+    set listchars+=nbsp:⍽
 endif
 set nowrap	" don't wrap long lines (show extends character instead)
 set more	" use a pager for long listings
