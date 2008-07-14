@@ -102,6 +102,16 @@ error()
 	echo "$@" 1>&2
 }
 
+fixgroup()
+{
+	typeset group
+	group=$1
+	shift
+
+	chgrp -R "$group" "$@"
+	find . \( -type f -a -exec chmod g+w "{}" \; \) -o \( -type d -a -exec chmod g+ws "{}" \; \)
+}
+
 # print lines from a file 
 # starting with the line matching $1 
 # finishing with the line matching $2 
@@ -299,13 +309,14 @@ then
 	type apt-get >/dev/null 2>/dev/null && alias apt='apt-get'
 	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
 	alias bell='echo -n "\a"'
+	alias c='cd'
 	alias cx='chmod +x'
 	alias d='dirs'	# only supported by bash and zsh
 	alias e='${EDITOR:-vi}'
 	alias edit='${EDITOR:-vi}'
 	alias g='grep -EHIin'		 # -H and -I are non-POSIX but are widely supported
 	alias gdb='gdb -q '
-	alias h='history'
+	#alias h=head
 	alias hup='kill -HUP'
 	alias l='ls'
 	alias l.='l -d .*'
@@ -313,6 +324,7 @@ then
 	alias ll='l -l'
 	alias lt='l -lt'
 	alias j='jobs'
+	#alias m=make
 	alias nohup='nohup '		 # expand aliases after nohup
 	alias pd='pushd'
 	alias po='popd'
@@ -323,7 +335,10 @@ then
 	alias rg='reportgraylist'
 	if command -v assh >/dev/null 2>/dev/null
 	then
+		alias s='exec assh'
 		alias ssh='assh'
+	else
+		alias s='exec ssh'
 	fi
 	if command -v ascp >/dev/null 2>/dev/null
 	then
@@ -331,11 +346,13 @@ then
 	fi
 	alias strace='strace '		 # expand aliases after strace
 	alias sudo='sudo '			 # expand aliases after sudo
+	#alias t=tail
 	alias tf='tail -n 0 -F'
 	alias tm='t -f /var/log/mail'
 	alias tp='t -f "$HOME/.proclog"'
 	alias today='date "+%Y%m%d"'
 	alias v='${VIEWER:-view}'
+	alias x='exit'
 
 	# set default flags
 	if quiet grep --color=auto --quiet "" "$HOME"/.shrc
@@ -360,6 +377,26 @@ calc()
 editlatest()
 {
 	edit $(latest "$@")
+}
+
+# print the first screenful of text from a file
+h()
+{
+	local lines
+	local promptlines
+	promptlines=5				 # leave five lines for the prompt
+	if test -n $LINES
+	then
+		lines=$(($LINES - $promptlines))
+	else
+		lines=$(tput lines)
+		if test -z $lines
+		then
+			lines=24
+		fi
+	fi
+
+	head -n $lines "$@"
 }
 
 # show the most recently changed file
