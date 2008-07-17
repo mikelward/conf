@@ -18,6 +18,7 @@ then
 fi
 
 ### HELPER FUNCTIONS
+#
 # add a directory to the path
 addpath()
 {
@@ -102,16 +103,6 @@ error()
 	echo "$@" 1>&2
 }
 
-fixgroup()
-{
-	typeset group
-	group=$1
-	shift
-
-	chgrp -R "$group" "$@"
-	find . \( -type f -a -exec chmod g+w "{}" \; \) -o \( -type d -a -exec chmod g+ws "{}" \; \)
-}
-
 # print lines from a file 
 # starting with the line matching $1 
 # finishing with the line matching $2 
@@ -147,6 +138,12 @@ last_part_of_path()
 	else
 		echo "/"
 	fi
+}
+
+# process list with status
+pss()
+{
+	ps -e -o pid,stat,stime,args
 }
 
 # run a simple command quietly
