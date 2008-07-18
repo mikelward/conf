@@ -3,7 +3,7 @@
 " Vim startup commands
 "
 if has("multi_byte")
-    set fileencoding=utf-8
+    set encoding=utf-8	" have to do this to make the Unicode listchars work
 endif
 
 " COMMON OPTIONS
