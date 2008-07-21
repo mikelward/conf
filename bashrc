@@ -123,7 +123,12 @@ then
 fi
 if test -n "${promptstring}"
 then
-	PS1='\[$(setcolor ${promptcolor})\]$(eval echo -n "\"${promptstring}\"")\[$(setcolor "normal")\]'
+    if test ${BASH_VERSINFO[0]} -eq 3 -a ${BASH_VERSINFO[1]} -eq 1
+    then
+        PS1='$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")'
+    else
+        PS1='\[$(setcolor ${promptcolor})\]$(eval echo -n "\"${promptstring}\"")\[$(setcolor "normal")\]'
+    fi
 fi
 
 # history format
