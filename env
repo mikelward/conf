@@ -7,11 +7,13 @@
 
 # ensure this shell supports local variables using either local
 # (from bash and zsh) or typeset (from ksh)
-if ! type local >/dev/null 2>/dev/null
+if ! type local >/dev/null 2>&1
 then
-	if type typeset >/dev/null 2>/dev/null
+	if type typeset >/dev/null 2>&1
 	then
+		echo creating local alias
 		alias local='typeset'
+		alias
 	else
 		echo "Cannot find local or typeset shell command, some features in .shrc will not work" 1>&2
 	fi
@@ -55,6 +57,12 @@ addpath()
 		;;
 	esac
 	IFS="$OIFS"
+}
+
+# list processes in D state
+blocked()
+{
+	ps -e -o stat= -o pid= -o comm=   | awk '$1 ~ /D/ { print }'
 }
 
 # remove a directory from the path
@@ -654,3 +662,4 @@ export TOP=-I
 export WANT_SSH_AGENT=1
 export WWW_HOME=http://google.com
 
+true
