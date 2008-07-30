@@ -65,6 +65,12 @@ blocked()
 	ps -e -o stat= -o pid= -o comm=   | awk '$1 ~ /D/ { print }'
 }
 
+# list threads in D state, Linux only
+blockedthreads()
+{
+	ps -Le -o stat= -o pid= -o lwp= -o comm=   | awk '$1 ~ /D/ { print }'
+}
+
 # remove a directory from the path
 delpath()
 {
