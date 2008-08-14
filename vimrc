@@ -96,14 +96,14 @@ set esckeys	" allow arrow keys in insert mode
 set noerrorbells visualbell	" flash screen instead of ringing bell
 set showbreak=+	" specially mark continued lines with a plus
 
-let is_bash = 1	" use bash syntax for #!/bin/sh files
-
 if version >= 600
     " per-file type rules
     filetype on	" enable per-user file type customizations
     filetype plugin on
     filetype indent on
+endif
 
+if has("autocmd")
     " disable line wrapping for program source files
     au BufRead *.{c,cc,cpp,h,hh,hpp} setlocal tw=0
     au BufRead *.{html,shtml,php,php3,php4,php5,inc} setlocal tw=0
@@ -117,30 +117,35 @@ if version >= 600
     au BufRead,BufNewFile * if &filetype == 'text' || &filetype == 'svn' | set textwidth=66 | endif
 
     au FileType perl set cindent cinkeys-=0#
+
+    " edit binary files in binary mode using the output of xxd
+    augroup Binary
+        au!
+        au BufReadPre  *.bin,*.exe.*.jpg,*.pcx let &bin=1
+        au BufReadPost *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd
+        au BufReadPost *.bin,*.exe.*.jpg,*.pcx set ft=xxd | endif
+        au BufWritePre *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd -r
+        au BufWritePre *.bin,*.exe.*.jpg,*.pcx endif
+        au BufWritePost *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd
+        au BufWritePost *.bin,*.exe.*.jpg,*.pcx set nomod | endif
+    augroup END
+
+    " per-project rules
+    au BufRead,BufNewFile */acxpcp/*.{c,h} setlocal sw=4 ts=8 noexpandtab
+    au BufRead,BufNewFile */cvs/*.{c,h} setlocal sw=4 ts=8 noexpandtab
+    au BufRead,BufNewFile */fam/*{.c++,h} setlocal sw=4 ts=8 noexpandtab
+    au BufRead,BufNewFile */lics/*.{c,cpp,h} setlocal sw=4 ts=4 expandtab
+    au BufRead,BufNewFile */postfix/*.{c,h} setlocal sw=4 ts=8 noexpandtab
+    au BufRead,BufNewFile */procmail/*.{c,h} setlocal sw=3 ts=8 noexpandtab
+    au BufRead,BufNewFile */putty/*.{c,h} setlocal sw=4 ts=8 noexpandtab
+    au BufRead,BufNewFile */terminal/*.{c,h} setlocal sw=4 ts=8 expandtab
+    au BufRead,BufNewFile */zsh/*.[ch] setlocal sw=4 ts=8 noexpandtab
+
 endif
 
-" edit binary files in binary mode using the output of xxd
-augroup Binary
-    au!
-    au BufReadPre  *.bin,*.exe.*.jpg,*.pcx let &bin=1
-    au BufReadPost *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd
-    au BufReadPost *.bin,*.exe.*.jpg,*.pcx set ft=xxd | endif
-    au BufWritePre *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd -r
-    au BufWritePre *.bin,*.exe.*.jpg,*.pcx endif
-    au BufWritePost *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd
-    au BufWritePost *.bin,*.exe.*.jpg,*.pcx set nomod | endif
-augroup END
-
-" per-project rules
-au BufRead,BufNewFile */acxpcp/*.{c,h} setlocal sw=4 ts=8 noexpandtab
-au BufRead,BufNewFile */cvs/*.{c,h} setlocal sw=4 ts=8 noexpandtab
-au BufRead,BufNewFile */fam/*{.c++,h} setlocal sw=4 ts=8 noexpandtab
-au BufRead,BufNewFile */lics/*.{c,cpp,h} setlocal sw=4 ts=4 expandtab
-au BufRead,BufNewFile */postfix/*.{c,h} setlocal sw=4 ts=8 noexpandtab
-au BufRead,BufNewFile */procmail/*.{c,h} setlocal sw=3 ts=8 noexpandtab
-au BufRead,BufNewFile */putty/*.{c,h} setlocal sw=4 ts=8 noexpandtab
-au BufRead,BufNewFile */terminal/*.{c,h} setlocal sw=4 ts=8 expandtab
-au BufRead,BufNewFile */zsh/*.[ch] setlocal sw=4 ts=8 noexpandtab
+if has("eval")
+    let is_bash = 1	" use bash syntax for #!/bin/sh files
+endif
 
 " SEARCH OPTIONS
 set nohlsearch	" disable highlighting of matches
