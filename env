@@ -62,13 +62,20 @@ addpath()
 # list processes in D state
 blocked()
 {
-	ps -e -o stat= -o pid= -o comm=   | awk '$1 ~ /D/ { print }'
+	#ps -e -o stat= -o pid= -o comm=   |
+	#	awk '$1 ~ /D/ { print }'
+	# awk stuff strips out the first field and prints a tab between the pid and the args
+	ps -e -o stat= -o pid= -o args= |
+		awk '$1 ~ /D/ { sub("^[^ ]* *", ""); sub(" ", "\t"); print }'
 }
 
 # list threads in D state, Linux only
 blockedthreads()
 {
-	ps -Le -o stat= -o pid= -o lwp= -o comm=   | awk '$1 ~ /D/ { print }'
+	#ps -Le -o stat= -o pid= -o lwp= -o comm=   |
+	#	awk '$1 ~ /D/ { print }'
+	ps -Le -o stat= -o pid= -o lwp= -o comm=   |
+		awk '$1 ~ /D/ { sub("^[^ ]* *", ""); sub(" ", "\t"); print }'
 }
 
 # remove a directory from the path
@@ -319,12 +326,14 @@ then
 	# aliase apt to aptitude or apt-get (in that order)
 	type apt-get >/dev/null 2>/dev/null && alias apt='apt-get'
 	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
+	alias b='bg'
 	alias bell='echo -n "\a"'
 	alias c='cd'
 	alias cx='chmod +x'
 	alias d='dirs'	# only supported by bash and zsh
 	alias e='${EDITOR:-vi}'
 	alias edit='${EDITOR:-vi}'
+	alias f='fg'
 	alias g='grep -EHIin'		 # -H and -I are non-POSIX but are widely supported
 	alias gdb='gdb -q '
 	#alias h=head
@@ -355,6 +364,7 @@ then
 	then
 		alias scp='ascp'
 	fi
+	alias ss='sudo -s'
 	alias strace='strace '		 # expand aliases after strace
 	alias sudo='sudo '			 # expand aliases after sudo
 	#alias t=tail
