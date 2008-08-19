@@ -7,7 +7,7 @@ $include /etc/inputrc
 # general settings
 set bell-style visible
 set completion-ignore-case on
-set horizontal-scroll-mode on
+set horizontal-scroll-mode off
 set mark-directories on
 set prefer-visible-bell on
 set print-completions-horizontally on
