@@ -340,6 +340,7 @@ then
 	alias hup='kill -HUP'
 	alias l='ls'
 	alias l.='l -d .*'
+	alias l1='l -1'
 	alias la='l -A'
 	alias ll='l -l'
 	alias lt='l -lt'
