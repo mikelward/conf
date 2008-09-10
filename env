@@ -254,6 +254,16 @@ if test -z "$HOST"
 then
 	HOST=$(hostname)
 fi
+if ! expr "$HOST" : "\." >/dev/null
+then
+    case `uname -o` in
+    Cygwin)
+        HOST="$(get_win_hostname.sh)"
+        ;;
+    *)
+        ;;
+    esac
+fi
 if exists tty
 then
 	TTY=$(tty)
@@ -587,8 +597,8 @@ prompt_character()
 	if test $UID -eq 0; then
 		echo "#"
 	else
-		#echo "$"
-		echo ">"
+		echo "$"
+		#echo ">"
 	fi
 }
 

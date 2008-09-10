@@ -23,10 +23,14 @@ case $- in
 	promptcolor=normal
 	#promptstring='
 #$(eval echo "${shellinfo}")$(eval echo -n "\"${promptchars}\"") '
-	promptstring='$(short_hostname)$(eval echo -n "\"${promptchars}\"") '
+	#promptstring='$(short_hostname)$(prompt_character) '
+	promptstring='$(prompt_character) '
 	#promptstring='$(last_part_of_path "$PWD")$(eval echo -n "\"${promptchars}\"") '
 	title='$(eval echo -n "${connectioninfo} ${commandinfo}")'
 	PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")'
+	PS2='> '
+	PS3='? '
+	PS4='+ '
 
 	# command line editing key bindings (must be set after EDITOR and VISUAL)
 	set -o emacs 2>/dev/null
@@ -83,6 +87,12 @@ case $- in
 	test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
 	;;
 esac
+
+# workaround for GNOME Terminal tabs inhering the old PWD
+if test "$HOST" = "laptop"
+then
+	cd
+fi
 
 # finish with a zero exit status
 true
