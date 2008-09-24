@@ -178,14 +178,19 @@ bindkey -e
 # set command completions
 compctl -a {,un}alias
 compctl -b bindkey
+compctl -c command
 compctl -/ {c,push,pop}d
 compctl -E {print,set,unset}env
 compctl -c exec
 compctl -j fg
+# no -g according to zshcompctl
+#compctl -g {ch}grp
 compctl -j kill
 compctl -c man
+compctl -c nohup
 compctl -u {ch}own
 compctl -o {set,unset}opt
+compctl -c sudo
 compctl -c {whence,where,which}
 compctl -M '' 'm:{a-zA-Z}={A-Za-z}'
 
