@@ -610,6 +610,11 @@ pass()
 	fi
 }
 
+vipass()
+{
+	"$EDITOR" "$PASSFILE"
+}
+
 prompt_character()
 {
 	#if test ${laststatus:-0} -ne 0; then
@@ -617,8 +622,8 @@ prompt_character()
 	if test $UID -eq 0; then
 		echo "#"
 	else
-		echo "$"
-		#echo ">"
+		#echo "$"
+		echo ">"
 	fi
 }
 
