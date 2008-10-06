@@ -181,7 +181,8 @@ compctl -b bindkey
 compctl -c command
 compctl -/ {c,push,pop}d
 compctl -E {print,set,unset}env
-compctl -c exec
+#compctl -c exec
+compctl -f -x "c[-1,exec]" -c -- exec
 compctl -j fg
 # no -g according to zshcompctl
 #compctl -g {ch}grp
@@ -190,7 +191,7 @@ compctl -c man
 compctl -c nohup
 compctl -u {ch}own
 compctl -o {set,unset}opt
-compctl -c sudo
+compctl -f -x "c[-1,sudo]" -c -- sudo
 compctl -c {whence,where,which}
 compctl -M '' 'm:{a-zA-Z}={A-Za-z}'
 
