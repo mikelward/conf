@@ -157,6 +157,24 @@ then
 	complete -F complete_runner nohup
 	complete -F complete_runner sudo
 	complete -F complete_services service
+    complete -F complete_pcp_archive {pmdumptext,pminfo,pmstat,pmval,acxstat}
+
+    # the -a argument to most PCP commands is looking for a .0 file
+    complete_pcp_archive()
+    {
+        if test "$3" = "-a"
+        then
+            set -- `compgen -f -X '!*.0' $2`
+        else
+            set -- `compgen -f $2`
+        fi
+        i=0
+        for arg
+        do
+            COMPREPLY[$i]=$arg
+            i=`expr $i + 1`
+        done
+    }
 
 	# completion function for commands such as sudo that take a
 	# command as the first argument but should revert to file
