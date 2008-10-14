@@ -124,6 +124,12 @@ delpath()
 	IFS="$NIFS"
 }
 
+# print an error message
+error()
+{
+	echo "$@" 1>&2
+}
+
 # return true if the command can be found, false otherwise
 exists()
 {
@@ -136,12 +142,6 @@ exists()
 	else
 		return 1
 	fi
-}
-
-# print an error message
-error()
-{
-	echo "$@" 1>&2
 }
 
 # print lines from a file 
@@ -384,14 +384,18 @@ then
 	alias rcslog='rlog'
 	alias rdiff='rcsdiff'
 	alias rg='reportgraylist'
-	if command -v assh >/dev/null 2>/dev/null
+	if command -v arsync >/dev/null 2>&1
+	then
+		alias rsync='arsync'
+	fi
+	if command -v assh >/dev/null 2>&1
 	then
 		alias s='exec assh'
 		alias ssh='assh'
 	else
 		alias s='exec ssh'
 	fi
-	if command -v ascp >/dev/null 2>/dev/null
+	if command -v ascp >/dev/null 2>&1
 	then
 		alias scp='ascp'
 	fi
@@ -512,7 +516,12 @@ rgrep()
 	local dirs
 	local args
 
+	# XXX this doesn't look right
+	# I think we need to add explicit support for each grep option
+	# (with the first parameter being the pattern and the rest being a list of files or directories,
+	#  as it currently is)
 	args=
+	#while getopts "A:aB:C:bcD:d:Ee:FPf:GHhIiLlm:noqRsUuVvwxyZ" flag...
 	while true
 	do
 		case $1 in
@@ -531,12 +540,7 @@ rgrep()
 		shift
 	fi
 
-	if grep -HRq "" .
-	then
-		grep -HR "$pattern" "$@"
-	else
-		find "${@:-.}" -type f -print | xargs -i grep $args "$pattern" {} /dev/null
-	fi
+	find "${@:-.}" \( -type d -name ".svn" -prune \) -o -print0 | xargs -0i grep $args "$pattern" {} /dev/null
 }
 
 # print the escape sequence for the named color (e.g. setcolor "blue")
