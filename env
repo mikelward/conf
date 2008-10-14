@@ -144,6 +144,22 @@ exists()
 	fi
 }
 
+# prevent running "exit" if the user is still running jobs in the background
+# the user is expected to close the jobs or disown them
+exit()
+{
+	case $- in *m*)
+		# this way works in bash and zsh
+		jobs | wc -l | grep -q '^0$'
+		if test $? -eq 0
+		then
+			command exit "$@"
+		else
+			jobs
+		fi
+	esac
+}
+
 # print lines from a file 
 # starting with the line matching $1 
 # finishing with the line matching $2 
