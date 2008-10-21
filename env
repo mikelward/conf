@@ -439,6 +439,12 @@ then
 	fi
 fi
 
+# search the Aconex LDAP directory
+aldap()
+{
+	ldapsearch -H ldap://ldap.aconex.com:389 -D 'CN=Mikel Ward,CN=Users,DC=acxyarra,DC=com' -b 'CN=Users,DC=acxyarra,DC=com' -W -x "$@"
+}
+
 # do some floating point arithmetic
 calc()
 {
@@ -495,6 +501,35 @@ flash()
 	then
 		tput flash
 	fi
+}
+
+# sort a file in place
+# Usage: isort <file>...
+isort()
+{
+	for file
+	do
+		temp=$file.$$
+		if test -f "$temp"
+		then
+			error "$temp already exists, skipping $file"
+		else
+			if sort "$file" > "$temp"
+			then
+				if mv "$temp" "$file"
+				then
+					# OK
+					:
+				else
+					error "isort: Cannot move temp file $temp for $file"
+					rm "$temp"
+				fi
+			else
+				error "isort: Error running sort on $file"
+				rm "$temp"
+			fi
+		fi
+	done
 }
 
 # keep trying a command until it works
