@@ -46,8 +46,8 @@
 	Mod4 + f
 
 # home folder
-#"nautilus"
-"thunar"
+#"thunar"
+"nautilus"
 	Mod4 + h
 
 # lock screen
