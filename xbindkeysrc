@@ -42,8 +42,7 @@
 	Mod4 + c
 
 # firefox
-#"firefox"
-"/home/mward/firefox/firefox"
+"firefox"
 	Mod4 + f
 
 # home folder
@@ -84,17 +83,18 @@
 	Mod4 + s
 
 # terminal
-"gnome-terminal --geometry 1680x1050"
+#"gnome-terminal --geometry 1680x1050"
+"gnome-terminal --maximize"
 	Mod4 + t
 
 # word
-#"oowriter"
-"abiword"
+#"abiword"
+"oowriter"
 	Mod4 + w
 
 # spreadsheet (x = excel)
-#"oocalc"
-"gnumeric"
+#"gnumeric"
+"oocalc"
 	Mod4 + x
 
 # desktop search
@@ -116,11 +116,11 @@
 	Mod4 + Insert
 
 # volume down
-"amixer set Master 10%-"
+"amixer set Master 5%-"
 	Mod4 + Down
 
 # volume up
-"amixer set Master 10%+"
+"amixer set Master 5%+"
 	Mod4 + Up
 
 # XXX would be nice to figure out how to send XF86AudioNext, etc.
