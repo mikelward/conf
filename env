@@ -146,7 +146,7 @@ exists()
 
 # prevent running "exit" if the user is still running jobs in the background
 # the user is expected to close the jobs or disown them
-exit()
+_exit()
 {
 	case $- in *m*)
 		# this way works in bash and zsh
@@ -406,10 +406,7 @@ then
 	fi
 	if command -v assh >/dev/null 2>&1
 	then
-		alias s='exec assh'
 		alias ssh='assh'
-	else
-		alias s='exec ssh'
 	fi
 	if command -v ascp >/dev/null 2>&1
 	then
@@ -424,7 +421,7 @@ then
 	alias tp='t -f "$HOME/.proclog"'
 	alias today='date "+%Y%m%d"'
 	alias v='${VIEWER:-view}'
-	alias x='exit'
+	alias x='_exit'
 
 	# set default flags
 	if quiet grep --color=auto --quiet "" "$HOME"/.shrc
