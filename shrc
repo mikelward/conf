@@ -88,5 +88,8 @@ case $- in
 	;;
 esac
 
+# workaround for GNOME Terminal which does a cd on startup :-(
+[ ${SHLVL:-1} -eq 1 ] && cd
+
 # finish with a zero exit status
 true
