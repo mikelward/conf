@@ -109,7 +109,7 @@ whence()
 			fi
 		elif test -z "$verbose" && `type -t "$arg" | grep -q alias`
 		then
-			echo "$arg"
+			command $opts -v "$arg" | sed -e 's/^alias [^ ]*=//'
 		else
 			command $opts "$arg"
 		fi
