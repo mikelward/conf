@@ -377,6 +377,7 @@ then
 	alias c='cd'
 	alias cx='chmod +x'
 	alias d='dirs'	# only supported by bash and zsh
+	alias dba='ssh dba@localhost'
 	alias e='${EDITOR:-vi}'
 	alias edit='${EDITOR:-vi}'
 	alias f='fg'
@@ -412,6 +413,7 @@ then
 	then
 		alias scp='ascp'
 	fi
+	alias s='ssh'
 	alias ss='sudo -s'
 	alias strace='strace '		 # expand aliases after strace
 	alias sudo='sudo '			 # expand aliases after sudo
