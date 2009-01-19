@@ -372,6 +372,7 @@ then
 	# aliase apt to aptitude or apt-get (in that order)
 	type apt-get >/dev/null 2>/dev/null && alias apt='apt-get'
 	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
+	alias admin='ssh Administrator@localhost'
 	alias b='bg'
 	alias bell='echo -n "\a"'
 	alias c='cd'
