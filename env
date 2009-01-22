@@ -398,6 +398,7 @@ then
 	alias pd='pushd'
 	alias po='popd'
 	alias psme='ps -f -U "${USER:-${LOGNAME}}"'
+	alias q='_exit'
 	alias rb='reportblocked'
 	alias rcslog='rlog'
 	alias rdiff='rcsdiff'
@@ -416,8 +417,8 @@ then
 	fi
 	alias s='ssh'
 	alias ss='sudo -s'
-	alias strace='strace '		 # expand aliases after strace
-	alias sudo='sudo '			 # expand aliases after sudo
+	alias strace='strace '		# expand aliases after strace
+	alias sudo='sudo '			# expand aliases after sudo
 	#alias t=tail
 	alias tf='tail -n 0 -F'
 	alias tm='t -f /var/log/mail'
@@ -768,5 +769,7 @@ test -n "$TABSIZE" && export LESS="${LESS}x${TABSIZE}"
 export TOP=-I
 export WANT_SSH_AGENT=1
 export WWW_HOME=http://google.com
+
+test -f "$HOME"/.env.local && . "$HOME"/.env.local
 
 true
