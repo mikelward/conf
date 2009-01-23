@@ -416,6 +416,7 @@ then
 		alias scp='ascp'
 	fi
 	alias s='ssh'
+	alias software='cd /var/www/html/software'
 	alias ss='sudo -s'
 	alias strace='strace '		# expand aliases after strace
 	alias sudo='sudo '			# expand aliases after sudo
