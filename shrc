@@ -56,7 +56,7 @@ case $- in
 			dircolors="$HOME/.dircolors.$TERM"
 		else
 			case "$TERM" in
-			linux|vt220)
+			linux|putty|vt220)
 				if test -f "$HOME"/.dircolors.dark
 				then
 					dircolors="$HOME"/.dircolors.dark
