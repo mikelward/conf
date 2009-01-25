@@ -433,11 +433,11 @@ then
 	then
 		alias grep='grep --color=auto'
 	fi
-	if quiet ls --color=auto --directory --format=across /
+	if quiet ls --color=never --directory --classify --format=across /
 	then
-		alias ls='ls --color=auto --format=across'
+		alias ls='ls --color=never --classify --format=across'
 	else
-		alias ls='ls -x'
+		alias ls='ls -xF'
 	fi
 fi
 
