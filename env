@@ -375,7 +375,7 @@ then
 	alias admin='ssh Administrator@localhost'
 	alias b='bg'
 	alias bell='echo -n "\a"'
-	alias c='cd'
+	alias c='scp -o LogLevel=QUIET'
 	alias cx='chmod +x'
 	alias d='dirs'	# only supported by bash and zsh
 	alias dba='ssh dba@localhost'
@@ -415,7 +415,7 @@ then
 	then
 		alias scp='ascp'
 	fi
-	alias s='ssh'
+	alias s='ssh -o LogLevel=QUIET'
 	alias software='cd /var/www/html/software'
 	alias ss='sudo -s'
 	alias strace='strace '		# expand aliases after strace
