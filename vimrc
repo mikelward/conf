@@ -27,26 +27,14 @@ set nostartofline	" keep the current cursor position when reediting a file
 set wildmode=list:longest	" filename completion lists when ambiguous
 
 " DISPLAY OPTIONS
-if has("multi_byte")
-    if version >= 503
-        set listchars=tab:↦⇢,trail:˽,eol:↵
-    endif
-    if version >= 600
-        set listchars+=extends:…,precedes:…
-    endif
-    if version >= 700
-        set listchars+=nbsp:⍽
-    endif
-else
-    if version >= 503
-        set listchars=tab:>-,trail:_,eol:$
-    endif
-    if version >= 600
-        set listchars+=extends:>,precedes:<
-    endif
-    if version >= 700
-        set listchars+=nbsp:%
-    endif
+if version >= 503
+    set listchars=tab:>-,trail:_,eol:$
+endif
+if version >= 600
+    set listchars+=extends:>,precedes:<
+endif
+if version >= 700
+    set listchars+=nbsp:%
 endif
 
 set nowrap	" don't wrap long lines (show extends character instead)
