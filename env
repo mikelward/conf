@@ -196,6 +196,18 @@ last_part_of_path()
 	fi
 }
 
+on_cygwin()
+{
+    case `uname -o` in
+    Cygwin)
+		true
+		;;
+	*)
+		false
+		;;
+	esac
+}
+
 # process list with status
 pss()
 {
@@ -219,6 +231,15 @@ settitle()
 
 terminit()
 {
+	# Cygwin should set the terminal type to cygwin, but doesn't
+	if on_cygwin
+	then
+		if test "$TERM" = "dumb"
+		then
+			TERM=cygwin
+		fi
+	fi
+
 	# determine the graphics mode escape sequences
 	if exists tput
 	then
@@ -291,15 +312,14 @@ then
 fi
 if ! expr "$HOST" : "\." >/dev/null
 then
-    case `uname -o` in
-    Cygwin)
-		# hack for Aconex hosts that don't have the domain name in the host name
+	# hack for Aconex hosts that don't have the domain name in the host name
+	if on_cygwin
+	then
 		if exists get_win_hostname.sh
 		then
 			HOST="$(get_win_hostname.sh 2>/dev/null)"
 		fi
-        ;;
-    esac
+    fi
 fi
 if exists tty
 then
