@@ -13,7 +13,6 @@ then
 	then
 		echo creating local alias
 		alias local='typeset'
-		alias
 	else
 		echo "Cannot find local or typeset shell command, some features in .shrc will not work" 1>&2
 	fi
@@ -294,9 +293,11 @@ if ! expr "$HOST" : "\." >/dev/null
 then
     case `uname -o` in
     Cygwin)
-        HOST="$(get_win_hostname.sh)"
-        ;;
-    *)
+		# hack for Aconex hosts that don't have the domain name in the host name
+		if exists get_win_hostname.sh
+		then
+			HOST="$(get_win_hostname.sh 2>/dev/null)"
+		fi
         ;;
     esac
 fi
