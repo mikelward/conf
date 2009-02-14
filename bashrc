@@ -126,8 +126,16 @@ then
     if test ${BASH_VERSINFO[0]} -eq 3 -a ${BASH_VERSINFO[1]} -eq 1
     then
         PS1='$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")$(bell)'
+		case $TERM in putty|xterm*)
+			PS1="$PS1"'$(bell)'
+			;;
+		esac
     else
-        PS1='\[$(setcolor ${promptcolor})\]$(eval echo -n "\"${promptstring}\"")\[$(setcolor "normal")\]\[$(bell)\]'
+        PS1='\[$(setcolor ${promptcolor})\]$(eval echo -n "\"${promptstring}\"")\[$(setcolor "normal")\]'
+		case $TERM in putty|xterm*)
+			PS1="$PS1"'\[$(bell)\]'
+			;;
+		esac
     fi
 fi
 
