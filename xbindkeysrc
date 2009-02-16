@@ -41,13 +41,17 @@
 "gnome-calculator"
 	Mod4 + c
 
+# epiphany web browser
+"epiphany-browser"
+	Mod4 + e
+
 # firefox
 "firefox"
 	Mod4 + f
 
 # home folder
 #"thunar"
-"nautilus"
+"nautilus ~"
 	Mod4 + h
 
 # lock screen
@@ -55,6 +59,7 @@
 	Mod4 + l
 
 # mail
+#"/home/mward/thunderbird/thunderbird"
 "evolution -c mail"
 	Mod4 + m
 
@@ -79,11 +84,16 @@
 #"beagle-search"
 #	Mod4 + s
 # Skype chat
-"skype"
+#"skype"
+# s = "sticky"
+"tomboy"
 	Mod4 + s
 
 # terminal
 #"gnome-terminal --geometry 1680x1050"
+#"gnome-terminal --geometry 132x50"
+#"gnome-terminal --geometry 207x58"
+#"/usr/bin/gnome-terminal"
 "gnome-terminal --maximize"
 	Mod4 + t
 
