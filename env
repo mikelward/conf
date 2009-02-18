@@ -450,6 +450,7 @@ then
 	alias today='date "+%Y%m%d"'
 	alias v='${VIEWER:-view}'
 	alias x='_exit'
+	alias zones='test -d /var/named/chroot/var/named/master && cd /var/named/chroot/var/named/master || cd /var/named/master'
 
 	# set default flags
 	if quiet grep --color=auto --quiet "" "$HOME"/.shrc
