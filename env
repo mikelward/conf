@@ -432,7 +432,9 @@ then
 	fi
 	if command -v assh >/dev/null 2>&1
 	then
-		alias ssh='assh'
+		alias ssh='assh -A'
+	else
+		alias ssh='ssh -A'
 	fi
 	if command -v ascp >/dev/null 2>&1
 	then
