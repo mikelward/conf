@@ -789,7 +789,7 @@ test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
 # set preferred program options
 export CLICOLOR=true
 export FIGNORE=
-export GREP_COLOR=4
+export GREP_COLOR=1
 export LESS=-eFj3MRX
 test -n "$TABSIZE" && export LESS="${LESS}x${TABSIZE}"
 
