@@ -419,6 +419,7 @@ then
 	alias nohup='nohup '		 # expand aliases after nohup
 	alias pd='pushd'
 	alias po='popd'
+	alias programs='cd "$PROGRAMFILES"'
 	alias psme='ps -f -U "${USER:-${LOGNAME}}"'
 	alias q='_exit'
 	alias rb='reportblocked'
