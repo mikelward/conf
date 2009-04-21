@@ -247,6 +247,7 @@ terminit()
 		then
 			bold="$(tput bold)"
 			underline="$(tput smul)"
+			standout="$(tput smso)"
 			normal="$(tput sgr0)"
 			black="$(tput setaf 0)"
 			red="$(tput setaf 1)"
@@ -790,6 +791,7 @@ test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
 # set preferred program options
 export CLICOLOR=true
 export FIGNORE=
+# vt220/xterm: 1=bold, 4=underline, 7=standout/reverse
 export GREP_COLOR=4
 export LESS=-eFj3MRX
 test -n "$TABSIZE" && export LESS="${LESS}x${TABSIZE}"
