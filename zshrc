@@ -159,10 +159,12 @@ bindkey -M emacs '^[*' expand-word
 bindkey -M emacs '^[=' list-choices
 bindkey -M emacs '^X?' expand-cmd-path
 bindkey -M emacs '^X/' expand-word-path
+bindkey -M emacs '\' quoted-insert
 
 bindkey -M vicmd '!' expand-history
 bindkey -M vicmd '*' expand-word
 bindkey -M vicmd '=' list-choices
+#bindkey -M viins '\' quoted-insert
 
 if test -n "$home"
 then
