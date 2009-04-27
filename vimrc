@@ -127,6 +127,7 @@ if has("autocmd")
     au BufRead,BufNewFile */postfix/*.{c,h} setlocal sw=4 ts=8 noexpandtab
     au BufRead,BufNewFile */procmail/*.{c,h} setlocal sw=3 ts=8 noexpandtab
     au BufRead,BufNewFile */putty/*.{c,h} setlocal sw=4 ts=8 noexpandtab
+    au BufRead,BufNewFile */sudo*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
     au BufRead,BufNewFile */terminal/*.{c,h} setlocal sw=4 ts=8 expandtab
     au BufRead,BufNewFile */zsh/*.[ch] setlocal sw=4 ts=8 noexpandtab
 
