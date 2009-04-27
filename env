@@ -335,7 +335,10 @@ then
 else
 	TTY='?'
 fi
-UID=$(id -u)
+if test -z "$UID"
+then
+	UID=$(id -u)
+fi
 USER=$(id -un)
 
 # set directories to search for commands
