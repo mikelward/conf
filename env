@@ -303,6 +303,13 @@ terminit()
 	esac
 }
 
+# get the username of the person we originally logged in as
+# (e.g. print mward even if we did sudo -s, $LOGNAME does this wrong)
+username()
+{
+	logname
+}
+
 ### SHELL ENVIRONMENT
 # set shell options and environment
 HISTIGNORE="bg:fg: *"
@@ -328,14 +335,8 @@ then
 else
 	TTY='?'
 fi
-if test -z "$UID"
-then
-	UID=$(id -u)
-fi
-if test -z "$USER"
-then
-	USER=$(id -un)
-fi
+UID=$(id -u)
+USER=$(id -un)
 
 # set directories to search for commands
 # add preferred locations at start
@@ -735,11 +736,7 @@ t()
 # print the current directory with $HOME changed to ~
 tilde_directory()
 {
-	if test $UID -eq 0; then
-		pwd
-	else
-		pwd | sed -e 's#'"$HOME"'#~#'
-	fi
+	pwd | sed -e 's#'"$HOME"'#~#'
 }
 
 # list all instances of a command
