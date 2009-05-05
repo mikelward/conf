@@ -22,12 +22,9 @@ case $- in
 	shellinfo='$(username)@$(short_hostname):$(tilde_directory)'
 	promptchars='$(prompt_character)'
 	promptcolor=normal
-	promptstring='
-$(eval echo "${shellinfo}")
-$(eval echo -n "\"${promptchars}\"") '
 	#promptstring='$(short_hostname)$(prompt_character) '
-	#promptstring='$(prompt_character) '
 	#promptstring='$(last_part_of_path "$PWD")$(eval echo -n "\"${promptchars}\"") '
+	promptstring='$(prompt_character) '
 	title='$(eval echo -n "${connectioninfo} ${commandinfo}")'
 	PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")$(bell)'
 	PS2='> '
