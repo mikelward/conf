@@ -69,7 +69,7 @@
 	Mod4 + n
 
 # opera browser
-"opera"
+"opera -notrayicon -nomail"
 	Mod4 + o
 
 # pidgin im
