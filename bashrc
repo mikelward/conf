@@ -162,8 +162,8 @@ then
 	complete $COMPDEF -c man
 	complete -e printenv
 	complete -G "*.java" javac
-	complete -F complete_runner nohup
-	complete -F complete_runner sudo
+	complete -F complete_runner -o nospace -o bashdefault nohup
+	complete -F complete_runner -o nospace -o bashdefault sudo
 	complete -F complete_services service
     complete -F complete_pcp_archive {pmdumptext,pminfo,pmstat,pmval,acxstat}
 
@@ -189,19 +189,30 @@ then
 	# completion for subsequent arguments
 	complete_runner()
 	{
+		# completing the command name
 		if test "$1" = "$3"
 		then
-			set -- `compgen -c $2`
+			set -- `compgen -c "$2"`
+		# completing other arguments
 		else
-			set -- `compgen -f $2`
+			set -- `compgen -o bashdefault`
 		fi
+		if test $# -eq 1
+		then
+			if test -d "$1"
+			then
+				COMPREPLY[0]=$1/
+			else
+				COMPREPLY[0]=$1" "
+			fi
+		else
 		i=0
-		for arg
-		do
-			COMPREPLY[$i]=$arg
-			i=`expr $i + 1`
-		done
-
+			for arg
+			do
+				COMPREPLY[$i]=$arg
+				i=`expr $i + 1`
+			done
+		fi
 	}
 
 	# completion function for Red Hat service command
