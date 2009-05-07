@@ -15,7 +15,9 @@ precmd()
 	laststatus=$?
 
 	# the currently running foreground job is the shell (without any leading minus)
-	command=${0#-}
+	oldcommand=$command
+	#command=${0#-}
+	command=
 
 	# set the window title
 	[[ -t 1 ]] && eval settitle "\"$title\""

@@ -16,7 +16,8 @@ case $- in
 
 	# prompt and window title
 	connectioninfo='$(short_hostname)'
-	command=${0#-}
+	#command=${0#-}
+	command=
 	commandinfo='$(short_command "$command")'
 	shellinfo='$(username)@$(short_hostname):$(tilde_directory)'
 	shellinfo='$(username)@$(short_hostname):$(tilde_directory)'
