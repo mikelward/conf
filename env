@@ -77,6 +77,22 @@ blockedthreads()
 		awk '$1 ~ /D/ { sub("^[^ ]* *", ""); sub(" ", "\t"); print }'
 }
 
+command_or_oldcommand()
+{
+	local _command=$1
+	local _oldcommand=$2
+
+	if test -n "$command"
+	then
+		short_command "$command"
+	elif test -n "$oldcommand"
+	then
+		echo "$oldcommand done"
+	else
+		echo ""
+	fi
+}
+
 # remove a line from a file
 delline()
 {
