@@ -79,15 +79,15 @@ blockedthreads()
 
 command_or_oldcommand()
 {
-	local _command=$1
-	local _oldcommand=$2
+	local _command="$1"
+	local _oldcommand="$2"
 
-	if test -n "$command"
+	if test -n "$_command"
 	then
-		short_command "$command"
-	elif test -n "$oldcommand"
+		short_command "$_command"
+	elif test -n "$_oldcommand"
 	then
-		echo "$oldcommand done"
+		echo "$(short_command "$_oldcommand") done"
 	else
 		echo ""
 	fi
