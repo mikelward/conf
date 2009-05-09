@@ -13,6 +13,17 @@ precmd()
 {
 	# store the status of the previous interactive command for use in the prompt
 	laststatus=$?
+	commandfinish=$(date "+%s")
+	commandstart=${commandstart:-$commandfinish}
+	commandtime=$((commandfinish - commandstart))
+
+	if test $commandtime -ge 5
+	then
+		if exists notify-send
+		then
+			notify-send "$(short_command "$command") done $(test $laststatus -ne 0 && echo "(status $laststatus)")"
+		fi
+	fi
 
 	# the currently running foreground job is the shell (without any leading minus)
 	oldcommand=$command
@@ -27,10 +38,16 @@ precmd()
 		bell
 		;;
 	esac
+
+	# in case the user didn't run any command, preexec won't have been called,
+	# so initialise it here too
+	commandstart=$commandfinish
 }
 
 preexec()
 {
+	commandstart=$(date "+%s")
+
 	# get the canonical name of the command just invoked
 	case $1 in
 	# resuming an existing job
