@@ -65,7 +65,8 @@
 
 # notepad
 #"mousepad"
-"gedit"
+#"gedit"
+"tomboy --new-note"
 	Mod4 + n
 
 # opera browser
@@ -86,8 +87,8 @@
 # Skype chat
 #"skype"
 # s = "sticky"
-"tomboy"
-	Mod4 + s
+#"tomboy"
+#	Mod4 + s
 
 # terminal
 #"gnome-terminal --geometry 1680x1050"
