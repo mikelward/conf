@@ -17,11 +17,24 @@ precmd()
 	commandstart=${commandstart:-$commandfinish}
 	commandtime=$((commandfinish - commandstart))
 
+	# temporarily using notify-send until GNOME Terminal/metacity/whatever does this itself
+	# until that time, I'm also only alerting for things that took more than 5 seconds
+	# because the shell can't tell whether it's got focus or not
 	if test $commandtime -ge 5
 	then
 		if exists notify-send
 		then
-			notify-send "$(short_command "$command") done $(test $laststatus -ne 0 && echo "(status $laststatus)")"
+			case $laststatus in
+			0)
+				notify-send "$(short_command "$command") done"
+				;;
+			20)
+				# notify-send "$(short_command "$command") suspended"
+				;;
+			*)
+				notify-send "$(short_command "$command") exited with error $laststatus"
+				;;
+			esac
 		fi
 	fi
 
