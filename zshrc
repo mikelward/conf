@@ -26,13 +26,13 @@ precmd()
 		then
 			case $laststatus in
 			0)
-				notify-send "$(short_command "$command") done"
+				quiet notify-send "$(short_command "$command") done"
 				;;
 			20)
-				# notify-send "$(short_command "$command") suspended"
+				# quiet notify-send "$(short_command "$command") suspended"
 				;;
 			*)
-				notify-send "$(short_command "$command") exited with error $laststatus"
+				quiet notify-send -i stock_dialog-warning "$(short_command "$command") exited with error $laststatus"
 				;;
 			esac
 		fi
