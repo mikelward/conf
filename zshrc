@@ -20,7 +20,7 @@ precmd()
 	# temporarily using notify-send until GNOME Terminal/metacity/whatever does this itself
 	# until that time, I'm also only alerting for things that took more than 5 seconds
 	# because the shell can't tell whether it's got focus or not
-	if test $commandtime -ge 5
+	if test $commandtime -ge 5 && test -n "$command"
 	then
 		if exists notify-send
 		then
