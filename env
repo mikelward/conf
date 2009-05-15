@@ -224,6 +224,11 @@ on_cygwin()
 	esac
 }
 
+plist()
+{
+	ps -fp $(pgrep -d , "$@")
+}
+
 # process list with status
 pss()
 {
