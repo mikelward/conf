@@ -108,6 +108,9 @@
 "oocalc"
 	Mod4 + x
 
+"zdesktop"
+	Mod4 + z
+
 # desktop search
 #"beagle-search"
 #	Mod4 + space
