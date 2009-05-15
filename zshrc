@@ -9,33 +9,40 @@ fi
 # set zsh-specific aliases
 alias h="history -d"
 
+notify()
+{
+	local message="$*"
+
+	# set the title and then ring the bell
+	# in my patched version of GNOME Terminal, this displays a desktop notification
+	case $TERM in putty|xterm*)
+		settitle "$message"
+		bell
+		;;
+	esac
+}
+
 precmd()
 {
 	# store the status of the previous interactive command for use in the prompt
 	laststatus=$?
-	commandfinish=$(date "+%s")
-	commandstart=${commandstart:-$commandfinish}
-	commandtime=$((commandfinish - commandstart))
+	#commandfinish=$(date "+%s")
+	#commandstart=${commandstart:-$commandfinish}
+	#commandtime=$((commandfinish - commandstart))
 
-	# temporarily using notify-send until GNOME Terminal/metacity/whatever does this itself
-	# until that time, I'm also only alerting for things that took more than 5 seconds
-	# because the shell can't tell whether it's got focus or not
-	if test $commandtime -ge 5 && test -n "$command"
+    if [[ -t 1 ]] && [[ -n "$command" ]]
 	then
-		if exists notify-send
-		then
-			case $laststatus in
-			0)
-				quiet notify-send "$(short_command "$command") done"
-				;;
-			20)
-				# quiet notify-send "$(short_command "$command") suspended"
-				;;
-			*)
-				quiet notify-send -i stock_dialog-warning "$(short_command "$command") exited with error $laststatus"
-				;;
-			esac
-		fi
+		case $laststatus in
+		0)
+			notify "$(short_command "$command") done"
+			;;
+		20)
+			# zsh uses status 20 for suspended, don't print anything
+			;;
+		*)
+			notify "$(short_command "$command") exited with error $laststatus"
+			;;
+		esac
 	fi
 
 	# the currently running foreground job is the shell (without any leading minus)
@@ -43,23 +50,20 @@ precmd()
 	#command=${0#-}
 	command=
 
-	# set the window title
-	[[ -t 1 ]] && eval settitle "\"$title\""
-
-	# raise/flash the window
-	case $TERM in putty|xterm*)
-		bell
-		;;
-	esac
+	# set the window title back to the standard one
+	if [[ -t 1 ]]
+	then
+		eval settitle "\"$title\""
+	fi
 
 	# in case the user didn't run any command, preexec won't have been called,
 	# so initialise it here too
-	commandstart=$commandfinish
+	#commandstart=$commandfinish
 }
 
 preexec()
 {
-	commandstart=$(date "+%s")
+	#commandstart=$(date "+%s")
 
 	# get the canonical name of the command just invoked
 	case $1 in
@@ -191,7 +195,7 @@ bindkey -M emacs '^[*' expand-word
 bindkey -M emacs '^[=' list-choices
 bindkey -M emacs '^X?' expand-cmd-path
 bindkey -M emacs '^X/' expand-word-path
-bindkey -M emacs '\' quoted-insert
+#bindkey -M emacs '\' quoted-insert
 
 bindkey -M vicmd '!' expand-history
 bindkey -M vicmd '*' expand-word
