@@ -23,20 +23,23 @@ test -f "$HOME"/.exitrc && trap ". $HOME/.exitrc" EXIT
 # start the SSH agent if desired
 if test $WANT_SSH_AGENT
 then
-	if test -z $SSH_AUTH_SOCK
+	if test -z "$GNOME_KEYRING_PID"
 	then
-		if type ssh-agent >/dev/null 2>/dev/null
+		if test -z "$SSH_AUTH_SOCK"
 		then
-			eval $(ssh-agent)
-		fi
-	fi
-	if test -n $SSH_AUTH_SOCK
-	then
-		if type ssh-add >/dev/null 2>/dev/null
-		then
-			if ! ssh-add -l >/dev/null
+			if type ssh-agent >/dev/null 2>/dev/null
 			then
-				ssh-add
+				eval $(ssh-agent)
+			fi
+		fi
+		if test -n "$SSH_AUTH_SOCK"
+		then
+			if type ssh-add >/dev/null 2>/dev/null
+			then
+				if ! ssh-add -l >/dev/null
+				then
+					ssh-add
+				fi
 			fi
 		fi
 	fi
