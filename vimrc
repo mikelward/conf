@@ -41,6 +41,7 @@ set nowrap	" don't wrap long lines (show extends character instead)
 set more	" use a pager for long listings
 set nolist	" don't display non-printing characters
 set nonumber	" don't show line numbers
+set noicon	" don't change terminal's title
 set notitle	" don't change terminal's title
 set laststatus=2	" always show status line for each window
 set showmode	" always show command or insert mode
