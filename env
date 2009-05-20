@@ -728,14 +728,26 @@ vipass()
 
 prompt_character()
 {
-	if test ${laststatus:-0} -ne 0; then
-		echo "!"
-	elif test $UID -eq 0; then
-		echo "#"
-	else
-		echo "$"
-		#echo ">"
-	fi
+	case ${laststatus:-0} in
+	0|20)
+		# 0 is OK, 20 is command suspended in zsh
+		case $UID in
+		"")
+			echo "?"
+			;;
+		0)
+			echo "#"
+			;;
+		*)
+			#echo ">"
+			echo "$"
+			;;
+		esac
+		;;
+	*)
+		echo "?"
+		;;
+	esac
 }
 
 # print the last screenful of text from a file
