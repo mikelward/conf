@@ -728,9 +728,9 @@ vipass()
 
 prompt_character()
 {
-	#if test ${laststatus:-0} -ne 0; then
-	#	echo "!"
-	if test $UID -eq 0; then
+	if test ${laststatus:-0} -ne 0; then
+		echo "!"
+	elif test $UID -eq 0; then
 		echo "#"
 	else
 		echo "$"
