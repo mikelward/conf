@@ -120,9 +120,15 @@ preexec()
 			;;
 		esac
 		;;
-		# executing a new command
 	*)
+		# executing a new command
 		command=$1
+		alias=$(alias "${command%% *}")
+		if test -n "$alias"
+		then
+			command=${alias#*=}
+		else
+		fi
 		;;
 	esac
 
