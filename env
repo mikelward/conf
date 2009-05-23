@@ -93,6 +93,23 @@ command_or_oldcommand()
 	fi
 }
 
+statusmessage()
+{
+	local _status="$1"
+
+	case $_status in
+	0)
+		echo "done"
+		;;
+	20)
+		# zsh uses status 20 for suspended, don't print anything
+		;;
+	*)
+		echo "error $_status"
+		;;
+	esac
+}
+
 # remove a line from a file
 delline()
 {
@@ -210,6 +227,21 @@ last_part_of_path()
 	else
 		echo "/"
 	fi
+}
+
+# display a desktop notification
+# (requires support in the terminal application)
+notify()
+{
+	local message="$*"
+
+	# set the title and then ring the bell
+	# in my patched version of GNOME Terminal, this displays a desktop notification
+	case $TERM in putty|xterm*)
+		settitle "$message"
+		bell
+		;;
+	esac
 }
 
 on_cygwin()
@@ -422,7 +454,6 @@ then
 	alias admin='ssh Administrator@localhost'
 	alias appdir='cd /aconex/tomcat/app'
 	alias b='bg'
-	alias bell='echo -n "\a"'
 	alias c='scp'
 	alias cx='chmod +x'
 	alias d='dirs'	# only supported by bash and zsh
@@ -499,6 +530,12 @@ fi
 aldap()
 {
 	ldapsearch -H ldap://ldap.aconex.com:389 -D 'CN=Mikel Ward,CN=Users,DC=acxyarra,DC=com' -b 'CN=Users,DC=acxyarra,DC=com' -W -x "$@"
+}
+
+# ring the terminal's bell
+bell()
+{
+	echo -en "\a"
 }
 
 # do some floating point arithmetic
@@ -588,9 +625,20 @@ isort()
 	done
 }
 
+# show the 10 most recently changed files
+recent()
+{
+	if test $# -ne 0
+	then
+		/bin/ls -t -1 "$@" | head -n 10
+	else
+		/bin/ls -t -1 . | head -n 10
+	fi
+}
+
 # keep trying a command until it works
 # (e.g. ping -c 1 host)
-notify()
+retry()
 {
 	while true
 	do
@@ -603,17 +651,6 @@ notify()
 			sleep 10
 		fi
 	done
-}
-
-# show the 10 most recently changed files
-recent()
-{
-	if test $# -ne 0
-	then
-		/bin/ls -t -1 "$@" | head -n 10
-	else
-		/bin/ls -t -1 . | head -n 10
-	fi
 }
 
 # search for a pattern in text files in a directory tree

@@ -116,14 +116,23 @@ whence()
 	done
 }
 
+# set the title when we run a command
+setcommandhook()
+{
+	if test "${BASH_VERSINFO[0]}" = "3" -a "${BASH_VERSINFO[1]}" -gt "1"
+	then
+		trap 'command=$BASH_COMMAND; eval settitle "\"${title}\""; trap - DEBUG' DEBUG
+	fi
+}
+
 # prompt and window title
 if test -n "${title}"
 then
-	PROMPT_COMMAND='laststatus="$?"; eval settitle "\"${title}\""'
+	PROMPT_COMMAND='laststatus="$?"; command=; eval settitle "\"${title}\""; setcommandhook'
 fi
 if test -n "${promptstring}"
 then
-    if test ${BASH_VERSINFO[0]} -eq 3 -a ${BASH_VERSINFO[1]} -eq 1
+    if test "${BASH_VERSINFO[0]}" = "3" -a "${BASH_VERSINFO[1]}" = "1"
     then
         PS1='$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")'
 		case $TERM in putty|xterm*)

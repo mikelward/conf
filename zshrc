@@ -9,19 +9,6 @@ fi
 # set zsh-specific aliases
 alias h="history -d"
 
-notify()
-{
-	local message="$*"
-
-	# set the title and then ring the bell
-	# in my patched version of GNOME Terminal, this displays a desktop notification
-	case $TERM in putty|xterm*)
-		settitle "$message"
-		bell
-		;;
-	esac
-}
-
 precmd()
 {
 	# store the status of the previous interactive command for use in the prompt
@@ -30,19 +17,22 @@ precmd()
 	#commandstart=${commandstart:-$commandfinish}
 	#commandtime=$((commandfinish - commandstart))
 
-    if [[ -t 1 ]] && [[ -n "$command" ]]
+    if [[ -t 1 ]]
 	then
-		case $laststatus in
-		0)
-			notify "$(short_command "$command") done"
-			;;
-		20)
-			# zsh uses status 20 for suspended, don't print anything
-			;;
-		*)
-			notify "$(short_command "$command") exited with error $laststatus"
-			;;
-		esac
+		if [[ -n "$command" ]]
+		then
+			case $laststatus in
+			0)
+				notify "$(short_hostname $hostname) $(short_command "$command") done"
+				;;
+			20)
+				# zsh uses status 20 for suspended, don't print anything
+				;;
+			*)
+				notify "$(short_hostname $hostname) $(short_command "$command") exited with error $laststatus"
+				;;
+			esac
+		fi
 	fi
 
 	# the currently running foreground job is the shell (without any leading minus)
