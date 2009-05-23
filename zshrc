@@ -17,26 +17,26 @@ precmd()
 	#commandstart=${commandstart:-$commandfinish}
 	#commandtime=$((commandfinish - commandstart))
 
-    if [[ -t 1 ]]
-	then
-		if [[ -n "$command" ]]
-		then
-			case $laststatus in
-			0)
-				notify "$(short_hostname $hostname) $(short_command "$command") done"
-				;;
-			20)
-				# zsh uses status 20 for suspended, don't print anything
-				;;
-			*)
-				notify "$(short_hostname $hostname) $(short_command "$command") exited with error $laststatus"
-				;;
-			esac
-		fi
-	fi
+#	if [[ -t 1 ]]
+#	then
+#		if [[ -n "$command" ]]
+#		then
+#			case $laststatus in
+#			0)
+#				notify "$(short_hostname $hostname) $(short_command "$command") done"
+#				;;
+#			20)
+#				# zsh uses status 20 for suspended, don't print anything
+#				;;
+#			*)
+#				notify "$(short_hostname $hostname) $(short_command "$command") error $laststatus"
+#				;;
+#			esac
+#		fi
+#	fi
 
 	# the currently running foreground job is the shell (without any leading minus)
-	oldcommand=$command
+	lastcommand=$command
 	#command=${0#-}
 	command=
 
@@ -44,6 +44,7 @@ precmd()
 	if [[ -t 1 ]]
 	then
 		eval settitle "\"$title\""
+		bell
 	fi
 
 	# in case the user didn't run any command, preexec won't have been called,

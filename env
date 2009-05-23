@@ -77,17 +77,17 @@ blockedthreads()
 		awk '$1 ~ /D/ { sub("^[^ ]* *", ""); sub(" ", "\t"); print }'
 }
 
-command_or_oldcommand()
+command_or_lastcommand()
 {
 	local _command="$1"
-	local _oldcommand="$2"
+	local _lastcommand="$2"
 
 	if test -n "$_command"
 	then
 		short_command "$_command"
-	elif test -n "$_oldcommand"
+	elif test -n "$_lastcommand"
 	then
-		echo "$(short_command "$_oldcommand") done"
+		echo "$(short_command "$_lastcommand") done"
 	else
 		echo ""
 	fi

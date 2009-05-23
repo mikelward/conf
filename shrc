@@ -18,9 +18,9 @@ case $- in
 	connectioninfo='$(short_hostname)'
 	#command=${0#-}
 	command=
-	#commandinfo='$(test -n "$command" && $(short_command "$command") || $(echo "$oldcommand"))'
-	#commandinfo='$(echo "${command:-${oldcommand:+$oldcommand done}}")'
-	#commandinfo='$(command_or_oldcommand "$command" "$oldcommand")'
+	#commandinfo='$(test -n "$command" && $(short_command "$command") || $(echo "$lastcommand"))'
+	#commandinfo='$(echo "${command:-${lastcommand:+$lastcommand done}}")'
+	#commandinfo='$(command_or_lastcommand "$command" "$lastcommand")'
 	commandinfo='$(short_command "$command")'
 	shellinfo='$(username)@$(short_hostname):$(tilde_directory)'
 	shellinfo='$(username)@$(short_hostname):$(tilde_directory)'
