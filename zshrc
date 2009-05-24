@@ -127,6 +127,8 @@ preexec()
 		if test -n "$alias"
 		then
 			command=${alias#*=}
+			command=${command#\'}
+			command=${command%\'}
 		else
 		fi
 		;;
