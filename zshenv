@@ -19,6 +19,7 @@ setopt kshglob
 unsetopt nomatch
 setopt posixbuiltins
 setopt promptsubst
+setopt rmstarsilent
 setopt shfileexpansion
 setopt shglob
 setopt shwordsplit
