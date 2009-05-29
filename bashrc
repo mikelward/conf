@@ -204,7 +204,7 @@ then
 			set -- `compgen -c "$2"`
 		# completing other arguments
 		else
-			set -- `compgen -o bashdefault`
+			set -- `compgen -o default "$2"`
 		fi
 		if test $# -eq 1
 		then
