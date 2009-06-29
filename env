@@ -520,7 +520,8 @@ then
 	fi
 	if quiet ls --color=never --directory --classify --format=across /
 	then
-		alias ls='ls --color=never --classify --format=across'
+		#alias ls='ls --color=never --classify --format=across'
+		alias ls='ls --color=auto --format=across'
 	else
 		alias ls='ls -xF'
 	fi
@@ -841,6 +842,7 @@ else
 fi
 exists rsh && export CVS_RSH=rsh
 exists ssh && export CVS_RSH=ssh
+exists diff && export DIFF=diff
 exists ed && export EDITOR=ed
 exists vi && export EDITOR=vi
 exists vim && export EDITOR=vim
@@ -849,6 +851,7 @@ exists less && export VIEWER=less
 exists view && export VIEWER=view
 exists more && export PAGER=more
 exists less && export PAGER=less
+export DIFF # for use by ~/bin/svndiff
 export VISUAL="$EDITOR"
 export WINTERM=xterm
 
@@ -869,7 +872,7 @@ export LESS=-eFj3MRX
 test -n "$TABSIZE" && export LESS="${LESS}x${TABSIZE}"
 
 export TOP=-I
-export WANT_SSH_AGENT=1
+export WANT_SSH_AGENT=true
 export WWW_HOME=http://google.com
 
 test -f "$HOME"/.env.local && . "$HOME"/.env.local
