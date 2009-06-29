@@ -28,7 +28,10 @@ case $- in
 	promptcolor=normal
 	#promptstring='$(short_hostname)$(prompt_character) '
 	#promptstring='$(last_part_of_path "$PWD")$(eval echo -n "\"${promptchars}\"") '
-	promptstring='$(prompt_character) '
+	#promptstring='$(prompt_character) '
+	promptstring='
+$(eval echo $shellinfo)
+$(prompt_character) '
 	title='$(eval echo -n "${connectioninfo} ${commandinfo}")'
 	PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")$(bell)'
 	PS2='> '
@@ -60,7 +63,7 @@ case $- in
 			dircolors="$HOME/.dircolors.$TERM"
 		else
 			case "$TERM" in
-			linux|putty|vt220)
+			linux|putty|vt220|xterm)
 				if test -f "$HOME"/.dircolors.dark
 				then
 					dircolors="$HOME"/.dircolors.dark
