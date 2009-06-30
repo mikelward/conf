@@ -22,8 +22,7 @@ case $- in
 	#commandinfo='$(echo "${command:-${lastcommand:+$lastcommand done}}")'
 	#commandinfo='$(command_or_lastcommand "$command" "$lastcommand")'
 	commandinfo='$(short_command "$command")'
-	shellinfo='$(username)@$(short_hostname):$(tilde_directory)'
-	shellinfo='$(username)@$(short_hostname):$(tilde_directory)'
+	shellinfo='$(username)@$HOST:$(tilde_directory)'
 	promptchars='$(prompt_character)'
 	promptcolor=normal
 	#promptstring='$(short_hostname)$(prompt_character) '
