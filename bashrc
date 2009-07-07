@@ -119,7 +119,7 @@ whence()
 # set the title when we run a command
 setcommandhook()
 {
-	if test "${BASH_VERSINFO[0]}" = "3" -a "${BASH_VERSINFO[1]}" -gt "1"
+	if test "${BASH_VERSINFO[0]}" = "3" && test "${BASH_VERSINFO[1]}" -gt "1"
 	then
 		trap 'command=$BASH_COMMAND; eval settitle "\"${title}\""; trap - DEBUG' DEBUG
 	fi
@@ -132,7 +132,7 @@ then
 fi
 if test -n "${promptstring}"
 then
-    if test "${BASH_VERSINFO[0]}" = "3" -a "${BASH_VERSINFO[1]}" = "1"
+    if test "${BASH_VERSINFO[0]}" = "3" && test "${BASH_VERSINFO[1]}" = "1"
     then
         PS1='$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")'
 		case $TERM in putty|xterm*)
@@ -171,8 +171,8 @@ then
 	complete $COMPDEF -c man
 	complete -e printenv
 	complete -G "*.java" javac
-	complete -F complete_runner -o nospace -o bashdefault nohup
-	complete -F complete_runner -o nospace -o bashdefault sudo
+	complete -F complete_runner -o nospace -o default nohup
+	complete -F complete_runner -o nospace -o default sudo
 	complete -F complete_services service
     complete -F complete_pcp_archive {pmdumptext,pminfo,pmstat,pmval,acxstat}
 
