@@ -182,13 +182,17 @@ _exit()
 {
 	case $- in *m*)
 		# this way works in bash and zsh
-		jobs | wc -l | grep -q '^0$'
+		jobs | wc -l | grep -q '^ *0 *$'
 		if test $? -eq 0
 		then
 			command exit "$@"
 		else
 			jobs
 		fi
+		;;
+	*)
+		command exit "$@"
+		;;
 	esac
 }
 
