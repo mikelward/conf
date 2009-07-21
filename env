@@ -364,7 +364,9 @@ terminit()
 # (e.g. print mward even if we did sudo -s, $LOGNAME does this wrong)
 username()
 {
-	logname
+	#logname
+	# doesn't work with screen, urxvt, etc.
+	echo "$LOGNAME"
 }
 
 ### SHELL ENVIRONMENT
@@ -781,8 +783,8 @@ prompt_character()
 			echo "#"
 			;;
 		*)
-			#echo ">"
-			echo "$"
+			echo ">"
+			#echo "$"
 			;;
 		esac
 		;;
