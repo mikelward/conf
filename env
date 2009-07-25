@@ -524,13 +524,7 @@ then
 	then
 		alias grep='grep --color=auto'
 	fi
-	if quiet ls --color=never --directory --classify --format=across /
-	then
-		#alias ls='ls --color=never --classify --format=across'
-		alias ls='ls --color=auto --format=across'
-	else
-		alias ls='ls -xF'
-	fi
+	alias ls='ls -px'
 fi
 
 # search the Aconex LDAP directory
