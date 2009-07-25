@@ -116,12 +116,39 @@ whence()
 	done
 }
 
+getcommand()
+{
+	case $1 in
+	fg|%*)
+		test "$1" = "fg" && shift
+		if test $# -eq 0
+		then
+			jobs %+ | while read num state rest
+			do
+				echo $rest
+				break
+			done
+		else
+			jobs "$@" | while read num state rest
+			do
+				echo $rest
+				break
+			done
+		fi
+		;;
+	*)
+		echo "$@"
+		;;
+	esac
+}
+		
+
 # set the title when we run a command
 setcommandhook()
 {
 	if test "${BASH_VERSINFO[0]}" = "3" && test "${BASH_VERSINFO[1]}" -gt "1"
 	then
-		trap 'command=$BASH_COMMAND; eval settitle "\"${title}\""; trap - DEBUG' DEBUG
+		trap 'command=$(getcommand $BASH_COMMAND); eval settitle "\"${title}\""; trap - DEBUG' DEBUG
 	fi
 }
 
