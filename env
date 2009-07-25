@@ -691,7 +691,7 @@ rgrep()
 		shift
 	fi
 
-	find "${@:-.}" \( -type d -name ".svn" -prune \) -o -print0 | xargs -0i grep $args "$pattern" {} /dev/null
+	find "${@:-.}" \( -type d \( -name ".svn" -o -name ".git" \) -prune \) -o -print0 | xargs -0i grep $args "$pattern" {} /dev/null
 }
 
 # print the escape sequence for the named color (e.g. setcolor "blue")
@@ -874,6 +874,8 @@ export CLICOLOR=true
 export FIGNORE=
 # vt220/xterm: 1=bold, 4=underline, 7=standout/reverse
 export GREP_COLOR=4
+# disable new GNU grep colors for file names and line numbers
+export GREP_COLORS=fn=:ln=:bn=:se=
 export LESS=-eFj3MRX
 test -n "$TABSIZE" && export LESS="${LESS}x${TABSIZE}"
 
