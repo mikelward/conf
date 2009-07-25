@@ -777,8 +777,8 @@ prompt_character()
 			echo "#"
 			;;
 		*)
-			echo ">"
-			#echo "$"
+			#echo ">"
+			echo "$"
 			;;
 		esac
 		;;
