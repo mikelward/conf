@@ -712,18 +712,25 @@ short_command()
 # get a short version of the hostname for use in the prompt or window title
 short_hostname()
 {
-	local domains
-	# domain that we want to keep the subdomain for
-	domain="acx"
+	local domain="acx"	# domain that we want to keep the subdomain for
+	local hostname
 
-	if test -n "$HOST"
+	hostname="$HOST"
+
+	if test -n "$hostname"
 	then
-		if echo "$HOST" | grep -q "\.$domain"
+		if echo "$hostname" | grep -q "\.$domain"
 		then
-			echo "$HOST" | sed -e "s/\.$domain//"
+			hostname=$(echo "$hostname" | sed -e "s/\.$domain//")
 		else
-			echo "$HOST" | sed -e "s/\..*//"
+			hostname=$(echo "$hostname" | sed -e "s/\..*//")
 		fi
+		case $hostname in
+		$USER-*)
+			hostname=${hostname#$USER-}
+			;;
+		esac
+		echo "$hostname"
 		return 0
 	else
 		echo "unknown"
