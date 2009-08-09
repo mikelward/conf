@@ -146,7 +146,8 @@ getcommand()
 # set the title when we run a command
 setcommandhook()
 {
-	if test "${BASH_VERSINFO[0]}" = "3" && test "${BASH_VERSINFO[1]}" -gt "1"
+	if test ${BASH_VERSINFO[0]} -ge 4 ||
+	   test ${BASH_VERSINFO[0]} -eq 3 -a ${BASH_VERSINFO[1]} -gt 1
 	then
 		trap 'command=$(getcommand $BASH_COMMAND); eval settitle "\"${title}\""; trap - DEBUG' DEBUG
 	fi
