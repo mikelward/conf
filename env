@@ -498,12 +498,15 @@ then
 	fi
 	if command -v assh >/dev/null 2>&1
 	then
+		# nobody supports type/whence/command consistently, so let's hope which is installed
+		alias ossh="$(which ssh) -A"
 		alias ssh='assh -A'
 	else
 		alias ssh='ssh -A'
 	fi
 	if command -v ascp >/dev/null 2>&1
 	then
+		alias oscp="$(which scp)"
 		alias scp='ascp'
 	fi
 	alias s='ssh'
