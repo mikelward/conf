@@ -95,7 +95,14 @@ case $- in
 esac
 
 # workaround for GNOME Terminal which does a cd on startup :-(
-[ ${SHLVL:-1} -eq 1 ] && cd
+if test -n "$DISPLAY"
+then
+	case "$HOSTNAME" in
+	*laptop)
+		cd
+		;;
+	esac
+fi
 
 # finish with a zero exit status
 true
