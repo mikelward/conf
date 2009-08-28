@@ -160,20 +160,29 @@ then
 fi
 if test -n "${promptstring}"
 then
-    if test "${BASH_VERSINFO[0]}" = "3" && test "${BASH_VERSINFO[1]}" = "1"
+    if test -f /etc/profile.d/acx-prompt.sh
     then
-        PS1='$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")'
+        . /etc/profile.d/acx-prompt.sh
+    else
+		if test "${BASH_VERSINFO[0]}" = "3" && test "${BASH_VERSINFO[1]}" = "1"
+		then
+			PS1='$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")'
+		else
+			PS1='\[$(setcolor ${promptcolor})\]$(eval echo -n "\"${promptstring}\"")\[$(setcolor "normal")\]'
+		fi
+	fi
+	if test "${BASH_VERSINFO[0]}" = "3" && test "${BASH_VERSINFO[1]}" = "1"
+	then
 		case $TERM in putty|xterm*)
 			PS1="$PS1"'$(bell)'
 			;;
 		esac
-    else
-        PS1='\[$(setcolor ${promptcolor})\]$(eval echo -n "\"${promptstring}\"")\[$(setcolor "normal")\]'
+	else
 		case $TERM in putty|xterm*)
 			PS1="$PS1"'\[$(bell)\]'
 			;;
 		esac
-    fi
+	fi
 fi
 
 # history format
