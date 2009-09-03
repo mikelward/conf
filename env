@@ -250,8 +250,8 @@ notify()
 
 on_cygwin()
 {
-    case `uname -o` in
-    Cygwin)
+    case `uname -s` in
+    CYGWIN*)
 		true
 		;;
 	*)
@@ -461,6 +461,13 @@ then
 	alias appdir='cd /aconex/tomcat/app'
 	alias b='bg'
 	alias c='scp'
+	case $(uname -s) in CYGWIN*)
+		for drive in c d e f g h i j k l m n o p q r s t u v w x y z
+		do
+			alias $drive:="cd $(cygpath -u "$drive:")"
+		done
+		;;
+	esac
 	alias cx='chmod +x'
 	alias d='dirs'	# only supported by bash and zsh
 	alias dba='ssh dba@localhost'
@@ -484,7 +491,6 @@ then
 	alias p=$PAGER
 	alias pd='pushd'
 	alias po='popd'
-	alias programs='cd "$PROGRAMFILES"'
 	alias psme='ps -f -U "${USER:-${LOGNAME}}"'
 	alias q='_exit'
 	alias rb='reportblocked'
@@ -510,7 +516,6 @@ then
 		alias scp='ascp'
 	fi
 	alias s='ssh'
-	alias software='cd /var/www/html/software'
 	alias ss='sudo -s'
 	alias strace='strace '		# expand aliases after strace
 	alias sudo='sudo '			# expand aliases after sudo
@@ -630,6 +635,11 @@ isort()
 	done
 }
 
+programs()
+{
+	cd "$PROGRAMFILES/$1"
+}
+
 # show the 10 most recently changed files
 recent()
 {
@@ -739,6 +749,11 @@ short_hostname()
 		echo "unknown"
 		return 1
 	fi
+}
+
+software()
+{
+	cd "/var/www/html/software/$1"
 }
 
 # look up the password for a user@host combination
