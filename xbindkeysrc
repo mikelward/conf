@@ -49,6 +49,10 @@
 "firefox"
 	Mod4 + f
 
+# chromium (Google Chrome)
+"chromium-browser"
+	Mod4 + g
+
 # home folder
 #"thunar"
 "nautilus ~"
