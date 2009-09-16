@@ -123,13 +123,13 @@ getcommand()
 		test "$1" = "fg" && shift
 		if test $# -eq 0
 		then
-			jobs %+ | while read num state rest
+			jobs %+ 2>/dev/null | while read num state rest
 			do
 				echo $rest
 				break
 			done
 		else
-			jobs "$@" | while read num state rest
+			jobs "$@" 2>/dev/null | while read num state rest
 			do
 				echo $rest
 				break
