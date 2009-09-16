@@ -484,7 +484,10 @@ then
 	alias l1='l -1'
 	alias la='l -A'
 	alias ll='l -l'
-	alias lt='l -lt'
+	alias lt='l -t'
+	alias llt='l -lt'
+	alias lrt='l -rt'
+	alias llrt='l -lrt'
 	alias j='jobs'
 	#alias m=make
 	alias nohup='nohup '		 # expand aliases after nohup
@@ -495,7 +498,7 @@ then
 	alias q='_exit'
 	alias rb='reportblocked'
 	alias rcslog='rlog'
-	alias rdesktop='rdesktop -M'
+	#alias rdesktop='rdesktop -M'
 	alias rdiff='rcsdiff'
 	alias rg='reportgraylist'
 	if command -v arsync >/dev/null 2>&1
