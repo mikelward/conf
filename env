@@ -796,8 +796,8 @@ vipass()
 prompt_character()
 {
 	case ${laststatus:-0} in
-	0|20)
-		# 0 is OK, 20 is command suspended in zsh
+	0|20|148)
+		# 0 is OK, 20 is command suspended in zsh, 148 is bash
 		case $UID in
 		"")
 			echo "?"
