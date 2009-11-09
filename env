@@ -233,6 +233,26 @@ last_part_of_path()
 	fi
 }
 
+nagiosconf()
+{
+	if test -d /usr/local/nagios
+	then
+		cd /usr/local/nagios/etc/configs
+	else
+		cd /etc/nagios/configs
+	fi
+}
+
+nagioslog()
+{
+	if test -d /usr/local/nagios
+	then
+		cd /usr/local/nagios/var
+	else
+		cd /var/log/nagios
+	fi
+}
+
 # display a desktop notification
 # (requires support in the terminal application)
 notify()
@@ -263,6 +283,16 @@ on_cygwin()
 plist()
 {
 	ps -fp $(pgrep -d , "$@")
+}
+
+pmielogs()
+{
+	cd "/var/log/pcp/pmie"
+}
+
+pmlogs()
+{
+	cd "/var/log/pcp/pmlogger"
 }
 
 # process list with status
