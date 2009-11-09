@@ -529,7 +529,6 @@ then
 	alias today='date "+%Y%m%d"'
 	alias v='${VIEWER:-view}'
 	alias x='_exit'
-	alias zones='test -d /var/named/chroot/var/named/master && cd /var/named/chroot/var/named/master || cd /var/named/master'
 
 	# set default flags
 	if quiet grep --color=auto --quiet "" "$HOME"/.shrc
@@ -640,7 +639,14 @@ isort()
 
 programs()
 {
-	cd "$PROGRAMFILES/$1"
+	local programfiles="$(cygpath -u "$PROGRAMFILES")"
+
+	if test -n "$programfiles" && test -d "$programfiles"
+	then
+		cd "$programfiles/$1"
+	else
+		return 1
+	fi
 }
 
 # show the 10 most recently changed files
@@ -754,6 +760,11 @@ short_hostname()
 	fi
 }
 
+properties()
+{
+	cd "/aconex/tomcat/app/$1/WEB-INF/classes/properties"
+}
+
 software()
 {
 	cd "/var/www/html/software/$1"
@@ -854,6 +865,16 @@ where()
 yumpolicy()
 {
 	repoquery -a --qf '%-20{repoid} %{name}-%{version}' "$@"
+}
+
+zones()
+{
+	if test -d /var/named/chroot/var/named/master
+	then
+		cd /var/named/chroot/var/named/master
+	else
+		cd /var/named/master
+	fi
 }
 
 ### PROGRAM SETTINGS
