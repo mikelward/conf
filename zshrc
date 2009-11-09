@@ -152,12 +152,12 @@ commandcolor=
 # set prompt and window title format
 if test -n "$promptstring"
 then
-	if test -f /etc/profile.d/acx-prompt.sh
-	then
-		. /etc/profile.d/acx-prompt.sh
-	else
+	#if test -f /etc/profile.d/acx-prompt.sh
+	#then
+	#	. /etc/profile.d/acx-prompt.sh
+	#else
 		PS1='%{$(setcolor ${promptcolor})%}$(eval echo -n "\"${promptstring}\"")%{$(setcolor "normal")%}%{$(setcolor ${commandcolor})%}'
-	fi
+	#fi
 fi
 
 HISTFILE=~/.zsh_history

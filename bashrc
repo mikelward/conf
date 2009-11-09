@@ -160,17 +160,17 @@ then
 fi
 if test -n "${promptstring}"
 then
-    if test -f /etc/profile.d/acx-prompt.sh
-    then
-        . /etc/profile.d/acx-prompt.sh
-    else
+	#if test -f /etc/profile.d/acx-prompt.sh
+	#then
+	#    . /etc/profile.d/acx-prompt.sh
+	#else
 		if test "${BASH_VERSINFO[0]}" = "3" && test "${BASH_VERSINFO[1]}" = "1"
 		then
 			PS1='$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")'
 		else
 			PS1='\[$(setcolor ${promptcolor})\]$(eval echo -n "\"${promptstring}\"")\[$(setcolor "normal")\]'
 		fi
-	fi
+	#fi
 	if test "${BASH_VERSINFO[0]}" = "3" && test "${BASH_VERSINFO[1]}" = "1"
 	then
 		case $TERM in putty|xterm*)

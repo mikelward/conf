@@ -22,7 +22,7 @@ case $- in
 	#commandinfo='$(echo "${command:-${lastcommand:+$lastcommand done}}")'
 	#commandinfo='$(command_or_lastcommand "$command" "$lastcommand")'
 	commandinfo='$(short_command "$command")'
-	shellinfo='$(username)@$HOST:$(tilde_directory)'
+	shellinfo='$(short_hostname):$(dirs -l)'
 	promptchars='$(prompt_character)'
 	promptcolor=normal
 	#promptstring='$(short_hostname)$(prompt_character) '
@@ -32,14 +32,14 @@ case $- in
 $(eval echo $shellinfo)
 $(prompt_character) '
 	title='$(eval echo -n "${connectioninfo} ${commandinfo}")'
-	if test -f /etc/profile.d/acx-prompt.sh
-	then
-		. /etc/profile.d/acx-prompt.sh
-	else
+	#if test -f /etc/profile.d/acx-prompt.sh
+	#then
+	#	. /etc/profile.d/acx-prompt.sh
+	#else
 		PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")$(bell)'
-	fi
-	#PS2='> '
-	PS2='_ '
+	#fi
+	PS2='> '
+	#PS2='_ '
 	PS3='? '
 	PS4='+ '
 
