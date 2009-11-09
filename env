@@ -243,7 +243,7 @@ nagiosconf()
 	fi
 }
 
-nagioslog()
+nagioslogs()
 {
 	if test -d /usr/local/nagios
 	then
