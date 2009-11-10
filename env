@@ -127,7 +127,7 @@ delline()
 		return 1
 	fi
 
-	sed -ie "${_line}d" "$_file"
+	sed -i.bak -e "${_line}d" "$_file"
 }
 
 # remove a directory from the path
