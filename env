@@ -285,6 +285,16 @@ plist()
 	ps -fp $(pgrep -d , "$@")
 }
 
+pmieconfi()
+{
+	if test -d "/opt/pcp/config/pmie"
+	then
+		cd "/opt/pcp/config/pmie"
+	else
+		cd "/var/lib/pcp/config/pmie"
+	fi
+}
+
 pmielogs()
 {
 	cd "/var/log/pcp/pmie"
