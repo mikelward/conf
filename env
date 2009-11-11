@@ -285,7 +285,7 @@ plist()
 	ps -fp $(pgrep -d , "$@")
 }
 
-pmieconfi()
+pmieconf()
 {
 	if test -d "/opt/pcp/config/pmie"
 	then
