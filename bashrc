@@ -278,9 +278,12 @@ then
 	}
 fi
 
-bind -m vi-command '"!"':history-expand-line
-# for some reason glob-expand-word doesn't work here, but insert-completions is fine
-bind -m vi-command '"*"':insert-completions
+case $- in *i*)
+	bind -m vi-command '"!"':history-expand-line >/dev/null 2>&1
+	# for some reason glob-expand-word doesn't work here, but insert-completions is fine
+	bind -m vi-command '"*"':insert-completions >/dev/null 2>&1
+	;;
+esac
 
 # disable Ctrl+D = EOF
 IGNOREEOF=yes
