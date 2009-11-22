@@ -103,7 +103,7 @@ esac
 if test -n "$DISPLAY"
 then
 	case "$HOSTNAME" in
-	*laptop)
+	$USER-*)
 		cd
 		;;
 	esac
