@@ -596,6 +596,11 @@ calc()
 	echo "scale=3; $*" | bc
 }
 
+dblocal()
+{
+	sqsh -U sa -P "$SA_PASS" -S localhost:1433
+}
+
 # edit the most recently changed file
 editlatest()
 {
@@ -675,6 +680,11 @@ isort()
 			fi
 		fi
 	done
+}
+
+opsutils()
+{
+	cd /opt/opsutils/$1
 }
 
 programs()
@@ -790,6 +800,7 @@ short_hostname()
 		case $hostname in
 		$USER-*)
 			hostname=${hostname#$USER-}
+			hostname=${hostname%%.*}
 			;;
 		esac
 		echo "$hostname"
