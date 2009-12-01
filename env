@@ -499,6 +499,7 @@ then
 	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
 	alias admin='ssh Administrator@localhost'
 	alias appdir='cd /aconex/tomcat/app'
+	alias ardesktop='ardesktop -M'
 	alias b='bg'
 	alias c='scp'
 	case $(uname -s) in CYGWIN*)
@@ -538,7 +539,7 @@ then
 	alias q='_exit'
 	alias rb='reportblocked'
 	alias rcslog='rlog'
-	#alias rdesktop='rdesktop -M'
+	alias rdesktop='rdesktop -M'
 	alias rdiff='rcsdiff'
 	alias rg='reportgraylist'
 	if command -v arsync >/dev/null 2>&1
