@@ -105,7 +105,7 @@ if has("autocmd")
     "au BufRead,BufNewFile * if &filetype == 'c' || &filetype == 'cpp' || &filetype == 'perl' || &filetype == 'python' || &filetype == 'ruby' | set listchars+=tab:\|\  | endif
     "au BufRead,BufNewFile * if &filetype == 'fstab' | set listchars+=tab:>\  | endif
     "au BufRead,BufNewFile * if &filetype == 'text' | set textwidth=66 | endif
-    au BufRead,BufNewFile * if &filetype == 'svn' | set textwidth=80 | endif
+    au BufRead,BufNewFile * if &filetype == 'svn' | set textwidth=80 | set viminfo= | endif
 
     au FileType perl set cindent cinkeys-=0#
 
