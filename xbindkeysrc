@@ -37,6 +37,9 @@
 #keystate_capslock = enable
 #keystate_scrolllock= enable
 
+"/home/mward/thunderbird/thunderbird"
+	Mod4 + b
+
 # calculator
 "gnome-calculator"
 	Mod4 + c
@@ -50,7 +53,8 @@
 	Mod4 + f
 
 # chromium (Google Chrome)
-"chromium-browser"
+#"chromium-browser"
+"google-chrome"
 	Mod4 + g
 
 # home folder
