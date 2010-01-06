@@ -4,6 +4,7 @@
 :map gg :open google.com<CR>
 :map gj :open https://jira.aconex.com<CR>
 :map gm :open mail.mikelward.com<CR>
+:map gn :open https://monitor.aconex.com/nagios/<CR>
 :map go :open osnews.com<CR>
 :map gr :open google.com/reader<CR>
 :map gs :open slashdot.org<CR>
