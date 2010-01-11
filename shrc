@@ -102,7 +102,7 @@ esac
 # workaround for GNOME Terminal which does a cd on startup :-(
 if test -n "$DISPLAY"
 then
-	case "$HOSTNAME" in
+	case "$HOST" in
 	$USER-*)
 		cd
 		;;
