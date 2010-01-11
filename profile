@@ -21,7 +21,7 @@ fi
 test -f "$HOME"/.exitrc && trap ". $HOME/.exitrc" EXIT
 
 # start the SSH agent if desired
-if test $WANT_SSH_AGENT
+if false
 then
 	if test -z "$GNOME_KEYRING_PID"
 	then
@@ -42,6 +42,10 @@ then
 				fi
 			fi
 		fi
+	else
+		:
+		# eval $(gnome-keyring-daemon --start)
+		# export SSH_AUTH_SOCK
 	fi
 fi
 
@@ -52,6 +56,9 @@ if type tty >/dev/null 2>/dev/null && tty >/dev/null
 then
 	# disable flow control so applications can use ^Q and ^S
 	type stty >/dev/null 2>/dev/null && stty -ixon
+
+	# use Ctrl+_ instead of Ctrl+C so we can use Ctrl+C for copy and paste
+	#type stty >/dev/null 2>/dev/null && stty intr '^_'
 
 	# use screen if possible
 	#type screen >/dev/null 2>/dev/null && exec screen -R
