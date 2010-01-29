@@ -12,3 +12,4 @@
 :map gs :open slashdot.org<CR>
 :map gw :open http://www.google.com.au/search?q=melbourne+weather<CR>
 :map gz :open https://mail1.aconex.com<CR>
+:set showstatuslinks=2
