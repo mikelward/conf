@@ -196,18 +196,18 @@ _exit()
 	esac
 }
 
-# print lines from a file 
-# starting with the line matching $1 
-# finishing with the line matching $2 
-from_to() 
-{ 
-    local from 
-    local to 
-    from=$1 
-    to=$2 
-    shift 2 
- 
-    sed -ne "/$from/ b INSIDE 
+# print lines from a file
+# starting with the line matching $1
+# finishing with the line matching $2
+from_to()
+{
+	local from
+	local to
+	from=$1
+	to=$2
+	shift 2
+
+	sed -ne "/$from/ b INSIDE 
 d 
 : INSIDE { 
 p 
@@ -270,8 +270,8 @@ notify()
 
 on_cygwin()
 {
-    case `uname -s` in
-    CYGWIN*)
+	case `uname -s` in
+	CYGWIN*)
 		true
 		;;
 	*)
@@ -426,7 +426,7 @@ then
 		then
 			HOST="$(get_win_hostname.sh 2>/dev/null)"
 		fi
-    fi
+	fi
 fi
 if exists tty
 then
@@ -531,7 +531,9 @@ then
 	alias ltr='l -tr'
 	alias j='jobs'
 	#alias m=make
-	alias nohup='nohup '		 # expand aliases after nohup
+	alias nohup='nohup '		# expand aliases after nohup
+	alias oscp='command scp '	# just in case ascp doesn't work
+	alias ossh='command ssh '	# just in case assh doesn't work
 	alias p=$PAGER
 	alias pd='pushd'
 	alias po='popd'

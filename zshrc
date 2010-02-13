@@ -206,10 +206,6 @@ bindkey -M vicmd '*' expand-word
 bindkey -M vicmd '=' list-choices
 #bindkey -M viins '\' quoted-insert
 
-# make the edit pad Delete key delete to the right
-[[ -z "$terminfo[kdch1]" ]] || bindkey -M emacs "$terminfo[kdch1]" delete-char
-[[ -z "$terminfo[kdch1]" ]] || bindkey -M vicmd "$terminfo[kdch1]" vi-delete-char
-
 if test -n "$home"
 then
 	bindkey -M emacs "$home" "beginning-of-line"
