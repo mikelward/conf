@@ -105,4 +105,5 @@ set print=ask-yes			# ask before printing
 #----------------------------------------
 # Miscellaneous settings
 #----------------------------------------
-source ~/.muttrc.local
+source `if test -f ~/.muttrc.local; then echo ~/.muttrc.local; else echo /dev/null; fi`
+
