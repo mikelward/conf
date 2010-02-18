@@ -1,0 +1,115 @@
+# #!/bin/bash
+snippet #!
+	#!/bin/bash
+	
+snippet if
+	if [ ${1:condition} ]
+	then
+		${2:#statements}
+	fi
+snippet elif
+	elif [ ${1:condition} ]
+	then
+		${2:#statements}
+snippet for
+	for ${1:name} in $${2:list}
+	do
+		${3:#statements}
+	done
+snippet fori
+	for (( ${2:i} = 0; $2 < ${1:count}; $2++ ))
+	do
+		${3:#statements}
+	done
+snippet while
+	while [ ${1:condition} ]
+	do
+		${2:#statements}
+	done
+snippet until
+	until [ ${1:condition} ]
+	do
+		${2:#statements}
+	done
+snippet case
+	case ${1:word} in
+	${2:pattern})
+		${3}
+		;;
+	*)
+		${4}
+		;;
+	esac
+snippet tempdir
+	_abort()
+	{
+		_error "Signal received, aborting"
+		exit 1
+
+		# bash will fall thru and run _cleanup via the trap 0
+	}
+
+	_cleanup()
+	{
+		if [ -d "$TEMPDIR" ]
+		then
+			rm -rf "$TEMPDIR"
+		fi
+	}
+
+	SCRIPTNAME=${0##*/}
+	TEMPDIR=/tmp/"$SCRIPTNAME".$$
+
+	if [ -e "$TEMPDIR" ]
+	then
+		_error "Temporary directory $TEMPDIR already exists"
+		exit 1
+	fi
+	mkdir "$TEMPDIR"
+	if [ $? -ne 0 ]
+	then
+		_error "Cannot create temporary directory $TEMPDIR"
+		exit 1
+	fi
+	trap '_abort' 1 2 3 15
+	trap '_cleanup; exit' 0
+
+snippet getopts
+	_usage()
+	{
+		cat <<EOF 1>&2
+	Usage: $SCRIPTNAME [-h]
+	EOF
+	}
+
+	SCRIPTNAME=${0##*/}
+
+	while getopts ":h${1:options}" OPTION
+	do
+		case $OPTION in
+		${2:option})
+			$3
+			;;
+		h)
+			_usage
+			exit 0
+			;;
+		':')
+			echo "Missing argument to -$OPTION" 1>&2
+			_usage
+			exit 2
+			;;
+		'?')
+			echo "Invalid option -$OPTARG" 1>&2
+			_usage
+			;;
+		*)
+			echo "Program does not support -$OPTION yet" 1>&2
+			_usage
+			exit 2
+			;;
+		esac
+	done
+	shift $((OPTIND - 1))
+
+
