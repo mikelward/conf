@@ -47,14 +47,14 @@ set laststatus=2	" always show status line for each window
 set showmode	" always show command or insert mode
 set shortmess=I	" no intro or swap file found messages
 	" after opening a file already being edited
-set winminheight=0               " show only the status bars of other buffers after pressing Ctrl+W+_
+set winminheight=0	" show only the status bars of other buffers after pressing Ctrl+W+_
 
 if has("cmdline_info")
     set showcmd	" show partial commands
     set ruler	" show line and column information
 endif
 if has("syntax")
-    syntax off	" don't ever use syntax highlighting
+    syntax on	" turn syntax highlighting on by default
 endif
 
 if &term == "putty"
