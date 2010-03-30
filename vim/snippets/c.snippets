@@ -108,3 +108,19 @@ snippet .
 	[${1}]${2}
 snippet un
 	unsigned
+snippet debug
+	void debug(const char *format, ...)
+	{
+		va_list ap;
+		va_start(ap, format);
+		vfprintf(stderr, format, ap);
+		va_end(ap);
+	}
+snippet error
+	void error(const char *format, ...)
+	{
+		va_list ap;
+		va_start(ap, format);
+		vfprintf(stderr, format, ap);
+		va_end(ap);
+	}
