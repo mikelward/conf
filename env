@@ -233,6 +233,24 @@ last_part_of_path()
 	fi
 }
 
+mtd()
+{
+	local dir
+	dir=$(mktemp -d)
+	if test -n "$dir"
+	then
+		if test -d "$dir"
+		then
+			echo "$dir"
+			cd "$dir"
+		else
+			echo "mktemp directory $dir does not exist"
+		fi
+	else
+		echo "mktemp didn't work"
+	fi
+}
+
 nagiosconf()
 {
 	if test -d /usr/local/nagios
@@ -407,6 +425,15 @@ username()
 	#logname
 	# doesn't work with screen, urxvt, etc.
 	echo "$LOGNAME"
+}
+
+viewerlogs()
+{
+	local viewerdir
+
+	viewerdir=$(cygpath "$PROGRAMFILES")/jVue
+	test ! -d "$viewerdir" && viewerdir=$(cygpath c:)/jVue
+	cd "$viewerdir"/logs
 }
 
 ### SHELL ENVIRONMENT
