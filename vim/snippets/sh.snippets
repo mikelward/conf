@@ -102,6 +102,7 @@ snippet getopts
 		'?')
 			echo "Invalid option -$OPTARG" 1>&2
 			_usage
+			exit 2
 			;;
 		*)
 			echo "Program does not support -$OPTION yet" 1>&2
