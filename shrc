@@ -26,8 +26,9 @@ case $- in
 	promptchars='$(prompt_character)'
 	promptcolor=normal
 	#promptstring='$(short_hostname)$(prompt_character) '
+	#promptstring='$(short_hostname):$PWD$(prompt_character) '
 	#promptstring='$(last_part_of_path "$PWD")$(eval echo -n "\"${promptchars}\"") '
-	#promptstring='$(prompt_character) '
+	promptstring='$(prompt_character) '
 	promptstring='
 $(eval echo $shellinfo)
 $(prompt_character) '
@@ -48,7 +49,7 @@ $(prompt_character) '
 
 	# colors for ls
 	case "$TERM" in
-	linux|vt220)
+	linux|putty|vt220)
 		# colors for white on black
 		#export LSCOLORS='gxcxxxxxfxxxxx'
 		export LSCOLORS='ExFxxxxxCxxxxx'
