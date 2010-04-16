@@ -1,0 +1,8 @@
+xterm*altIsNotMeta: true
+xterm*altSendsEscape: true
+urxvt*font: xft:Bitstream Vera Sans Mono
+urxvt*scrollBar: false
+urxvt*scrollBar_right: true
+urxvt*background: black
+urxvt*foreground: white
+urxvt*urgentOnBell: true
