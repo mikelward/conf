@@ -544,6 +544,8 @@ then
 	alias f='fg'
 	alias g='grep -EHIin'		 # -H and -I are non-POSIX but are widely supported
 	alias gdb='gdb -q '
+	alias gitd='git diff'
+	alias gitdc='git diff --cached'
 	#alias h=head
 	alias html='cd /var/www/html'
 	alias hup='kill -HUP'
