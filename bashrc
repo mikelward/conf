@@ -143,11 +143,18 @@ getcommand()
 }
 		
 
+if test ${BASH_VERSINFO[0]} -ge 4 ||
+   test ${BASH_VERSINFO[0]} -eq 3 -a ${BASH_VERSINFO[1]} -gt 1
+then
+	has_debug_trap=true
+else
+	has_debug_trap=false
+fi
+
 # set the title when we run a command
 setcommandhook()
 {
-	if test ${BASH_VERSINFO[0]} -ge 4 ||
-	   test ${BASH_VERSINFO[0]} -eq 3 -a ${BASH_VERSINFO[1]} -gt 1
+	if $has_debug_trap
 	then
 		trap 'command=$(getcommand $BASH_COMMAND); eval settitle "\"${title}\""; setcolor normal; trap - DEBUG' DEBUG
 	fi
@@ -156,27 +163,22 @@ setcommandhook()
 # prompt and window title
 if test -n "${title}"
 then
-	PROMPT_COMMAND='laststatus="$?"; command=; eval settitle "\"${title}\""; setcommandhook'
+	PROMPT_COMMAND='laststatus="$?"; command=; eval settitle "\"${title}\""'
+	if $has_debug_trap
+	then
+		PROMPT_COMMAND="$PROMPT_COMMAND; setcommandhook"
+	fi
 fi
 if test -n "${promptstring}"
 then
-	if test "${BASH_VERSINFO[0]}" = "3" && test "${BASH_VERSINFO[1]}" = "1"
+	PS1='\[$(setcolor ${promptcolor})\]$(eval echo -n "\"${promptstring}\"")'
+	case $TERM in putty|xterm*)
+		PS1="$PS1"'\[$(bell)\]'
+		;;
+	esac
+	if $has_debug_trap
 	then
-		PS1='$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor ${commandcolor})'
-	else
-		PS1='\[$(setcolor ${promptcolor})\]$(eval echo -n "\"${promptstring}\"")\[$(setcolor ${commandcolor})\]'
-	fi
-	if test "${BASH_VERSINFO[0]}" = "3" && test "${BASH_VERSINFO[1]}" = "1"
-	then
-		case $TERM in putty|xterm*)
-			PS1="$PS1"'$(bell)'
-			;;
-		esac
-	else
-		case $TERM in putty|xterm*)
-			PS1="$PS1"'\[$(bell)\]'
-			;;
-		esac
+		PS1="$PS1"'\[$(setcolor ${commandcolor})\]'
 	fi
 fi
 
