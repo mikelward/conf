@@ -122,6 +122,7 @@ preexec()
 		;;
 	*)
 		# executing a new command
+		# XXX rather than expanding aliases, use $2 or $3
 		command=$1
 		alias=$(alias "${command%% *}")
 		if test -n "$alias"
@@ -152,12 +153,7 @@ commandcolor=
 # set prompt and window title format
 if test -n "$promptstring"
 then
-	#if test -f /etc/profile.d/acx-prompt.sh
-	#then
-	#	. /etc/profile.d/acx-prompt.sh
-	#else
-		PS1='%{$(setcolor ${promptcolor})%}$(eval echo -n "\"${promptstring}\"")%{$(setcolor "normal")%}%{$(setcolor ${commandcolor})%}'
-	#fi
+	PS1='%{$(setcolor ${promptcolor})%}$(eval echo -n "\"${promptstring}\"")%{$(setcolor "normal")%}%{$(setcolor ${commandcolor})%}'
 fi
 
 HISTFILE=~/.zsh_history

@@ -149,7 +149,7 @@ setcommandhook()
 	if test ${BASH_VERSINFO[0]} -ge 4 ||
 	   test ${BASH_VERSINFO[0]} -eq 3 -a ${BASH_VERSINFO[1]} -gt 1
 	then
-		trap 'command=$(getcommand $BASH_COMMAND); eval settitle "\"${title}\""; trap - DEBUG' DEBUG
+		trap 'command=$(getcommand $BASH_COMMAND); eval settitle "\"${title}\""; setcolor normal; trap - DEBUG' DEBUG
 	fi
 }
 
@@ -160,17 +160,12 @@ then
 fi
 if test -n "${promptstring}"
 then
-	#if test -f /etc/profile.d/acx-prompt.sh
-	#then
-	#	. /etc/profile.d/acx-prompt.sh
-	#else
-		if test "${BASH_VERSINFO[0]}" = "3" && test "${BASH_VERSINFO[1]}" = "1"
-		then
-			PS1='$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")'
-		else
-			PS1='\[$(setcolor ${promptcolor})\]$(eval echo -n "\"${promptstring}\"")\[$(setcolor "normal")\]'
-		fi
-	#fi
+	if test "${BASH_VERSINFO[0]}" = "3" && test "${BASH_VERSINFO[1]}" = "1"
+	then
+		PS1='$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor ${commandcolor})'
+	else
+		PS1='\[$(setcolor ${promptcolor})\]$(eval echo -n "\"${promptstring}\"")\[$(setcolor ${commandcolor})\]'
+	fi
 	if test "${BASH_VERSINFO[0]}" = "3" && test "${BASH_VERSINFO[1]}" = "1"
 	then
 		case $TERM in putty|xterm*)

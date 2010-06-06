@@ -29,16 +29,11 @@ case $- in
 	#promptstring='$(short_hostname):$PWD$(prompt_character) '
 	#promptstring='$(last_part_of_path "$PWD")$(eval echo -n "\"${promptchars}\"") '
 	promptstring='$(prompt_character) '
-	promptstring='
-$(eval echo $shellinfo)
-$(prompt_character) '
+	#promptstring='
+#$(eval echo $shellinfo)
+#$(prompt_character) '
 	title='$(eval echo -n "${connectioninfo} ${commandinfo}")'
-	#if test -f /etc/profile.d/acx-prompt.sh
-	#then
-	#	. /etc/profile.d/acx-prompt.sh
-	#else
-		PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")$(bell)'
-	#fi
+	PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")$(bell)'
 	PS2='> '
 	#PS2='_ '
 	PS3='? '
