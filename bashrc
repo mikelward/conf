@@ -217,12 +217,7 @@ then
 		else
 			set -- `compgen -f $2`
 		fi
-		i=0
-		for arg
-		do
-			COMPREPLY[$i]=$arg
-			i=$((i + 1))
-		done
+		COMPREPLY=("$@")
 	}
 
 	# completion function for commands such as sudo that take a
