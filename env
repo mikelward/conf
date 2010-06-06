@@ -619,7 +619,7 @@ aldap()
 # ring the terminal's bell
 bell()
 {
-	echo -en "\a"
+	printf "\a"
 }
 
 # do some floating point arithmetic
