@@ -221,39 +221,39 @@ then
 		for arg
 		do
 			COMPREPLY[$i]=$arg
-			i=`expr $i + 1`
+			i=$((i + 1))
 		done
 	}
 
 	# completion function for commands such as sudo that take a
-	# command as the first argument but should revert to file
-	# completion for subsequent arguments
+	# command as the first argument but should complete the second
+	# argument as if it was the first
 	complete_runner()
 	{
 		# completing the command name
+		# $1 = sudo
+		# $3 = sudo
+		# $2 = partial command (or complete command but no space was typed)
 		if test "$1" = "$3"
 		then
 			set -- `compgen -c "$2"`
 		# completing other arguments
 		else
-			set -- `compgen -o default "$2"`
+			# $1 = sudo
+			# $3 = command after sudo (i.e. second word)
+			# $2 = arguments to command
+			# use the custom completion as printed by complete -p,
+			# fall back to filename/bashdefault
+			local comps
+			comps=`complete -p "$3" 2>/dev/null`
+			# "complete -o default -c man" => "-o default -c"
+			# "" => "-o bashdefault -f"
+			comps=${comps#complete }
+			comps=${comps% *}
+			comps=${comps:--o bashdefault -f}
+			set -- `compgen $comps "$2"`
 		fi
-		if test $# -eq 1
-		then
-			if test -d "$1"
-			then
-				COMPREPLY[0]=$1/
-			else
-				COMPREPLY[0]=$1" "
-			fi
-		else
-		i=0
-			for arg
-			do
-				COMPREPLY[$i]=$arg
-				i=`expr $i + 1`
-			done
-		fi
+		COMPREPLY=("$@")
 	}
 
 	# completion function for Red Hat service command
