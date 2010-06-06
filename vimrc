@@ -123,6 +123,7 @@ if has("autocmd")
 
     " per-project rules
     au BufRead,BufNewFile */acxpcp*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
+    au BufRead,BufNewFile */bash*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
     au BufRead,BufNewFile */cvs*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
     au BufRead,BufNewFile */fam*/*{.c++,h} setlocal sw=4 ts=8 noexpandtab
     au BufRead,BufNewFile */gnome-terminal*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
