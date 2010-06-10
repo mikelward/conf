@@ -25,6 +25,7 @@ case $- in
 	shellinfo='$(short_hostname):$(dirs -l)'
 	promptchars='$(prompt_character)'
 	promptcolor=normal
+	errorcolor=red
 	#promptstring='$(short_hostname)$(prompt_character) '
 	#promptstring='$(short_hostname):$PWD$(prompt_character) '
 	#promptstring='$(last_part_of_path "$PWD")$(eval echo -n "\"${promptchars}\"") '
@@ -38,6 +39,26 @@ case $- in
 	#PS2='_ '
 	PS3='? '
 	PS4='+ '
+
+# make standard error red
+rederr()
+{
+	while read -r line
+	do
+		setcolor $errorcolor
+		echo "$line"
+		setcolor normal
+	done
+}
+
+	errfifo=${TMPDIR:-/tmp}/errfifo.$$
+	mkfifo $errfifo
+	# to silence the line telling us what job number the background job is
+	exec 2>/dev/null
+	rederr <$errfifo&
+	errpid=$!
+	disown %+
+	exec 2>$errfifo
 
 	# command line editing key bindings (must be set after EDITOR and VISUAL)
 	set -o emacs 2>/dev/null
