@@ -196,7 +196,7 @@ then
 	fi
 	complete -a alias unalias
 	complete -d cd pushd popd pd po
-	complete $COMPDEF -g chgrp
+	complete $COMPDEF -g chgrp 2>/dev/null
 	complete $COMPDEF -u chown
 	complete -j fg
 	complete -j kill
@@ -205,8 +205,8 @@ then
 	complete $COMPDEF -c man
 	complete -e printenv
 	complete -G "*.java" javac
-	complete -F complete_runner -o nospace -o default nohup
-	complete -F complete_runner -o nospace -o default sudo
+	complete -F complete_runner -o nospace -o default nohup 2>/dev/null
+	complete -F complete_runner -o nospace -o default sudo 2>/dev/null
 	complete -F complete_services service
 	complete -F complete_pcp_archive {pmdumptext,pminfo,pmstat,pmval,acxstat}
 
