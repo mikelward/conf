@@ -51,14 +51,14 @@ rederr()
 	done
 }
 
-	errfifo=${TMPDIR:-/tmp}/errfifo.$$
-	mkfifo $errfifo
-	# to silence the line telling us what job number the background job is
-	exec 2>/dev/null
-	rederr <$errfifo&
-	errpid=$!
-	disown %+
-	exec 2>$errfifo
+#	errfifo=${TMPDIR:-/tmp}/errfifo.$$
+#	mkfifo $errfifo
+#	# to silence the line telling us what job number the background job is
+#	exec 2>/dev/null
+#	rederr <$errfifo&
+#	errpid=$!
+#	disown %+
+#	exec 2>$errfifo
 
 	# command line editing key bindings (must be set after EDITOR and VISUAL)
 	set -o emacs 2>/dev/null
