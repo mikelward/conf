@@ -465,7 +465,7 @@ if test -z "$UID"
 then
 	UID=$(id -u)
 fi
-USER=$(id -un)
+USER=$(whoami)
 
 # set directories to search for commands
 # add preferred locations at start
@@ -474,7 +474,7 @@ USER=$(id -un)
 # if we add the symlink versions before the standard directories such as
 # /usr/bin, some utilities get confused, so only add them to PATH if
 # they're not symlinks
-for dir in /usr/X11R6/bin /usr/bin/X11
+for dir in /usr/X11R6/bin /usr/bin/X11 /usr/java1.6/bin
 do
 	test -d "$dir" && test ! -L "$dir" && addpath "$dir" start
 done
