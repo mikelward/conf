@@ -444,17 +444,6 @@ if test -z "$HOST"
 then
 	HOST=$(hostname)
 fi
-if ! expr "$HOST" : "\." >/dev/null
-then
-	# hack for Aconex hosts that don't have the domain name in the host name
-	if on_cygwin
-	then
-		if exists get_win_hostname.sh
-		then
-			HOST="$(get_win_hostname.sh 2>/dev/null)"
-		fi
-	fi
-fi
 if exists tty
 then
 	TTY=$(tty)
@@ -525,7 +514,6 @@ then
 	type apt-get >/dev/null 2>/dev/null && alias apt='apt-get'
 	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
 	alias admin='ssh Administrator@localhost'
-	alias appdir='cd /aconex/tomcat/app'
 	alias ardesktop='ardesktop -M'
 	alias b='bg'
 	alias c='scp'
@@ -609,12 +597,6 @@ then
 	fi
 	alias ls='ls -px'
 fi
-
-# search the Aconex LDAP directory
-aldap()
-{
-	ldapsearch -H ldap://ldap.aconex.com:389 -D 'CN=Mikel Ward,CN=Users,DC=acxyarra,DC=com' -b 'CN=Users,DC=acxyarra,DC=com' -W -x "$@"
-}
 
 # ring the terminal's bell
 bell()
@@ -847,16 +829,6 @@ short_hostname()
 		echo "unknown"
 		return 1
 	fi
-}
-
-properties()
-{
-	cd "/aconex/tomcat/app/$1/WEB-INF/classes/properties"
-}
-
-software()
-{
-	cd "/var/www/html/software/$1"
 }
 
 # look up the password for a user@host combination
