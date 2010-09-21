@@ -81,6 +81,12 @@ set shiftround	" manual shift aligns on columns
 " allow # character at current indentation level (must appear on own line)
 inoremap # X<BS>#
 
+" MARKDOWN SHORTCUTS
+" http://stevelosh.com/blog/2010/09/coming-home-to-vim/
+nnoremap <leader>1 yypVr=
+nnoremap <leader>2 yypVr-
+nnoremap <leader>3 yypVr~
+
 set backspace=2	" backspaces can go over lines
 set esckeys	" allow arrow keys in insert mode
 set noerrorbells visualbell	" flash screen instead of ringing bell
