@@ -579,10 +579,15 @@ then
 	fi
 	if quiet ls --color=never --directory --classify --format=across /
 	then
+		# enable colors with GNU ls
 		#alias ls='ls --color=never --classify --format=across'
 		alias ls='ls --color=auto --format=across'
+	elif test "$(CLICOLOR_FORCE=1 /bin/ls -G)" != "$(/bin/ls -G)"
+	then
+		# enable colors with FreeBSD ls
+		alias ls='ls -Gx'
 	else
-		alias ls='ls -xF'
+		alias ls='ls -Fx'
 	fi
 fi
 
