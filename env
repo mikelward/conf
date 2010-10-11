@@ -771,7 +771,7 @@ rgrep()
 		shift
 	fi
 
-	find "${@:-.}" \( -type d \( -name ".svn" -o -name ".git" \) -prune \) -o -print0 | xargs -0i grep $args "$pattern" {} /dev/null
+	find "${@:-.}" \( -type d \( -name ".svn" -o -name ".git" \) -prune \) -o -type f -print0 | xargs -0i grep $args "$pattern" {} /dev/null
 }
 
 # print the escape sequence for the named color (e.g. setcolor "blue")
