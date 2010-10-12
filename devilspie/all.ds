@@ -1,3 +1,5 @@
 (if
-	(is (window_property "_NET_WM_WINDOW_TYPE") "_NET_WM_WINDOW_TYPE_NORMAL")
+	(and
+	    (is (window_property "_NET_WM_WINDOW_TYPE") "_NET_WM_WINDOW_TYPE_NORMAL")
+		(not (contains (window_property "_NET_WM_STATE") "_NET_WM_STATE_FULLSCREEN")))
 	(begin (undecorate) (maximize)))
