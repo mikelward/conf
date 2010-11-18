@@ -467,7 +467,19 @@ for dir in /usr/X11R6/bin /usr/bin/X11 /usr/java1.6/bin
 do
 	test -d "$dir" && test ! -L "$dir" && addpath "$dir" start
 done
-for dir in /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin "$HOME"/bin
+get_android_sdk_dir()
+{
+	_platform=$(uname -m)
+	case $_platform in i686)
+		_platform=x86
+		;;
+	esac
+	_os=$(uname -s | tr '[[:upper:]]' '[[:lower:]]')
+	_sdkdir=$HOME/android-sdk-${_os}_${_platform}
+	echo $_sdkdir
+}
+android_sdk_dir=$(get_android_sdk_dir)
+for dir in /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin "$android_sdk_dir/tools" "$HOME"/.cabal/bin "$HOME"/bin
 do
 	test -d "$dir" && addpath "$dir" start
 done
@@ -534,6 +546,7 @@ then
 	alias gdb='gdb -q '
 	alias gitd='git diff'
 	alias gitdc='git diff --cached'
+	alias gits='git status'
 	#alias h=head
 	alias html='cd /var/www/html'
 	alias hup='kill -HUP'
