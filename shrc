@@ -119,8 +119,16 @@ esac
 # workaround for GNOME Terminal which does a cd on startup :-(
 if test -n "$DISPLAY"
 then
+	# e.g. Mikel-PC or Mikel-Laptop means local
 	case "$HOST" in
 	$USER-*)
+		cd
+		;;
+	esac
+	# assuming DISPLAY=:0.0 means local
+	# note that DISPLAY=localhost:0.0 can mean SSH X forwarding
+	case "$DISPLAY" in
+	:*)
 		cd
 		;;
 	esac
