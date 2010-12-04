@@ -479,7 +479,7 @@ get_android_sdk_dir()
 	echo $_sdkdir
 }
 android_sdk_dir=$(get_android_sdk_dir)
-for dir in /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin "$android_sdk_dir/tools" "$HOME"/.cabal/bin "$HOME"/bin
+for dir in /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin "$android_sdk_dir/tools" "$HOME/depot_tools" "$HOME"/.cabal/bin "$HOME"/bin
 do
 	test -d "$dir" && addpath "$dir" start
 done
