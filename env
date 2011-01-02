@@ -621,6 +621,16 @@ dblocal()
 	sqsh -U sa -P "$SA_PASS" -S localhost:1433
 }
 
+directories()
+{
+	if exists dirs
+	then
+		dirs -l
+	else
+		echo "$PWD"
+	fi
+}
+
 # edit the most recently changed file
 editlatest()
 {
@@ -810,25 +820,16 @@ short_command()
 # get a short version of the hostname for use in the prompt or window title
 short_hostname()
 {
-	local domain="acx"	# domain that we want to keep the subdomain for
 	local hostname
+	local hostprefix
 
 	hostname="$HOST"
 
 	if test -n "$hostname"
 	then
-		if echo "$hostname" | grep -q "\.$domain"
-		then
-			hostname=$(echo "$hostname" | sed -e "s/\.$domain//")
-		else
-			hostname=$(echo "$hostname" | sed -e "s/\..*//")
-		fi
-		case $hostname in
-		$USER-*)
-			hostname=${hostname#$USER-}
-			hostname=${hostname%%.*}
-			;;
-		esac
+		# strip domain name and any hyphen prefix (assumed to be a username)
+		# XXX what if it's some other username?
+		hostname=$(echo "$hostname" | sed -e "s/\..*//" -e "s/^[^-]*-//")
 		echo "$hostname"
 		return 0
 	else

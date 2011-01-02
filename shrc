@@ -29,7 +29,10 @@ case $- in
 	#promptstring='$(short_hostname)$(prompt_character) '
 	#promptstring='$(short_hostname):$PWD$(prompt_character) '
 	#promptstring='$(last_part_of_path "$PWD")$(eval echo -n "\"${promptchars}\"") '
-	promptstring='$(prompt_character) '
+	promptstring='
+$(short_hostname):$(directories)
+$(prompt_character) '
+	#promptstring='$(prompt_character) '
 	#promptstring='
 #$(eval echo $shellinfo)
 #$(prompt_character) '
