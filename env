@@ -11,11 +11,17 @@ if ! type local >/dev/null 2>&1
 then
 	if type typeset >/dev/null 2>&1
 	then
-		echo creating local alias
-		alias local='typeset'
-	else
-		echo "Cannot find local or typeset shell command, some features in .shrc will not work" 1>&2
-	fi
+        # must be a function not an alias so it works in ksh too
+        local()
+        {
+            typeset "$@"
+        }
+    fi
+    # see if our attempts to emulate "local" worked
+    if ! type local >/dev/null 2>&1
+    then
+        echo "Cannot find local or typeset shell command, some features in .shrc will not work" 1>&2
+    fi
 fi
 
 ### HELPER FUNCTIONS
