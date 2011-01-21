@@ -47,7 +47,8 @@ set laststatus=2	" always show status line for each window
 set showmode	" always show command or insert mode
 set shortmess=I	" no intro or swap file found messages
 	" after opening a file already being edited
-set winminheight=0	" show only the status bars of other buffers after pressing Ctrl+W+_
+set winminheight=0	" make Ctrl+W+_ fully minimize other buffers
+	" (show only their status bars)
 
 if has("cmdline_info")
     set showcmd	" show partial commands
@@ -78,6 +79,16 @@ set expandtab	" use spaces rather than tabs for indentation
 set smartindent	" indentation level automatically controlled
 set smarttab	" backspace deletes one indentation level
 set shiftround	" manual shift aligns on columns
+
+set backspace=2	" backspaces can go over lines
+set esckeys	" allow arrow keys in insert mode
+set noerrorbells visualbell	" flash screen instead of ringing bell
+set showbreak=+	" specially mark continued lines with a plus
+
+if has("x11")
+    set clipboard=unnamed	" yank to X selection buffer
+endif
+
 " allow # character at current indentation level (must appear on own line)
 inoremap # X<BS>#
 
@@ -86,11 +97,6 @@ inoremap # X<BS>#
 nnoremap <leader>1 yypVr=
 nnoremap <leader>2 yypVr-
 nnoremap <leader>3 yypVr~
-
-set backspace=2	" backspaces can go over lines
-set esckeys	" allow arrow keys in insert mode
-set noerrorbells visualbell	" flash screen instead of ringing bell
-set showbreak=+	" specially mark continued lines with a plus
 
 if version >= 600
     " per-file type rules
