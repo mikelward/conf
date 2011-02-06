@@ -667,11 +667,55 @@ h()
 # show the most recently changed file
 latest()
 {
+    local count=1               # how many files to print
+    local promptlines=5         # how many lines to leave for the prompt
+                                # when printing a screenful with -s
+    local usage="Usage: latest [-n <number>] [-s] [--] [pattern]"
+    while test $# -gt 0
+    do
+        case $1 in
+        # -- = stop processing options
+        --)
+            shift
+            break
+            ;;
+        # -n <number> = <number> files
+        -n)
+            if test -n "$2"
+            then
+                count=$2
+                shift 2
+            else
+                echo "$usage" 1>&2
+                return 1
+            fi
+            ;;
+        # -s = one screenful
+        -s)
+            count=$((LINES - promptlines))
+            shift
+            ;;
+        # -<number> = <number> files
+        -[0-9]*)
+            count=${1#-}
+            shift
+            ;;
+        # anything else starting with a minus as a usage error
+        -*)
+            echo "$usage" 1>&2
+            return 1
+            ;;
+        *)
+            break
+            ;;
+        esac
+    done
+
 	if test $# -ne 0
 	then
-		/bin/ls -t -1 -d "$@" | head -n 1
+		/bin/ls -t -1 -d "$@" | head -n $count
 	else
-		/bin/ls -t -1 -d * | head -n 1
+		/bin/ls -t -1 -d * | head -n $count
 	fi
 }
 
