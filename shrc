@@ -32,7 +32,6 @@ case $- in
 	promptstring='
 $(short_hostname)
 $(directories)
-$(jobs)
 $(prompt_character) '
 	#promptstring='$(prompt_character) '
 	#promptstring='
