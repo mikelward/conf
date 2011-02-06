@@ -22,7 +22,7 @@ case $- in
 	#commandinfo='$(echo "${command:-${lastcommand:+$lastcommand done}}")'
 	#commandinfo='$(command_or_lastcommand "$command" "$lastcommand")'
 	commandinfo='$(short_command "$command")'
-	shellinfo='$(short_hostname):$(dirs -l)'
+	shellinfo='$(short_hostname):$(dirs -v)'
 	promptchars='$(prompt_character)'
 	promptcolor=normal
 	errorcolor=red
@@ -30,7 +30,9 @@ case $- in
 	#promptstring='$(short_hostname):$PWD$(prompt_character) '
 	#promptstring='$(last_part_of_path "$PWD")$(eval echo -n "\"${promptchars}\"") '
 	promptstring='
-$(short_hostname):$(directories)
+$(short_hostname)
+$(directories)
+$(jobs)
 $(prompt_character) '
 	#promptstring='$(prompt_character) '
 	#promptstring='

@@ -632,7 +632,7 @@ directories()
 {
 	if exists dirs
 	then
-		dirs -l
+		dirs -v
 	else
 		echo "$PWD"
 	fi
