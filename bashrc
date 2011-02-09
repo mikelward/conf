@@ -195,7 +195,7 @@ then
 		COMPDEF="-o default"
 	fi
 	complete -a alias unalias
-	complete -d cd pushd popd pd po
+	complete -o bashdefault -d cd pushd popd pd po
 	complete $COMPDEF -g chgrp 2>/dev/null
 	complete $COMPDEF -u chown
 	complete -j fg
