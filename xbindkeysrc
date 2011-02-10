@@ -53,8 +53,8 @@
 	Mod4 + f
 
 # chromium (Google Chrome)
-#"chromium-browser"
-"google-chrome"
+#"google-chrome"
+"chromium-browser"
 	Mod4 + g
 
 # home folder
