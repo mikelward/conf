@@ -1046,6 +1046,8 @@ export TOP=-I
 export WANT_SSH_AGENT=true
 export WWW_HOME=http://google.com
 
+export PYTHONSTARTUP="$HOME"/.pythonstartup.py
+
 test -f "$HOME"/.env.local && . "$HOME"/.env.local
 
 true
