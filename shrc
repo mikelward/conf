@@ -21,7 +21,7 @@ case $- in
 	#commandinfo='$(test -n "$command" && $(short_command "$command") || $(echo "$lastcommand"))'
 	#commandinfo='$(echo "${command:-${lastcommand:+$lastcommand done}}")'
 	#commandinfo='$(command_or_lastcommand "$command" "$lastcommand")'
-	commandinfo='$(short_command "$command")'
+	commandinfo='$([ -n "$mytitle" ] && echo "$mytitle" || short_command "$command")'
 	shellinfo='$(short_hostname):$(dirs -v)'
 	promptchars='$(prompt_character)'
 	promptcolor=normal
