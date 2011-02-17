@@ -579,6 +579,7 @@ then
 	alias rdesktop='rdesktop -M'
 	alias rdiff='rcsdiff'
 	alias rg='reportgraylist'
+	alias root='root '          # expand aliases
 	alias ssh='ssh -A'
 	alias s='ssh'
 	alias ss='sudo -s'
@@ -1050,4 +1051,23 @@ export PYTHONSTARTUP="$HOME"/.pythonstartup.py
 
 test -f "$HOME"/.env.local && . "$HOME"/.env.local
 
+taskbar()
+{
+	local njobs=${#jobtexts[*]}
+	local ncolumns=${COLUMNS:-80}
+	local maxjobwidth=18
+
+	if test ${njobs:=0} -gt 0; then
+		local jobwidth=$((ncolumns/njobs - 2))
+		if test $jobwidth -gt $maxjobwidth; then
+			jobwidth=$maxjobwidth
+		fi
+		for jobnum in ${(k)jobtexts[*]}; do
+			local jobtext="${jobtexts[$jobnum]}"
+			printf "[%-${jobwidth}s]" "${jobtext[0,$jobwidth]}"
+		done
+		printf "\n"
+	fi
+}
+	
 true
