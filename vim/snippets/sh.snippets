@@ -41,15 +41,15 @@ snippet case
 		;;
 	esac
 snippet tempdir
-	_abort()
+	abort()
 	{
-		_error "Signal received, aborting"
+		error "Signal received, aborting"
 		exit 1
 
-		# bash will fall thru and run _cleanup via the trap 0
+		# bash will fall thru and run cleanup via the trap 0
 	}
 
-	_cleanup()
+	cleanup()
 	{
 		if [ -d "$TEMPDIR" ]
 		then
@@ -62,20 +62,20 @@ snippet tempdir
 
 	if [ -e "$TEMPDIR" ]
 	then
-		_error "Temporary directory $TEMPDIR already exists"
+		error "Temporary directory $TEMPDIR already exists"
 		exit 1
 	fi
 	mkdir "$TEMPDIR"
 	if [ $? -ne 0 ]
 	then
-		_error "Cannot create temporary directory $TEMPDIR"
+		error "Cannot create temporary directory $TEMPDIR"
 		exit 1
 	fi
-	trap '_abort' 1 2 3 15
-	trap '_cleanup; exit' 0
+	trap 'abort' 1 2 3 15
+	trap 'cleanup; exit' 0
 
 snippet getopts
-	_usage()
+	usage()
 	{
 		cat <<EOF 1>&2
 	Usage: $SCRIPTNAME [-h]
@@ -91,22 +91,22 @@ snippet getopts
 			${3}
 			;;
 		h)
-			_usage
+			usage
 			exit 0
 			;;
 		':')
 			echo "Missing argument to -$OPTION" 1>&2
-			_usage
+			usage
 			exit 2
 			;;
 		'?')
 			echo "Invalid option -$OPTARG" 1>&2
-			_usage
+			usage
 			exit 2
 			;;
 		*)
 			echo "Program does not support -$OPTION yet" 1>&2
-			_usage
+			usage
 			exit 2
 			;;
 		esac
