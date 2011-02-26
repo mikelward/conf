@@ -12,6 +12,8 @@ setopt correct
 setopt histignorespace
 setopt histreduceblanks
 
+# nofunctionargzero so that $0 tells us if a script was sourced or run
+unsetopt functionargzero
 setopt globsubst
 setopt interactivecomments
 setopt ksharrays
