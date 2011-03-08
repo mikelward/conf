@@ -57,8 +57,8 @@ snippet tempdir
 		fi
 	}
 
-	SCRIPTNAME=${0##*/}
-	TEMPDIR=/tmp/"$SCRIPTNAME".$$
+	scriptname=${0##*/}
+	TEMPDIR=/tmp/"$scriptname".$$
 
 	if [ -e "$TEMPDIR" ]
 	then
@@ -78,15 +78,15 @@ snippet getopts
 	usage()
 	{
 		cat <<EOF 1>&2
-	Usage: $SCRIPTNAME [-h]
+	Usage: $scriptname [-h]
 	EOF
 	}
 
-	SCRIPTNAME=${0##*/}
+	scriptname=${0##*/}
 
-	while getopts ":h${1:options}" OPTION
+	while getopts ":h${1:options}" option
 	do
-		case $OPTION in
+		case $option in
 		${2:option})
 			${3}
 			;;
@@ -95,7 +95,7 @@ snippet getopts
 			exit 0
 			;;
 		':')
-			echo "Missing argument to -$OPTION" 1>&2
+			echo "Missing argument to -$option" 1>&2
 			usage
 			exit 2
 			;;
@@ -105,7 +105,7 @@ snippet getopts
 			exit 2
 			;;
 		*)
-			echo "Program does not support -$OPTION yet" 1>&2
+			echo "Program does not support -$option yet" 1>&2
 			usage
 			exit 2
 			;;
