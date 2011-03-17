@@ -573,6 +573,7 @@ then
 	alias po='popd'
 	alias psme='ps -f -U "${USER:-${LOGNAME}}"'
 	alias py='python'
+	alias py3='python3'
 	alias q='_exit'
 	alias rb='reportblocked'
 	alias rcslog='rlog'
