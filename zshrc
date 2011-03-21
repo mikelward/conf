@@ -202,7 +202,7 @@ bindkey -M vicmd '*' expand-word
 bindkey -M vicmd '=' list-choices
 #bindkey -M viins '\' quoted-insert
 
-for esc in "[1~" "$home"
+for esc in "[1~" "$khome"
 do
 	if test -n "$esc"
 	then
@@ -210,12 +210,20 @@ do
 		bindkey -M vicmd "$esc" "beginning-of-line"
 	fi
 done
-for esc in "[4~" "$end"
+for esc in "[4~" "$kend"
 do
 	if test -n "$esc"
 	then
 		bindkey -M emacs "$esc" "end-of-line"
 		bindkey -M vicmd "$esc" "end-of-line"
+	fi
+done
+for esc in "[3~" "$kdch1"
+do
+	if test -n "$esc"
+	then
+		bindkey -M emacs "$esc" "delete-char"
+		bindkey -M vicmd "$esc" "delete-char"
 	fi
 done
 

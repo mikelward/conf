@@ -379,8 +379,9 @@ terminit()
 			cyan="$(tput setaf 6)"
 			white="$(tput setaf 7)"
 
-			home="$(tput khome)"
-			end="$(tput kend)"
+			khome="$(tput khome)"
+			kend="$(tput kend)"
+            kdch1="$(tput kdch1)"
 		fi
 	fi
 
