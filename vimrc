@@ -98,6 +98,9 @@ nnoremap <leader>1 yypVr=
 nnoremap <leader>2 yypVr-
 nnoremap <leader>3 yypVr~
 
+" swap commented setting and uncommented setting
+nnoremap <leader>s 0xddpki#<Esc>
+
 if version >= 600
     " per-file type rules
     filetype on	" enable per-user file type customizations
