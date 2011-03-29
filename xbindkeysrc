@@ -174,6 +174,12 @@
 "moveto 2"
     Mod4 + Shift + 2
 
+"moveto 3"
+    Mod4 + Shift + 3
+
+"moveto 4"
+    Mod4 + Shift + 4
+
 ##################################
 # End of xbindkeys configuration #
 ##################################
