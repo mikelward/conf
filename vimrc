@@ -120,8 +120,18 @@ if has("autocmd")
     "au BufRead,BufNewFile * if &filetype == 'c' || &filetype == 'cpp' || &filetype == 'perl' || &filetype == 'python' || &filetype == 'ruby' | set listchars+=tab:\|\  | endif
     "au BufRead,BufNewFile * if &filetype == 'fstab' | set listchars+=tab:>\  | endif
     "au BufRead,BufNewFile * if &filetype == 'text' | set textwidth=66 | endif
-    au BufRead,BufNewFile * if &filetype == 'svn' | set textwidth=80 | set viminfo= | endif
-    au BufRead,BufNewFile * if &filetype == 'haskell' | set textwidth=80 | set expandtab | endif
+    "au BufRead,BufNewFile * if &filetype == 'svn' | set textwidth=80 | set viminfo= | endif
+    "au BufRead,BufNewFile * if &filetype == 'haskell' | set textwidth=80 | set expandtab | endif
+
+    au BufNewFile * call ReadTemplate()
+    fun ReadTemplate()
+        let b:filename = bufname('%')
+        let b:extension = substitute(b:filename, '.*\.\(.*\)', '\1', '')
+        let b:template = $HOME . '/templates/template.' . b:extension
+        if filereadable(b:template)
+          call setline(1, readfile(b:template))
+        endif
+    endfun
 
     au FileType perl set cindent cinkeys-=0#
 
