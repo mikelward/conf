@@ -122,6 +122,8 @@ if has("autocmd")
     "au BufRead,BufNewFile * if &filetype == 'text' | set textwidth=66 | endif
     "au BufRead,BufNewFile * if &filetype == 'svn' | set textwidth=80 | set viminfo= | endif
     "au BufRead,BufNewFile * if &filetype == 'haskell' | set textwidth=80 | set expandtab | endif
+    
+    au BufRead,BufNewFile * if &filetype == 'c' | set errorformat^=%*[^:]:\ %f:%l:\ %m
 
     au BufNewFile * call ReadTemplate()
     fun ReadTemplate()
