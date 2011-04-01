@@ -130,6 +130,8 @@ if has("autocmd")
         let b:template = $HOME . '/templates/template.' . b:extension
         if filereadable(b:template)
           call setline(1, readfile(b:template))
+          let b:lastline = line('$')
+          call setpos('.', [0, b:lastline, 0, 0])
         endif
     endfun
 
