@@ -140,12 +140,12 @@ preexec()
 
 	# reset the terminal attributes (disable bold, underline, reverse, etc.)
 	# in case these were set in promptstring or commandstring
-	print -n "${normal}"
+	printf "%b" "${normal}"
 }
 
 settitle()
 {
-	test -n "$titlestart" && print -Pn "${titlestart}$*${titlefinish}"
+	test -n "$titlestart" && printf "%b%s%b" "${titlestart}" "$*" "${titlefinish}"
 }
 
 commandcolor=bold
