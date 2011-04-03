@@ -18,25 +18,15 @@ case $- in
 	connectioninfo='$(short_hostname)'
 	#command=${0#-}
 	command=
-	#commandinfo='$(test -n "$command" && $(short_command "$command") || $(echo "$lastcommand"))'
-	#commandinfo='$(echo "${command:-${lastcommand:+$lastcommand done}}")'
-	#commandinfo='$(command_or_lastcommand "$command" "$lastcommand")'
-	commandinfo='$([ -n "$mytitle" ] && echo "$mytitle" || short_command "$command")'
+	commandinfo='$([ -n "$mytitle" ] && echo "$mytitle" || printf "%s" "$command")'
 	shellinfo='$(short_hostname):$(dirs -v)'
 	promptchars='$(prompt_character)'
 	promptcolor=normal
 	errorcolor=red
-	#promptstring='$(short_hostname)$(prompt_character) '
-	#promptstring='$(short_hostname):$PWD$(prompt_character) '
-	#promptstring='$(last_part_of_path "$PWD")$(eval echo -n "\"${promptchars}\"") '
 	promptstring='
 $(short_hostname)$(prompt_character) '
-	#promptstring='$(prompt_character) '
-	#promptstring='
-#$(eval echo $shellinfo)
-#$(prompt_character) '
-	title='$(eval echo -n "${connectioninfo} ${commandinfo}")'
-	PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval echo -n "\"${promptstring}\"")$(setcolor "normal")$(bell)'
+	title='$(eval printf "%s" "\"${connectioninfo} ${commandinfo}\"")'
+	PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval printf "%s" "\"${promptstring}\"")$(setcolor "normal")$(bell)'
 	PS2='> '
 	#PS2='_ '
 	PS3='? '

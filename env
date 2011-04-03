@@ -83,22 +83,6 @@ blockedthreads()
 		awk '$1 ~ /D/ { sub("^[^ ]* *", ""); sub(" ", "\t"); print }'
 }
 
-command_or_lastcommand()
-{
-	local _command="$1"
-	local _lastcommand="$2"
-
-	if test -n "$_command"
-	then
-		short_command "$_command"
-	elif test -n "$_lastcommand"
-	then
-		echo "$(short_command "$_lastcommand") done"
-	else
-		echo ""
-	fi
-}
-
 statusmessage()
 {
 	local _status="$1"
@@ -347,7 +331,7 @@ settitle()
 {
 	test -z "${titlestart}" && return 0
 
-	printf "${titlestart}$*${titlefinish}"
+	printf "%b%s%b" "${titlestart}" "$*" "${titlefinish}"
 }
 
 terminit()
@@ -862,15 +846,6 @@ setcolor()
 	then
 		eval echo -n "\"\$$color\""
 	fi
-}
-
-# get a short version of the current command (strips path and arguments)
-short_command()
-{
-	local command
-	command=$1
-
-	echo "$command" | sed -e "s/^-//" -e "s#^[^ ]*/##" -e "s/ .*$//"
 }
 
 # get a short version of the hostname for use in the prompt or window title

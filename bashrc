@@ -78,7 +78,7 @@ whence()
 			verbose=true
 			;;
 		*)
-			echo "Unknown option $1"
+			printf "%s\n" "Unknown option $1"
 			return
 			;;
 		esac
@@ -102,9 +102,9 @@ whence()
 			then
 				if test -n "$verbose"
 				then
-					echo "$arg is $path"
+					printf "%s\n" "$arg is $path"
 				else
-					echo "$path"
+					printf "%s\n" "$path"
 				fi
 			fi
 		elif test -z "$verbose" && `type -t "$arg" | grep -q alias`
@@ -125,19 +125,23 @@ getcommand()
 		then
 			jobs %+ 2>/dev/null | while read num state rest
 			do
-				echo $rest
+				printf "%s\n" "$rest"
 				break
 			done
 		else
 			jobs "$@" 2>/dev/null | while read num state rest
 			do
-				echo $rest
+				printf "%s\n" "$rest"
 				break
 			done
 		fi
 		;;
 	*)
-		echo "$@"
+        for arg in "$@"
+        do
+            printf "%s " "$arg"
+        done
+        printf "\n"
 		;;
 	esac
 }
@@ -171,7 +175,7 @@ then
 fi
 if test -n "${promptstring}"
 then
-	PS1='\[$(setcolor ${promptcolor})\]$(eval echo -n "\"${promptstring}\"")'
+	PS1='\[$(setcolor ${promptcolor})\]$(eval printf "%s" "\"${promptstring}\"")'
 	case $TERM in putty|xterm*)
 		PS1="$PS1"'\[$(bell)\]'
 		;;
