@@ -123,8 +123,10 @@ if has("autocmd")
     "au BufRead,BufNewFile * if &filetype == 'svn' | set textwidth=80 | set viminfo= | endif
     "au BufRead,BufNewFile * if &filetype == 'haskell' | set textwidth=80 | set expandtab | endif
     
+    " make :make jump to C assertion errors
     au BufRead,BufNewFile * if &filetype == 'c' | set errorformat^=%*[^:]:\ %f:%l:\ %m
 
+    " when creating a new file, use a template from ~/templates/template.<filetype extension>
     au BufNewFile * call ReadTemplate()
     fun ReadTemplate()
         let b:filename = bufname('%')
@@ -136,8 +138,6 @@ if has("autocmd")
           call setpos('.', [0, b:lastline, 0, 0])
         endif
     endfun
-
-    au FileType perl set cindent cinkeys-=0#
 
     " edit binary files in binary mode using the output of xxd
     augroup Binary
