@@ -124,7 +124,7 @@ if has("autocmd")
     "au BufRead,BufNewFile * if &filetype == 'haskell' | set textwidth=80 | set expandtab | endif
     
     " make :make jump to C assertion errors
-    au BufRead,BufNewFile * if &filetype == 'c' | set errorformat^=%*[^:]:\ %f:%l:\ %m
+    au BufRead,BufNewFile * if &filetype == 'c' | set errorformat^=%*[^:]:\ %f:%l:\ %m | endif
 
     " when creating a new file, use a template from ~/templates/template.<filetype extension>
     au BufNewFile * call ReadTemplate()
