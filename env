@@ -553,7 +553,7 @@ then
 	alias j='jobs'
 	#alias m=make
 	alias nohup='nohup '		# expand aliases after nohup
-	alias p=$PAGER
+	alias p='eval "$PAGER"'
 	alias pd='pushd'
 	alias po='popd'
 	alias psme='ps -f -U "${USER:-${LOGNAME}}"'
