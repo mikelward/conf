@@ -922,6 +922,10 @@ then
 	exists mozilla && export BROWSER=mozilla
 	exists opera && export BROWSER=opera
 	exists firefox && export BROWSER=firefox
+	exists chrome && export BROWSER=chrome
+	exists google-chrome && export BROWSER=google-chrome
+	exists chromium && export BROWSER=chromium
+	exists chromium-browser && export BROWSER=chromium-browser
 else
 	exists lynx && export BROWSER=lynx
 	exists links && export BROWSER=links
