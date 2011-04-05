@@ -241,26 +241,6 @@ mtd()
 	fi
 }
 
-nagiosconf()
-{
-	if test -d /usr/local/nagios
-	then
-		cd /usr/local/nagios/etc/configs
-	else
-		cd /etc/nagios/configs
-	fi
-}
-
-nagioslogs()
-{
-	if test -d /usr/local/nagios
-	then
-		cd /usr/local/nagios/var
-	else
-		cd /var/log/nagios
-	fi
-}
-
 # display a desktop notification
 # (requires support in the terminal application)
 notify()
@@ -291,26 +271,6 @@ on_cygwin()
 plist()
 {
 	ps -fp $(pgrep -d , "$@")
-}
-
-pmieconf()
-{
-	if test -d "/opt/pcp/config/pmie"
-	then
-		cd "/opt/pcp/config/pmie"
-	else
-		cd "/var/lib/pcp/config/pmie"
-	fi
-}
-
-pmielogs()
-{
-	cd "/var/log/pcp/pmie"
-}
-
-pmlogs()
-{
-	cd "/var/log/pcp/pmlogger"
 }
 
 # process list with status
@@ -418,15 +378,6 @@ username()
 	echo "$LOGNAME"
 }
 
-viewerlogs()
-{
-	local viewerdir
-
-	viewerdir=$(cygpath "$PROGRAMFILES")/jVue
-	test ! -d "$viewerdir" && viewerdir=$(cygpath c:)/jVue
-	cd "$viewerdir"/logs
-}
-
 ### SHELL ENVIRONMENT
 # set shell options and environment
 HISTIGNORE="bg:fg: *"
@@ -516,8 +467,6 @@ then
 	# aliase apt to aptitude or apt-get (in that order)
 	type apt-get >/dev/null 2>/dev/null && alias apt='apt-get'
 	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
-	alias admin='ssh Administrator@localhost'
-	alias ardesktop='ardesktop -M'
 	alias b='bg'
 	alias c='scp'
 	case $(uname -s) in CYGWIN*)
@@ -529,7 +478,6 @@ then
 	esac
 	alias cx='chmod +x'
 	alias d='dirs'	# only supported by bash and zsh
-	alias dba='ssh dba@localhost'
 	alias e='${EDITOR:-vi}'
 	alias edit='${EDITOR:-vi}'
 	alias f='fg'
@@ -610,11 +558,6 @@ bell()
 calc()
 {
 	echo "scale=3; $*" | bc
-}
-
-dblocal()
-{
-	sqsh -U sa -P "$SA_PASS" -S localhost:1433
 }
 
 directories()
@@ -756,11 +699,6 @@ isort()
 			fi
 		fi
 	done
-}
-
-opsutils()
-{
-	cd /opt/opsutils/$1
 }
 
 programs()
