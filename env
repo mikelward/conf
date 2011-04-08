@@ -493,6 +493,7 @@ then
 	alias l.='l -d .*'
 	alias l1='l -1'
 	alias la='l -A'
+	alias lc='l -C'
 	alias ll='l -l'
 	alias llt='l -lt'
 	alias lltr='l -ltr'
@@ -536,7 +537,7 @@ then
 #	then
 #		# enable colors with GNU ls
 #		#alias ls='ls --color=auto --format=across'
-#        
+#
 #        # disable colors, mark files with a special trailing character
 #		#alias ls='ls --color=never --classify --format=across'
 #	elif test "$(CLICOLOR_FORCE=1 /bin/ls -G)" != "$(/bin/ls -G)"
@@ -992,3 +993,5 @@ taskbar()
 }
 	
 true
+
+# vi: set ts=4 sw=4 noet:
