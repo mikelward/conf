@@ -122,13 +122,13 @@ if has("autocmd")
     "au BufRead,BufNewFile * if &filetype == 'text' | set textwidth=66 | endif
     "au BufRead,BufNewFile * if &filetype == 'svn' | set textwidth=80 | set viminfo= | endif
     "au BufRead,BufNewFile * if &filetype == 'haskell' | set textwidth=80 | set expandtab | endif
-    
+
     " make :make jump to C assertion errors
     au BufRead,BufNewFile * if &filetype == 'c' | set errorformat^=%*[^:]:\ %f:%l:\ %m | endif
 
     " when creating a new file, use a template from ~/templates/template.<filetype extension>
-    au BufNewFile * call ReadTemplate()
-    fun ReadTemplate()
+    au BufNewFile * call ReadTemplate() | call AppendModeline()
+    fun! ReadTemplate()
         let b:filename = bufname('%')
         let b:extension = substitute(b:filename, '.*\.\(.*\)', '\1', '')
         let b:template = $HOME . '/templates/template.' . b:extension
@@ -138,6 +138,17 @@ if has("autocmd")
           call setpos('.', [0, b:lastline, 0, 0])
         endif
     endfun
+
+    " append a modeline using the current settings
+    fun! AppendModeline()
+        let l:modeline = printf(" vim: set ts=%d sw=%d tw=%d %s:",
+                         \ &tabstop, &shiftwidth, &textwidth,
+                         \ (&expandtab == 1)? "et": "noet" )
+        let l:modeline = substitute(&commentstring, "%s", l:modeline, "")
+        call append(line("$"), l:modeline)
+    endfun
+
+    nnoremap <leader>m :call AppendModeline()<CR>
 
     " edit binary files in binary mode using the output of xxd
     augroup Binary
