@@ -39,13 +39,13 @@ cd()
 
 	case $# in
 	2)
-		builtin cd $opts "${PWD/$1/$2}"
+		builtin cd $opts "${PWD/$1/$2}" >/dev/null
 		;;
 	1)
-		builtin cd $opts "$1"
+		builtin cd $opts "$1" >/dev/null
 		;;
 	0)
-		builtin cd $opts "$HOME"
+		builtin cd $opts "$HOME" >/dev/null
 		;;
 	esac
 }
