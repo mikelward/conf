@@ -545,7 +545,7 @@ then
 #		# enable colors with FreeBSD ls
 #		alias ls='ls -Gx'
 #	else
-		alias ls='ls -Fx'
+#		alias ls='ls -Fx'
 #	fi
 fi
 
