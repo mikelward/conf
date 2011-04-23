@@ -23,6 +23,8 @@ $if mode=emacs
 "\ef": forward-word
 "\ep": history-search-backward
 "\en": history-search-forward
+"\eOC": forward-word
+"\eOD": backward-word
 #"\\": quoted-insert
 $endif
 
