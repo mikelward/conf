@@ -64,6 +64,45 @@ addpath()
 	IFS="$OIFS"
 }
 
+# set up a new directory (and in future, a whole clean environment)
+# for answering a question on the StackExchange network
+# the directory name is based on the supplied question URL,
+# e.g. http://unix.stackexchange.com/questions/11815/what-should-i-use-when-cut-doesnt-cut-it
+# so that I can go back there easily in future
+answer()
+{
+	local url=$1
+	if test -z "$url"
+	then
+		echo "med: need a URL" 1>&2
+		return 0
+	fi
+
+	read -r site questionno <<EOF
+$(echo "$url" | sed -e 's#[a-z]*://\([^/]*\)/questions/\([0-9]*\)/.*#\1 \2#')
+EOF
+
+	site=${site#www.}
+	sitename=${site%%.*}
+	case $sitename in
+		unix)
+		sitename=ul
+		;;
+	stackoverflow)
+		sitename=so
+		;;
+	askubuntu)
+		sitename=au
+		;;
+	esac
+	dir=$HOME/$sitename/$questionno
+	if test -d "$dir"; then
+		cd "$dir"
+	else
+		mkdir -p "$dir" && cd "$dir"
+	fi
+}
+
 # list processes in D state
 blocked()
 {
