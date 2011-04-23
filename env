@@ -564,7 +564,7 @@ bell()
 # e.g. ps | body grep ps
 body()
 {
-    read -r header
+    IFS= read -r header
     printf '%s\n' "$header"
     "$@"
 }
