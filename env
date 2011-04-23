@@ -560,6 +560,15 @@ bell()
 	printf "\a"
 }
 
+# perform a command on all lines except the first,
+# e.g. ps | body grep ps
+body()
+{
+    read -r header
+    printf '%s\n' "$header"
+    "$@"
+}
+
 # do some floating point arithmetic
 calc()
 {
@@ -600,15 +609,6 @@ h()
 	fi
 
 	head -n $lines "$@"
-}
-
-# perform a command on all lines except the first,
-# e.g. ps | header grep ps
-header()
-{
-    read -r header
-    printf "%s\n" "$header"
-    "$@"
 }
 
 # show the most recently changed file
