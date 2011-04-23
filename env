@@ -675,7 +675,11 @@ m()
 # make a directory and cd to it
 mcd()
 {
-	test -d "$1" || mkdir "$1" && cd "$1"
+	if test -d "$1"; then
+		echo "$1 already exists"
+	else
+		mkdir -p "$1" && cd "$1"
+	fi
 }
 
 # flash the screen ("visible bell")
