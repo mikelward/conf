@@ -1,3 +1,27 @@
 [user]
 	name = Mikel Ward
 	email = mikel@mikelward.com
+
+[alias]
+    ad = add
+    #br = branch
+    changes=diff --name-status -r
+    ci = commit
+    co = checkout
+    df = diff
+    di = diff
+    diffstat = diff --stat -r
+    ds = diff --stat -r
+    lo = log
+    llog = log --date=local
+    #mr = merge
+    #revert = ???checkout -f HEAD???
+    #rs = reset
+    st = status
+    stat = status
+    stage = add --update
+    track = add --intent-to-add
+    unadd = reset HEAD
+    untrack = rm --cached
+    who = shortlog -s --
+    unstage = reset HEAD
