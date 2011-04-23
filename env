@@ -602,6 +602,15 @@ h()
 	head -n $lines "$@"
 }
 
+# perform a command on all lines except the first,
+# e.g. ps | header grep ps
+header()
+{
+    read -r header
+    printf "%s\n" "$header"
+    "$@"
+}
+
 # show the most recently changed file
 latest()
 {
