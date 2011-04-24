@@ -18,7 +18,7 @@ case $- in
 	connectioninfo='$(short_hostname)'
 	#command=${0#-}
 	command=
-	commandinfo='$([ -n "$mytitle" ] && echo "$mytitle" || printf "%s" "$command")'
+	commandinfo='$(test -n "$mytitle" && echo "$mytitle" || printf "%s" "$command")'
 	shellinfo='$(short_hostname):$(dirs -v)'
 	promptchars='$(prompt_character)'
 	promptcolor=normal
