@@ -1,4 +1,3 @@
-# $Id: zshenv 174 2005-07-23 04:53:33Z michael $
 # zsh-specific commands for interactive sessions.
 
 if test -f ~/.shrc

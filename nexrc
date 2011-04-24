@@ -1,4 +1,3 @@
-" $Id: exrc 962 2007-01-07 03:07:46Z michael $
 " Ex and Vi startup commands
 
 :source ~/.exrc
