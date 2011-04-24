@@ -408,6 +408,11 @@ terminit()
 	esac
 }
 
+sub()
+{
+    echo "$3" | sed -e "s/$1/$2/"
+}
+
 # get the username of the person we originally logged in as
 # (e.g. print mward even if we did sudo -s, $LOGNAME does this wrong)
 username()
@@ -504,9 +509,11 @@ export MANPATH
 if quiet alias
 then
 	# aliase apt to aptitude or apt-get (in that order)
+	alias add='git add'
 	type apt-get >/dev/null 2>/dev/null && alias apt='apt-get'
 	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
 	alias b='bg'
+	alias branch='git branch'
 	alias c='scp'
 	case $(uname -s) in CYGWIN*)
 		for drive in c d e f g h i j k l m n o p q r s t u v w x y z
@@ -515,8 +522,11 @@ then
 		done
 		;;
 	esac
+	alias clone='git clone'
+	alias checkout='git checkout'
 	alias cx='chmod +x'
 	alias d='dirs'	# only supported by bash and zsh
+	alias di='git diff'
 	alias e='${EDITOR:-vi}'
 	alias edit='${EDITOR:-vi}'
 	alias f='fg'
@@ -538,8 +548,11 @@ then
 	alias lltr='l -ltr'
 	alias lt='l -t'
 	alias ltr='l -tr'
+	alias log='git log'
 	alias j='jobs'
+	# replaced by shell function
 	#alias m=make
+	alias merge='git merge'
 	for section in 1 2 3 4 5 6 7 8 9; do
 		alias man$section="man $section"
 	done
@@ -548,6 +561,8 @@ then
 	alias pd='pushd'
 	alias po='popd'
 	alias psme='ps -f -U "${USER:-${LOGNAME}}"'
+	alias pull='git pull'
+	alias push='git push'
 	alias py='python'
 	alias py3='python3'
 	alias q='_exit'
@@ -555,18 +570,24 @@ then
 	alias rcslog='rlog'
 	alias rdesktop='rdesktop -M'
 	alias rdiff='rcsdiff'
+	alias remote='git remote'
 	alias rg='reportgraylist'
 	alias root='root '          # expand aliases
 	alias ssh='ssh -A'
 	alias s='ssh'
 	alias ss='sudo -s'
+	# XXX clashes with upstart's "status" command
+	alias status='git status'
 	alias strace='strace '		# expand aliases after strace
 	alias sudo='sudo '			# expand aliases after sudo
 	#alias t=tail
+	alias tag='git tag'
 	alias tf='tail -n 0 -F'
 	alias tm='t -f /var/log/mail'
-	alias tp='t -f "$HOME/.proclog"'
 	alias today='date "+%Y%m%d"'
+	alias tp='t -f "$HOME/.proclog"'
+	alias track='git add --intent-to-add'
+	alias untrack='git reset'
 	alias v='${VIEWER:-view}'
 	alias x='_exit'
 
