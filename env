@@ -600,22 +600,22 @@ then
 	then
 		alias grep='grep --color=auto'
 	fi
-#	if quiet ls --color=never --directory --classify --format=across /
-#	then
-#		# enable colors with GNU ls
-#		#alias ls='ls --color=auto --format=across'
-#
-#        # disable colors, mark files with a special trailing character
-#		#alias ls='ls --color=never --classify --format=across'
-#	elif test "$(CLICOLOR_FORCE=1 /bin/ls -G)" != "$(/bin/ls -G)"
-#	then
-#		# enable colors with FreeBSD ls
-#		alias ls='ls -Gx'
-#	else
-#		alias ls='ls -Fx'
-#		# old school ls
-		alias ls='ls -1'
-#	fi
+	alias ls='ls -1'
+	if quiet ls --color=never --directory /
+	then
+		# enable colors with GNU ls
+		alias ls='ls -1 --color=auto'
+
+        # disable colors, mark files with a special trailing character
+		#alias ls='ls --color=never --classify --format=across'
+	elif test "$(CLICOLOR_FORCE=1 /bin/ls -G)" != "$(/bin/ls -G)"
+	then
+		# enable colors with FreeBSD ls
+		alias ls='ls -1G'
+	else
+		# fall back to appending a file type "flag"
+		alias ls='ls -1F'
+	fi
 fi
 
 # ring the terminal's bell
