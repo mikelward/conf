@@ -537,6 +537,7 @@ then
 	esac
 	alias clone='git clone'
 	alias checkout='git checkout'
+	alias commit='git commit'
 	alias cx='chmod +x'
 	alias d='dirs'	# only supported by bash and zsh
 	alias di='git diff'
