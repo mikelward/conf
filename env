@@ -510,6 +510,7 @@ if quiet alias
 then
 	# aliase apt to aptitude or apt-get (in that order)
 	alias add='git add'
+	alias apply='git apply'
 	type apt-get >/dev/null 2>/dev/null && alias apt='apt-get'
 	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
 	alias b='bg'
@@ -575,6 +576,7 @@ then
 	alias root='root '          # expand aliases
 	alias ssh='ssh -A'
 	alias s='ssh'
+	alias show='git show'
 	alias ss='sudo -s'
 	# XXX clashes with upstart's "status" command
 	alias status='git status'
