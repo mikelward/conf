@@ -531,6 +531,7 @@ then
 	alias e='${EDITOR:-vi}'
 	alias edit='${EDITOR:-vi}'
 	alias f='fg'
+	alias fetch='git fetch'
 	alias g='grep -EHIin'		 # -H and -I are non-POSIX but are widely supported
 	alias gdb='gdb -q '
 	alias gitd='git diff'
@@ -550,6 +551,7 @@ then
 	alias lt='l -t'
 	alias ltr='l -tr'
 	alias log='git log'
+	alias logg='git logg'
 	alias j='jobs'
 	# replaced by shell function
 	#alias m=make
