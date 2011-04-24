@@ -195,6 +195,7 @@ bindkey -M emacs '^[*' expand-word
 bindkey -M emacs '^[=' list-choices
 bindkey -M emacs '^X?' expand-cmd-path
 bindkey -M emacs '^X/' expand-word-path
+bindkey -M emacs '\e#' pound-insert
 #bindkey -M emacs '\' quoted-insert
 
 bindkey -M vicmd '!' expand-history
