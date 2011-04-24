@@ -122,6 +122,18 @@ blockedthreads()
 		awk '$1 ~ /D/ { sub("^[^ ]* *", ""); sub(" ", "\t"); print }'
 }
 
+git_branch()
+{
+	while read star branch; do
+		if test "$star" = "*"; then
+			echo "$branch"
+			return 0
+		fi
+	done <<EOF
+$(git branch --color=always 2>/dev/null)
+EOF
+}
+
 statusmessage()
 {
 	local _status="$1"
@@ -972,7 +984,7 @@ t()
 # print the current directory with $HOME changed to ~
 tilde_directory()
 {
-	pwd | sed -e 's#'"$HOME"'#~#'
+	printf "%b%s%b" "$blue" "$(pwd | sed -e 's#'"$HOME"'#~#')" "$normal"
 }
 
 # list all instances of a command

@@ -24,7 +24,7 @@ case $- in
 	promptcolor=normal
 	errorcolor=red
 	promptstring='
-$(short_hostname):$PWD
+$(short_hostname):$(tilde_directory) $(git_branch)
 $(prompt_character) '
 	title='$(eval printf "%s" "\"${connectioninfo} ${commandinfo}\"")'
 	PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval printf "%s" "\"${promptstring}\"")$(setcolor "normal")$(bell)'
