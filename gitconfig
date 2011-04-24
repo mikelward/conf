@@ -2,6 +2,9 @@
 	name = Mikel Ward
 	email = mikel@mikelward.com
 
+[core]
+	excludesfile = /home/mikel/.gitexclude
+
 [alias]
     ad = add
     br = branch
