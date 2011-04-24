@@ -525,7 +525,6 @@ then
 	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
 	alias b='bg'
 	alias branch='git branch'
-	alias c='scp'
 	case $(uname -s) in CYGWIN*)
 		for drive in c d e f g h i j k l m n o p q r s t u v w x y z
 		do
@@ -533,8 +532,9 @@ then
 		done
 		;;
 	esac
-	alias clone='git clone'
 	alias checkout='git checkout'
+	alias cherry-pick='git cherry-pick'
+	alias clone='git clone'
 	alias commit='git commit'
 	alias cx='chmod +x'
 	alias d='dirs'	# only supported by bash and zsh
@@ -545,6 +545,7 @@ then
 	alias fetch='git fetch'
 	alias g='grep -EHIin'		 # -H and -I are non-POSIX but are widely supported
 	alias gdb='gdb -q '
+	alias gdiff='git diff'
 	alias gitd='git diff'
 	alias gitdc='git diff --cached'
 	alias gits='git status'
