@@ -1,4 +1,3 @@
-# $Id$
 # bash-specific commands for login sessions.
 
 # environment and common interactive commands

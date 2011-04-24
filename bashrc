@@ -1,4 +1,3 @@
-# $Id$
 # bash-specific commands to run for all interactive shells.
 
 # commands common to all sh-like shells

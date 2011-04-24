@@ -1,4 +1,3 @@
-" $Id$
 " Ex and Vi startup commands
 
 :set autoindent

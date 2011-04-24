@@ -1,4 +1,3 @@
-# $Id$
 # Commands to run for any interactive POSIX shell.
 # Examples include the prompt and any terminal-specific code.
 # It is called by sh via $ENV, bash via .bashrc, and zsh via .zshrc.

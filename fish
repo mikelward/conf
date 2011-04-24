@@ -1,6 +1,5 @@
 
 # fish startup file
-# $Id$
 
 function l
     ls -F1 $argv

@@ -1,4 +1,3 @@
-# $Id$
 # Commands to run for any POSIX shell when the user logs in.
 
 # interactive sub-shells run .env, unless this is bash or zsh, because they already ran .env in .bashrc or .zshrc

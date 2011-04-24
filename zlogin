@@ -1,4 +1,3 @@
-# $Id$
 
 if test -f ~/.profile
 then

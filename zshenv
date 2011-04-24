@@ -1,4 +1,3 @@
-# $Id$
 # zsh-specific commands for all sessions.
 
 # Red Hat's /etc/zshrc and /etc/zprofile break things

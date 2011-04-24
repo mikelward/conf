@@ -2,8 +2,6 @@
 #
 # This script contains functions, aliases and settings that are common for all
 # POSIX-compatible shells including bash, ksh, and zsh.
-#
-# $Id: shrc 1618 2008-03-06 23:24:24Z mikel $
 
 # ensure this shell supports local variables using either local
 # (from bash and zsh) or typeset (from ksh)

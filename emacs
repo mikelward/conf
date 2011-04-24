@@ -1,6 +1,4 @@
-
 ;; -*- mode: emacs-lisp -*-
-;; $Id$
 ;; Emacs settings
 
 ;; DISPLAY

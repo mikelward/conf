@@ -1,4 +1,3 @@
-# $Id$
 # C Shell startup commands
 
 # set shell options for all sessions

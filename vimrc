@@ -1,5 +1,3 @@
-" $Id$
-"
 " Vim startup commands
 "
 if has("multi_byte")
