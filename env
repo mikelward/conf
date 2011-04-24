@@ -130,7 +130,7 @@ git_branch()
 			return 0
 		fi
 	done <<EOF
-$(git branch --color=always 2>/dev/null)
+$(git branch --color 2>/dev/null)
 EOF
 }
 
