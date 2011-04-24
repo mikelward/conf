@@ -15,6 +15,7 @@
     di = diff
     diffstat = diff --stat -r
     ds = diff --stat -r
+    last = log -1
     lg = log --graph --pretty=oneline --abbrev-commit --decorate
     lo = log
     llog = log --date=local
@@ -37,3 +38,6 @@
     branch = auto
     interactive = auto
     ui = auto
+
+[svn]
+    authorsfile = /home/mikel/.gitauthors
