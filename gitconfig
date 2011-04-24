@@ -4,14 +4,18 @@
 
 [alias]
     ad = add
-    #br = branch
+    br = branch
     changes=diff --name-status -r
     ci = commit
     co = checkout
+    cp = cherry-pick
+    cs = commit --signoff
+    dc = diff --cached
     df = diff
     di = diff
     diffstat = diff --stat -r
     ds = diff --stat -r
+    lg = log --graph --pretty=oneline --abbrev-commit --decorate
     lo = log
     llog = log --date=local
     #mr = merge
@@ -20,8 +24,16 @@
     st = status
     stat = status
     stage = add --update
+    staged = diff --cached
     track = add --intent-to-add
     unadd = reset HEAD
     untrack = rm --cached
     who = shortlog -s --
     unstage = reset HEAD
+
+[color]
+    diff = auto
+    status = auto
+    branch = auto
+    interactive = auto
+    ui = auto
