@@ -20,7 +20,7 @@ then
 	# see if our attempts to emulate "local" worked
 	if ! type local >/dev/null 2>&1
 	then
-		echo "Cannot find local or typeset shell command, some features in .shrc will not work" 1>&2
+		echo "Cannot find local or typeset shell command, some features in .env/.shrc will not work" 1>&2
 	fi
 fi
 
