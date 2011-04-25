@@ -6,30 +6,18 @@
 	excludesfile = /home/mikel/.gitexclude
 
 [alias]
-    ad = add
     amend = commit --amend
-    br = branch
-    changes=diff --name-status -r
-    ci = commit
-    co = checkout
-    cp = cherry-pick
-    cs = commit --signoff
-    dc = diff --cached
-    df = diff
-    di = diff
+    changed = diff
     diffstat = diff --stat -r
-    ds = diff --stat -r
     last = log -1
-    logl = log --date=local
     logg = log --graph --pretty=oneline --abbrev-commit --decorate
-    #mr = merge
-    #rs = reset
-    st = status
-    stat = status
+    logl = log --date=local
     stage = add --update
     staged = diff --cached
     track = add --intent-to-add
+    unadd = reset HEAD --
     unstage = reset HEAD --
+    unstaged = diff
     untrack = rm --cached --
     who = shortlog -s --
 
