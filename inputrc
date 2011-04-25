@@ -24,6 +24,7 @@ $if mode=emacs
 "\en": history-search-forward
 "\eOC": forward-word
 "\eOD": backward-word
+"\ew": copy-region-as-kill
 #"\\": quoted-insert
 $endif
 
