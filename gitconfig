@@ -9,9 +9,10 @@
     amend = commit --amend
     changed = diff
     diffstat = diff --stat -r
-    last = log -1
-    logg = log --graph --pretty=oneline --abbrev-commit --decorate
-    logl = log --date=local
+    log1 = log --pretty=oneline --abbrev-commit --decorate
+    logg = log --pretty=oneline --abbrev-commit --decorate --graph
+    logp = log --pretty=tformat:'%h%x09%ar%x09%s' --graph
+    recent = log --pretty=tformat:'%h%x09%ar%x09%s' --graph --since='-1 month'
     stage = add --update
     staged = diff --cached
     track = add --intent-to-add
@@ -27,6 +28,9 @@
     branch = auto
     interactive = auto
     ui = auto
+
+[log]
+    date = relative
 
 [svn]
     authorsfile = /home/mikel/.gitauthors
