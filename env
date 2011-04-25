@@ -519,12 +519,9 @@ export MANPATH
 if quiet alias
 then
 	# aliase apt to aptitude or apt-get (in that order)
-	alias add='git add'
-	alias apply='git apply'
 	type apt-get >/dev/null 2>/dev/null && alias apt='apt-get'
 	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
 	alias b='bg'
-	alias branch='git branch'
 	case $(uname -s) in CYGWIN*)
 		for drive in c d e f g h i j k l m n o p q r s t u v w x y z
 		do
@@ -532,23 +529,19 @@ then
 		done
 		;;
 	esac
-	alias checkout='git checkout'
-	alias cherry-pick='git cherry-pick'
-	alias clone='git clone'
-	alias commit='git commit'
 	alias cx='chmod +x'
 	alias d='dirs'	# only supported by bash and zsh
-	alias di='git diff'
 	alias e='${EDITOR:-vi}'
 	alias edit='${EDITOR:-vi}'
 	alias f='fg'
-	alias fetch='git fetch'
 	alias g='grep -EHIin'		 # -H and -I are non-POSIX but are widely supported
 	alias gdb='gdb -q '
-	alias gdiff='git diff'
-	alias gitd='git diff'
-	alias gitdc='git diff --cached'
-	alias gits='git status'
+	for command in add amend apply branch checkout cherry-pick clone commit fetch log logg \
+		           merge pull push remote show stage status tag track unstage untrack
+	do
+		alias $command="git $command"
+	done
+	# replaced by shell function
 	#alias h=head
 	alias html='cd /var/www/html'
 	alias hup='kill -HUP'
@@ -562,12 +555,9 @@ then
 	alias lltr='l -ltr'
 	alias lt='l -t'
 	alias ltr='l -tr'
-	alias log='git log'
-	alias logg='git logg'
 	alias j='jobs'
 	# replaced by shell function
 	#alias m=make
-	alias merge='git merge'
 	for section in 1 2 3 4 5 6 7 8 9; do
 		alias man$section="man $section"
 	done
@@ -576,8 +566,6 @@ then
 	alias pd='pushd'
 	alias po='popd'
 	alias psme='ps -f -U "${USER:-${LOGNAME}}"'
-	alias pull='git pull'
-	alias push='git push'
 	alias py='python'
 	alias py3='python3'
 	alias q='_exit'
@@ -585,25 +573,18 @@ then
 	alias rcslog='rlog'
 	alias rdesktop='rdesktop -M'
 	alias rdiff='rcsdiff'
-	alias remote='git remote'
 	alias rg='reportgraylist'
 	alias root='root '          # expand aliases
 	alias ssh='ssh -A'
 	alias s='ssh'
-	alias show='git show'
 	alias ss='sudo -s'
-	# XXX clashes with upstart's "status" command
-	alias status='git status'
 	alias strace='strace '		# expand aliases after strace
 	alias sudo='sudo '			# expand aliases after sudo
 	#alias t=tail
-	alias tag='git tag'
 	alias tf='tail -n 0 -F'
 	alias tm='t -f /var/log/mail'
 	alias today='date "+%Y%m%d"'
 	alias tp='t -f "$HOME/.proclog"'
-	alias track='git add --intent-to-add'
-	alias untrack='git reset'
 	alias v='${VIEWER:-view}'
 	alias x='_exit'
 

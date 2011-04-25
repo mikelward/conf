@@ -7,6 +7,7 @@
 
 [alias]
     ad = add
+    amend = commit --amend
     br = branch
     changes=diff --name-status -r
     ci = commit
@@ -19,22 +20,18 @@
     diffstat = diff --stat -r
     ds = diff --stat -r
     last = log -1
-    #lg = log --graph --pretty=oneline --abbrev-commit --decorate
-    #lo = log
-    llog = log --date=local
+    logl = log --date=local
     logg = log --graph --pretty=oneline --abbrev-commit --decorate
     #mr = merge
-    #revert = ???checkout -f HEAD???
     #rs = reset
     st = status
     stat = status
     stage = add --update
     staged = diff --cached
     track = add --intent-to-add
-    unadd = reset HEAD
-    untrack = rm --cached
+    unstage = reset HEAD --
+    untrack = rm --cached --
     who = shortlog -s --
-    unstage = reset HEAD
 
 [color]
     diff = auto
