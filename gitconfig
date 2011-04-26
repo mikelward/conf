@@ -7,18 +7,18 @@
 
 [alias]
     amend = commit --amend
-    changed = diff
+    changed = diff --ignore-all-space
     diffstat = diff --stat -r
     log1 = log --pretty=oneline --abbrev-commit --decorate
     logg = log --pretty=oneline --abbrev-commit --decorate --graph
     logp = log --pretty=tformat:'%h%x09%ar%x09%s' --graph
     recent = log --pretty=tformat:'%h%x09%ar%x09%s' --graph --since='-1 month'
     stage = add --update
-    staged = diff --cached
+    staged = diff --cached --ignore-all-space
     track = add --intent-to-add
     unadd = reset HEAD --
     unstage = reset HEAD --
-    unstaged = diff
+    unstaged = diff --ignore-all-space
     untrack = rm --cached --
     who = shortlog -s --
 
