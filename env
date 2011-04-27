@@ -536,8 +536,8 @@ then
 	alias g='grep -EHIin'       # -H and -I are non-POSIX but are widely supported
 	alias gdb='gdb -q '
 	for command in add amend apply branch changed checkout cherry-pick clone commit \
-		           fetch log log1 logg logp merge pull push remote \
-		           show stage staged status tag track unstage untrack
+		           fetch forget log log1 logc logg logp merge pull push remote \
+		           show stage stageall staged status tag track undo undoall unstage unstaged untrack
 	do
 		alias $command="git $command"
 	done
