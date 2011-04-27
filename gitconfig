@@ -6,35 +6,21 @@
 	excludesfile = /home/mikel/.gitexclude
 
 [alias]
-    ad = add
-    br = branch
-    changes=diff --name-status -r
-    ci = commit
-    co = checkout
-    cp = cherry-pick
-    cs = commit --signoff
-    dc = diff --cached
-    df = diff
-    di = diff
+    amend = commit --amend
+    changed = diff --ignore-all-space
     diffstat = diff --stat -r
-    ds = diff --stat -r
-    last = log -1
-    #lg = log --graph --pretty=oneline --abbrev-commit --decorate
-    #lo = log
-    llog = log --date=local
-    logg = log --graph --pretty=oneline --abbrev-commit --decorate
-    #mr = merge
-    #revert = ???checkout -f HEAD???
-    #rs = reset
-    st = status
-    stat = status
+    log1 = log --pretty=oneline --abbrev-commit --decorate
+    logg = log --pretty=oneline --abbrev-commit --decorate --graph
+    logp = log --pretty=tformat:'%h%x09%ar%x09%s' --graph
+    recent = log --pretty=tformat:'%h%x09%ar%x09%s' --graph --since='-1 month'
     stage = add --update
-    staged = diff --cached
+    staged = diff --cached --ignore-all-space
     track = add --intent-to-add
-    unadd = reset HEAD
-    untrack = rm --cached
+    unadd = reset HEAD --
+    unstage = reset HEAD --
+    unstaged = diff --ignore-all-space
+    untrack = rm --cached --
     who = shortlog -s --
-    unstage = reset HEAD
 
 [color]
     diff = auto
@@ -42,6 +28,9 @@
     branch = auto
     interactive = auto
     ui = auto
+
+[log]
+    date = relative
 
 [svn]
     authorsfile = /home/mikel/.gitauthors
