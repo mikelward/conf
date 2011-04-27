@@ -5,22 +5,46 @@
 [core]
 	excludesfile = /home/mikel/.gitexclude
 
+# git command aliases
+# where possible, use a name that's not a Unix command
+# so I can make it a shell alias too
 [alias]
     amend = commit --amend
     changed = diff --ignore-all-space
     diffstat = diff --stat -r
+    # mark a file as deleted so it won't be in the tree from the next commit
+    # see also "untrack"
+    forget = rm --cached
     log1 = log --pretty=oneline --abbrev-commit --decorate
+    # my preferred format
+    # "log chronological"
+    # might call it "log simple" in future
+    logc = log --pretty=tformat:'%h%x09%ar%x09%s%d' --date-order --no-merges --since='-1 month'
+    # "log graphical"
     logg = log --pretty=oneline --abbrev-commit --decorate --graph
-    logp = log --pretty=tformat:'%h%x09%ar%x09%s' --graph
-    recent = log --pretty=tformat:'%h%x09%ar%x09%s' --graph --since='-1 month'
-    stage = add --update
+    # logically "stage" should mean "add --update",
+    # but in git 1.7 "stage" means "add", and takes precedence over this alias,
+    # so it's now just a compatibility alias
+    # see stageall for stage --update
+    stage = add
+    # stage all currently tracked files (and forget any deleted files)
+    stageall = add --update
+    # same as diff --staged, but older versions only support diff --cached
     staged = diff --cached --ignore-all-space
     track = add --intent-to-add
-    unadd = reset HEAD --
-    unstage = reset HEAD --
+    # add has two semantic meanings, so unadd is potentially confusing
+    #unadd = reset HEAD
+    #unadd = rm --cached
+    # similar to svn revert
+    # called undo because the name revert is already taken
+    undo = checkout HEAD
+    undoall = reset --hard
+    # remove the file from the index
+    # reset means reset --mixed, but calling it reset --mixed is deprecated
+    unstage = reset HEAD
     unstaged = diff --ignore-all-space
-    untrack = rm --cached --
-    who = shortlog -s --
+    untrack = rm --cached
+    who = shortlog -s
 
 [color]
     diff = auto
@@ -28,6 +52,9 @@
     branch = auto
     interactive = auto
     ui = auto
+
+[diff]
+    renames = true
 
 [log]
     date = relative
