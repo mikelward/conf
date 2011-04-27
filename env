@@ -641,8 +641,19 @@ bell()
 # e.g. ps | body grep ps
 body()
 {
-    IFS= read -r header
-    printf '%s\n' "$header"
+	local lines=1
+	case "$1" in
+	-*)
+		lines=${1#-}
+		shift
+		;;
+	esac
+
+	while test $lines -gt 0; do
+		IFS= read -r header
+		printf '%s\n' "$header"
+		lines=$((lines-1))
+	done
     "$@"
 }
 
