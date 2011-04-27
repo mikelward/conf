@@ -530,10 +530,10 @@ then
 		;;
 	esac
 	alias cx='chmod +x'
-	alias d='dirs'	# only supported by bash and zsh
+	alias d='dirs'              # only supported by bash and zsh
 	alias e='${EDITOR:-vi}'
 	alias f='fg'
-	alias g='grep -EHIin'		 # -H and -I are non-POSIX but are widely supported
+	alias g='grep -EHIin'       # -H and -I are non-POSIX but are widely supported
 	alias gdb='gdb -q '
 	for command in add amend apply branch changed checkout cherry-pick clone commit \
 		           fetch log log1 logg logp merge pull push remote \
@@ -541,8 +541,6 @@ then
 	do
 		alias $command="git $command"
 	done
-	# replaced by shell function
-	#alias h=head
 	alias html='cd /var/www/html'
 	alias hup='kill -HUP'
 	alias l='ls'
@@ -556,12 +554,10 @@ then
 	alias lt='l -t'
 	alias ltr='l -tr'
 	alias j='jobs'
-	# replaced by shell function
-	#alias m=make
 	for section in 1 2 3 4 5 6 7 8 9; do
 		alias man$section="man $section"
 	done
-	alias nohup='nohup '		# expand aliases after nohup
+	alias nohup='nohup '        # expand aliases after nohup
 	alias p='${PAGER:-less}'
 	alias pd='pushd'
 	alias po='popd'
@@ -574,13 +570,12 @@ then
 	alias rdesktop='rdesktop -M'
 	alias rdiff='rcsdiff'
 	alias rg='reportgraylist'
-	alias root='root '          # expand aliases
+	alias root='root '          # expand aliases after root
 	alias ssh='ssh -A'
 	alias s='ssh'
 	alias ss='sudo -s'
-	alias strace='strace '		# expand aliases after strace
-	alias sudo='sudo '			# expand aliases after sudo
-	#alias t=tail
+	alias strace='strace '      # expand aliases after strace
+	alias sudo='sudo '          # expand aliases after sudo
 	alias tf='tail -n 0 -F'
 	alias tm='t -f /var/log/mail'
 	alias today='date "+%Y%m%d"'
@@ -599,7 +594,7 @@ then
 		# LANG=C gives traditional sort order and date format
 		alias ls='LANG=C ls -1 --color=auto'
 
-        # disable colors, mark files with a special trailing character
+		# disable colors, mark files with a special trailing character
 		#alias ls='ls --color=never --classify --format=across'
 	elif test "$(CLICOLOR_FORCE=1 /bin/ls -1G 2>/dev/null)" != "$(/bin/ls -1G 2>/dev/null)"
 	then
@@ -618,8 +613,13 @@ bell()
 	printf "\a"
 }
 
-# perform a command on all lines except the first,
+# print the first line of input (the header) as-is,
+# run a command on the rest the input (the body)
 # e.g. ps | body grep ps
+#
+# accepts an option -<number>, makes the header <number>
+# lines instead of 1
+# e.g. netstat -tn | body -2 grep ':22\>'
 body()
 {
 	local lines=1
@@ -635,7 +635,7 @@ body()
 		printf '%s\n' "$header"
 		lines=$((lines-1))
 	done
-    "$@"
+	"$@"
 }
 
 # do some floating point arithmetic
@@ -665,7 +665,7 @@ h()
 {
 	local lines
 	local promptlines
-	promptlines=5				 # leave five lines for the prompt
+	promptlines=5               # leave five lines for the prompt
 	if test -n $LINES
 	then
 		lines=$(($LINES - $promptlines))
@@ -683,49 +683,49 @@ h()
 # show the most recently changed file
 latest()
 {
-    local count=1               # how many files to print
-    local promptlines=5         # how many lines to leave for the prompt
-                                # when printing a screenful with -s
-    local usage="Usage: latest [-n <number>] [-s] [--] [pattern]"
-    while test $# -gt 0
-    do
-        case $1 in
-        # -- = stop processing options
-        --)
-            shift
-            break
-            ;;
-        # -n <number> = <number> files
-        -n)
-            if test -n "$2"
-            then
-                count=$2
-                shift 2
-            else
-                echo "$usage" 1>&2
-                return 1
-            fi
-            ;;
-        # -s = one screenful
-        -s)
-            count=$((LINES - promptlines))
-            shift
-            ;;
-        # -<number> = <number> files
-        -[0-9]*)
-            count=${1#-}
-            shift
-            ;;
-        # anything else starting with a minus as a usage error
-        -*)
-            echo "$usage" 1>&2
-            return 1
-            ;;
-        *)
-            break
-            ;;
-        esac
-    done
+	local count=1               # how many files to print
+	local promptlines=5         # how many lines to leave for the prompt
+	                            # when printing a screenful with -s
+	local usage="Usage: latest [-n <number>] [-s] [--] [pattern]"
+	while test $# -gt 0
+	do
+		case $1 in
+		# -- = stop processing options
+		--)
+			shift
+			break
+			;;
+		# -n <number> = <number> files
+		-n)
+			if test -n "$2"
+			then
+				count=$2
+				shift 2
+			else
+				echo "$usage" 1>&2
+				return 1
+				fi
+				;;
+		# -s = one screenful
+		-s)
+			count=$((LINES - promptlines))
+			shift
+			;;
+		# -<number> = <number> files
+		-[0-9]*)
+			count=${1#-}
+			shift
+			;;
+		# anything else starting with a minus is a usage error
+		-*)
+			echo "$usage" 1>&2
+			return 1
+			;;
+		*)
+			break
+			;;
+		esac
+	done
 
 	if test $# -ne 0
 	then
@@ -958,7 +958,7 @@ t()
 {
 	local lines
 	local promptlines
-	promptlines=5				 # leave five lines for the prompt
+	promptlines=5               # leave five lines for the prompt
 	if test -n $LINES
 	then
 		lines=$(($LINES - $promptlines))
