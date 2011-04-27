@@ -140,11 +140,12 @@
 	Mod4 + Insert
 
 # volume down
-"amixer set Master 5%-"
+#"amixer set Master 5%-"
+"amixer set 'Master Front' 5%-"
 	Mod4 + Down
 
 # volume up
-"amixer set Master 5%+"
+"amixer set 'Master Front' 5%+"
 	Mod4 + Up
 
 # XXX would be nice to figure out how to send XF86AudioNext, etc.
