@@ -15,7 +15,6 @@
     changed = diff --ignore-all-space
     hist = log --pretty=oneline --abbrev-commit
     remove = rm --cached
-    staged = diff --cached --ignore-all-space
     # XXX why does this print "needs update"?
     unadd = reset HEAD
     unadded = diff --ignore-all-space
