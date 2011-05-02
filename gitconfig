@@ -14,7 +14,6 @@
     amend = commit --amend
     changed = diff --ignore-all-space
     hist = log --pretty=oneline --abbrev-commit
-    merge-base = show-branch --merge-base
     remove = rm --cached
     # XXX why does this print "needs update"?
     unadd = reset HEAD
