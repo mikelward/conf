@@ -16,6 +16,7 @@
     # see also "untrack"
     forget = rm --cached
     log1 = log --pretty=oneline --abbrev-commit --decorate
+    ls = ls-tree HEAD
     # my preferred format
     # "log chronological"
     # might call it "log simple" in future
