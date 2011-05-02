@@ -58,9 +58,10 @@ preexec()
 	# get the canonical name of the command just invoked
 	case $1 in
 	# resuming an existing job
-	fg*|%*)
+	f|fg|%*)
 		local spec
 		spec=${1#fg}
+		spec=${1#f}
 		spec=${spec# }
 		case $spec in
 		[0-9]*)
