@@ -537,9 +537,9 @@ then
 	alias gdb='gdb -q '
 	for command in add added addremove amend apply \
 		           branch checkout cherry-pick clone commit \
-		           fetch graph log hist merge pull push \
+		           fetch graph log hist merge merge-base pull push \
 				   remote remove show show-branch tag \
-				   unadd uncommitted undo undoall 
+				   unadd unadded uncommitted undo undoall
 	do
 		alias $command="git $command"
 	done
