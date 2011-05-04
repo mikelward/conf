@@ -593,8 +593,8 @@ then
 	if quiet ls --color=never --directory /
 	then
 		# enable colors with GNU ls
-		# LANG=C gives traditional sort order and date format
-		alias ls='LANG=C ls -1 --color=auto'
+		## LANG=C gives traditional sort order and date format
+		alias ls='ls -1 --color=auto'
 
 		# disable colors, mark files with a special trailing character
 		#alias ls='ls --color=never --classify --format=across'
