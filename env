@@ -83,7 +83,7 @@ EOF
 	site=${site#www.}
 	sitename=${site%%.*}
 	case $sitename in
-		unix)
+	unix)
 		sitename=ul
 		;;
 	stackoverflow)
@@ -246,15 +246,15 @@ from_to()
 	to=$2
 	shift 2
 
-	sed -ne "/$from/ b INSIDE 
-d 
-: INSIDE { 
-p 
-/$to/ q 
-n 
-b INSIDE 
-} 
-: END" "$@" 
+	sed -ne "/$from/ b INSIDE
+d
+: INSIDE {
+p
+/$to/ q
+n
+b INSIDE
+}
+: END" "$@"
 }
 
 # return the last component of the path
@@ -1080,7 +1080,7 @@ taskbar()
 		printf "\n"
 	fi
 }
-	
+
 true
 
 # vi: set ts=4 sw=4 noet:
