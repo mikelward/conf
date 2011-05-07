@@ -374,7 +374,7 @@ terminit()
 
 			khome="$(tput khome)"
 			kend="$(tput kend)"
-            kdch1="$(tput kdch1)"
+			kdch1="$(tput kdch1)"
 		fi
 	fi
 
@@ -420,7 +420,7 @@ terminit()
 
 sub()
 {
-    echo "$3" | sed -e "s/$1/$2/"
+	echo "$3" | sed -e "s/$1/$2/"
 }
 
 # get the username of the person we originally logged in as
@@ -538,8 +538,8 @@ then
 	for command in add added addremove amend apply \
 		           branch checkout cherry-pick clone commit \
 		           fetch graph log hist merge merge-base pull push \
-				   remote remove show show-branch tag \
-				   unadd unadded uncommitted undo undoall
+		           remote remove show show-branch tag \
+		           unadd unadded uncommitted undo undoall
 	do
 		alias $command="git $command"
 	done
@@ -706,8 +706,8 @@ latest()
 			else
 				echo "$usage" 1>&2
 				return 1
-				fi
-				;;
+			fi
+			;;
 		# -s = one screenful
 		-s)
 			count=$((LINES - promptlines))
