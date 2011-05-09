@@ -9,16 +9,18 @@
 # where possible, use a name that's not a Unix command
 # so I can make it a shell alias too
 [alias]
+    addall = add --all
     added = diff --cached --ignore-all-space
     addremove = add --update
     amend = commit --amend
-    changed = diff --ignore-all-space
+    changes = diff --ignore-all-space
+    commit = commit --all
+    diffstat = diff --stat
+    graph = log --graph --pretty=oneline --decorate --abbrev-commit
     hist = log --pretty=oneline --abbrev-commit
     remove = rm --cached
     # XXX why does this print "needs update"?
     unadd = reset HEAD
-    unadded = diff --ignore-all-space
-    uncommitted = diff --cached --ignore-all-space
     # these should be called revert, but that name is taken
     undo = checkout HEAD
     undoall = reset --hard
