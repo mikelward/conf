@@ -522,15 +522,8 @@ then
 	type apt-get >/dev/null 2>/dev/null && alias apt='apt-get'
 	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
 	alias b='bg'
-	case $(uname -s) in CYGWIN*)
-		for drive in c d e f g h i j k l m n o p q r s t u v w x y z
-		do
-			alias $drive:="cd $(cygpath -u "$drive:")"
-		done
-		;;
-	esac
+	alias d='l -d */'
 	alias cx='chmod +x'
-	alias d='dirs'              # only supported by bash and zsh
 	alias e='${EDITOR:-vi}'
 	alias f='fg'
 	alias g='grep -EHIin'       # -H and -I are non-POSIX but are widely supported
@@ -545,7 +538,6 @@ then
 	done
 	alias html='cd /var/www/html'
 	alias hup='kill -HUP'
-	alias /='ls -d */'
 	alias l='ls'
 	alias l.='l -d .*'
 	alias l1='l -1'
