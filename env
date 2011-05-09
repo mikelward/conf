@@ -595,18 +595,18 @@ then
 	then
 		# enable colors with GNU ls
 		## LANG=C gives traditional sort order and date format
-		alias ls='ls -1 --color=auto'
+		alias ls='ls --color=auto'
 
 		# disable colors, mark files with a special trailing character
 		#alias ls='ls --color=never --classify --format=across'
-	elif test "$(CLICOLOR_FORCE=1 /bin/ls -1G 2>/dev/null)" != "$(/bin/ls -1G 2>/dev/null)"
+	elif test "$(CLICOLOR_FORCE=1 /bin/ls -G 2>/dev/null)" != "$(/bin/ls -G 2>/dev/null)"
 	then
 		# enable colors with FreeBSD ls
-		alias ls='ls -1G'
-	elif quiet /bin/ls -1F
+		alias ls='ls -G'
+	elif quiet /bin/ls -F
 	then
 		# fall back to appending a file type "flag"
-		alias ls='ls -1F'
+		alias ls='ls -F'
 	fi
 fi
 

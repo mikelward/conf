@@ -9,7 +9,6 @@ set completion-ignore-case on
 set horizontal-scroll-mode off
 set mark-directories on
 set prefer-visible-bell on
-set print-completions-horizontally on
 set show-all-if-ambiguous on
 set visible-stats on
 
