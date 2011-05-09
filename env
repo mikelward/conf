@@ -83,7 +83,7 @@ EOF
 	site=${site#www.}
 	sitename=${site%%.*}
 	case $sitename in
-		unix)
+	unix)
 		sitename=ul
 		;;
 	stackoverflow)
@@ -246,15 +246,15 @@ from_to()
 	to=$2
 	shift 2
 
-	sed -ne "/$from/ b INSIDE 
-d 
-: INSIDE { 
-p 
-/$to/ q 
-n 
-b INSIDE 
-} 
-: END" "$@" 
+	sed -ne "/$from/ b INSIDE
+d
+: INSIDE {
+p
+/$to/ q
+n
+b INSIDE
+}
+: END" "$@"
 }
 
 # return the last component of the path
@@ -374,7 +374,7 @@ terminit()
 
 			khome="$(tput khome)"
 			kend="$(tput kend)"
-            kdch1="$(tput kdch1)"
+			kdch1="$(tput kdch1)"
 		fi
 	fi
 
@@ -420,7 +420,7 @@ terminit()
 
 sub()
 {
-    echo "$3" | sed -e "s/$1/$2/"
+	echo "$3" | sed -e "s/$1/$2/"
 }
 
 # get the username of the person we originally logged in as
@@ -535,9 +535,11 @@ then
 	alias f='fg'
 	alias g='grep -EHIin'       # -H and -I are non-POSIX but are widely supported
 	alias gdb='gdb -q '
-	for command in add amend apply branch changed checkout cherry-pick clone commit \
-		           fetch forget log log1 logc logg logp merge pull push remote \
-		           show stage stageall staged status tag track undo undoall unstage unstaged untrack
+	for command in add added addremove amend apply \
+		           branch checkout cherry-pick clone commit \
+		           fetch graph log hist merge merge-base pull push \
+		           remote remove show show-branch tag \
+		           unadd unadded uncommitted undo undoall
 	do
 		alias $command="git $command"
 	done
@@ -705,8 +707,8 @@ latest()
 			else
 				echo "$usage" 1>&2
 				return 1
-				fi
-				;;
+			fi
+			;;
 		# -s = one screenful
 		-s)
 			count=$((LINES - promptlines))
@@ -1079,7 +1081,7 @@ taskbar()
 		printf "\n"
 	fi
 }
-	
+
 true
 
 # vi: set ts=4 sw=4 noet:
