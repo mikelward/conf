@@ -545,6 +545,7 @@ then
 	done
 	alias html='cd /var/www/html'
 	alias hup='kill -HUP'
+	alias /='ls -d */'
 	alias l='ls'
 	alias l.='l -d .*'
 	alias l1='l -1'
