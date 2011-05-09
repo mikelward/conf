@@ -553,7 +553,7 @@ then
 	alias ll='l -l'
 	alias llt='l -lt'
 	alias lltr='l -ltr'
-	alias lsd='l -d'
+	alias lsd='l -d */'
 	alias lt='l -t'
 	alias ltr='l -tr'
 	alias j='jobs'
@@ -603,10 +603,10 @@ then
 	then
 		# enable colors with FreeBSD ls
 		alias ls='ls -G'
-	elif quiet /bin/ls -F
-	then
-		# fall back to appending a file type "flag"
-		alias ls='ls -F'
+	else
+		# use plain ls
+		# (ls -F is too ugly to use by default)
+		:
 	fi
 fi
 
