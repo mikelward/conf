@@ -170,6 +170,7 @@ if has("autocmd")
     au BufRead,BufNewFile */gnome-terminal*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
     au BufRead,BufNewFile */lics/*.{c,cpp,h} setlocal sw=4 ts=4 expandtab
     au BufRead,BufNewFile */nagios*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
+    au BufRead,BufNewFile */openbsd*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
     au BufRead,BufNewFile */postfix*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
     au BufRead,BufNewFile */procmail*/*.{c,h} setlocal sw=3 ts=8 noexpandtab
     au BufRead,BufNewFile */putty*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
