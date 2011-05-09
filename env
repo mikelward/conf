@@ -538,7 +538,7 @@ then
 	for command in add addall added addremove amend apply branch \
 		           checkout changes cherry-pick clone commit commitall \
 		           fetch graph log hist merge merge-base pull push \
-		           remote remove show show-branch status tag \
+		           remote remove show show-branch state status tag \
 		           unadd undo undoall
 	do
 		alias $command="git $command"

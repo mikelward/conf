@@ -19,6 +19,7 @@
     graph = log --graph --pretty=oneline --decorate --abbrev-commit
     hist = log --pretty=oneline --abbrev-commit
     remove = rm --cached
+    state = status --short
     # XXX why does this print "needs update"?
     unadd = reset HEAD
     # these should be called revert, but that name is taken
