@@ -1039,6 +1039,7 @@ fi
 test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
 
 # set preferred program options
+export BLOCKSIZE=1024
 export CLICOLOR=true
 export FIGNORE=
 # vt220/xterm: 1=bold, 4=underline, 7=standout/reverse
