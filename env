@@ -603,9 +603,12 @@ then
 	fi
 fi
 
+# easier way to resume jobs, e.g. "% vim" to resume vim
+# bash supports "%<jobspec>" out of the box
+# but ksh doesn't, so this should be handy in ksh
 %()
 {
-	fg %"$*"
+	fg %"$@"
 }
 
 # ring the terminal's bell
