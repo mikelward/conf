@@ -524,7 +524,7 @@ then
 	alias b='bg'
 	alias d='l -d */'
 	alias cx='chmod +x'
-	alias e='${EDITOR:-vi}'
+	alias e='edit'
 	alias f='%'
 	alias g='grep -EHIin'       # -H and -I are non-POSIX but are widely supported
 	alias gdb='gdb -q '
@@ -576,7 +576,7 @@ then
 	alias tm='t -f /var/log/mail'
 	alias today='date "+%Y%m%d"'
 	alias tp='t -f "$HOME/.proclog"'
-	alias v='${VIEWER:-view}'
+	alias v='view'
 	alias x='_exit'
 
 	# set default flags
