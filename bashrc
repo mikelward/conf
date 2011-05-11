@@ -67,6 +67,8 @@ whence()
 {
 	typeset arg opts pathonly verbose
 	OPTIND=1
+	pathonly=false
+	verbose=false
 	while getopts pv flag
 	do
 		case $flag in
@@ -84,35 +86,13 @@ whence()
 	done
 	shift $(($OPTIND - 1))
 
-	opts=-
-	# whence translates to command -v
-	test -z "$verbose" && opts="${opts}v"
-	# whence -v translates to command -V
-	test -n "$verbose" && opts="${opts}V"
-	# whence -p searches only the default PATH
-	test -n "$pathonly" && opts="${opts}p"
-
-	for arg
-	do
-		if test -n "$pathonly"
-		then
-			typeset path=`type -P "$arg"`
-			if test -n "$path"
-			then
-				if test -n "$verbose"
-				then
-					printf "%s\n" "$arg is $path"
-				else
-					printf "%s\n" "$path"
-				fi
-			fi
-		elif test -z "$verbose" && `type -t "$arg" | grep -q alias`
-		then
-			command $opts -v "$arg" | sed -e 's/^alias [^ ]*=//'
-		else
-			command $opts "$arg"
-		fi
-	done
+	if $pathonly; then
+		type -P "$@"
+	elif $verbose; then
+		command -V "$@"
+	else
+		command -v "$@"
+	fi
 }
 
 getcommand()
@@ -136,18 +116,18 @@ getcommand()
 		fi
 		;;
 	*)
-        for arg in "$@"
-        do
-            printf "%s " "$arg"
-        done
-        printf "\n"
+	for arg in "$@"
+	do
+		printf "%s " "$arg"
+	done
+	printf "\n"
 		;;
 	esac
 }
-		
+
 
 if test ${BASH_VERSINFO[0]} -ge 4 ||
-   test ${BASH_VERSINFO[0]} -eq 3 -a ${BASH_VERSINFO[1]} -gt 1
+	test ${BASH_VERSINFO[0]} -eq 3 -a ${BASH_VERSINFO[1]} -gt 1
 then
 	has_debug_trap=true
 else
@@ -285,3 +265,5 @@ IGNOREEOF=yes
 
 # finish with a zero exit status
 true
+
+# vim: set ts=4 sw=4 tw=0 noet:
