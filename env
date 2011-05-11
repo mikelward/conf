@@ -525,8 +525,9 @@ then
 	alias d='l -d */'
 	alias cx='chmod +x'
 	alias e='edit'
+	alias eg='g -E'
 	alias f='%'
-	alias g='grep -EHIin'       # -H and -I are non-POSIX but are widely supported
+	alias g='grep -HIin'       # -H and -I are non-POSIX but are widely supported
 	alias gdb='gdb -q '
 	for command in add addall added addremove amend apply branch \
 		           checkout changes cherry-pick clone commit commitall \
