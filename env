@@ -520,10 +520,11 @@ if quiet alias
 then
 	alias %+='fg %+'
 	alias %-='fg %-'
-	alias +='pushd +1'
+	+() { pushd +1; }
 	for i in `seq 0 9`; do
 		alias +$i='pushd +'$i
 	done
+	/() { echo */; }
 	# aliase apt to aptitude or apt-get (in that order)
 	type apt-get >/dev/null 2>/dev/null && alias apt='apt-get'
 	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
