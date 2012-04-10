@@ -13,12 +13,13 @@
     added = diff --cached --ignore-all-space
     addremove = add --update
     amend = commit --amend
-    changes = diff --ignore-all-space
+    changed = diff --ignore-all-space
     commit = commit --all
     diffstat = diff --stat
     graph = log --graph --pretty=oneline --decorate --abbrev-commit
     hist = log --pretty=oneline --abbrev-commit
     remove = rm --cached
+    staged = diff --cached
     state = status --short
     # XXX why does this print "needs update"?
     unadd = reset HEAD

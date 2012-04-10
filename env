@@ -537,10 +537,10 @@ then
 	alias g='grep -HIin'       # -H and -I are non-POSIX but are widely supported
 	alias gdb='gdb -q '
 	for command in add addall added addremove amend apply branch \
-		           checkout changes cherry-pick clone commit commitall \
+		           checkout changed cherry-pick clone commit commitall \
 		           fetch graph log hist merge merge-base pull push \
-		           remote remove show show-branch state status tag \
-		           unadd undo undoall
+		           remote remove show show-branch staged stash state status \
+		           tag unadd undo undoall
 	do
 		alias $command="git $command"
 	done
