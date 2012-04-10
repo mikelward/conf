@@ -520,6 +520,10 @@ if quiet alias
 then
 	alias %+='fg %+'
 	alias %-='fg %-'
+	alias +='pushd +1'
+	for i in `seq 0 9`; do
+		alias +$i='pushd +'$i
+	done
 	# aliase apt to aptitude or apt-get (in that order)
 	type apt-get >/dev/null 2>/dev/null && alias apt='apt-get'
 	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
@@ -657,12 +661,16 @@ calc()
 
 directories()
 {
+	printf "%b" "$blue"
+
 	if exists dirs
 	then
-		dirs -v
+		printf "%s" "$(dirs)"
 	else
-		echo "$PWD"
+		printf "%s" "$PWD"
 	fi
+
+	printf "%b" "$normal"
 }
 
 # edit the most recently changed file
