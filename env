@@ -541,7 +541,11 @@ then
 	done
 	alias html='cd /var/www/html'
 	alias hup='kill -HUP'
-	alias l='ls'
+	if type -tP l >/dev/null 2>&1; then
+		alias l='l -K'
+	else
+		alias l='ls'
+	fi
 	alias l.='l -d .*'
 	alias l1='l -1'
 	alias la='l -A'
