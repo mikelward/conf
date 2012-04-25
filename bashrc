@@ -13,7 +13,6 @@ shopt -s extglob	# ksh-like globbing
 shopt -s xpg_echo
 
 # ksh style aliases
-alias command='command '
 alias autoload='typeset -fu'
 alias float='typeset -E'
 alias functions='typeset -f'
@@ -24,6 +23,7 @@ alias r='fc -s'
 alias redirect='command exec'
 alias stop='kill -s STOP'
 alias sudo='sudo '
+unalias command
 
 # ksh style cd
 cd()
