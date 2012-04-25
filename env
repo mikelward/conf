@@ -573,11 +573,11 @@ then
 	alias py='python'
 	alias py3='python3'
 	alias q='_exit'
-	alias rb='reportblocked'
+	alias rb='ruby'
 	alias rcslog='rlog'
 	alias rdesktop='rdesktop -M'
 	alias rdiff='rcsdiff'
-	alias rg='reportgraylist'
+	alias rg='rgrep'
 	alias root='root '          # expand aliases after root
 	alias ssh='ssh -A'
 	alias s='ssh'
