@@ -53,8 +53,8 @@
 	Mod4 + f
 
 # chromium (Google Chrome)
-#"google-chrome"
-"chromium-browser"
+#"chromium-browser"
+"google-chrome"
 	Mod4 + g
 
 # home folder
@@ -89,14 +89,9 @@
 "rhythmbox"
 	Mod4 + r
 
-# desktop search
-#"beagle-search"
-#	Mod4 + s
-# Skype chat
-#"skype"
-# s = "sticky"
-#"tomboy"
-#	Mod4 + s
+# Sublime Text editor
+"/home/mikel/Programs/SublimeText2/sublime_text"
+    Mod4 + s
 
 # terminal
 #"gnome-terminal --geometry 1680x1050"
