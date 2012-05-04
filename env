@@ -536,7 +536,7 @@ then
 	alias f='%'
 	alias g='grep -HIin'       # -H and -I are non-POSIX but are widely supported
 	alias gdb='gdb -q '
-	for command in add addall added addremove amend apply branch \
+	for command in add addall added addremove amend apply blame branch \
 		           checkout changed cherry-pick clone commit commitall \
 		           fetch graph log hist merge merge-base pull push \
 		           remote remove show show-branch staged stash state status \
