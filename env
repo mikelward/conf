@@ -520,7 +520,7 @@ if quiet alias
 then
 	alias %+='fg %+'
 	alias %-='fg %-'
-	+() { pushd +1; }
+	alias +='pushd +1'
 	for i in `seq 0 9`; do
 		alias +$i='pushd +'$i
 	done
