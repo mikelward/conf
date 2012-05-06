@@ -23,7 +23,11 @@ alias r='fc -s'
 alias redirect='command exec'
 alias stop='kill -s STOP'
 alias sudo='sudo '
-unalias command
+# ksh-like command alias expands aliases, defeating the purpose of command
+if alias command >/dev/null 2>&1
+then
+	unalias command
+fi
 
 # ksh style cd
 cd()
