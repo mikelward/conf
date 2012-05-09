@@ -538,11 +538,11 @@ then
 	alias gdb='gdb -q '
 	for command in add addall added addremove adds amend apply blame branch \
 		           checkout changed changes cherry-pick clone commit commitall \
-				   describe \
+		           describe \
 		           fetch format-patch gc graph log ls-files ls-tree hist \
-				   merge merge-base pull push \
+		           merge merge-base pull push \
 		           rebase remote remove reset rollback \
-				   show show-branch staged stash state status \
+		           show show-branch staged stash state status \
 		           tag unadd undo undoall
 	do
 		alias $command="git $command"
