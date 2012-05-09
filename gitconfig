@@ -10,15 +10,18 @@
 # so I can make it a shell alias too
 [alias]
     addall = add --all
-    added = diff --cached --ignore-all-space
+    added = diff --cached --name-only
     addremove = add --update
+    adds = diff --cached
     amend = commit --amend
-    changed = diff --ignore-all-space
+    changed = diff --name-only
+    changes = diff
     commit = commit --all
     diffstat = diff --stat
     graph = log --graph --pretty=oneline --decorate --abbrev-commit
     hist = log --pretty=oneline --abbrev-commit
     remove = rm --cached
+    rollback = revert
     staged = diff --cached
     state = status --short
     # XXX why does this print "needs update"?

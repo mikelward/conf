@@ -536,10 +536,13 @@ then
 	alias f='%'
 	alias g='grep -HIin'       # -H and -I are non-POSIX but are widely supported
 	alias gdb='gdb -q '
-	for command in add addall added addremove amend apply blame branch \
-		           checkout changed cherry-pick clone commit commitall \
-		           fetch graph log hist merge merge-base pull push \
-		           remote remove reset show show-branch staged stash state status \
+	for command in add addall added addremove adds amend apply blame branch \
+		           checkout changed changes cherry-pick clone commit commitall \
+				   describe \
+		           fetch format-patch gc graph log ls-files ls-tree hist \
+				   merge merge-base pull push \
+		           rebase remote remove reset rollback \
+				   show show-branch staged stash state status \
 		           tag unadd undo undoall
 	do
 		alias $command="git $command"
