@@ -16,7 +16,7 @@
     amend = commit --amend
     changed = diff --name-only
     changes = diff
-    commit = commit --all
+    commitall = commit --all
     diffstat = diff --stat
     graph = log --graph --pretty=oneline --decorate --abbrev-commit
     hist = log --pretty=oneline --abbrev-commit
