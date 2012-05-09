@@ -542,8 +542,8 @@ then
 		           fetch format-patch gc graph log ls-files ls-tree hist \
 		           merge merge-base pull push \
 		           rebase remote remove reset rollback \
-		           show show-branch staged stash state status \
-		           tag unadd undo undoall
+		           show show-branch staged stash state status switch \
+		           tag track unadd unchange unchangeall undo undoall untrack
 	do
 		alias $command="git $command"
 	done

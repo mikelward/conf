@@ -21,14 +21,19 @@
     graph = log --graph --pretty=oneline --decorate --abbrev-commit
     hist = log --pretty=oneline --abbrev-commit
     remove = rm --cached
-    rollback = revert
-    staged = diff --cached
+    #rollback = revert
+    #rollback = reset --hard
     state = status --short
+    switch = checkout
+    track = add --intent-to-add
     # XXX why does this print "needs update"?
     unadd = reset HEAD
+    unchange = checkout-index --force
+    unchangeall = checkout-index --force --all
     # these should be called revert, but that name is taken
     undo = checkout HEAD
     undoall = reset --hard
+    untrack = rm --cached
 
 [color]
     diff = auto
