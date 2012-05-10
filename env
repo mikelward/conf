@@ -10,10 +10,8 @@ then
 	if type typeset >/dev/null 2>&1
 	then
 		# must be a function not an alias so it works in ksh too
-		local()
-		{
-			typeset "$@"
-		}
+		# must be evaled to prevent error in dash
+		eval 'local() { typeset "$@"; }'
 	fi
 	# see if our attempts to emulate "local" worked
 	if ! type local >/dev/null 2>&1
