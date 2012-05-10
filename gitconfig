@@ -20,6 +20,7 @@
     diffstat = diff --stat
     graph = log --graph --pretty=oneline --decorate --abbrev-commit
     hist = log --pretty=oneline --abbrev-commit
+    history = log --pretty=format:$'%h\t%cr\t%s\t%d'
     remove = rm --cached
     #rollback = revert
     #rollback = reset --hard
