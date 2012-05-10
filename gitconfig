@@ -17,19 +17,25 @@
     changed = diff --name-only
     changes = diff
     commitall = commit --all
-    diffstat = diff --stat
     graph = log --graph --pretty=oneline --decorate --abbrev-commit
     hist = log --pretty=oneline --abbrev-commit
-    history = log --pretty=format:$'%h\t%cr\t%s\t%d'
+    # XXX use fc -l in bash?
+    history = log --pretty=format:'%h%x09%cr%x09%s%x09%d'
+    logs = log
     remove = rm --cached
-    #rollback = revert
-    #rollback = reset --hard
+    # restore [<tree>] file = restore a file from branch or index
+    restore = checkout
+    # rewind [<commit>] = move the index back to commit
+    rewind = reset
     state = status --short
+    # switch [<branch>] = change to a different branch
     switch = checkout
     track = add --intent-to-add
     # XXX why does this print "needs update"?
     unadd = reset HEAD
+    # unchange <file> = restore a file from index
     unchange = checkout-index --force
+    # unchangeall = restore all files from index
     unchangeall = checkout-index --force --all
     # these should be called revert, but that name is taken
     undo = checkout HEAD
