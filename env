@@ -546,9 +546,10 @@ then
 	for command in add addall added addremove adds amend apply blame branch \
 		           checkout changed changes cherry-pick clone commit commitall \
 		           describe \
-		           fetch format-patch gc graph log ls-files ls-tree hist \
+		           fetch format-patch gc graph hist history \
+		           log logs ls-files ls-tree \
 		           merge merge-base pull push \
-		           rebase remote remove reset rollback \
+		           rebase remote remove reset restore rewind rollback \
 		           show show-branch staged stash state status switch \
 		           tag track unadd unchange unchangeall undo undoall untrack
 	do
