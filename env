@@ -516,13 +516,22 @@ export MANPATH
 # create aliases for commonly invoked commands
 if quiet alias
 then
+	# for ksh, which lacks %
+	alias %='fg'
 	alias %+='fg %+'
 	alias %-='fg %-'
-	alias +='pushd +1'
+	if test -n "$ZSH_VERSION"; then
+		# zsh requires --
+		alias -- +='pushd +1'
+	else
+		# dash requires no --, works fine in bash and ksh too
+		alias +='pushd +1'
+	fi
 	for i in `seq 0 9`; do
 		alias +$i='pushd +'$i
 	done
-	/() { echo */; }
+	# doesn't work in bash or ksh
+	#/() { echo */; }
 	# aliase apt to aptitude or apt-get (in that order)
 	type apt-get >/dev/null 2>/dev/null && alias apt='apt-get'
 	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
@@ -615,14 +624,6 @@ then
 		:
 	fi
 fi
-
-# easier way to resume jobs, e.g. "% vim" to resume vim
-# bash supports "%<jobspec>" out of the box
-# but ksh doesn't, so this should be handy in ksh
-%()
-{
-	fg %"$@"
-}
 
 # ring the terminal's bell
 bell()
