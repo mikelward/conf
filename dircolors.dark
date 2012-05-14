@@ -10,6 +10,7 @@
 TERM vt220
 TERM linux
 TERM screen
+TERM xterm
 # Below are the color init strings for the basic file types. A color init
 # string consists of one or more of the following numeric codes:
 # Attribute codes:
