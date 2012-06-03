@@ -557,7 +557,8 @@ then
 	done
 	alias html='cd /var/www/html'
 	alias hup='kill -HUP'
-	if type -tP l >/dev/null 2>&1; then
+	alias l >/dev/null 2>&1 && unalias l
+	if command -v l >/dev/null 2>&1; then
 		alias l='l -K'
 	else
 		alias l='ls'
