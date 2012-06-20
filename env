@@ -199,6 +199,7 @@ delpath()
 
 	local _olddirs
 	eval "_olddirs=\"\$$_pathvar\""
+	eval "$_pathvar=\"\""
 	for _dir in $_olddirs
 	do
 		test "${_dir:-.}" = "${_deldir:-.}" && continue
