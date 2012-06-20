@@ -39,11 +39,21 @@ addpath()
 	case "$_position" in
 	start)
 		delpath "$_adddir" "$_pathvar" "$_separator"
-		eval $_pathvar="\$_adddir""\${$_pathvar:+\$_separator}""\$$_pathvar"
+		if test -n "$(eval echo "\$$_pathvar")"
+		then
+			eval "$_pathvar=\"$_adddir$_separator\$$_pathvar\""
+		else
+			eval "$_pathvar=\"$_adddir\""
+		fi
 		;;
 	end)
 		delpath "$_adddir" "$_pathvar" "$_separator"
-		eval $_pathvar="\$$_pathvar""\${$_pathvar:+\$_separator}""\$_adddir"
+		if test -n "$(eval echo "\$$_pathvar")"
+		then
+			eval "$_pathvar=\"\$$_pathvar$_separator$_adddir\""
+		else
+			eval "$_pathvar=\"$_adddir\""
+		fi
 		;;
 	*)
 		local dirs
@@ -54,7 +64,15 @@ addpath()
 			# directory is already in PATH, leave as is
 			test "${_adddir:-.}" = "${d:-.}" && seen=true
 		done
-		test -z "$seen" && eval $_pathvar="\$$_pathvar""\${$_pathvar:+$_separator}""\$_adddir"
+		if test -z "$seen"
+		then
+			if test -n "$(eval echo "\$$_pathvar")"
+			then
+				eval "$_pathvar=\"\$$_pathvar$_separator$_adddir\""
+			else
+				eval "$_pathvar=\"$_adddir\""
+			fi
+		fi
 		;;
 	esac
 	IFS="$OIFS"
@@ -179,17 +197,18 @@ delpath()
 	NIFS="$IFS"
 	IFS="$_separator"
 
-	local _newdirs
 	local _olddirs
-
-	eval _olddirs=\$$_pathvar
-	_newdirs=
-	for d in $_olddirs
+	eval "_olddirs=\"\$$_pathvar\""
+	for _dir in $_olddirs
 	do
-		test "${d:-.}" = "${_deldir:-.}" && continue
-		_newdirs="$_newdirs""${_newdirs:+$_separator}""$d"
+		test "${_dir:-.}" = "${_deldir:-.}" && continue
+		if test -n "$(eval echo "\$$_pathvar")"
+		then
+			eval "$_pathvar=\"\$$_pathvar$_separator$_dir\""
+		else
+			eval "$_pathvar=\"$_dir\""
+		fi
 	done
-	eval $_pathvar="\$_newdirs"
 	IFS="$NIFS"
 }
 
@@ -457,25 +476,25 @@ USER=$(whoami)
 # if we add the symlink versions before the standard directories such as
 # /usr/bin, some utilities get confused, so only add them to PATH if
 # they're not symlinks
+platform="$(uname -m)"
+os=$(uname -s | tr '[[:upper:]]' '[[:lower:]]')
 for dir in /usr/X11R6/bin /usr/bin/X11 /usr/java1.6/bin
 do
 	test -d "$dir" && test ! -L "$dir" && addpath "$dir" start
 done
 get_android_sdk_dir()
 {
-	_platform=$(uname -m)
-	case $_platform in i686)
-		_platform=x86
+	local platform=$platform
+	case $platform in i686)
+		platform=x86
 		;;
 	esac
-	_os=$(uname -s | tr '[[:upper:]]' '[[:lower:]]')
-	_sdkdir=$HOME/android-sdk-${_os}_${_platform}
-	echo $_sdkdir
+	echo "$HOME/android-sdk-${os}_${platform}"
 }
 android_sdk_dir=$(get_android_sdk_dir)
-for dir in /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin "$android_sdk_dir/tools" "$HOME/depot_tools" "$HOME"/.cabal/bin "$HOME"/bin
+for dir in /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin "$android_sdk_dir/tools" "$HOME/depot_tools" "$HOME"/.cabal/bin "$HOME"/bin "$HOME/bin.${platform}" "$HOME"/scripts
 do
-	test -d "$dir" && addpath "$dir" start
+	test -d "$dir" && addpath "$dir"
 done
 # add standard locations if they're not there
 for dir in /usr/bin /bin /usr/sbin /sbin
