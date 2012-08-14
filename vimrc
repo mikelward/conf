@@ -107,19 +107,13 @@ if version >= 600
 endif
 
 if has("autocmd")
-    " disable line wrapping for program source files
-    au BufRead *.{c,cc,cpp,h,hh,hpp} setlocal tw=0
-    au BufRead *.{html,shtml,php,php3,php4,php5,inc} setlocal tw=0
-
-    " treat unknown file types as text files
-    au BufRead,BufNewFile * setfiletype text
+    " teach Vim about .go files
+    au BufRead,BufNewFile *.go setfiletype go
 
     " per file-type rules
-    "au BufRead,BufNewFile * if &filetype == 'c' || &filetype == 'cpp' || &filetype == 'perl' || &filetype == 'python' || &filetype == 'ruby' | set listchars+=tab:\|\  | endif
-    "au BufRead,BufNewFile * if &filetype == 'fstab' | set listchars+=tab:>\  | endif
-    "au BufRead,BufNewFile * if &filetype == 'text' | set textwidth=66 | endif
-    "au BufRead,BufNewFile * if &filetype == 'svn' | set textwidth=80 | set viminfo= | endif
-    "au BufRead,BufNewFile * if &filetype == 'haskell' | set textwidth=80 | set expandtab | endif
+    au BufRead,BufNewFile * if &filetype == 'fstab' | set listchars+=tab:>\  | endif
+    au BufRead,BufNewFile * if &filetype == 'go' | set shiftwidth=8 tabstop=8 textwidth=0 noexpandtab | endif
+    au BufRead,BufNewFile * if &filetype == 'svn' | set viminfo= | endif
 
     " make :make jump to C assertion errors
     au BufRead,BufNewFile * if &filetype == 'c' | set errorformat^=%*[^:]:\ %f:%l:\ %m | endif
