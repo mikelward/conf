@@ -477,25 +477,18 @@ USER=$(whoami)
 # if we add the symlink versions before the standard directories such as
 # /usr/bin, some utilities get confused, so only add them to PATH if
 # they're not symlinks
-platform="$(uname -m)"
-os=$(uname -s | tr '[[:upper:]]' '[[:lower:]]')
 for dir in /usr/X11R6/bin /usr/bin/X11 /usr/java1.6/bin
 do
 	test -d "$dir" && test ! -L "$dir" && addpath "$dir" start
 done
-get_android_sdk_dir()
-{
-	local platform=$platform
-	case $platform in i686)
-		platform=x86
-		;;
-	esac
-	echo "$HOME/android-sdk-${os}_${platform}"
-}
-android_sdk_dir=$(get_android_sdk_dir)
-for dir in /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin "$android_sdk_dir/tools" "$HOME/depot_tools" "$HOME"/.cabal/bin "$HOME"/bin "$HOME/bin.${platform}" "$HOME"/scripts
+platform=$(uname -m)
+os=$(uname -s | tr '[[:upper:]]' '[[:lower:]]')
+android_sdk_dir="$HOME/android-sdk-linux"
+for dir in /usr/kerberos/bin /usr/posix/bin /usr/gnu/bin /usr/local/bin \
+	/usr/local/go/bin "$HOME/android-sdk-linux/tools" "$HOME/depot_tools" \
+	"$HOME/.cabal/bin" "$HOME/bin" "$HOME/bin.$platform" "$HOME/scripts"
 do
-	test -d "$dir" && addpath "$dir"
+	test -d "$dir" && addpath "$dir" start
 done
 # add standard locations if they're not there
 for dir in /usr/bin /bin /usr/sbin /sbin
@@ -1096,6 +1089,8 @@ export GREP_COLOR=4
 export GREP_COLORS=fn=:ln=:bn=:se=
 export LESS=-eFj3MRX
 test -n "$TABSIZE" && export LESS="${LESS}x${TABSIZE}"
+
+export GOPATH="$HOME/go"
 
 export TOP=-I
 export WANT_SSH_AGENT=true
