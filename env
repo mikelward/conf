@@ -1090,7 +1090,7 @@ export GREP_COLORS=fn=:ln=:bn=:se=
 export LESS=-eFj3MRX
 test -n "$TABSIZE" && export LESS="${LESS}x${TABSIZE}"
 
-export GOPATH="$HOME/go"
+export GOPATH="$HOME"
 
 export TOP=-I
 export WANT_SSH_AGENT=true
