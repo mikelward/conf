@@ -81,8 +81,8 @@
 "opera -notrayicon -nomail"
 	Mod4 + o
 
-# pidgin im
-"pidgin"
+# PyCharm IDE
+"charm"
 	Mod4 + p
 
 # rhythmbox music player
