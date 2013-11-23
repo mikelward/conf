@@ -82,7 +82,7 @@
 	Mod4 + o
 
 # PyCharm IDE
-"charm"
+"env JAVA_HOME=/usr/java/current charm"
 	Mod4 + p
 
 # rhythmbox music player
@@ -98,8 +98,7 @@
 #"gnome-terminal --geometry 132x50"
 #"gnome-terminal --geometry 207x58"
 #"/usr/bin/gnome-terminal"
-#"gnome-terminal --maximize"
-"Terminal"
+"gnome-terminal --maximize"
 	Mod4 + t
 
 # word
