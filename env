@@ -718,6 +718,13 @@ h()
 	head -n $lines "$@"
 }
 
+# print information about all shell jobs
+# intended to be used in the prompt
+job_info()
+{
+	jobs | sed -e 's/^\[\([0-9]*\)\][-+ ]*[^ ]* */%\1 /'
+}
+
 # show the most recently changed file
 latest()
 {
@@ -787,6 +794,16 @@ mcd()
 	else
 		mkdir -p "$1" && cd "$1"
 	fi
+}
+
+# workaround for shell trimming trailing newlines
+# each non empty argument is printed along with a trailing newline
+# see shrc for an example
+newline_if_non_empty()
+{
+    for arg; do
+        [ -n "$arg" ] && echo "$arg"
+    done
 }
 
 # flash the screen ("visible bell")

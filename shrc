@@ -23,8 +23,7 @@ case $- in
 	promptcolor=normal
 	errorcolor=red
 	promptstring='
-$(short_hostname):$(directories) $(git_branch)
-$(prompt_character) '
+$(newline_if_non_empty "$(job_info)" "$(short_hostname):$(directories) $(git_branch)" "$(prompt_character)") '
 	title='$(eval printf "%s" "\"${connectioninfo} ${commandinfo}\"")'
 	PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval printf "%s" "\"${promptstring}\"")$(setcolor "normal")$(bell)'
 	PS2='> '
