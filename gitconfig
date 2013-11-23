@@ -9,24 +9,44 @@
 # where possible, use a name that's not a Unix command
 # so I can make it a shell alias too
 [alias]
+    ad = add
     addall = add --all
     added = diff --cached --name-only
     addremove = add --update
     adds = diff --cached
     amend = commit --amend
+    an = annotate
+    ap = apply
+    br = branch
     changed = diff --name-only
     changes = diff
+    # Nobody uses RCS anymore, right?
+    ci = commit
+    cl = clone
+    co = checkout
     commitall = commit --all
+    # da = "diff added"
+    da = diff --cached
+    di = diff
+    # For symmetry with the shell alias.
+    diffs = diff
+    gr = log --graph --pretty=oneline --decorate --abbrev-commit
     graph = log --graph --pretty=oneline --decorate --abbrev-commit
+    hi = log --pretty=oneline --abbrev-commit
     hist = log --pretty=oneline --abbrev-commit
     # XXX use fc -l in bash?
     history = log --pretty=format:'%h%x09%cr%x09%s%x09%d'
+    lo = log
     logs = log
+    pick = cherry-pick
+    pu = push
     remove = rm --cached
     # restore [<tree>] file = restore a file from branch or index
     restore = checkout
     # rewind [<commit>] = move the index back to commit
     rewind = reset
+    rs = reset
+    st = status --short
     state = status --short
     # switch [<branch>] = change to a different branch
     switch = checkout
