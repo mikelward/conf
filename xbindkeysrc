@@ -62,6 +62,9 @@
 "nautilus ~"
 	Mod4 + h
 
+"xchat"
+	Mod4 + i
+
 # lock screen
 "gnome-screensaver-command -l"
 	Mod4 + l
@@ -108,7 +111,8 @@
 
 # spreadsheet (x = excel)
 #"gnumeric"
-"oocalc"
+#"oocalc"
+"xchat"
 	Mod4 + x
 
 "zdesktop"
