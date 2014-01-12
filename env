@@ -335,6 +335,30 @@ on_cygwin()
 	esac
 }
 
+packageinit()
+{
+	if exists yum; then
+		alias yum='yum --cacheonly'
+		alias update='yum makecache'
+		alias search='yum search'
+		alias install='yum install'
+		alias uninstall='yum erase'
+		alias reinstall='yum reinstall'
+		alias upgrade='yum upgrade'
+		alias versions='yum list'
+	elif exists apt-get; then
+		alias update='apt-get update'
+		alias search='apt-cache search --names-only'
+		alias install='apt-get install'
+		alias uninstall='apt-get remove'
+		alias reinstall='apt-get install --reinstall'
+		alias upgrade='apt-get upgrade'
+		alias versions='apt-cache policy'
+	else
+		echo "No package manager found" 1>&2
+	fi
+}
+
 plist()
 {
 	ps -fp $(pgrep -d , "$@")
@@ -639,6 +663,9 @@ then
 		# (ls -F is too ugly to use by default)
 		:
 	fi
+
+	# set up cross-platform package manager aliases
+	packageinit
 fi
 
 # ring the terminal's bell
@@ -1139,4 +1166,4 @@ taskbar()
 
 true
 
-# vi: set ts=4 sw=4 noet:
+# vi: set ts=4 sw=4 noet ft=sh:
