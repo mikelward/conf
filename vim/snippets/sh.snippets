@@ -3,32 +3,26 @@ snippet #!
 	#!/bin/bash
 	
 snippet if
-	if [ ${1:condition} ]
-	then
+	if test ${1:condition}; then
 		${2:#statements}
 	fi
 snippet elif
-	elif [ ${1:condition} ]
-	then
+	elif test ${1:condition}; then
 		${2:#statements}
 snippet for
-	for ${1:name} in $${2:list}
-	do
+	for ${1:name} in $${2:list}; do
 		${3:#statements}
 	done
 snippet fori
-	for (( ${2:i} = 0; $2 < ${1:count}; $2++ ))
-	do
+	for (( ${2:i} = 0; $2 < ${1:count}; $2++ )); do
 		${3:#statements}
 	done
 snippet while
-	while [ ${1:condition} ]
-	do
+	while ${1:condition}; do
 		${2:#statements}
 	done
 snippet until
-	until [ ${1:condition} ]
-	do
+	until ${1:condition}; do
 		${2:#statements}
 	done
 snippet case
@@ -51,7 +45,7 @@ snippet tempdir
 
 	cleanup()
 	{
-		if [ -d "$TEMPDIR" ]
+		if test -d "$TEMPDIR"
 		then
 			rm -rf "$TEMPDIR"
 		fi
@@ -60,13 +54,13 @@ snippet tempdir
 	scriptname=${0##*/}
 	TEMPDIR=/tmp/"$scriptname".$$
 
-	if [ -e "$TEMPDIR" ]
+	if test -e "$TEMPDIR"
 	then
 		error "Temporary directory $TEMPDIR already exists"
 		exit 1
 	fi
 	mkdir "$TEMPDIR"
-	if [ $? -ne 0 ]
+	if test $? -ne 0
 	then
 		error "Cannot create temporary directory $TEMPDIR"
 		exit 1
@@ -75,8 +69,7 @@ snippet tempdir
 	trap 'cleanup; exit' 0
 
 snippet getopts
-	usage()
-	{
+	usage() {
 		cat <<EOF 1>&2
 	Usage: $scriptname [-h]
 	EOF
@@ -84,8 +77,7 @@ snippet getopts
 
 	scriptname=${0##*/}
 
-	while getopts ":h${1:options}" option
-	do
+	while getopts ":h${1:options}" option; do
 		case $option in
 		${2:option})
 			${3}
