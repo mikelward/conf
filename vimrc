@@ -90,6 +90,37 @@ endif
 " allow # character at current indentation level (must appear on own line)
 inoremap # X<BS>#
 
+function! ToggleWhitespace()
+  if exists("b:show_whitespace")
+    let b:show_whitespace = !b:show_whitespace
+  else
+    let b:show_whitespace = 1
+  endif
+  if b:show_whitespace
+    set listchars-=tab:\ \                " revert previous whitespace chars
+    set listchars+=tab:\|\ ,trail:-       " tab is "|   ", trail is "-"
+    echo "Showing whitespace"
+  else
+    set listchars-=tab:\|\ ,trail:-       " revert previous whitespace chars
+    set listchars+=tab:\ \                " show tabs as regular spaces
+    echo "Hiding whitespace"
+  endif
+endfunction
+
+function! TogglePaste()
+  if &paste
+    set nopaste
+    echo "Disabling paste mode"
+  else
+    set paste
+    echo "Enabling paste mode"
+  endif
+endfunction
+
+map <Leader>c :TComment<CR>
+map <Leader>w :call ToggleWhitespace()<CR>
+map <Leader>p :call TogglePaste()<CR>
+
 " MARKDOWN SHORTCUTS
 " http://stevelosh.com/blog/2010/09/coming-home-to-vim/
 nnoremap <leader>1 yypVr=
