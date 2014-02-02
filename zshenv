@@ -25,6 +25,7 @@ setopt shfileexpansion
 setopt shglob
 setopt shwordsplit
 
+setopt autocd
 setopt autolist
 unsetopt automenu
 unsetopt bareglobqual

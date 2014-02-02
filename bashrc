@@ -7,6 +7,7 @@ then
 fi
 
 # bash options
+shopt -s autocd
 shopt -s checkwinsize
 shopt -s lithist
 shopt -s extglob	# ksh-like globbing
