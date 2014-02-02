@@ -364,6 +364,18 @@ plist()
 	ps -fp $(pgrep -d , "$@")
 }
 
+# pgrep with default ps options
+psgrep()
+{
+	eval "local pattern=\"\$$#\""
+	if test $# -eq 1; then
+		set -- -o user,pid,ppid,pgid,sid,start_time,nlwp,pcpu,rss,wchan:24,comm=EXE,args=ARGS
+	else
+		eval "set -- $(for i in $(seq $(($# - 1))); do echo -n "\"\$$i\" "; done)"
+	fi
+	ps "$@" -p $(pgrep -d , -f "$pattern")
+}
+
 # process list with status
 pss()
 {
