@@ -39,7 +39,7 @@ addpath()
 	case "$_position" in
 	start)
 		delpath "$_adddir" "$_pathvar" "$_separator"
-		if test -n "$(eval echo "\$$_pathvar")"
+		if eval "test -n \"\$$_pathvar\""
 		then
 			eval "$_pathvar=\"$_adddir$_separator\$$_pathvar\""
 		else
@@ -48,7 +48,7 @@ addpath()
 		;;
 	end)
 		delpath "$_adddir" "$_pathvar" "$_separator"
-		if test -n "$(eval echo "\$$_pathvar")"
+		if eval "test -n \"\$$_pathvar\""
 		then
 			eval "$_pathvar=\"\$$_pathvar$_separator$_adddir\""
 		else
@@ -66,7 +66,7 @@ addpath()
 		done
 		if test -z "$seen"
 		then
-			if test -n "$(eval echo "\$$_pathvar")"
+			if eval "test -n \"\$$_pathvar\""
 			then
 				eval "$_pathvar=\"\$$_pathvar$_separator$_adddir\""
 			else
@@ -203,7 +203,7 @@ delpath()
 	for _dir in $_olddirs
 	do
 		test "${_dir:-.}" = "${_deldir:-.}" && continue
-		if test -n "$(eval echo "\$$_pathvar")"
+		if eval "test -n \"\$$_pathvar\""
 		then
 			eval "$_pathvar=\"\$$_pathvar$_separator$_dir\""
 		else
