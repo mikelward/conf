@@ -373,7 +373,12 @@ psgrep()
 	else
 		eval "set -- $(for i in $(seq $(($# - 1))); do echo -n "\"\$$i\" "; done)"
 	fi
-	ps "$@" -p $(pgrep -d , -f "$pattern")
+	local pids="$(pgrep -d , -f "$pattern")"
+	if test -n "$pids"; then
+		ps "$@" -p "$pids"
+	else
+		error "No processes matching $pattern"
+	fi
 }
 
 # process list with status
