@@ -39,7 +39,7 @@ addpath()
 	case "$_position" in
 	start)
 		delpath "$_adddir" "$_pathvar" "$_separator"
-		if test -n "$(eval echo "\$$_pathvar")"
+		if eval "test -n \"\$$_pathvar\""
 		then
 			eval "$_pathvar=\"$_adddir$_separator\$$_pathvar\""
 		else
@@ -48,7 +48,7 @@ addpath()
 		;;
 	end)
 		delpath "$_adddir" "$_pathvar" "$_separator"
-		if test -n "$(eval echo "\$$_pathvar")"
+		if eval "test -n \"\$$_pathvar\""
 		then
 			eval "$_pathvar=\"\$$_pathvar$_separator$_adddir\""
 		else
@@ -66,7 +66,7 @@ addpath()
 		done
 		if test -z "$seen"
 		then
-			if test -n "$(eval echo "\$$_pathvar")"
+			if eval "test -n \"\$$_pathvar\""
 			then
 				eval "$_pathvar=\"\$$_pathvar$_separator$_adddir\""
 			else
@@ -203,7 +203,7 @@ delpath()
 	for _dir in $_olddirs
 	do
 		test "${_dir:-.}" = "${_deldir:-.}" && continue
-		if test -n "$(eval echo "\$$_pathvar")"
+		if eval "test -n \"\$$_pathvar\""
 		then
 			eval "$_pathvar=\"\$$_pathvar$_separator$_dir\""
 		else
@@ -331,20 +331,20 @@ packageinit()
 {
 	if exists yum; then
 		alias yum='yum --cacheonly'
-		alias update='yum makecache'
+		alias update='root yum makecache'
 		alias search='yum search'
-		alias install='yum install'
-		alias uninstall='yum erase'
-		alias reinstall='yum reinstall'
-		alias upgrade='yum upgrade'
+		alias install='root yum install'
+		alias uninstall='root yum erase'
+		alias reinstall='root yum reinstall'
+		alias upgrade='root yum upgrade'
 		alias versions='yum list'
 	elif exists apt-get; then
 		alias update='apt-get update'
 		alias search='apt-cache search --names-only'
-		alias install='apt-get install'
-		alias uninstall='apt-get remove'
-		alias reinstall='apt-get install --reinstall'
-		alias upgrade='apt-get upgrade'
+		alias install='root apt-get install'
+		alias uninstall='root apt-get remove'
+		alias reinstall='root apt-get install --reinstall'
+		alias upgrade='root apt-get upgrade'
 		alias versions='apt-cache policy'
 	else
 		echo "No package manager found" 1>&2
@@ -354,6 +354,23 @@ packageinit()
 plist()
 {
 	ps -fp $(pgrep -d , "$@")
+}
+
+# pgrep with default ps options
+psgrep()
+{
+	eval "local pattern=\"\$$#\""
+	if test $# -eq 1; then
+		set -- -o user,pid,ppid,pgid,sid,start_time,nlwp,pcpu,rss,wchan:24,comm=EXE,args=ARGS
+	else
+		eval "set -- $(for i in $(seq $(($# - 1))); do echo -n "\"\$$i\" "; done)"
+	fi
+	local pids="$(pgrep -d , -f "$pattern")"
+	if test -n "$pids"; then
+		ps "$@" -p "$pids"
+	else
+		error "No processes matching $pattern"
+	fi
 }
 
 # process list with status
@@ -559,8 +576,6 @@ then
 	for i in `seq 0 9`; do
 		alias +$i='pushd +'$i
 	done
-	# doesn't work in bash or ksh
-	#/() { echo */; }
 	# aliase apt to aptitude or apt-get (in that order)
 	type apt-get >/dev/null 2>/dev/null && alias apt='apt-get'
 	type aptitude >/dev/null 2>/dev/null && alias apt='aptitude'
