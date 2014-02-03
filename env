@@ -222,15 +222,7 @@ error()
 # return true if the command can be found, false otherwise
 exists()
 {
-	local cmd
-	cmd="$1"
-
-	if type "$cmd" >/dev/null 2>&1
-	then
-		return 0
-	else
-		return 1
-	fi
+	type "$1" >/dev/null 2>&1
 }
 
 # prevent running "exit" if the user is still running jobs in the background
