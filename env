@@ -338,7 +338,7 @@ on_cygwin()
 packageinit()
 {
 	if exists yum; then
-		alias yum='yum --cacheonly'
+		alias yum='root yum --cacheonly'
 		alias update='root yum makecache'
 		alias search='yum search'
 		alias install='root yum install'
@@ -347,7 +347,7 @@ packageinit()
 		alias upgrade='root yum upgrade'
 		alias versions='yum list'
 	elif exists apt-get; then
-		alias update='apt-get update'
+		alias update='root apt-get update'
 		alias search='apt-cache search --names-only'
 		alias install='root apt-get install'
 		alias uninstall='root apt-get remove'
