@@ -190,6 +190,8 @@ bindkey -M emacs '^[b' backward-word
 bindkey -M emacs '^[f' forward-word
 bindkey -M emacs '^[p' history-beginning-search-backward
 bindkey -M emacs '^[n' history-beginning-search-forward
+bindkey -M emacs "${terminfo[cuu1]}" history-search-backward
+bindkey -M emacs "${terminfo[cud1]}" history-search-forward
 bindkey -M emacs '^[^' expand-history
 bindkey -M emacs '^[*' expand-word
 bindkey -M emacs '^[=' list-choices
