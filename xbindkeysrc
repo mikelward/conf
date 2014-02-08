@@ -77,7 +77,8 @@
 # notepad
 #"mousepad"
 #"tomboy --new-note"
-"gedit"
+#"gedit"
+"leafpad"
 	Mod4 + n
 
 # opera browser
