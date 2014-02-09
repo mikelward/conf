@@ -643,10 +643,14 @@ then
 	alias rdesktop='rdesktop -M'
 	alias rdiff='rcsdiff'
 	alias rg='rgrep'
-	alias root='root '          # expand aliases after root
+	if whence root >/dev/null 2>&1; then
+		alias root='root '          # expand aliases after root
+	else
+		alias root='sudo '			# fall back to sudo
+	fi
 	alias ssh='ssh -A'
 	alias s='ssh'
-	alias ss='sudo -s'
+	alias ss='root "$SHELL"'
 	alias strace='strace '      # expand aliases after strace
 	alias sudo='sudo '          # expand aliases after sudo
 	alias tf='tail -n 0 -F'
