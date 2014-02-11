@@ -1,15 +1,35 @@
 # zsh-specific commands for interactive sessions.
 
+# TODO: use emulate?
 if test -f ~/.shrc
 then
 	. ~/.shrc
 fi
 
 # set zsh-specific aliases
-alias h="history -d"
+alias h="fc -d"
+
+function / {
+    echo */
+}
+
+function @ {
+    case "$(whence -w "$@")" in *": command")
+        whence "$@"
+        ;;
+    *)
+        error "$* is not an external command"
+        ;;
+    esac
+}
+
+function ? {
+    man "$@"
+}
 
 precmd()
 {
+
 	# store the status of the previous interactive command for use in the prompt
 	laststatus=$?
 	#commandfinish=$(date "+%s")
@@ -39,6 +59,8 @@ precmd()
 	#command=${0#-}
 	command=
 
+    ${simple:-false} && return
+
 	# set the window title back to the standard one
 	if [[ -t 1 ]]
 	then
@@ -53,6 +75,8 @@ precmd()
 
 preexec()
 {
+    ${simple:-false} && return
+
 	#commandstart=$(date "+%s")
 
 	# get the canonical name of the command just invoked
