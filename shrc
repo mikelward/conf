@@ -15,17 +15,15 @@ case $- in
 
 	# prompt and window title
 	connectioninfo='$(short_hostname)'
-	#command=${0#-}
 	command=
 	commandinfo='$(test -n "$mytitle" && echo "$mytitle" || printf "%s" "$command")'
 	shellinfo='$(short_hostname):$(dirs -v)'
 	promptchars='$(prompt_character)'
 	promptcolor=normal
-	errorcolor=red
-	promptstring='
-$(newline_if_non_empty "$(short_hostname):$(directories) $(git_branch)" "$(job_info)" "$(prompt_character)") '
+	preprompt='
+$(newline_if_non_empty "$(short_hostname) $(directories) $(git_branch)" "$(job_info)")'
 	title='$(eval printf "%s" "\"${connectioninfo} ${commandinfo}\"")'
-	PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval printf "%s" "\"${promptstring}\"")$(setcolor "normal")$(bell)'
+	PS1='$(prompt_character) '
 	PS2='> '
 	#PS2='_ '
 	PS3='? '

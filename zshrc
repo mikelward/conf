@@ -32,34 +32,11 @@ precmd()
 
 	# store the status of the previous interactive command for use in the prompt
 	laststatus=$?
-	#commandfinish=$(date "+%s")
-	#commandstart=${commandstart:-$commandfinish}
-	#commandtime=$((commandfinish - commandstart))
-
-#	if [[ -t 1 ]]
-#	then
-#		if [[ -n "$command" ]]
-#		then
-#			case $laststatus in
-#			0)
-#				notify "$(short_hostname $hostname) $(short_command "$command") done"
-#				;;
-#			20)
-#				# zsh uses status 20 for suspended, don't print anything
-#				;;
-#			*)
-#				notify "$(short_hostname $hostname) $(short_command "$command") error $laststatus"
-#				;;
-#			esac
-#		fi
-#	fi
 
 	# the currently running foreground job is the shell (without any leading minus)
 	lastcommand=$command
 	#command=${0#-}
 	command=
-
-    ${simple:-false} && return
 
 	# set the window title back to the standard one
 	if [[ -t 1 ]]
@@ -71,12 +48,12 @@ precmd()
 	# in case the user didn't run any command, preexec won't have been called,
 	# so initialise it here too
 	#commandstart=$commandfinish
+	setcolor "$promptcolor"
+	eval "echo \"${preprompt}\""
 }
 
 preexec()
 {
-    ${simple:-false} && return
-
 	#commandstart=$(date "+%s")
 
 	# get the canonical name of the command just invoked
@@ -174,11 +151,8 @@ settitle()
 
 commandcolor=bold
 
-# set prompt and window title format
-if test -n "$promptstring"
-then
-	PS1='%{$(setcolor ${promptcolor})%}$(eval echo -n "\"${promptstring}\"")%{$(setcolor "normal")%}%{$(setcolor ${commandcolor})%}'
-fi
+# set prompt
+PS1='$(prompt_character)%{$(setcolor "normal")%} %{$(setcolor ${commandcolor})%}'
 
 HISTFILE=~/.zsh_history
 SAVEHIST=${HISTSIZE:-128}

@@ -131,43 +131,36 @@ getcommand()
 }
 
 
-if test ${BASH_VERSINFO[0]} -ge 4 ||
-	test ${BASH_VERSINFO[0]} -eq 3 -a ${BASH_VERSINFO[1]} -gt 1
-then
-	has_debug_trap=true
-else
-	has_debug_trap=false
-fi
-
-# set the title when we run a command
-setcommandhook()
+precmd()
 {
-	if $has_debug_trap
-	then
-		trap 'command=$(getcommand $BASH_COMMAND); eval settitle "\"${title}\""; setcolor normal; trap - DEBUG' DEBUG
-	fi
+	laststatus=$?
+	command=
+	eval settitle "\"${title}\""
+	setcolor "$promptcolor"
+	eval "echo \"${preprompt}\""
+	case $TERM in putty|xterm*)
+		bell;;
+	esac
 }
 
-# prompt and window title
-if test -n "${title}"
-then
-	PROMPT_COMMAND='laststatus="$?"; command=; eval settitle "\"${title}\""'
-	if $has_debug_trap
-	then
-		PROMPT_COMMAND="$PROMPT_COMMAND; setcommandhook"
-	fi
+preexec()
+{
+	command=$(getcommand $BASH_COMMAND)
+	eval "settitle \"$title\""
+	setcolor normal
+}
+
+has_debug_trap=false
+if trap '' DEBUG >/dev/null 2>&1; then
+	has_debug_trap=true
 fi
-if test -n "${promptstring}"
-then
-	PS1='\[$(setcolor ${promptcolor})\]$(eval printf "%s" "\"${promptstring}\"")'
-	case $TERM in putty|xterm*)
-		PS1="$PS1"'\[$(bell)\]'
-		;;
-	esac
-	if $has_debug_trap
-	then
-		PS1="$PS1"'\[$(setcolor ${commandcolor})\]'
-	fi
+
+PROMPT_COMMAND='precmd'
+trap preexec DEBUG
+
+if $has_debug_trap; then
+	commandcolor=bold
+	PS1="$PS1"'\[$(setcolor ${commandcolor})\]'
 fi
 
 # history format

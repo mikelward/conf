@@ -23,5 +23,7 @@ setopt CORRECT
 setopt DVORAK
 setopt PROMPT_PERCENT
 setopt PUSHD_SILENT
+# so we can display jobs in the prompt
+unsetopt POSIX_JOBS
 
 # read .env in .zshrc for compatibility with other POSIX shells

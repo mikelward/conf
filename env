@@ -768,7 +768,7 @@ h()
 # intended to be used in the prompt
 job_info()
 {
-	jobs | sed -e 's/^\[\([0-9]*\)\][-+ ]*[^ ]* */%\1 /'
+	jobs | sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /'
 }
 
 # show the most recently changed file
@@ -1157,7 +1157,6 @@ test -n "$TABSIZE" && export LESS="${LESS}x${TABSIZE}"
 export GOPATH="$HOME"
 
 export TOP=-I
-export WANT_SSH_AGENT=true
 export WWW_HOME=http://google.com
 
 export PYTHONSTARTUP="$HOME"/.pythonstartup.py
