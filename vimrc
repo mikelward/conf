@@ -26,7 +26,8 @@ set wildmode=list:longest	" filename completion lists when ambiguous
 
 " DISPLAY OPTIONS
 if version >= 503
-    set listchars=tab:>-,trail:_,eol:$
+    set listchars=trail:-
+    set list
 endif
 if version >= 600
     set listchars+=extends:>,precedes:<
@@ -99,11 +100,11 @@ function! ToggleWhitespace()
   if b:show_whitespace
     set listchars-=tab:\ \                " revert previous whitespace chars
     set listchars+=tab:\|\ ,trail:-       " tab is "|   ", trail is "-"
-    echo "Showing whitespace"
+    echo "Showing more whitespace"
   else
     set listchars-=tab:\|\ ,trail:-       " revert previous whitespace chars
     set listchars+=tab:\ \                " show tabs as regular spaces
-    echo "Hiding whitespace"
+    echo "Hiding most whitespace"
   endif
 endfunction
 
