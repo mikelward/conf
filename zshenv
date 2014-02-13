@@ -9,9 +9,11 @@ setopt BRACE_EXPAND
 setopt BANG_HIST
 setopt CSH_JUNKIE_HISTORY
 setopt KSH_TYPESET
-# emulate sh doesn't set this PROMPT_SUBST
+# emulate sh doesn't set PROMPT_SUBST
 # could use emulate -R, but that breaks compinit
 setopt PROMPT_SUBST
+# so we can display jobs in the prompt
+unsetopt POSIX_JOBS
 
 # useful optional features in both bash and zsh
 setopt AUTO_CD       # autocd in bash
@@ -23,7 +25,5 @@ setopt CORRECT
 setopt DVORAK
 setopt PROMPT_PERCENT
 setopt PUSHD_SILENT
-# so we can display jobs in the prompt
-unsetopt POSIX_JOBS
 
 # read .env in .zshrc for compatibility with other POSIX shells
