@@ -49,7 +49,7 @@ precmd()
 	# so initialise it here too
 	#commandstart=$commandfinish
 	setcolor "$promptcolor"
-	eval "printf \"${preprompt}\""
+	eval "printf \"%s\" \"${preprompt}\""
 }
 
 preexec()
