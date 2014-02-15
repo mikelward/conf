@@ -29,7 +29,6 @@ function ? {
 
 precmd()
 {
-
 	# store the status of the previous interactive command for use in the prompt
 	laststatus=$?
 
@@ -48,6 +47,7 @@ precmd()
 	# in case the user didn't run any command, preexec won't have been called,
 	# so initialise it here too
 	#commandstart=$commandfinish
+
 	setcolor "$promptcolor"
 	eval "printf \"%s\" \"${preprompt}\""
 }
