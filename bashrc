@@ -137,7 +137,7 @@ precmd()
 	command=
 	eval settitle "\"${title}\""
 	setcolor "$promptcolor"
-	eval "echo \"${preprompt}\""
+	eval "printf \"${preprompt}\""
 	case $TERM in putty|xterm*)
 		bell;;
 	esac

@@ -144,7 +144,7 @@ git_branch()
 			return 0
 		fi
 	done <<EOF
-$(git branch --color 2>/dev/null)
+$(git branch 2>/dev/null)
 EOF
 }
 
@@ -325,7 +325,7 @@ notify()
 
 on_cygwin()
 {
-	case `uname -s` in
+	case "$(uname -s)" in
 	CYGWIN*)
 		true
 		;;
@@ -574,14 +574,8 @@ then
 	alias %='fg'
 	alias %+='fg %+'
 	alias %-='fg %-'
-	if test -n "$ZSH_VERSION"; then
-		# zsh requires --
-		alias -- +='pushd +1'
-	else
-		# dash requires no --, works fine in bash and ksh too
-		alias +='pushd +1'
-	fi
-	for i in `seq 0 9`; do
+	# see also function + and function -
+	for i in $(seq 0 9); do
 		alias +$i='pushd +'$i
 	done
 	# aliase apt to aptitude or apt-get (in that order)
@@ -687,6 +681,21 @@ then
 	packageinit
 fi
 
+# bash and zsh allow using special function names in this form
+if test -n "$BASH_VERSION" || test -n "$ZSH_VERSION"; then
+	function + {
+		pushd "$@"
+	}
+
+	function - {
+		popd "$@"
+	}
+
+	function +- {
+		pushd "$OLDPWD"
+	}
+fi
+
 # ring the terminal's bell
 bell()
 {
@@ -724,15 +733,23 @@ calc()
 	echo "scale=3; $*" | bc
 }
 
-directories()
+dir_info()
 {
 	printf "%b" "$blue"
 
-	if exists dirs
-	then
-		printf "%s" "$(dirs)"
+	if exists dirs; then
+		dirs -v -l | while read num dir; do
+			(
+				cd "$dir"
+				dir=$(tilde_directory)
+				branch=$(git_branch)
+				printf "+%s%s %s%s %s%s%s\n" \
+					"$blue" "$num" "$dir" "$normal" \
+					"$green" "$branch" "$normal"
+			)
+		done
 	else
-		printf "%s" "$PWD"
+		printf "%s\n" "$PWD"
 	fi
 
 	printf "%b" "$normal"
@@ -1077,7 +1094,7 @@ t()
 # print the current directory with $HOME changed to ~
 tilde_directory()
 {
-	printf "%b%s%b" "$blue" "$(pwd | sed -e 's#'"$HOME"'#~#')" "$normal"
+	pwd | sed -e 's#'"$HOME"'#~#'
 }
 
 # list all instances of a command

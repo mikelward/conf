@@ -21,7 +21,7 @@ case $- in
 	promptchars='$(prompt_character)'
 	promptcolor=normal
 	preprompt='
-$(newline_if_non_empty "$(short_hostname) $(directories) $(git_branch)" "$(job_info)")'
+$(newline_if_non_empty "$USERNAME@$(short_hostname)" "$(job_info)" "$(dir_info)")'
 	title='$(eval printf "%s" "\"${connectioninfo} ${commandinfo}\"")'
 	PS1='$(prompt_character) '
 	PS2='> '
