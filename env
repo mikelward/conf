@@ -735,8 +735,6 @@ calc()
 
 dir_info()
 {
-	printf "%b" "$blue"
-
 	if exists dirs; then
 		dirs -v -l | while read num dir; do
 			(
@@ -749,10 +747,8 @@ dir_info()
 			)
 		done
 	else
-		printf "%s\n" "$PWD"
+		printf "%s%s%s\n" "$blue" "$PWD" "$normal"
 	fi
-
-	printf "%b" "$normal"
 }
 
 # edit the most recently changed file
