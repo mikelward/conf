@@ -1,107 +1,357 @@
-# Commands to run for any interactive POSIX shell.
-# Examples include the prompt and any terminal-specific code.
-# It is called by sh via $ENV, bash via .bashrc, and zsh via .zshrc.
+##########################################################################
+# Configuration for bash, zsh, etc.
+#
+# Configuration for all shells is in this one file so that it can be
+# easily copied to many hosts.
+#
+# bashrc and shrc should be symlinks to this file.
+#
+# ksh and dash should also work, but will have a simpler prompt, etc.
+#
+# Mikel Ward <mikel@mikelward.com>
+##########################################################################
 
-case $- in
-*i*)
-	# common environment
-	if test -f "$HOME/.env"
-	then
-		. "$HOME/.env"
-	fi
+set -u
 
-	# terminal colors, etc.
-	terminit
+##########################################################################
+# COMPATIBILITY
+#
+# Try to make all shells behave similarly while reading this file
+##########################################################################
+is_zsh() {
+	[ -n "${ZSH_VERSION:-}" ]
+}
 
-	# prompt and window title
-	connectioninfo='$(short_hostname)'
-	command=
-	commandinfo='$(test -n "$mytitle" && echo "$mytitle" || printf "%s" "$command")'
-	shellinfo='$(short_hostname):$(dirs -v)'
-	promptchars='$(prompt_character)'
-	promptcolor=normal
-	preprompt='
-$(newline_if_non_empty "$USERNAME@$(short_hostname)" "$(job_info)" "$(dir_info)")'
-	title='$(eval printf "%s" "\"${connectioninfo} ${commandinfo}\"")'
-	PS1='$(prompt_character) '
-	PS2='> '
-	#PS2='_ '
-	PS3='? '
-	PS4='+ '
+is_bash() {
+	[ -n "${BASH_VERSION:-}" ]
+}
 
-	# command line editing key bindings (must be set after EDITOR and VISUAL)
-	set -o emacs 2>/dev/null
+if is_zsh; then
+	# Red Hat's /etc/zshrc and /etc/zprofile break things
+	unsetopt GLOBAL_RCS
 
-	# colors for ls
-	case "$TERM" in
-	linux|putty|vt220)
-		# colors for white on black
-		#export LSCOLORS='gxcxxxxxfxxxxx'
-		export LSCOLORS='ExFxxxxxCxxxxx'
-		export LS_COLORS='no=00:fi=00:di=01;34:ln=01;35:so=00;00:bd=00;00:cd=00;00:or=01;31:pi=00;00:ex=01;32'
-		;;
-	*)
-		# colors for black on white
-		export LSCOLORS='exfxxxxxcxxxxx'
-		export LS_COLORS='no=00:fi=00:di=00;34:ln=00;35:so=00;00:bd=00;00:cd=00;00:or=00;31:pi=00;00:ex=00;32'
-		;;
-	esac
-	if exists dircolors
-	then
-		if test -f "$HOME/.dircolors.$TERM"
-		then
-			dircolors="$HOME/.dircolors.$TERM"
-		else
-			case "$TERM" in
-			linux|putty|vt220)
-				if test -f "$HOME"/.dircolors.dark
-				then
-					dircolors="$HOME"/.dircolors.dark
-				fi
-				;;
-			*)
-				if test -f "$HOME"/.dircolors.light
-				then
-					dircolors="$HOME"/.dircolors.light
-				fi
-				;;
-			esac
-		fi
-		if test -z "$dircolors"
-		then
-			if test -f "$HOME"/.dircolors
-			then
-				dircolors="$HOME"/.dircolors
-			fi
-		fi
-		if test -n "$dircolors"
-		then
-			eval $(dircolors -b "$dircolors" 2>/dev/null)
-		fi
-	fi
+	# make zsh as similar to bash as possible
+	emulate sh
+	setopt BRACE_EXPAND
+	setopt BANG_HIST
+	setopt CSH_JUNKIE_HISTORY
+	setopt KSH_TYPESET
+	# emulate sh doesn't set PROMPT_SUBST
+	# could use emulate -R, but that breaks compinit
+	setopt PROMPT_SUBST
+	# so we can display jobs in the prompt
+	unsetopt POSIX_JOBS
 
-	# local settings (company environment, network, etc.)
-	test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
-	;;
-esac
+	# enable ksh default features
+	setopt KSH_GLOB         # !(pattern) etc. like in ksh
+elif is_bash; then
+	# enable ksh default features
+	shopt -s extglob        # !(pattern) etc. like in ksh
 
-# workaround for GNOME Terminal which does a cd on startup :-(
-if test -n "$DISPLAY"
-then
-	# e.g. Mikel-PC or Mikel-Laptop means local
-	case "$HOST" in
-	$USER-*)
-		cd
-		;;
-	esac
-	# assuming DISPLAY=:0.0 means local
-	# note that DISPLAY=localhost:0.0 can mean SSH X forwarding
-	case "$DISPLAY" in
-	:*)
-		cd
-		;;
-	esac
+	# enable zsh default features
+	shopt -s globstar       # recursive globbing with **
 fi
 
-# finish with a zero exit status
+# standardize on bash-like variables that everyone assumes are preset
+USERNAME=${USERNAME:-$(id -un)}
+HOSTNAME=${HOSTNAME:-$(hostname --fqdn)}
+
+##########################################################################
+# BASIC FUNCTIONS
+#
+# Functions that are needed elsewhere in this file.
+##########################################################################
+# return true if the argument is a command that can be invoked
+is_command() {
+	quiet type "$1"
+}
+
+# return true if the shell is interactive
+is_interactive() {
+	case $- in *i*)
+		true;;
+	*)
+		false;;
+	esac
+}
+
+# run a command with output silenced
+quiet() {
+	"$@" >/dev/null 2>&1
+}
+
+# print an important message that's not quite an error
+warn() {
+	printf "$*\n" >&2
+}
+
+##########################################################################
+# GENERAL FUNCTIONS
+#
+# Useful things that could be commands if distributing them wasn't
+# impractical.
+##########################################################################
+# print the first line of input (the header) as-is, run a command
+# on the rest the input (the body)
+# e.g. ps | body grep ps
+#
+# accepts an option -<number>, makes the header <number> lines
+# instead of 1
+# e.g. netstat -tn | body -2 grep ':22\>'
+body() {
+    local lines
+
+	lines=1
+    case "$1" in
+    -*)
+        lines=${1#-}
+        shift
+        ;;
+    esac
+
+    while test $lines -gt 0; do
+        IFS= read -r header
+        printf '%s\n' "$header"
+        lines=$((lines-1))
+    done
+    "$@"
+}
+
+##########################################################################
+# INTERACTIVE SHELL SETUP
+#
+# Set up the prompt, title, key bindings, etc.
+##########################################################################
+if is_interactive; then
+
+	# determine the graphics mode escape sequences
+	if is_command tput; then
+		if quiet tput longname; then
+			bold="$(tput bold)"
+			underline="$(tput smul)"
+			standout="$(tput smso)"
+			normal="$(tput sgr0)"
+			black="$(tput setaf 0)"
+			red="$(tput setaf 1)"
+			green="$(tput setaf 2)"
+			yellow="$(tput setaf 3)"
+			blue="$(tput setaf 4)"
+			magenta="$(tput setaf 5)"
+			cyan="$(tput setaf 6)"
+			white="$(tput setaf 7)"
+
+			khome="$(tput khome)"
+			kend="$(tput kend)"
+			kdch1="$(tput kdch1)"
+		fi
+	fi
+
+	# determine the window title escape sequences
+	case "$TERM" in
+		aixterm|dtterm|putty|rxvt|xterm*)
+			titlestart=']0;'
+			titlefinish=''
+			;;
+		cygwin)
+			titlestart='];'
+			titlefinish=''
+			;;
+		konsole)
+			titlestart=']30;'
+			titlefinish=''
+			;;
+		screen*)
+			# status line
+			#titlestart='^[_'
+			#titlefinish='^[\'
+			# window title
+			titlestart='k'
+			titlefinish='\'
+			;;
+		*)
+			if is_command tput
+			then
+				if quiet tput longname
+				then
+					titlestart="$(tput tsl)"
+					titlefinish="$(tput fsl)"
+				fi
+			else
+				titlestart=''
+				titlefinish=''
+			fi
+			;;
+	esac
+
+	# commands to execute before the prompt is displayed
+	preprompt() {
+		laststatus=$?
+
+		if $simple; then
+			return
+		fi
+
+		printf '\n'
+		printf '%s\n' "$(short_hostname)"
+		job_info
+		dir_info
+		set_title "$(title)"
+	}
+
+	# print information about all shell jobs
+	# intended to be used in the prompt
+	job_info() {
+			jobs | sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /'
+	}
+
+	# print directory stack listing in "+<number> <directory>" format
+	# intended to be used in the prompt
+	dir_info() {
+		if is_command dirs; then
+			dirs -v -l | while read num dir; do
+			(
+				cd "$dir"
+				dir=$(tilde_directory)
+				branch=$(git_branch)
+				printf "%s+%s %s%s %s%s%s\n" \
+					"$blue" "$num" "$dir" "$normal" \
+					"$green" "$branch" "$normal"
+			)
+			done
+		else
+			printf "%s%s%s\n" "$blue" "$PWD" "$normal"
+		fi
+	}
+
+	# print the name of the currently active git branch in $PWD
+	git_branch() {
+		git branch 2>/dev/null | while read star branch; do
+			if test "$star" = "*"; then
+				echo "$branch"
+				break
+			fi
+		done
+	}
+
+	# get a short version of the hostname for use in the prompt or window title
+	short_hostname() {
+		local hostname
+
+		hostname="${HOSTNAME%%.*}"
+		hostname="${hostname#$USERNAME-}"
+		printf "%s" "$hostname"
+	}
+
+	# print the current directory with $HOME changed to ~
+	tilde_directory() {
+		pwd | sed -e 's#'"$HOME"'#~#'
+	}
+
+	# print the string that should be used as the xterm title
+	title() {
+		short_hostname
+		printf ' '
+	}
+
+	# print the string that should be used as the prompt
+	prompt() {
+		if $simple; then
+			printf '$ '
+			return
+		fi
+
+		prompt_character
+		printf ' '
+		user_input_color
+	}
+
+	# print a character that should be the last part of the prompt
+	prompt_character() {
+		if test $laststatus -eq 0; then
+			printf '$'
+		else
+			printf '?'
+		fi
+	}
+
+	# set the terminal text color to the one for highlighting user input
+	user_input_color() {
+		printf "%s" "$bold"
+	}
+
+	# set the terminal text color back to the normal one after user input
+	command_output_color() {
+		printf "%s" "$normal"
+	}
+
+	# function to run just before running a command from the command line
+	# see also preexec (zsh) and DEBUG (bash)
+	# the first argument is the command line being run
+	precommand() {
+		$simple && return
+
+		command_output_color
+		printf "Running %s\n" "$1"
+	}
+
+	# set the xterm title to the supplied string
+	set_title() {
+		printf "%s%s%s" "$titlestart""$*""$titlefinish"
+	}
+
+	simple=false
+	laststatus=0
+
+	PS1='$(prompt)'
+	# allow copy-pasting continued commands
+	PS2='_ '
+	alias _=' '
+
+	if is_zsh; then
+		# zsh enhancements
+		setopt AUTO_CD
+		setopt BARE_GLOB_QUAL
+		setopt CORRECT
+		setopt DVORAK
+		setopt PROMPT_PERCENT
+		setopt PUSHD_SILENT
+
+		# install preprompt and precommand functions
+		precmd() {
+			preprompt
+		}
+		preexec() {
+			precommand "$1"
+		}
+	elif is_bash; then
+		# bash enhancements
+		shopt -s autocd
+		shopt -s checkwinsize
+		shopt -s lithist
+
+		# install preprompt and precommand functions
+		remove_precommand_hook() {
+			trap '' DEBUG
+		}
+
+		install_precommand_hook() {
+			trap 'precommand "$BASH_COMMAND"' DEBUG
+		}
+
+		# remove_precommand_hook and install_precommand_hook are intended
+		# to prevent setting the title to each of the commands in
+		# preprompt, but needs more testing
+		#PROMPT_COMMAND='\
+		#	remove_precommand_hook; \
+		#	preprompt; \
+		#	install_precommand_hook'
+		PROMPT_COMMAND=preprompt
+		install_precommand_hook
+	fi
+fi
+
+# exit successfully so the first prompt is $ rather than ?
 true
+
+# Use tabs for indentation so we can edit this in nvi if necessary.
+# vi: set ts=4 sw=4 tw=74 noet:
