@@ -183,9 +183,22 @@ if is_interactive; then
             ;;
     esac
 
+    basic_prompt() {
+        PS1='$ '
+        PS2='_ '
+        PS3='#? '
+    }
+
+    simple() {
+        simple=true
+        basic_prompt
+    }
+
     # commands to execute before the prompt is displayed
     preprompt() {
         laststatus=$?
+
+        basic_prompt
 
         if $simple; then
             return
@@ -196,6 +209,7 @@ if is_interactive; then
         job_info
         dir_info
         set_title "$(title)"
+        set_prompt
     }
 
     # print information about all shell jobs
@@ -253,16 +267,12 @@ if is_interactive; then
         printf ' '
     }
 
-    # print the string that should be used as the prompt
-    prompt() {
-        if $simple; then
-            printf '$ '
-            return
-        fi
-
-        prompt_character
-        printf ' '
-        prompt_color "$(user_input_color)"
+    # set all the prompt strings
+    # done this way so that \[ (bash) and \{ (zsh) are handled consistenly
+    set_prompt() {
+        PS1="$(prompt_character) $(prompt_color $user_input_color)"
+        PS2="_ $(prompt_color $user_input_color)"
+        PS3="#? $(prompt_color $user_input_color)"
     }
 
     # print a character that should be the last part of the prompt
@@ -274,24 +284,14 @@ if is_interactive; then
         fi
     }
 
-    # set the terminal text color to the one for highlighting user input
-    user_input_color() {
-        printf "%s" "$bold"
-    }
-
-    # set the terminal text color back to the normal one after user input
-    command_output_color() {
-        printf "%s" "$normal"
-    }
-
     # function to run just before running a command from the command line
     # see also preexec (zsh) and DEBUG (bash)
     # the first argument is the command line being run
     precommand() {
         $simple && return
 
-        command_output_color
-        printf "Running %s\n" "$1"
+        printf '%s' "$normal"
+        set_title "$(short_hostname) $1"
     }
 
     # set the xterm title to the supplied string
@@ -302,18 +302,22 @@ if is_interactive; then
     simple=false
     laststatus=0
 
-    PS1='$(prompt)'
-    # allow copy-pasting continued commands
-    PS2='_ '
-    alias _=' '
-
-    set -o emacs
-
     # print the supplied string inside prompt escape sequences
     # that tell the shell the escape sequences do not move the cursor
     prompt_color() {
-        printf '%s' "$*"
+        local color_escape
+
+        color_escape=$(get_color_escape "$1")
+
+        if test -n "$color_escape" && test -n "$escape_start" && test -n "$escape_end"; then
+            printf '%s%s%s' "$escape_start" "$color_escape" "$escape_end"
+        fi
     }
+    get_color_escape() {
+        eval "printf \"%s\" \"\$$1\""
+    }
+    escape_start=
+    escape_end=
     if is_zsh; then
         # zsh enhancements
         setopt AUTO_CD
@@ -323,6 +327,9 @@ if is_interactive; then
         setopt PROMPT_PERCENT
         setopt PUSHD_SILENT
 
+        escape_start='%{'
+        escape_end='%}'
+
         # install preprompt and precommand functions
         precmd() {
             preprompt
@@ -330,14 +337,14 @@ if is_interactive; then
         preexec() {
             precommand "$1"
         }
-        prompt_color() {
-            printf '%s%s%s' '%{' "$*" '%}'
-        }
     elif is_bash; then
         # bash enhancements
         shopt -s autocd
         shopt -s checkwinsize
         shopt -s lithist
+
+        escape_start='\['
+        escape_end='\]'
 
         # install preprompt and precommand functions
         remove_precommand_hook() {
@@ -358,6 +365,12 @@ if is_interactive; then
         PROMPT_COMMAND=preprompt
         install_precommand_hook
     fi
+    user_input_color=bold
+    set_prompt
+    alias _=' '
+
+    set -o emacs
+
 fi
 
 # exit successfully so the first prompt is $ rather than ?
