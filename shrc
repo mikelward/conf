@@ -40,6 +40,7 @@ if is_zsh; then
     setopt BRACE_EXPAND
     setopt BANG_HIST
     setopt CSH_JUNKIE_HISTORY
+    setopt INTERACTIVE_COMMENTS
     setopt KSH_TYPESET
     # emulate sh doesn't set PROMPT_SUBST
     # could use emulate -R, but that breaks compinit
@@ -49,6 +50,10 @@ if is_zsh; then
 
     # enable ksh default features
     setopt KSH_GLOB         # !(pattern) etc. like in ksh
+    unsetopt BARE_GLOB_QUAL # otherwise !(pattern) breaks
+
+    # TODO: Re-evaluate turning EXTENDED_GLOB on, perhaps in conjunction with
+    # disable -p '#'.
 elif is_bash; then
     # enable ksh default features
     shopt -s extglob        # !(pattern) etc. like in ksh
@@ -62,6 +67,9 @@ fi
 # standardize on bash-like variables that everyone assumes are preset
 USERNAME=${USERNAME:-$(id -un)}
 HOSTNAME=${HOSTNAME:-$(hostname --fqdn)}
+
+# TODO Re-add addpath, delpath, etc.?
+PATH="$HOME/scripts:$PATH"
 
 ##########################################################################
 # BASIC FUNCTIONS
@@ -503,7 +511,6 @@ if is_interactive; then
     if is_zsh; then
         # zsh enhancements
         setopt AUTO_CD
-        setopt BARE_GLOB_QUAL
         setopt CORRECT
         setopt DVORAK
         setopt PROMPT_PERCENT
