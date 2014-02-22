@@ -183,33 +183,32 @@ if is_interactive; then
             ;;
     esac
 
+    # set a basic prompt that doesn't rely on precommand and preprompt hooks
     basic_prompt() {
         PS1='$ '
         PS2='_ '
         PS3='#? '
-    }
-
-    simple() {
-        simple=true
-        basic_prompt
+        set_title "$(title)"
     }
 
     # commands to execute before the prompt is displayed
     preprompt() {
         laststatus=$?
 
-        basic_prompt
-
-        if $simple; then
-            return
-        fi
+        $simple && return
 
         printf '\n'
-        printf '%s\n' "$(short_hostname)"
+        set_color "$prompt_color"
+        host_info
         job_info
         dir_info
         set_title "$(title)"
         set_prompt
+    }
+
+    # print information about this machine
+    host_info() {
+        printf '%s\n' "$(short_hostname)"
     }
 
     # print information about all shell jobs
@@ -264,19 +263,19 @@ if is_interactive; then
     # print the string that should be used as the xterm title
     title() {
         short_hostname
-        printf ' '
     }
 
     # set all the prompt strings
     # done this way so that \[ (bash) and \{ (zsh) are handled consistenly
     set_prompt() {
-        PS1="$(prompt_character) $(prompt_color $user_input_color)"
-        PS2="_ $(prompt_color $user_input_color)"
-        PS3="#? $(prompt_color $user_input_color)"
+        PS1="$(prompt_color $prompt_color)$(ps1_character) "\
+"$(prompt_color $user_input_color)"
+        PS2="$(prompt_color $prompt_color)_ $(prompt_color $user_input_color)"
+        PS3="$(prompt_color $prompt_color)#? $(prompt_color $user_input_color)"
     }
 
     # print a character that should be the last part of the prompt
-    prompt_character() {
+    ps1_character() {
         if test $laststatus -eq 0; then
             printf '$'
         else
@@ -290,8 +289,9 @@ if is_interactive; then
     precommand() {
         $simple && return
 
-        printf '%s' "$normal"
-        set_title "$(short_hostname) $1"
+        # TODO: Expand job references (fg, %1, etc.)
+        set_title "$(short_hostname) $*"
+        set_color "normal"
     }
 
     # set the xterm title to the supplied string
@@ -307,17 +307,26 @@ if is_interactive; then
     prompt_color() {
         local color_escape
 
-        color_escape=$(get_color_escape "$1")
+        color_escape=$(set_color "$*")
 
         if test -n "$color_escape" && test -n "$escape_start" && test -n "$escape_end"; then
+            printf '%s%s%s' "$escape_start" "$normal" "$escape_end"
             printf '%s%s%s' "$escape_start" "$color_escape" "$escape_end"
         fi
     }
-    get_color_escape() {
-        eval "printf \"%s\" \"\$$1\""
+    # set the terminal color to the specified color or terminal attribute
+    # accepts multiple arguments, e.g. set_color bold blue underline
+    set_color() {
+        local arg
+
+        for arg; do
+            eval "printf \"%s\" \"\$$arg\""
+        done
     }
     escape_start=
     escape_end=
+    prompt_color=normal
+    user_input_color=bold
     if is_zsh; then
         # zsh enhancements
         setopt AUTO_CD
@@ -331,12 +340,20 @@ if is_interactive; then
         escape_end='%}'
 
         # install preprompt and precommand functions
-        precmd() {
-            preprompt
+        enable_prompt_hooks() {
+            precmd() {
+                preprompt
+            }
+            preexec() {
+                precommand "$1"
+            }
         }
-        preexec() {
-            precommand "$1"
+        disable_prompt_hooks() {
+            unset -f precmd
+            unset -f preexec
+            basic_prompt
         }
+        enable_prompt_hooks
     elif is_bash; then
         # bash enhancements
         shopt -s autocd
@@ -347,26 +364,20 @@ if is_interactive; then
         escape_end='\]'
 
         # install preprompt and precommand functions
-        remove_precommand_hook() {
-            trap '' DEBUG
-        }
-
-        install_precommand_hook() {
+        enable_prompt_hooks() {
             trap 'precommand "$BASH_COMMAND"' DEBUG
+            PROMPT_COMMAND=preprompt
         }
-
-        # remove_precommand_hook and install_precommand_hook are intended
-        # to prevent setting the title to each of the commands in
-        # preprompt, but needs more testing
-        #PROMPT_COMMAND='\
-        #   remove_precommand_hook; \
-        #   preprompt; \
-        #   install_precommand_hook'
-        PROMPT_COMMAND=preprompt
-        install_precommand_hook
+        disable_prompt_hooks() {
+            trap '' DEBUG
+            PROMPT_COMMAND=
+            basic_prompt
+        }
+        enable_prompt_hooks
     fi
-    user_input_color=bold
-    set_prompt
+    # set a simple prompt for non-bash non-zsh
+    # (will be overridden immediately by bash and zsh)
+    basic_prompt
     alias _=' '
 
     set -o emacs
