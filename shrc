@@ -266,6 +266,7 @@ if is_interactive; then
         esac
     }
 
+    alias ct='ctags -R'
     alias cx='chmod +x'
     alias e='edit'
     alias f='fg'
