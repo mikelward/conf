@@ -364,7 +364,7 @@ if is_interactive; then
         $simple && return
 
         printf '\n'
-        set_color "$prompt_color"
+        set_color "normal"
         host_info
         dir_info
         job_info
@@ -433,12 +433,20 @@ if is_interactive; then
     }
 
     # set all the prompt strings
-    # done this way so that \[ (bash) and \{ (zsh) are handled consistenly
+    # done this way so that \[ (bash) and \{ (zsh) are handled consistently
     set_prompt() {
-        PS1="$(prompt_color $prompt_color)$(ps1_character) "\
-"$(prompt_color $user_input_color)"
-        PS2="$(prompt_color $prompt_color)_ $(prompt_color $user_input_color)"
-        PS3="$(prompt_color $prompt_color)#? $(prompt_color $user_input_color)"
+        PS1="$(ps1)"
+    }
+
+    ps1() {
+        if test $laststatus -ne 0; then
+            prompt_color 'red'
+            printf "%d" "$laststatus"
+            prompt_color 'black'
+        fi
+        ps1_character
+        printf ' '
+        prompt_color 'bold'
     }
 
     # print a character that should be the last part of the prompt
@@ -458,7 +466,7 @@ if is_interactive; then
 
         # TODO: Expand job references (fg, %1, etc.)
         set_title "$(short_hostname) $*"
-        set_color "normal"
+        set_color 'normal'
     }
 
     # set the xterm title to the supplied string
@@ -492,8 +500,6 @@ if is_interactive; then
     }
     escape_start=
     escape_end=
-    prompt_color=normal
-    user_input_color=bold
     if is_zsh; then
         # zsh enhancements
         setopt AUTO_CD
