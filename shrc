@@ -288,6 +288,17 @@ if is_interactive; then
     # in case root isn't available, fall back to sudo
     is_command root && alias root="root " || alias root="sudo "
 
+    # enable colors in commands that support it
+    if quiet grep --color=auto --quiet "" /etc/hosts
+    then
+        alias grep='grep --color=auto'
+    fi
+    if quiet ls --color=never --directory /
+    then
+        # enable colors with GNU ls
+        alias ls='ls --color=auto'
+    fi
+
     # allow running git subcommands without typing the "git" prefix
     # TODO: Write a script that supports multiple version control systems,
     # and make it an alias for that instead?
@@ -532,6 +543,20 @@ if is_interactive; then
     export BLOCKSIZE=1024
     export CLICOLOR=true
     export GREP_COLOR=4
+
+    # colors for ls
+    case "$TERM" in
+        linux|putty|vt220)
+            # colors for white on black
+            export LSCOLORS='ExFxxxxxCxxxxx'
+            export LS_COLORS='no=00:fi=00:di=01;34:ln=01;35:so=00;00:bd=00;00:cd=00;00:or=01;31:pi=00;00:ex=01;32'
+            ;;
+        *)
+            # colors for black on white
+            export LSCOLORS='exfxxxxxcxxxxx'
+            export LS_COLORS='no=00:fi=00:di=00;34:ln=00;35:so=00;00:bd=00;00:cd=00;00:or=00;31:pi=00;00:ex=00;32'
+            ;;
+    esac
 
     # command line editing
     test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
