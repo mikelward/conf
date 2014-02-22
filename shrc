@@ -27,6 +27,10 @@ is_bash() {
     [ -n "${BASH_VERSION:-}" ]
 }
 
+is_ksh() {
+    [ -n "${KSH_VERSION:-}" ]
+}
+
 if is_zsh; then
     # Red Hat's /etc/zshrc and /etc/zprofile break things
     unsetopt GLOBAL_RCS
@@ -51,6 +55,8 @@ elif is_bash; then
 
     # enable zsh default features
     shopt -s globstar       # recursive globbing with **
+elif is_ksh; then
+    alias local=typeset
 fi
 
 # standardize on bash-like variables that everyone assumes are preset
@@ -267,6 +273,7 @@ if is_interactive; then
     alias gdb='gdb -q '
     is_command l && alias l='l -K' || alias l='ls'
     alias ll='l -l'
+    alias lt='l -t'
     alias j='jobs'
     alias py='python'
     alias s='ssh'
