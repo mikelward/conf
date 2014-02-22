@@ -6,16 +6,6 @@ then
 	eval $(ssh-agent -k)
 fi
 
-# delete the fifo and kill the process used to make stderr red
-if test -n "$errfifo" && test -f "$errfifo"
-then
-	rm "$errfifo"
-fi
-if test -n "$errpid"
-then
-	kill $errpid
-fi
-
 # clear the screen
 if type clear >/dev/null 2>&1
 then
