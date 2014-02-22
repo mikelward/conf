@@ -272,8 +272,15 @@ if is_interactive; then
     alias g='grep -HIin'
     alias gdb='gdb -q '
     is_command l && alias l='l -K' || alias l='ls'
+    alias l1='l -1'
+    alias la='l -a'
+    alias lc='l -C'
     alias ll='l -l'
-    alias lt='l -t'
+    if quiet l -T; then
+        alias lt='l -Tt'
+    else
+        alias lt='ll -t'
+    fi
     alias j='jobs'
     alias py='python'
     alias s='ssh'
