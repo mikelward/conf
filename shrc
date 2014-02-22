@@ -274,6 +274,7 @@ if is_interactive; then
         esac
     }
 
+    alias ct='ctags -R'
     alias cx='chmod +x'
     alias e='edit'
     alias f='fg'
@@ -291,6 +292,7 @@ if is_interactive; then
     fi
     alias j='jobs'
     alias py='python'
+    alias rg='rgrep'
     alias s='ssh'
     alias v='view'
     alias x='_exit'
