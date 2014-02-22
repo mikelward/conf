@@ -366,8 +366,8 @@ if is_interactive; then
         printf '\n'
         set_color "$prompt_color"
         host_info
-        job_info
         dir_info
+        job_info
         set_title "$(title)"
         set_prompt
     }
