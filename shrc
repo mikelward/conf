@@ -18,6 +18,7 @@ set -u
 #
 # Try to make all shells behave similarly while reading this file
 ##########################################################################
+
 is_zsh() {
     [ -n "${ZSH_VERSION:-}" ]
 }
@@ -61,6 +62,7 @@ HOSTNAME=${HOSTNAME:-$(hostname --fqdn)}
 #
 # Functions that are needed elsewhere in this file.
 ##########################################################################
+
 # return true if the argument is a command that can be invoked
 is_command() {
     quiet type "$1"
@@ -91,6 +93,13 @@ warn() {
 # Useful things that could be commands if distributing them wasn't
 # impractical.
 ##########################################################################
+
+# ring the terminal's bell
+bell()
+{
+    printf "\a"
+}
+
 # print the first line of input (the header) as-is, run a command
 # on the rest the input (the body)
 # e.g. ps | body grep ps
@@ -115,6 +124,54 @@ body() {
         lines=$((lines-1))
     done
     "$@"
+}
+
+# make a directory and cd to it
+mcd()
+{
+    if test -d "$1"; then
+        printf "%s already exists\n" "$1"
+    else
+        mkdir -p "$1" && cd "$1"
+    fi
+}
+
+# pgrep with default ps options
+# pgrep [<ps options>] <pattern>
+psgrep()
+{
+    eval "local pattern=\"\$$#\""
+    if test $# -eq 1; then
+        set -- -o user,pid,ppid,pgid,sid,start_time,nlwp,pcpu,rss,wchan:24,comm=EXE,args=ARGS
+    else
+        eval "set -- $(for i in $(seq $(($# - 1))); do echo -n "\"\$$i\" "; done)"
+    fi
+    local pids="$(pgrep -d , -f "$pattern")"
+    if test -n "$pids"; then
+        ps "$@" -p "$pids"
+    else
+        error "No processes matching $pattern"
+    fi
+}
+
+# show the 10 most recently changed files
+recent()
+{
+    l -t -1 "$@" | head -n 10
+}
+
+# keep trying a command until it works
+# (e.g. ping -c 1 host)
+retry()
+{
+    while true; do
+        if "$@"; then
+            bell
+            break
+        else
+            sleep 10
+        fi
+    done
 }
 
 ##########################################################################
@@ -182,6 +239,90 @@ if is_interactive; then
             fi
             ;;
     esac
+
+    # prevent running "exit" if the user is still running jobs in the background
+    # the user is expected to close the jobs or disown them
+    _exit()
+    {
+        case $- in *m*)
+            # this way works in bash and zsh
+            jobs | wc -l | grep -q '^ *0 *$'
+            if test $? -eq 0
+                then
+                    command exit "$@"
+            else
+                jobs
+                    fi
+                    ;;
+        *)
+            command exit "$@"
+            ;;
+        esac
+    }
+
+    alias cx='chmod +x'
+    alias e='edit'
+    alias f='fg'
+    alias g='grep -HIin'
+    alias gdb='gdb -q '
+    is_command l && alias l='l -K' || alias l='ls'
+    alias ll='l -l'
+    alias j='jobs'
+    alias py='python'
+    alias s='ssh'
+    alias v='view'
+    alias x='_exit'
+
+    # expand aliases after nohup, etc.
+    for wrapper in nohup strace sudo; do
+        alias $wrapper="$wrapper "
+    done
+
+    # in case root isn't available, fall back to sudo
+    is_command root && alias root="root " || alias root="sudo "
+
+    # allow running git subcommands without typing the "git" prefix
+    # TODO: Write a script that supports multiple version control systems,
+    # and make it an alias for that instead?
+    for command in ad add addall added addremove adds am amend an ap apply \
+        blame br branch \
+        checkout changed changes cherry-pick ci cl clone co \
+        commit commitall describe da di diffs \
+        fetch format-patch gc gr graph hi hist history \
+        lo log logs ls-files ls-tree \
+        merge merge-base pick pu pull push \
+        rebase remote remove reset restore rewind rollback \
+        show show-branch st staged stash state status switch \
+        tag track unadd unchange unchangeall undo undoall untrack
+    do
+        alias $command="git $command"
+    done
+
+    # make +<num> change directories and %<num> resume jobs
+    # this matches the first column in the prompt output
+    if test -n "${BASH_VERSION:-}" || test -n "${ZSH_VERSION:-}"; then
+        for i in $(seq 0 9); do
+            alias +$i='pushd +'$i
+        done
+        function + {
+            pushd "$@"
+        }
+
+        function - {
+            popd "$@"
+        }
+
+        function +- {
+            pushd "$OLDPWD"
+        }
+    else
+        # ksh lacks %, %1, etc.
+        alias %='fg'
+        for i in $(seq 0 9); do
+            alias %$i='fg %'$i
+        done
+    fi
+    alias f='fg'
 
     # set a basic prompt that doesn't rely on precommand and preprompt hooks
     basic_prompt() {
@@ -380,8 +521,14 @@ if is_interactive; then
     basic_prompt
     alias _=' '
 
-    set -o emacs
+    # program defaults
+    export BLOCKSIZE=1024
+    export CLICOLOR=true
+    export GREP_COLOR=4
 
+    # command line editing
+    test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
+    set -o emacs
 fi
 
 # exit successfully so the first prompt is $ rather than ?
@@ -389,3 +536,4 @@ true
 
 # Use tabs for indentation so we can edit this in nvi if necessary.
 # vi: set sw=4 ts=33:
+# vim: set ft=sh:
