@@ -405,7 +405,8 @@ if is_interactive; then
         printf '\n'
         set_color "normal"
         host_info
-        dir_info
+        # & wait $! prevents bash displaying dir_info as a job in job_info
+        dir_info & wait $!
         job_info
         set_title "$(title)"
         set_prompt
