@@ -65,9 +65,9 @@ elif is_ksh; then
 fi
 
 # standardize on bash-like variables that everyone assumes are preset
-USERNAME=${USERNAME:-$(id -un)}
-HOSTNAME=${HOSTNAME:-$(hostname --fqdn)}
-UID=${UID:-$(id -u)}
+: ${USERNAME:=$(id -un)}
+: ${HOSTNAME:=$(hostname --fqdn)}
+: ${UID:=$(id -u)}
 
 # TODO Re-add addpath, delpath, etc.?
 PATH="$HOME/scripts:$PATH"
@@ -77,6 +77,11 @@ PATH="$HOME/scripts:$PATH"
 #
 # Functions that are needed elsewhere in this file.
 ##########################################################################
+
+# print an error message
+error() {
+    printf "$*\n" >&2
+}
 
 # return true if the argument is a command that can be invoked
 is_command() {
