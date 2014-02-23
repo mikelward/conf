@@ -427,19 +427,21 @@ if is_interactive; then
     # intended to be used in the preprompt
     dir_info() {
         if is_command dirs; then
-            dirs -v -l | while read num dir; do
-            (
-                cd "$dir"
-                dir=$(tilde_directory)
-                branch=$(git_branch)
-                printf "%s+%s %s%s %s%s%s\n" \
-                    "$blue" "$num" "$dir" "$normal" \
-                    "$green" "$branch" "$normal"
-            )
-            done
+            while read num dir; do
+                printf "%s+%s %s\n" "$blue" "$num" "$(_dir_info "$dir")"
+            done <<EOF
+$(dirs -v -l)
+EOF
         else
             printf "%s%s%s\n" "$blue" "$PWD" "$normal"
         fi
+    }
+    _dir_info() {
+            cd "$1"
+            dir=$(tilde_directory)
+            branch=$(git_branch)
+            printf "%s%s %s%s%s" \
+                "$dir" "$normal" "$green" "$branch" "$normal"
     }
 
     # print the name of the currently active git branch in $PWD
