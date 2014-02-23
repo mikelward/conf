@@ -340,6 +340,28 @@ if is_interactive; then
         alias $command="git $command"
     done
 
+    # aliases to abstract away differences between package managers
+    if is_command yum; then
+        alias yum='root yum --cacheonly'
+        alias update='root yum makecache'
+        alias search='yum search'
+        alias install='root yum install'
+        alias uninstall='root yum erase'
+        alias reinstall='root yum reinstall'
+        alias upgrade='root yum upgrade'
+        alias versions='yum list'
+    elif is_command apt-get; then
+        alias update='root apt-get update'
+        alias search='apt-cache search --names-only'
+        alias install='root apt-get install'
+        alias uninstall='root apt-get remove'
+        alias reinstall='root apt-get install --reinstall'
+        alias upgrade='root apt-get upgrade'
+        alias versions='apt-cache policy'
+    else
+        error "No supported package manager found"
+    fi
+
     # make +<num> change directories and %<num> resume jobs
     # this matches the first column in the prompt output
     if test -n "${BASH_VERSION:-}" || test -n "${ZSH_VERSION:-}"; then
