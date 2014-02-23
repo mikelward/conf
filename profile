@@ -1,5 +1,7 @@
 # Commands to run for any POSIX shell when the user logs in.
 
+test -f "$HOME"/.shrc && . "$HOME"/.shrc
+
 # set a script that will be sourced on exiting the shell
 test -f "$HOME"/.exitrc && trap ". $HOME/.exitrc" EXIT
 
