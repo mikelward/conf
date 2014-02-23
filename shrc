@@ -67,6 +67,7 @@ fi
 # standardize on bash-like variables that everyone assumes are preset
 USERNAME=${USERNAME:-$(id -un)}
 HOSTNAME=${HOSTNAME:-$(hostname --fqdn)}
+UID=${UID:-$(id -u)}
 
 # TODO Re-add addpath, delpath, etc.?
 PATH="$HOME/scripts:$PATH"
@@ -463,7 +464,11 @@ if is_interactive; then
     # print a character that should be the last part of the prompt
     ps1_character() {
         if test $laststatus -eq 0; then
-            printf '$'
+            if test $UID -eq 0; then
+                printf '#'
+            else
+                printf '$'
+            fi
         else
             printf '?'
         fi
@@ -587,7 +592,7 @@ if is_interactive; then
     set -o emacs
 
     # workaround for GNOME Terminal which does a cd on startup :-(
-    if test -n "$DISPLAY"
+    if test -n "${DISPLAY:-}"
     then
         # e.g. Mikel-PC or Mikel-Laptop means local
         case "$HOSTNAME" in
@@ -597,7 +602,7 @@ if is_interactive; then
         esac
         # assuming DISPLAY=:0.0 means local
         # note that DISPLAY=localhost:0.0 can mean SSH X forwarding
-        case "$DISPLAY" in
+        case "${DISPLAY:-}" in
             :*)
                 cd
                 ;;
