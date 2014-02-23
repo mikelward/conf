@@ -85,11 +85,7 @@ error() {
 
 # return true if the argument is a command that can be invoked
 is_command() {
-    local command
-
-    command="$(type "$1")"
-
-    test -x "$command"
+    test -x "$(which "$1")"
 }
 
 # return true if the shell is interactive
