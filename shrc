@@ -282,7 +282,7 @@ if is_interactive; then
 
     alias ct='ctags -R'
     alias cx='chmod +x'
-    alias e='edit'
+    alias e='${EDITOR:-vi}'
     alias f='fg'
     alias g='grep -HIin'
     alias gdb='gdb -q '
@@ -297,6 +297,7 @@ if is_interactive; then
         alias lt='ll -t'
     fi
     alias j='jobs'
+    alias p='${PAGER:-more}'
     alias py='python'
     alias rg='rgrep'
     alias s='ssh'
@@ -601,6 +602,12 @@ EOF
     export BLOCKSIZE=1024
     export CLICOLOR=true
     export GREP_COLOR=4
+
+    # default programs
+    is_command vi && EDITOR=vi
+    is_command vim && EDITOR=vim
+    is_command more && PAGER=more
+    is_command less && PAGER=less
 
     # colors for ls
     case "$TERM" in
