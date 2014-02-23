@@ -427,7 +427,7 @@ if is_interactive; then
     # print directory stack listing in "+<number> <directory>" format
     # intended to be used in the preprompt
     dir_info() {
-        if is_command dirs; then
+        if quiet type dirs; then
             while read num dir; do
                 printf "%s+%s %s\n" "$blue" "$num" "$(_dir_info "$dir")"
             done <<EOF
