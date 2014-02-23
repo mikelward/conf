@@ -46,7 +46,7 @@ if is_zsh; then
     # could use emulate -R, but that breaks compinit
     setopt PROMPT_SUBST
     # so we can display jobs in the prompt
-    unsetopt POSIX_JOBS
+    unsetopt POSIX_JOBS >/dev/null 2>&1
 
     # enable ksh default features
     setopt KSH_GLOB         # !(pattern) etc. like in ksh
