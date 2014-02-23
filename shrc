@@ -388,14 +388,14 @@ if is_interactive; then
     }
 
     # print information about all shell jobs
-    # intended to be used in the prompt
+    # intended to be used in the preprompt
     job_info() {
             jobs | sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /' |
                 grep -v '(pwd now:'
     }
 
     # print directory stack listing in "+<number> <directory>" format
-    # intended to be used in the prompt
+    # intended to be used in the preprompt
     dir_info() {
         if is_command dirs; then
             dirs -v -l | while read num dir; do
