@@ -311,7 +311,6 @@ if is_interactive; then
     alias po='popd'
     alias py='python'
     alias r='fc -s'
-    is_command root || alias root='sudo '
     alias rg='rgrep'
     alias s='ssh'
     alias sr='ssh -l root'
