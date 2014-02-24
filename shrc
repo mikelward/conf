@@ -370,20 +370,22 @@ if is_interactive; then
             alias +$i='pushpop '$i
         done
         function pushpop {
-            eval "pushd ~$1"
-            popd +$(($1 + 1))
+            eval "pushd ~$1" >/dev/null
+            popd +$(($1 + 1)) >/dev/null
         }
         function + {
-            pushd "$@"
+            pushd "$@" >/dev/null
         }
 
         function - {
-            popd "$@"
+            popd "$@" >/dev/null
         }
 
         function +- {
-            pushd "$OLDPWD"
+            pushd "$OLDPWD" >/dev/null
         }
+        alias pushd='pushd >/dev/null'
+        alias popd='popd >/dev/null'
     else
         # ksh lacks %, %1, etc.
         alias %='fg'
