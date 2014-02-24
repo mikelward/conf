@@ -84,9 +84,20 @@ error() {
     printf "$*\n" >&2
 }
 
+# return true if the argument is a shell builtin that can be invoked
+is_builtin() {
+    case "$(type "$1")" in *" shell builtin")
+        true
+        ;;
+    *)
+        false
+        ;;
+    esac
+}
+
 # return true if the argument is a command that can be invoked
 is_command() {
-    test -x "$(which "$1")"
+    test -x "$(command -v "$1")"
 }
 
 # return true if the shell is interactive
@@ -443,7 +454,7 @@ if is_interactive; then
     # print directory stack listing in "+<number> <directory>" format
     # intended to be used in the preprompt
     dir_info() {
-        if quiet type dirs; then
+        if is_builtin dirs; then
             while read num dir; do
                 printf "%s+%s %s\n" "$blue" "$num" "$(_dir_info "$dir")"
             done <<EOF
