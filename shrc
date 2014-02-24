@@ -157,14 +157,14 @@ mcd()
     fi
 }
 
-# make a temporarary directory and cd to it
+# make a temporary directory and cd to it
 mtd()
 {
     cd "$(mktemp -d)"
 }
 
 # pgrep with default ps options
-# pgrep [<ps options>] <pattern>
+# psgrep [<ps options>] <pattern>
 psgrep()
 {
     eval "local pattern=\"\$$#\""
