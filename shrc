@@ -71,6 +71,7 @@ fi
 
 # TODO Re-add addpath, delpath, etc.?
 PATH="$HOME/scripts:$PATH"
+CDPATH=".:$HOME"
 
 ##########################################################################
 # BASIC FUNCTIONS
