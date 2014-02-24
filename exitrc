@@ -1,19 +1,9 @@
 # Commands to run for any POSIX shell when the user logs out.
 
 # kill ssh-agent if it is running
-if test -n "$SSH_AGENT_PID"
+if test -n "${SSH_AGENT_PID:-}"
 then
 	eval $(ssh-agent -k)
-fi
-
-# delete the fifo and kill the process used to make stderr red
-if test -n "$errfifo" && test -f "$errfifo"
-then
-	rm "$errfifo"
-fi
-if test -n "$errpid"
-then
-	kill $errpid
 fi
 
 # clear the screen

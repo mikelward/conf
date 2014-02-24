@@ -77,5 +77,6 @@
 
 [svn]
     authorsfile = /home/mikel/.gitauthors
+
 [push]
-	default = matching
+	default = upstream

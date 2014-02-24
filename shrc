@@ -1,109 +1,687 @@
-# Commands to run for any interactive POSIX shell.
-# Examples include the prompt and any terminal-specific code.
-# It is called by sh via $ENV, bash via .bashrc, and zsh via .zshrc.
+##########################################################################
+# Configuration for bash, zsh, etc.
+#
+# Configuration for all shells is in this one file so that it can be
+# easily copied to many hosts.
+#
+# bashrc and shrc should be symlinks to this file.
+#
+# ksh and dash should also work, but will have a simpler prompt, etc.
+#
+# Mikel Ward <mikel@mikelward.com>
+##########################################################################
 
-case $- in
-*i*)
-	# common environment
-	if test -f "$HOME/.env"
-	then
-		. "$HOME/.env"
-	fi
+set -u
 
-	# terminal colors, etc.
-	terminit
+##########################################################################
+# COMPATIBILITY
+#
+# Try to make all shells behave similarly while reading this file
+##########################################################################
 
-	# prompt and window title
-	connectioninfo='$(short_hostname)'
-	#command=${0#-}
-	command=
-	commandinfo='$(test -n "$mytitle" && echo "$mytitle" || printf "%s" "$command")'
-	shellinfo='$(short_hostname):$(dirs -v)'
-	promptchars='$(prompt_character)'
-	promptcolor=normal
-	errorcolor=red
-	promptstring='
-$(newline_if_non_empty "$(short_hostname):$(directories) $(git_branch)" "$(job_info)" "$(prompt_character)") '
-	title='$(eval printf "%s" "\"${connectioninfo} ${commandinfo}\"")'
-	PS1='$(eval settitle "\"${title}\"")$(setcolor ${promptcolor})$(eval printf "%s" "\"${promptstring}\"")$(setcolor "normal")$(bell)'
-	PS2='> '
-	#PS2='_ '
-	PS3='? '
-	PS4='+ '
+is_zsh() {
+    [ -n "${ZSH_VERSION:-}" ]
+}
 
-	# command line editing key bindings (must be set after EDITOR and VISUAL)
-	set -o emacs 2>/dev/null
+is_bash() {
+    [ -n "${BASH_VERSION:-}" ]
+}
 
-	# colors for ls
-	case "$TERM" in
-	linux|putty|vt220)
-		# colors for white on black
-		#export LSCOLORS='gxcxxxxxfxxxxx'
-		export LSCOLORS='ExFxxxxxCxxxxx'
-		export LS_COLORS='no=00:fi=00:di=01;34:ln=01;35:so=00;00:bd=00;00:cd=00;00:or=01;31:pi=00;00:ex=01;32'
-		;;
-	*)
-		# colors for black on white
-		export LSCOLORS='exfxxxxxcxxxxx'
-		export LS_COLORS='no=00:fi=00:di=00;34:ln=00;35:so=00;00:bd=00;00:cd=00;00:or=00;31:pi=00;00:ex=00;32'
-		;;
-	esac
-	if exists dircolors
-	then
-		if test -f "$HOME/.dircolors.$TERM"
-		then
-			dircolors="$HOME/.dircolors.$TERM"
-		else
-			case "$TERM" in
-			linux|putty|vt220)
-				if test -f "$HOME"/.dircolors.dark
-				then
-					dircolors="$HOME"/.dircolors.dark
-				fi
-				;;
-			*)
-				if test -f "$HOME"/.dircolors.light
-				then
-					dircolors="$HOME"/.dircolors.light
-				fi
-				;;
-			esac
-		fi
-		if test -z "$dircolors"
-		then
-			if test -f "$HOME"/.dircolors
-			then
-				dircolors="$HOME"/.dircolors
-			fi
-		fi
-		if test -n "$dircolors"
-		then
-			eval $(dircolors -b "$dircolors" 2>/dev/null)
-		fi
-	fi
+is_ksh() {
+    [ -n "${KSH_VERSION:-}" ]
+}
 
-	# local settings (company environment, network, etc.)
-	test -r "$HOME"/.shrc.local && . "$HOME"/.shrc.local
-	;;
-esac
+if is_zsh; then
+    # Red Hat's /etc/zshrc and /etc/zprofile break things
+    unsetopt GLOBAL_RCS
 
-# workaround for GNOME Terminal which does a cd on startup :-(
-if test -n "$DISPLAY"
-then
-	# e.g. Mikel-PC or Mikel-Laptop means local
-	case "$HOST" in
-	$USER-*)
-		cd
-		;;
-	esac
-	# assuming DISPLAY=:0.0 means local
-	# note that DISPLAY=localhost:0.0 can mean SSH X forwarding
-	case "$DISPLAY" in
-	:*)
-		cd
-		;;
-	esac
+    # make zsh as similar to bash as possible
+    emulate sh
+    setopt BRACE_EXPAND
+    setopt BANG_HIST
+    setopt CSH_JUNKIE_HISTORY
+    setopt INTERACTIVE_COMMENTS
+    setopt KSH_TYPESET
+    # emulate sh doesn't set PROMPT_SUBST
+    # could use emulate -R, but that breaks compinit
+    setopt PROMPT_SUBST
+    # so we can display jobs in the prompt
+    unsetopt POSIX_JOBS >/dev/null 2>&1
+
+    # enable ksh default features
+    setopt KSH_GLOB         # !(pattern) etc. like in ksh
+    unsetopt BARE_GLOB_QUAL # otherwise !(pattern) breaks
+
+    # TODO: Re-evaluate turning EXTENDED_GLOB on, perhaps in conjunction with
+    # disable -p '#'.
+elif is_bash; then
+    # enable ksh default features
+    shopt -s extglob        # !(pattern) etc. like in ksh
+
+    # enable zsh default features
+    shopt -s globstar       # recursive globbing with **
+elif is_ksh; then
+    alias local=typeset
 fi
 
-# finish with a zero exit status
+# standardize on bash-like variables that everyone assumes are preset
+: ${USERNAME:=$(id -un)}
+: ${HOSTNAME:=$(hostname --fqdn)}
+: ${UID:=$(id -u)}
+
+# TODO Re-add addpath, delpath, etc.?
+PATH="$HOME/scripts:$PATH"
+CDPATH=".:$HOME"
+
+##########################################################################
+# BASIC FUNCTIONS
+#
+# Functions that are needed elsewhere in this file.
+##########################################################################
+
+# print an error message
+error() {
+    printf "$*\n" >&2
+}
+
+# return true if the argument is a shell builtin that can be invoked
+is_builtin() {
+    case "$(type "$1")" in *" shell builtin")
+        true
+        ;;
+    *)
+        false
+        ;;
+    esac
+}
+
+# return true if the argument is a command that can be invoked
+is_command() {
+    test -x "$(command -v "$1")"
+}
+
+# return true if the shell is interactive
+is_interactive() {
+    case $- in *i*)
+        true;;
+    *)
+        false;;
+    esac
+}
+
+# run a command with output silenced
+quiet() {
+    "$@" >/dev/null 2>&1
+}
+
+# print an important message that's not quite an error
+warn() {
+    printf "$*\n" >&2
+}
+
+##########################################################################
+# GENERAL FUNCTIONS
+#
+# Useful things that could be commands if distributing them wasn't
+# impractical.
+##########################################################################
+
+# ring the terminal's bell
+bell()
+{
+    printf "\a"
+}
+
+# print the first line of input (the header) as-is, run a command
+# on the rest the input (the body)
+# e.g. ps | body grep ps
+#
+# accepts an option -<number>, makes the header <number> lines
+# instead of 1
+# e.g. netstat -tn | body -2 grep ':22\>'
+body() {
+    local lines
+
+    lines=1
+    case "$1" in
+    -*)
+        lines=${1#-}
+        shift
+        ;;
+    esac
+
+    while test $lines -gt 0; do
+        IFS= read -r header
+        printf '%s\n' "$header"
+        lines=$((lines-1))
+    done
+    "$@"
+}
+
+# make a directory and cd to it
+mcd()
+{
+    if test -d "$1"; then
+        printf "%s already exists\n" "$1"
+    else
+        mkdir -p "$1" && cd "$1"
+    fi
+}
+
+# make a temporary directory and cd to it
+mtd()
+{
+    cd "$(mktemp -d)"
+}
+
+# pgrep with default ps options
+# psgrep [<ps options>] <pattern>
+psgrep()
+{
+    eval "local pattern=\"\$$#\""
+    if test $# -eq 1; then
+        set -- -o user,pid,ppid,pgid,sid,start_time,nlwp,pcpu,rss,wchan:24,comm=EXE,args=ARGS
+    else
+        eval "set -- $(for i in $(seq $(($# - 1))); do echo -n "\"\$$i\" "; done)"
+    fi
+    local pids="$(pgrep -d , -f "$pattern")"
+    if test -n "$pids"; then
+        ps "$@" -p "$pids"
+    else
+        error "No processes matching $pattern"
+    fi
+}
+
+# show the 10 most recently changed files
+recent()
+{
+    l -t -1 "$@" | head -n 10
+}
+
+# keep trying a command until it works
+# (e.g. ping -c 1 host)
+retry()
+{
+    while true; do
+        if "$@"; then
+            bell
+            break
+        else
+            sleep 10
+        fi
+    done
+}
+
+##########################################################################
+# INTERACTIVE SHELL SETUP
+#
+# Set up the prompt, title, key bindings, etc.
+##########################################################################
+if is_interactive; then
+
+    # determine the graphics mode escape sequences
+    if is_command tput; then
+        if quiet tput longname; then
+            bold="$(tput bold)"
+            underline="$(tput smul)"
+            standout="$(tput smso)"
+            normal="$(tput sgr0)"
+            black="$(tput setaf 0)"
+            red="$(tput setaf 1)"
+            green="$(tput setaf 2)"
+            yellow="$(tput setaf 3)"
+            blue="$(tput setaf 4)"
+            magenta="$(tput setaf 5)"
+            cyan="$(tput setaf 6)"
+            white="$(tput setaf 7)"
+
+            khome="$(tput khome)"
+            kend="$(tput kend)"
+            kdch1="$(tput kdch1)"
+        fi
+    fi
+
+    # determine the window title escape sequences
+    case "$TERM" in
+        aixterm|dtterm|putty|rxvt|xterm*)
+            titlestart=']0;'
+            titlefinish=''
+            ;;
+        cygwin)
+            titlestart='];'
+            titlefinish=''
+            ;;
+        konsole)
+            titlestart=']30;'
+            titlefinish=''
+            ;;
+        screen*)
+            # status line
+            #titlestart='^[_'
+            #titlefinish='^[\'
+            # window title
+            titlestart='k'
+            titlefinish='\'
+            ;;
+        *)
+            if is_command tput
+            then
+                if quiet tput longname
+                then
+                    titlestart="$(tput tsl)"
+                    titlefinish="$(tput fsl)"
+                fi
+            else
+                titlestart=''
+                titlefinish=''
+            fi
+            ;;
+    esac
+
+    # prevent running "exit" if the user is still running jobs in the background
+    # the user is expected to close the jobs or disown them
+    _exit()
+    {
+        case $- in *m*)
+            # this way works in bash and zsh
+            jobs | wc -l | grep -q '^ *0 *$'
+            if test $? -eq 0
+                then
+                    command exit "$@"
+            else
+                jobs
+                    fi
+                    ;;
+        *)
+            command exit "$@"
+            ;;
+        esac
+    }
+
+    alias ct='ctags -R'
+    alias cx='chmod +x'
+    alias e='${EDITOR:-vi}'
+    alias f='fg'
+    alias g='grep -HIin'
+    alias gdb='gdb -q '
+    is_command l && alias l='l -K' || alias l='ls'
+    alias l1='l -1'
+    alias la='l -a'
+    alias lc='l -C'
+    alias ll='l -l'
+    if quiet l -T; then
+        alias lt='l -Tt'
+    else
+        alias lt='ll -t'
+    fi
+    alias j='jobs'
+    alias p='${PAGER:-more}'
+    alias popd='popd >/dev/null'
+    alias pushd='pushd >/dev/null'
+    alias pd='pushd'
+    alias po='popd'
+    alias py='python'
+    alias r='fc -s'
+    alias rg='rgrep'
+    alias s='ssh'
+    alias sr='ssh -l root'
+    alias v='view'
+    alias x='_exit'
+
+    # expand aliases after nohup, etc.
+    for wrapper in nohup strace sudo; do
+        alias $wrapper="$wrapper "
+    done
+
+    # in case root isn't available, fall back to sudo
+    is_command root && alias root="root " || alias root="sudo "
+
+    # enable colors in commands that support it
+    if quiet grep --color=auto --quiet "" /etc/hosts
+    then
+        alias grep='grep --color=auto'
+    fi
+    if quiet ls --color=never --directory /
+    then
+        # enable colors with GNU ls
+        alias ls='ls --color=auto'
+    fi
+
+    # allow running git subcommands without typing the "git" prefix
+    # TODO: Write a script that supports multiple version control systems,
+    # and make it an alias for that instead?
+    for command in ad add addall added addremove adds am amend an ap apply \
+        blame br branch \
+        checkout changed changes cherry-pick ci cl clone co \
+        commit commitall describe da di diffs \
+        fetch format-patch gc gr graph hi hist history \
+        lo log logs ls-files ls-tree \
+        merge merge-base pick pu pull push \
+        rebase remote remove reset restore rewind rollback \
+        show show-branch st staged stash state status switch \
+        tag track unadd unchange unchangeall undo undoall untrack
+    do
+        alias $command="git $command"
+    done
+
+    # aliases to abstract away differences between package managers
+    if is_command yum; then
+        alias yum='root yum --cacheonly'
+        alias update='root yum makecache'
+        alias search='yum search'
+        alias info='yum info'
+        alias install='root yum install'
+        alias uninstall='root yum erase'
+        alias reinstall='root yum reinstall'
+        alias upgrade='root yum upgrade'
+        alias versions='yum list'
+        alias changelog='repoquery --changelog'
+        alias files='repoquery --file'
+    elif is_command apt-get; then
+        alias update='root apt-get update'
+        alias search='apt-cache search --names-only'
+        alias info='apt-cache show'
+        alias install='root apt-get install'
+        alias uninstall='root apt-get remove'
+        alias reinstall='root apt-get install --reinstall'
+        alias upgrade='root apt-get upgrade'
+        alias versions='apt-cache policy'
+        alias changelog='apt-get changelog'
+        alias files='apt-file search'
+    else
+        error "No supported package manager found"
+    fi
+
+    # make +<num> change directories and %<num> resume jobs
+    # this matches the first column in the prompt output
+    if test -n "${BASH_VERSION:-}" || test -n "${ZSH_VERSION:-}"; then
+        for i in $(seq 0 9); do
+            alias +$i='pushpop '$i
+        done
+        function pushpop {
+            eval "pushd ~$1" >/dev/null
+            popd +$(($1 + 1)) >/dev/null
+        }
+        function + {
+            pushd "$@" >/dev/null
+        }
+
+        function - {
+            popd "$@" >/dev/null
+        }
+
+        function +- {
+            pushd "$OLDPWD" >/dev/null
+        }
+    else
+        # ksh lacks %, %1, etc.
+        alias %='fg'
+        for i in $(seq 0 9); do
+            alias %$i='fg %'$i
+        done
+    fi
+    alias f='fg'
+
+    # set a basic prompt that doesn't rely on precommand and preprompt hooks
+    basic_prompt() {
+        PS1='$ '
+        PS2='_ '
+        PS3='#? '
+        set_title "$(title)"
+    }
+
+    # commands to execute before the prompt is displayed
+    preprompt() {
+        laststatus=$?
+
+        $simple && return
+
+        printf '\n'
+        set_color "normal"
+        host_info
+        dir_info
+        job_info
+        set_title "$(title)"
+        set_prompt
+    }
+
+    # print information about this machine
+    host_info() {
+        printf '%s\n' "$(short_hostname)"
+    }
+
+    # print information about all shell jobs
+    # intended to be used in the preprompt
+    job_info() {
+            jobs | sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /' |
+                grep -v '(pwd now:'
+    }
+
+    # print directory stack listing in "+<number> <directory>" format
+    # intended to be used in the preprompt
+    dir_info() {
+        if is_builtin dirs; then
+            while read num dir; do
+                printf "%s+%s %s\n" "$blue" "$num" "$(_dir_info "$dir")"
+            done <<EOF
+$(dirs -v -l)
+EOF
+        else
+            printf "%s%s%s\n" "$blue" "$PWD" "$normal"
+        fi
+    }
+    _dir_info() {
+            cd "$1"
+            dir=$(tilde_directory)
+            branch=$(git_branch)
+            printf "%s%s %s%s%s" \
+                "$dir" "$normal" "$green" "$branch" "$normal"
+    }
+
+    # print the name of the currently active git branch in $PWD
+    git_branch() {
+        git branch 2>/dev/null | while read star branch; do
+            if test "$star" = "*"; then
+                echo "$branch"
+                break
+            fi
+        done
+    }
+
+    # get a short version of the hostname for use in the prompt or window title
+    short_hostname() {
+        local hostname
+
+        hostname="${HOSTNAME%%.*}"
+        hostname="${hostname#$USERNAME-}"
+        printf "%s" "$hostname"
+    }
+
+    # print the current directory with $HOME changed to ~
+    tilde_directory() {
+        pwd | sed -e 's#^'"$HOME"'#~#'
+    }
+
+    # print the string that should be used as the xterm title
+    title() {
+        short_hostname
+    }
+
+    # set all the prompt strings
+    # done this way so that \[ (bash) and \{ (zsh) are handled consistently
+    set_prompt() {
+        PS1="$(ps1)"
+    }
+
+    ps1() {
+        if test $laststatus -ne 0; then
+            prompt_color 'red'
+            printf "%d" "$laststatus"
+            prompt_color 'black'
+        fi
+        ps1_character
+        printf ' '
+        prompt_color 'bold'
+    }
+
+    # print a character that should be the last part of the prompt
+    ps1_character() {
+        if test $laststatus -eq 0; then
+            if test $UID -eq 0; then
+                printf '#'
+            else
+                printf '$'
+            fi
+        else
+            printf '?'
+        fi
+    }
+
+    # function to run just before running a command from the command line
+    # see also preexec (zsh) and DEBUG (bash)
+    # the first argument is the command line being run
+    precommand() {
+        $simple && return
+
+        # TODO: Expand job references (fg, %1, etc.)
+        set_title "$(short_hostname) $*"
+        set_color 'normal'
+    }
+
+    # set the xterm title to the supplied string
+    set_title() {
+        printf "%s%s%s" "$titlestart""$*""$titlefinish"
+    }
+
+    simple=false
+    laststatus=0
+
+    # print the supplied string inside prompt escape sequences
+    # that tell the shell the escape sequences do not move the cursor
+    prompt_color() {
+        local color_escape
+
+        color_escape=$(set_color "$*")
+
+        if test -n "$color_escape" && test -n "$escape_start" && test -n "$escape_end"; then
+            printf '%s%s%s' "$escape_start" "$normal" "$escape_end"
+            printf '%s%s%s' "$escape_start" "$color_escape" "$escape_end"
+        fi
+    }
+    # set the terminal color to the specified color or terminal attribute
+    # accepts multiple arguments, e.g. set_color bold blue underline
+    set_color() {
+        local arg
+
+        for arg; do
+            eval "printf \"%s\" \"\$$arg\""
+        done
+    }
+    escape_start=
+    escape_end=
+    if is_zsh; then
+        # zsh enhancements
+        setopt AUTO_CD
+        setopt CORRECT
+        setopt DVORAK
+        setopt PROMPT_PERCENT
+        setopt PUSHD_SILENT
+
+        escape_start='%{'
+        escape_end='%}'
+
+        # install preprompt and precommand functions
+        enable_prompt_hooks() {
+            precmd() {
+                preprompt
+            }
+            preexec() {
+                precommand "$1"
+            }
+        }
+        disable_prompt_hooks() {
+            unset -f precmd
+            unset -f preexec
+            basic_prompt
+        }
+        enable_prompt_hooks
+    elif is_bash; then
+        # bash enhancements
+        shopt -s autocd
+        shopt -s checkwinsize
+        shopt -s lithist
+
+        escape_start='\['
+        escape_end='\]'
+
+        # install preprompt and precommand functions
+        enable_prompt_hooks() {
+            trap 'precommand "$BASH_COMMAND"' DEBUG
+            PROMPT_COMMAND=preprompt
+        }
+        disable_prompt_hooks() {
+            trap '' DEBUG
+            PROMPT_COMMAND=
+            basic_prompt
+        }
+        enable_prompt_hooks
+    fi
+    # set a simple prompt for non-bash non-zsh
+    # (will be overridden immediately by bash and zsh)
+    basic_prompt
+    alias _=' '
+
+    # program defaults
+    export BLOCKSIZE=1024
+    export CLICOLOR=true
+    export GREP_COLOR=4
+
+    # default programs
+    is_command vi && EDITOR=vi
+    is_command vim && EDITOR=vim
+    is_command more && PAGER=more
+    is_command less && PAGER=less
+
+    # colors for ls
+    case "$TERM" in
+        linux|putty|vt220)
+            # colors for white on black
+            export LSCOLORS='ExFxxxxxCxxxxx'
+            export LS_COLORS='no=00:fi=00:di=01;34:ln=01;35:so=00;00:bd=00;00:cd=00;00:or=01;31:pi=00;00:ex=01;32'
+            ;;
+        *)
+            # colors for black on white
+            export LSCOLORS='exfxxxxxcxxxxx'
+            export LS_COLORS='no=00:fi=00:di=00;34:ln=00;35:so=00;00:bd=00;00:cd=00;00:or=00;31:pi=00;00:ex=00;32'
+            ;;
+    esac
+
+    # command line editing
+    test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
+    set -o emacs
+
+    # workaround for GNOME Terminal which does a cd on startup :-(
+    if test -n "${DISPLAY:-}"
+    then
+        # e.g. Mikel-PC or Mikel-Laptop means local
+        case "$HOSTNAME" in
+            $USERNAME-*)
+                cd
+                ;;
+        esac
+        # assuming DISPLAY=:0.0 means local
+        # note that DISPLAY=localhost:0.0 can mean SSH X forwarding
+        case "${DISPLAY:-}" in
+            :*)
+                cd
+                ;;
+        esac
+    fi
+fi
+
+# exit successfully so the first prompt is $ rather than ?
 true
+
+# Use tabs for indentation so we can edit this in nvi if necessary.
+# vi: set sw=4 ts=33:
+# vim: set ft=sh:

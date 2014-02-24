@@ -34,3 +34,6 @@ $endif
 "\e[5~": previous-history
 "\e[6~": next-history
 
+"\e[A": history-search-backward
+"\e[B": history-search-forward
+
