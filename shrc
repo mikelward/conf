@@ -367,8 +367,12 @@ if is_interactive; then
     # this matches the first column in the prompt output
     if test -n "${BASH_VERSION:-}" || test -n "${ZSH_VERSION:-}"; then
         for i in $(seq 0 9); do
-            alias +$i='pushd +'$i
+            alias +$i='pushpop '$i
         done
+        function pushpop {
+            eval "pushd ~$1"
+            popd +$(($1 + 1))
+        }
         function + {
             pushd "$@"
         }
