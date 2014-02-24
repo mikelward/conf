@@ -156,6 +156,12 @@ mcd()
     fi
 }
 
+# make a temporarary directory and cd to it
+mtd()
+{
+    cd "$(mktemp -d)"
+}
+
 # pgrep with default ps options
 # pgrep [<ps options>] <pattern>
 psgrep()
