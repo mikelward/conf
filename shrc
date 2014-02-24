@@ -310,6 +310,7 @@ if is_interactive; then
     alias pd='pushd'
     alias po='popd'
     alias py='python'
+    alias r='fc -s'
     alias rg='rgrep'
     alias s='ssh'
     alias sr='ssh -l root'
