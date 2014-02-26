@@ -550,7 +550,9 @@ EOF
 
     # set the xterm title to the supplied string
     set_title() {
-        printf "%s%s%s" "$titlestart""$*""$titlefinish"
+        if test -n "$titlestart"; then
+            printf "%s%s%s" "$titlestart""$*""$titlefinish"
+        fi
     }
 
     simple=false
