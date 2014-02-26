@@ -1,6 +1,8 @@
 # Commands to run for any POSIX shell when the user logs in.
 
-test -f "$HOME"/.shrc && . "$HOME"/.shrc
+if test -z "${ZSH_VERSION:-}"; then
+    test -f "$HOME"/.shrc && . "$HOME"/.shrc
+fi
 
 # set a script that will be sourced on exiting the shell
 test -f "$HOME"/.exitrc && trap '. "$HOME/.exitrc"' EXIT
