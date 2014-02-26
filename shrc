@@ -437,8 +437,6 @@ if is_interactive; then
     preprompt() {
         laststatus=$?
 
-        $simple && return
-
         printf '\n'
         set_color "normal"
         host_info
@@ -544,8 +542,6 @@ EOF
     # see also preexec (zsh) and DEBUG (bash)
     # the first argument is the command line being run
     precommand() {
-        $simple && return
-
         # TODO: Expand job references (fg, %1, etc.)
         set_title "$(short_hostname) $*"
         set_color 'normal'
@@ -558,7 +554,6 @@ EOF
         fi
     }
 
-    simple=false
     laststatus=0
 
     # print the supplied string inside prompt escape sequences
