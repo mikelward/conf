@@ -307,8 +307,10 @@ if is_interactive; then
     }
 
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.java,*.js,*.py,*.sh,*.rb,*.go,*.swig}"
-    code_includes="$(eval echo --include=\"$code_patterns\")"
-    alias cg='g -IR '"$code_includes"
+    code_includes="$(eval echo --include=$code_patterns)"
+    dir_patterns="{.git,.hg}"
+    dir_excludes="$(eval echo --exclude-dir=$dir_patterns)"
+    alias cg='rg '"$code_includes"
     alias ct='ctags -R'
     alias cx='chmod +x'
     download() { cd "$HOME/Downloads"; wget "$@"; }
@@ -321,6 +323,8 @@ if is_interactive; then
     alias l1='l -1'
     alias la='l -a'
     alias lc='l -C'
+    # lg = line grep (or literal grep) -- fg was taken
+    alias lg='g -F'
     alias ll='l -l'
     if quiet l -T; then
         alias lt='l -Tt'
@@ -337,7 +341,7 @@ if is_interactive; then
     alias po='popd'
     alias py='python'
     alias r='fc -s'
-    alias rg='rgrep'
+    alias rg='g -IR '"$dir_excludes"
     alias s='ssh'
     alias sr='ssh -l root'
     alias symlink='ln -s'
