@@ -508,7 +508,7 @@ EOF
         if test $laststatus -ne 0; then
             prompt_color 'red'
             printf "%d" "$laststatus"
-            prompt_color 'black'
+            prompt_color 'normal'
         fi
         ps1_character
         printf ' '
