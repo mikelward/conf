@@ -50,6 +50,9 @@ if is_zsh; then
 
     # TODO: Re-evaluate turning EXTENDED_GLOB on, perhaps in conjunction with
     # disable -p '#'.
+
+    # zsh-style autoload, required for e.g. bashcompinit
+    unsetopt KSH_AUTOLOAD
 elif is_bash; then
     # enable ksh default features
     shopt -s extglob        # !(pattern) etc. like in ksh
@@ -92,6 +95,11 @@ is_builtin() {
 # return true if the argument is a command that can be invoked
 is_command() {
     test -x "$(command -v "$1")"
+}
+
+# return true if the argument is an alias, builtin, command, or function
+is_runnable() {
+    command -v "$1"
 }
 
 # return true if the shell is interactive
@@ -219,6 +227,9 @@ retry()
 
 if is_interactive; then
 
+    # regain use of Ctrl+S and Ctrl+Q
+    stty start undef stop undef
+
     # determine the graphics mode escape sequences
     if is_command tput; then
         if quiet tput longname; then
@@ -295,12 +306,17 @@ if is_interactive; then
         esac
     }
 
+    code_patterns="{*.c,*.h,*.cc,*.coffee,*.java,*.js,*.py,*.sh,*.rb,*.go,*.swig}"
+    code_includes="$(eval echo --include=\"$code_patterns\")"
+    alias cg='g -IR '"$code_includes"
     alias ct='ctags -R'
     alias cx='chmod +x'
+    download() { cd "$HOME/Downloads"; wget "$@"; }
     alias e='${EDITOR:-vi}'
     alias f='fg'
     alias g='grep -HIin'
     alias gdb='gdb -q '
+    alias headers='curl -L -i -sS -o/dev/null -D-'
     is_command l && alias l='l -K' || alias l='ls'
     alias l1='l -1'
     alias la='l -a'
@@ -313,7 +329,9 @@ if is_interactive; then
     fi
     alias j='jobs'
     alias p='${PAGER:-more}'
+    alias phup='pkill -HUP'
     alias popd='popd >/dev/null'
+    alias psu='ps -o user,pid,start,time,pcpu,stat,cmd'
     alias pushd='pushd >/dev/null'
     alias pd='pushd'
     alias po='popd'
@@ -322,6 +340,7 @@ if is_interactive; then
     alias rg='rgrep'
     alias s='ssh'
     alias sr='ssh -l root'
+    alias symlink='ln -s'
     alias v='view'
     alias x='_exit'
 
@@ -353,6 +372,14 @@ if is_interactive; then
     do
         alias $command="git $command"
     done
+    # same for my aliases in ~/.gitconfig
+    # for command in $(git config -l |
+    #     sed -ne '/^alias\./{s/^alias\.\([^ =]*\)=.*/\1/;p}')
+    # do
+    #     alias $command="git $command"
+    # done
+    # can't override it using git aliases, so do it here :-/
+    alias stage="git add --update"
 
     # aliases to abstract away differences between package managers
     if is_command yum; then
@@ -430,10 +457,16 @@ if is_interactive; then
         printf '\n'
         set_color "normal"
         host_info
+        auth_info
         dir_info
         job_info
         set_title "$(title)"
         set_prompt
+    }
+
+    # for overriding in .shrc.local
+    auth_info() {
+        :
     }
 
     # print information about this machine
@@ -483,9 +516,26 @@ EOF
     short_hostname() {
         local hostname
 
-        hostname="${HOSTNAME%%.*}"
-        hostname="${hostname#$USERNAME-}"
+        case "$HOSTNAME" in "$USERNAME"-*)
+            hostname="${HOSTNAME%%.*}"
+            hostname="${hostname#$USERNAME-}"
+            ;;
+        *)
+            if _has_four_dots "$HOSTNAME"; then
+                hostname=$(_substr_before_second_dot "$HOSTNAME")
+            else
+                hostname=${HOSTNAME%%.*}
+            fi
+            ;;
+        esac
         printf "%s" "$hostname"
+    }
+    _has_four_dots() {
+        expr match "$1" '[^.]*\.[^.]*\.[^.]*\.[^.]*\..*' >/dev/null
+    }
+
+    _substr_before_second_dot() {
+        expr substr "$1" 1 $(( $(expr match "$1" '[^.]*\.[^.]*\.') - 1))
     }
 
     # print the current directory with $HOME changed to ~
@@ -650,20 +700,19 @@ EOF
     set -o emacs
 
     # workaround for GNOME Terminal which does a cd on startup :-(
-    if test -n "${DISPLAY:-}"; then
-        # e.g. Mikel-PC or Mikel-Laptop means local
-        case "$HOSTNAME" in $USERNAME-*)
-            cd
-            ;;
-        esac
+    if test -n "${DISPLAY:-}" && test -z "${didcd:-}"; then
         # assuming DISPLAY=:0.0 means local
         # note that DISPLAY=localhost:0.0 can mean SSH X forwarding
         case "${DISPLAY:-}" in :*)
             cd
+            didcd=true
             ;;
         esac
     fi
 fi
+
+# source local overrides file (work vs home, etc.)
+test -f "${ZDOTDIR:-$HOME}/.shrc.local" && . "${ZDOTDIR:-$HOME}/.shrc.local"
 
 # finish with a zero exit status so the first prompt is '$' rather than '?'
 true

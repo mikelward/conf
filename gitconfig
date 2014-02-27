@@ -71,6 +71,15 @@
 
 [diff]
     renames = true
+    tool = vimdiff
+    guitool = meld
+
+[difftool]
+    prompt = no
+
+[merge]
+    tool = vimdiff
+    guitool = meld
 
 [log]
     date = relative
