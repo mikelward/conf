@@ -1,21 +1,19 @@
-##########################################################################
-# Configuration for bash, zsh, etc.
 #
-# Configuration for all shells is in this one file so that it can be
-# easily copied to many hosts.
+# Configuration for bash, zsh, ksh, dash, etc.
 #
-# bashrc and shrc should be symlinks to this file.
+# Configuration for all shells is in this one file so that it can be easily
+# copied to many hosts.
+#
+# bashrc and zshrc should be symlinks to this file.
 #
 # ksh and dash should also work, but will have a simpler prompt, etc.
 #
 # Mikel Ward <mikel@mikelward.com>
-##########################################################################
-
-##########################################################################
-# COMPATIBILITY
 #
+
+###############
+# COMPATIBILITY
 # Try to make all shells behave similarly while reading this file
-##########################################################################
 
 is_zsh() {
     [ -n "${ZSH_VERSION:-}" ]
@@ -71,11 +69,9 @@ fi
 PATH="$HOME/scripts:$PATH"
 CDPATH=".:$HOME"
 
-##########################################################################
+#################
 # BASIC FUNCTIONS
-#
 # Functions that are needed elsewhere in this file.
-##########################################################################
 
 # print an error message
 error() {
@@ -117,12 +113,9 @@ warn() {
     printf "$*\n" >&2
 }
 
-##########################################################################
+###################
 # GENERAL FUNCTIONS
-#
-# Useful things that could be commands if distributing them wasn't
-# impractical.
-##########################################################################
+# Useful things that could be commands if distributing them wasn't impractical.
 
 # ring the terminal's bell
 bell()
@@ -210,11 +203,10 @@ retry()
     done
 }
 
-##########################################################################
+#########################
 # INTERACTIVE SHELL SETUP
-#
 # Set up the prompt, title, key bindings, etc.
-##########################################################################
+
 if is_interactive; then
 
     # determine the graphics mode escape sequences
@@ -677,7 +669,7 @@ EOF
     fi
 fi
 
-# exit successfully so the first prompt is $ rather than ?
+# finish with a zero exit status so the first prompt is '$' rather than '?'
 true
 
 # Use tabs for indentation so we can edit this in nvi if necessary.

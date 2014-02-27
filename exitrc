@@ -1,14 +1,14 @@
+#
 # Commands to run for any POSIX shell when the user logs out.
+#
 
 # kill ssh-agent if it is running
-if test -n "${SSH_AGENT_PID:-}"
-then
+if test -n "${SSH_AGENT_PID:-}"; then
 	eval $(ssh-agent -k)
 fi
 
 # clear the screen
-if type clear >/dev/null 2>&1
-then
+if type clear >/dev/null 2>&1; then
 	clear
 fi
 
