@@ -191,14 +191,23 @@ psgrep()
     fi
 }
 
-# show the 10 most recently changed files
+# show the most recently changed files
+# defaults to the showing the last 10, override with -<number>
 recent()
 {
-    l -t -1 "$@" | head -n 10
+    local lines
+
+    lines=10
+    case "$1" in -*)
+        lines=${1#-}
+        shift
+        ;;
+    esac
+    l -t -1 "$@" | head -n $lines
 }
 
 # keep trying a command until it works
-# (e.g. ping -c 1 host)
+# (e.g. retry ping -c 1 host)
 retry()
 {
     while true; do
