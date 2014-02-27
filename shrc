@@ -11,8 +11,6 @@
 # Mikel Ward <mikel@mikelward.com>
 ##########################################################################
 
-set -u
-
 ##########################################################################
 # COMPATIBILITY
 #
@@ -395,24 +393,27 @@ if is_interactive; then
     # make +<num> change directories and %<num> resume jobs
     # this matches the first column in the prompt output
     if test -n "${BASH_VERSION:-}" || test -n "${ZSH_VERSION:-}"; then
-        for i in $(seq 0 9); do
-            alias +$i='pushpop '$i
-        done
-        function pushpop {
+        # use legacy function syntax then alias to prevent dash syntax errors,
+        # which could cause X session errors on Debian/Ubuntu
+        plus() {
+            pushd "$@" >/dev/null
+        }
+        minus() {
+            popd "$@" >/dev/null
+        }
+        plusminus() {
+            pushd "$OLDPWD" >/dev/null
+        }
+        pushpop() {
             eval "pushd ~$1" >/dev/null
             popd +$(($1 + 1)) >/dev/null
         }
-        function + {
-            pushd "$@" >/dev/null
-        }
-
-        function - {
-            popd "$@" >/dev/null
-        }
-
-        function +- {
-            pushd "$OLDPWD" >/dev/null
-        }
+        alias -- +='plus'
+        alias -- -='minus'
+        alias -- +-='plusminus'
+        for i in $(seq 0 9); do
+            alias -- +$i='pushpop '$i
+        done
     else
         # ksh lacks %, %1, etc.
         alias %='fg'
@@ -433,8 +434,6 @@ if is_interactive; then
     # commands to execute before the prompt is displayed
     preprompt() {
         laststatus=$?
-
-        $simple && return
 
         printf '\n'
         set_color "normal"
@@ -541,8 +540,6 @@ EOF
     # see also preexec (zsh) and DEBUG (bash)
     # the first argument is the command line being run
     precommand() {
-        $simple && return
-
         # TODO: Expand job references (fg, %1, etc.)
         set_title "$(short_hostname) $*"
         set_color 'normal'
@@ -550,10 +547,11 @@ EOF
 
     # set the xterm title to the supplied string
     set_title() {
-        printf "%s%s%s" "$titlestart""$*""$titlefinish"
+        if test -n "$titlestart"; then
+            printf "%s%s%s" "$titlestart""$*""$titlefinish"
+        fi
     }
 
-    simple=false
     laststatus=0
 
     # print the supplied string inside prompt escape sequences
