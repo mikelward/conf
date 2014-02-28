@@ -25,20 +25,8 @@ set nostartofline	" keep the current cursor position when reediting a file
 set wildmode=list:longest	" filename completion lists when ambiguous
 
 " DISPLAY OPTIONS
-if version >= 503
-    set listchars=trail:-
-    set list
-endif
-if version >= 600
-    set listchars+=extends:>,precedes:<
-endif
-if version >= 700
-    set listchars+=nbsp:%
-endif
-
 set nowrap	" don't wrap long lines (show extends character instead)
 set more	" use a pager for long listings
-set nolist	" don't display non-printing characters
 set nonumber	" don't show line numbers
 set noicon	" don't change terminal's title
 set notitle	" don't change terminal's title
@@ -91,22 +79,31 @@ endif
 " allow # character at current indentation level (must appear on own line)
 inoremap # X<BS>#
 
-function! ToggleWhitespace()
-  if exists("b:show_whitespace")
-    let b:show_whitespace = !b:show_whitespace
-  else
+function! ShowWhitespace()
     let b:show_whitespace = 1
-  endif
-  if b:show_whitespace
-    set listchars-=tab:\ \                " revert previous whitespace chars
-    set listchars+=tab:\|\ ,trail:-       " tab is "|   ", trail is "-"
-    echo "Showing more whitespace"
-  else
-    set listchars-=tab:\|\ ,trail:-       " revert previous whitespace chars
-    set listchars+=tab:\ \                " show tabs as regular spaces
-    echo "Hiding most whitespace"
-  endif
+    echo "Showing whitespace"
+    set list
 endfunction
+function! HideWhitespace()
+    let b:show_whitespace = 0
+    echo "Hiding whitespace"
+    set nolist
+endfunction
+function! ToggleWhitespace()
+    if !exists("b:show_whitespace") || !b:show_whitespace
+        call ShowWhitespace()
+    else
+        call HideWhitespace()
+    endif
+endfunction
+set listchars=tab:\|\ ,trail:_       " tab is "|   ", trail is "_"
+if version >= 600
+    set listchars+=extends:>,precedes:<
+endif
+if version >= 700
+    set listchars+=nbsp:%
+endif
+set nolist
 
 function! TogglePaste()
   if &paste
