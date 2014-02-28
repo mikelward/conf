@@ -537,7 +537,6 @@ EOF
     _has_four_dots() {
         expr match "$1" '[^.]*\.[^.]*\.[^.]*\.[^.]*\..*' >/dev/null
     }
-
     _substr_before_second_dot() {
         expr substr "$1" 1 $(( $(expr match "$1" '[^.]*\.[^.]*\.') - 1))
     }
@@ -586,8 +585,7 @@ EOF
     # see also preexec (zsh) and DEBUG (bash)
     # the first argument is the command line being run
     precommand() {
-        # TODO: Expand job references (fg, %1, etc.)
-        set_title "$(short_hostname) $*"
+        set_title "$(short_hostname) $(expand_job "$*")"
         set_color 'normal'
     }
 
@@ -596,6 +594,23 @@ EOF
         if test -n "$titlestart"; then
             printf "%s%s%s" "$titlestart""$*""$titlefinish"
         fi
+    }
+
+    # expand job references such as %1 into the command name
+    expand_job() {
+        local args
+
+        args=( "$@" )
+        case "${args[0]}" in f|fg)
+            args[0]='%+'
+            ;;
+        esac
+        case "${args[0]}" in '%'*)
+            # can't use job_info here in bash
+            args[0]="$(jobs "${args[0]}" | sed -e 's/^\[[0-9][0-9]*\][-+ ]*[^ ]* *//')"
+            ;;
+        esac
+        printf '%s' "${args[@]}"
     }
 
     laststatus=0
