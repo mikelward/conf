@@ -543,9 +543,19 @@ EOF
         pwd | sed -e 's#^'"$HOME"'#~#'
     }
 
+    # trim leading parts of a directory so it's no more than three entries long
+    shorten_directory() {
+        local dir="$1"
+
+        while expr "$dir" : '.*/.*/.*/.*' >/dev/null; do
+            dir=${dir#*/}
+        done
+        printf '%s' "$dir"
+    }
+
     # print the string that should be used as the xterm title
     title() {
-        printf '%s %s' "$(short_hostname)" "$(tilde_directory)"
+        printf '%s %s' "$(short_hostname)" "$(shorten_directory "$(tilde_directory)")"
     }
 
     # set all the prompt strings
