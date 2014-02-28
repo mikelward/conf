@@ -66,7 +66,7 @@
 	Mod4 + i
 
 # lock screen
-"gnome-screensaver-command -l"
+"xscreensaver-command -lock"
 	Mod4 + l
 
 # mail
