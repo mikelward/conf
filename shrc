@@ -598,19 +598,23 @@ EOF
 
     # expand job references such as %1 into the command name
     expand_job() {
-        local args
+        local arg
 
-        args=( "$@" )
-        case "${args[0]}" in f|fg)
-            args[0]='%+'
+        test $# -eq 0 && return
+
+        arg=$1
+        shift
+
+        case "$arg" in f|fg)
+            arg='%+'
             ;;
         esac
-        case "${args[0]}" in '%'*)
+        case "$arg" in '%'*)
             # can't use job_info here in bash
-            args[0]="$(jobs "${args[0]}" | sed -e 's/^\[[0-9][0-9]*\][-+ ]*[^ ]* *//')"
+            arg="$(jobs "$arg" | sed -e 's/^\[[0-9][0-9]*\][-+ ]*[^ ]* *//')"
             ;;
         esac
-        printf '%s' "${args[@]}"
+        printf '%s' "$arg" "$@"
     }
 
     laststatus=0
