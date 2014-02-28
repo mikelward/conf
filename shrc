@@ -358,7 +358,7 @@ if is_interactive; then
 
     # enable colors in commands that support it
     quiet grep -q --color=auto "" /etc/hosts && alias grep='grep --color=auto'
-    quiet ls -d --color=auto --directory / && alias ls='ls --color=auto'
+    quiet ls -d --color=auto / && alias ls='ls --color=auto'
 
     # allow running git subcommands without typing the "git" prefix
     # TODO: Write a script that supports multiple version control systems,
