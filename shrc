@@ -305,7 +305,7 @@ if is_interactive; then
 
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.java,*.js,*.py,*.sh,*.rb,*.go,*.swig}"
     code_includes="$(eval echo --include=$code_patterns)"
-    dir_patterns="{.git,.hg}"
+    dir_patterns="{.git,.hg,.svn}"
     dir_excludes="$(eval echo --exclude-dir=$dir_patterns)"
     alias cg='rg '"$code_includes"
     alias ct='ctags -R'
