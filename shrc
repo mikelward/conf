@@ -316,7 +316,7 @@ if is_interactive; then
     download() { cd "$HOME/Downloads"; wget "$@"; }
     alias e='${EDITOR:-vi}'
     alias f='fg'
-    alias g='grep -HIin'
+    alias g='grep -HIn'
     alias gdb='gdb -q '
     alias headers='curl -L -i -sS -o/dev/null -D-'
     is_command l && alias l='l -K' || alias l='ls'
