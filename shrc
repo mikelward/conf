@@ -674,12 +674,20 @@ EOF
         escape_end='\]'
 
         # install preprompt and precommand functions
+        # the DEBUG trap is disabled during running of preprompt to avoid lots
+        # of extra processing and several pointless title changes
+        install_precommand_trap() {
+            trap 'precommand "$BASH_COMMAND"; remove_precommand_trap' DEBUG
+            set_title "$(title)"
+        }
+        remove_precommand_trap() {
+            trap - DEBUG
+        }
         enable_prompt_hooks() {
-            trap 'precommand "$BASH_COMMAND"' DEBUG
-            PROMPT_COMMAND=preprompt
+            PROMPT_COMMAND='preprompt; install_precommand_trap'
         }
         disable_prompt_hooks() {
-            trap '' DEBUG
+            remove_precommand_trap
             PROMPT_COMMAND=
             basic_prompt
         }
