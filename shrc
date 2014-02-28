@@ -48,9 +48,6 @@ if is_zsh; then
     setopt KSH_GLOB         # !(pattern) etc. like in ksh
     unsetopt BARE_GLOB_QUAL # otherwise !(pattern) breaks
 
-    # TODO: Re-evaluate turning EXTENDED_GLOB on, perhaps in conjunction with
-    # disable -p '#'.
-
     # zsh-style autoload, required for e.g. bashcompinit
     unsetopt KSH_AUTOLOAD
 elif is_bash; then
@@ -647,6 +644,7 @@ EOF
         setopt AUTO_CD
         setopt CORRECT
         setopt DVORAK
+        setopt EXTENDED_GLOB
         setopt PROMPT_PERCENT
         setopt PUSHD_SILENT
 
