@@ -545,7 +545,7 @@ EOF
 
     # print the string that should be used as the xterm title
     title() {
-        short_hostname
+        printf '%s %s' "$(short_hostname)" "$(tilde_directory)"
     }
 
     # set all the prompt strings
