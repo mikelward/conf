@@ -704,6 +704,14 @@ EOF
             basic_prompt
         }
         enable_prompt_hooks
+
+        bind '"\eb": vi-bWord'
+        bind '"\ef": vi-fWord'
+        bind '"\eB": vi-bWord'
+        bind '"\eF": vi-fWord'
+        bind '"\ed": shell-kill-word'
+        bind '"\eD": shell-kill-word'
+        bind '"\e\C-?": unix-word-rubout'
     fi
     # set a simple prompt for non-bash non-zsh
     # (will be overridden immediately by bash and zsh)

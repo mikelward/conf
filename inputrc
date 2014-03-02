@@ -24,6 +24,13 @@ $if mode=emacs
 "\eOC": forward-word
 "\eOD": backward-word
 "\ew": copy-region-as-kill
+"\eb": vi-bWord
+"\ef": vi-fWord
+"\eB": vi-bWord
+"\eF": vi-fWord
+"\ed": shell-kill-word
+"\eD": shell-kill-word'
+"\e\C-?": unix-word-rubout
 #"\\": quoted-insert
 $endif
 
