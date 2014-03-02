@@ -676,6 +676,9 @@ EOF
             basic_prompt
         }
         enable_prompt_hooks
+
+        bindkey -M viins '^u' kill-whole-line
+        bindkey -M vicmd '^u' kill-whole-line
     elif is_bash; then
         # bash enhancements
         shopt -s autocd
