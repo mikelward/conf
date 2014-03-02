@@ -75,6 +75,7 @@ set keymap vi-command
 "\eOH": end-of-line
 "\e[4~": end-of-line
 "\e[3~": delete-char
+"\e": vi-insertion-mode
 
 # use vi mode by default
 set editing-mode vi
