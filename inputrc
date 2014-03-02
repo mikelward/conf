@@ -72,6 +72,6 @@ set keymap vi-command
 "\e[4~": end-of-line
 "\e[3~": delete-char
 
-# use emacs mode by default
-set editing-mode emacs
+# use vi mode by default
+set editing-mode vi
 
