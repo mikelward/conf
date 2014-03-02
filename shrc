@@ -682,6 +682,10 @@ EOF
         bindkey -M vicmd '^u' kill-whole-line
 
         # add Emacs bindings to Vi editing mode
+        bindkey -M viins '^a' beginning-of-line
+        bindkey -M vicmd '^a' beginning-of-line
+        bindkey -M viins '^e' end-of-line
+        bindkey -M vicmd '^e' end-of-line
         bindkey -M viins '^n' down-line-or-history
         bindkey -M vicmd '^n' down-line-or-history
         bindkey -M viins '^p' up-line-or-history
@@ -755,6 +759,10 @@ EOF
         bind -m vi-insert '"\C-u": kill-whole-line'
 
         # add Emacs bindings to Vi editing mode
+        bind -m vi-insert '"\C-a": beginning-of-line'
+        bind -m vi-command '"\C-a": beginning-of-line'
+        bind -m vi-insert '"\C-e": end-of-line'
+        bind -m vi-command '"\C-e": end-of-line'
         bind -m vi-insert '"\C-n": next-history'
         bind -m vi-command '"\C-n": next-history'
         bind -m vi-insert '"\C-p": previous-history'

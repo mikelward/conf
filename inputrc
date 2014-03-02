@@ -34,6 +34,8 @@ set keymap emacs
 
 # vi mode customizations
 set keymap vi-insert
+"\C-a": beginning-of-line
+"\C-e": end-of-line
 "\C-n": next-history
 "\C-p": previous-history
 "\C-r": reverse-search-history
@@ -53,6 +55,8 @@ set keymap vi-insert
 "\e[4~": end-of-line
 "\e[3~": delete-char
 set keymap vi-command
+"\C-a": beginning-of-line
+"\C-e": end-of-line
 "\C-n": next-history
 "\C-p": previous-history
 "\C-r": reverse-search-history
