@@ -12,35 +12,66 @@ set prefer-visible-bell on
 set show-all-if-ambiguous on
 set visible-stats on
 
-# use emacs mode by default
-set editing-mode emacs
-
 # emacs mode customizations
-$if mode=emacs
-"\eb": backward-word
-"\ef": forward-word
-"\ep": history-search-backward
-"\en": history-search-forward
-"\eOC": forward-word
-"\eOD": backward-word
-"\ew": copy-region-as-kill
+set keymap emacs
 "\eb": vi-bWord
-"\ef": vi-fWord
 "\eB": vi-bWord
-"\eF": vi-fWord
 "\ed": shell-kill-word
-"\eD": shell-kill-word'
+"\eD": shell-kill-word
+"\ef": vi-fWord
+"\eF": vi-fWord
+"\en": history-search-forward
+"\ep": history-search-backward
+"\ew": copy-region-as-kill
 "\e\C-?": unix-word-rubout
-#"\\": quoted-insert
-$endif
-
-# function and editing keys
+"\eOH": beginning-of-line
 "\e[1~": beginning-of-line
+"\eOH": end-of-line
 "\e[4~": end-of-line
 "\e[3~": delete-char
-"\e[5~": previous-history
-"\e[6~": next-history
-
 "\e[A": history-search-backward
 "\e[B": history-search-forward
+
+# vi mode customizations
+set keymap vi-insert
+"\C-n": next-history
+"\C-p": previous-history
+"\C-r": reverse-search-history
+"\C-s": forward-search-history
+"\C-w": backward-kill-word
+"\C-y": yank
+"\eb": vi-bWord
+"\eB": vi-bWord
+"\ed": shell-kill-word
+"\eD": shell-kill-word
+"\ef": vi-fWord
+"\eF": vi-fWord
+"\ey": yank-pop
+"\eOH": beginning-of-line
+"\e[1~": beginning-of-line
+"\eOH": end-of-line
+"\e[4~": end-of-line
+"\e[3~": delete-char
+set keymap vi-command
+"\C-n": next-history
+"\C-p": previous-history
+"\C-r": reverse-search-history
+"\C-s": forward-search-history
+"\C-w": backward-kill-word
+"\C-y": yank
+"\eb": vi-bWord
+"\eB": vi-bWord
+"\ed": shell-kill-word
+"\eD": shell-kill-word
+"\ef": vi-fWord
+"\eF": vi-fWord
+"\ey": yank-pop
+"\eOH": beginning-of-line
+"\e[1~": beginning-of-line
+"\eOH": end-of-line
+"\e[4~": end-of-line
+"\e[3~": delete-char
+
+# use emacs mode by default
+set editing-mode emacs
 

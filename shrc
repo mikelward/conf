@@ -677,8 +677,33 @@ EOF
         }
         enable_prompt_hooks
 
+        # standardize Ctrl+U behavior
         bindkey -M viins '^u' kill-whole-line
         bindkey -M vicmd '^u' kill-whole-line
+
+        # add Emacs bindings to Vi editing mode
+        bindkey -M viins '^n' down-line-or-history
+        bindkey -M vicmd '^n' down-line-or-history
+        bindkey -M viins '^p' up-line-or-history
+        bindkey -M vicmd '^p' up-line-or-history
+        bindkey -M viins '^r' history-incremental-search-backward
+        bindkey -M vicmd '^r' history-incremental-search-backward
+        bindkey -M viins '^s' history-incremental-search-forward
+        bindkey -M vicmd '^s' history-incremental-search-forward
+        bindkey -M viins '^w' backward-kill-word
+        bindkey -M vicmd '^w' backward-kill-word
+        bindkey -M viins '^y' yank
+        bindkey -M vicmd '^y' yank
+        bindkey -M viins '\eb' backward-word
+        bindkey -M vicmd '\eb' backward-word
+        bindkey -M viins '\eB' vi-backward-blank-word
+        bindkey -M vicmd '\eB' vi-backward-blank-word
+        bindkey -M viins '\ef' forward-word
+        bindkey -M vicmd '\ef' forward-word
+        bindkey -M viins '\eF' vi-forward-blank-word
+        bindkey -M vicmd '\eF' vi-forward-blank-word
+        bindkey -M viins '\ey' yank-pop
+        bindkey -M vicmd '\ey' yank-pop
     elif is_bash; then
         # bash enhancements
         shopt -s autocd
@@ -708,13 +733,50 @@ EOF
         }
         enable_prompt_hooks
 
-        bind '"\eb": vi-bWord'
-        bind '"\ef": vi-fWord'
-        bind '"\eB": vi-bWord'
-        bind '"\eF": vi-fWord'
-        bind '"\ed": shell-kill-word'
-        bind '"\eD": shell-kill-word'
-        bind '"\e\C-?": unix-word-rubout'
+        # these key bindings should be kept in sync with ~/.inputrc
+        # they are duplicated here so scp ~/.shrc newhost: is sufficient
+
+        # make motion commands treat all non-space characters as word chars
+        bind -m emacs '"\eb": vi-bWord'
+        bind -m emacs '"\ef": vi-fWord'
+        bind -m emacs '"\eB": vi-bWord'
+        bind -m emacs '"\eF": vi-fWord'
+        bind -m emacs '"\ed": shell-kill-word'
+        bind -m emacs '"\eD": shell-kill-word'
+        bind -m emacs '"\e\C-?": unix-word-rubout'
+        bind -m vi-command '"\e\C-?": unix-word-rubout'
+        bind -m vi-insert '"\e\C-?": unix-word-rubout'
+
+        # standardize Ctrl+U behavior
+        bind -m emacs '"\C-u": kill-whole-line'
+        bind -m vi-command '"\C-u": kill-whole-line'
+        bind -m vi-insert '"\C-u": kill-whole-line'
+        bind -m vi-command '"\C-u": kill-whole-line'
+        bind -m vi-insert '"\C-u": kill-whole-line'
+
+        # add Emacs bindings to Vi editing mode
+        bind -m vi-insert '"\C-n": next-history'
+        bind -m vi-command '"\C-n": next-history'
+        bind -m vi-insert '"\C-p": previous-history'
+        bind -m vi-command '"\C-p": previous-history'
+        bind -m vi-insert '"\C-r": reverse-search-history'
+        bind -m vi-command '"\C-r": reverse-search-history'
+        bind -m vi-insert '"\C-s": forward-search-history'
+        bind -m vi-command '"\C-s": forward-search-history'
+        bind -m vi-insert '"\C-w": backward-kill-word'
+        bind -m vi-command '"\C-w": backward-kill-word'
+        bind -m vi-insert '"\C-y": yank'
+        bind -m vi-command '"\C-y": yank'
+        bind -m vi-insert '"\eb": vi-bWord'
+        bind -m vi-command '"\eb": vi-bWord'
+        bind -m vi-insert '"\eB": vi-bWord'
+        bind -m vi-command '"\eB": vi-bWord'
+        bind -m vi-insert '"\ef": vi-fWord'
+        bind -m vi-command '"\ef": vi-fWord'
+        bind -m vi-insert '"\eF": vi-fWord'
+        bind -m vi-command '"\eF": vi-fWord'
+        bind -m vi-insert '"\ey": yank-pop'
+        bind -m vi-command '"\ey": yank-pop'
     fi
     # set a simple prompt for non-bash non-zsh
     # (will be overridden immediately by bash and zsh)
