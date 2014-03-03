@@ -576,9 +576,7 @@ EOF
     # output the string that should be used as the prompt
     ps1() {
         ps1_character
-        #keymap_character
         printf ' '
-        prompt_color 'bold'
     }
 
     # print a character that should be the last part of the prompt
@@ -672,6 +670,9 @@ EOF
         setopt EXTENDED_GLOB
         setopt PROMPT_PERCENT
         setopt PUSHD_SILENT
+
+        # user input appears in bold
+        zle_highlight=("default:bold")
 
         escape_start='%{'
         escape_end='%}'
