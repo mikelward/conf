@@ -461,15 +461,11 @@ if is_interactive; then
 
         printf '\n'
         set_color "normal"
+        last_command_info
         host_info
         auth_info
         dir_info
         job_info
-        if test $laststatus -ne 0; then
-            set_color 'red'
-            printf '%d\n' "$laststatus"
-            set_color 'normal'
-        fi
         set_title "$(title)"
         set_prompt
     }
@@ -510,6 +506,15 @@ EOF
         branch=$(git_branch)
         printf "%s%s %s%s%s" \
             "$dir" "$normal" "$green" "$branch" "$normal"
+    }
+
+    # print info about whether the last command exited successfully
+    last_command_info() {
+        if test ${laststatus:-0} -ne 0; then
+            set_color 'red'
+            printf 'exit status %d\n' "$laststatus"
+            set_color 'normal'
+        fi
     }
 
     # print the name of the currently active git branch in $PWD
@@ -672,7 +677,8 @@ EOF
         setopt PUSHD_SILENT
 
         # user input appears in bold
-        zle_highlight=("default:bold")
+        declare -a zle_highlight
+        zle_highlight[0]="default:bold"
 
         escape_start='%{'
         escape_end='%}'
@@ -693,7 +699,7 @@ EOF
         }
         enable_prompt_hooks
 
-        setopt functionargzero
+        # use underscores in the function names so dash doesn't choke
         zle_keymap() {
             emulate -L zsh
             keymap=$KEYMAP
@@ -701,18 +707,18 @@ EOF
             zle reset-prompt
             zle -R
         }
-        function zle-line-init {
+        zle_line_init() {
             zle_keymap
         }
-        function zle-keymap-select {
+        zle_keymap_select() {
             zle_keymap
         }
-        function zle-line-finish {
+        zle_line_finish() {
             zle_keymap
         }
-        zle -N zle-line-init
-        zle -N zle-keymap-select
-        zle -N zle-line-finish
+        zle -N zle-line-init zle_line_init
+        zle -N zle-keymap-select zle_keymap_select
+        zle -N zle-line-finish zle_line_finish
 
         # standardize Ctrl+U behavior
         bindkey -M viins '^u' kill-whole-line
