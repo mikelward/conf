@@ -89,3 +89,5 @@
 
 [push]
 	default = upstream
+[init]
+	templatedir = /home/mikel/.gittemplates
