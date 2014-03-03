@@ -61,7 +61,8 @@ set backupext=~	" backup files end in ~
 
 " EDITING OPTIONS
 set autoindent	" indentation level automatically controlled
-set cinoptions=:0,g0,(0	" labels are not indented (in C/C++ files)
+set cinoptions=:0,g0	" labels are not indented (in C/C++ files)
+set cinoptions+=(0	" hanging indent to align function parameters
 set expandtab	" use spaces rather than tabs for indentation
 set smarttab	" backspace deletes one indentation level
 set shiftround	" manual shift aligns on columns
