@@ -348,6 +348,9 @@ if is_interactive; then
     alias symlink='ln -s'
     alias v='view'
     alias x='_exit'
+    alias I='make install'
+    alias M='make'
+    alias T='make test'
 
     # expand aliases after nohup, etc.
     for wrapper in nohup strace sudo; do
