@@ -38,11 +38,11 @@ if is_zsh; then
     setopt CSH_JUNKIE_HISTORY
     setopt INTERACTIVE_COMMENTS
     setopt KSH_TYPESET
-    # emulate sh doesn't set PROMPT_SUBST
-    # could use emulate -R, but that breaks compinit
-    setopt PROMPT_SUBST
     # so we can display jobs in the prompt
     unsetopt POSIX_JOBS >/dev/null 2>&1
+
+    # set_prompt sets PS1 to a string likely including '$', don't expand it
+    unsetopt PROMPT_SUBST
 
     # enable ksh default features
     setopt KSH_GLOB         # !(pattern) etc. like in ksh
@@ -51,6 +51,10 @@ if is_zsh; then
     # zsh-style autoload, required for e.g. bashcompinit
     unsetopt KSH_AUTOLOAD
 elif is_bash; then
+
+    # set_prompt sets PS1 to a string likely including '$', don't expand it
+    shopt -u promptvars
+
     # enable ksh default features
     shopt -s extglob        # !(pattern) etc. like in ksh
 
@@ -461,6 +465,11 @@ if is_interactive; then
         auth_info
         dir_info
         job_info
+        if test $laststatus -ne 0; then
+            set_color 'red'
+            printf '%d\n' "$laststatus"
+            set_color 'normal'
+        fi
         set_title "$(title)"
         set_prompt
     }
@@ -564,28 +573,34 @@ EOF
         PS1="$(ps1)"
     }
 
+    # output the string that should be used as the prompt
     ps1() {
-        if test $laststatus -ne 0; then
-            prompt_color 'red'
-            printf "%d" "$laststatus"
-            prompt_color 'normal'
-        fi
         ps1_character
+        #keymap_character
         printf ' '
         prompt_color 'bold'
     }
 
     # print a character that should be the last part of the prompt
     ps1_character() {
-        if test $laststatus -eq 0; then
-            if test $UID -eq 0; then
-                printf '#'
-            else
-                printf '$'
-            fi
+        if test $UID -eq 0; then
+            printf '#'
+        elif test "${keymap:-}" = 'vicmd'; then
+            printf '>'
         else
-            printf '?'
+            printf '$'
         fi
+    }
+
+    # print a character indicating whether vi command mode is active
+    keymap_character() {
+        case "${keymap:-}" in vicmd)
+            printf '%s' '>'
+            ;;
+        *)
+            printf ' '
+            ;;
+        esac
     }
 
     # function to run just before running a command from the command line
@@ -677,9 +692,33 @@ EOF
         }
         enable_prompt_hooks
 
+        setopt functionargzero
+        zle_keymap() {
+            emulate -L zsh
+            keymap=$KEYMAP
+            set_prompt
+            zle reset-prompt
+            zle -R
+        }
+        function zle-line-init {
+            zle_keymap
+        }
+        function zle-keymap-select {
+            zle_keymap
+        }
+        function zle-line-finish {
+            zle_keymap
+        }
+        zle -N zle-line-init
+        zle -N zle-keymap-select
+        zle -N zle-line-finish
+
         # standardize Ctrl+U behavior
         bindkey -M viins '^u' kill-whole-line
         bindkey -M vicmd '^u' kill-whole-line
+
+        # Make Esc toggle between command and insert mode
+        bindkey -M vicmd '\e' vi-insert
 
         # add Emacs bindings to Vi editing mode
         bindkey -M viins '^a' beginning-of-line
@@ -708,9 +747,6 @@ EOF
         bindkey -M vicmd '\eF' vi-forward-blank-word
         bindkey -M viins '\ey' yank-pop
         bindkey -M vicmd '\ey' yank-pop
-
-        # Make Esc toggle between command and insert mode
-        bindkey -M vicmd '\e' vi-insert
     elif is_bash; then
         # bash enhancements
         shopt -s autocd
