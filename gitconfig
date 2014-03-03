@@ -1,9 +1,9 @@
 [user]
-	name = Mikel Ward
-	email = mikel@mikelward.com
+    name = Mikel Ward
+    email = mikel@mikelward.com
 
 [core]
-	excludesfile = /home/mikel/.gitexclude
+    excludesfile = /home/mikel/.gitexclude
 
 # git command aliases
 # where possible, use a name that's not a Unix command
@@ -11,24 +11,25 @@
 [alias]
     ad = add
     addall = add --all
-    added = diff --cached --name-only
+    added = diff --patience --cached --name-only
     addremove = add --update
-    adds = diff --cached
+    adds = diff --patience --cached
     amend = commit --amend
     an = annotate
     ap = apply
     br = branch
-    changed = diff --name-only
-    changes = diff
+    changed = diff --patience --name-only
+    changes = diff --patience
     # Nobody uses RCS anymore, right?
     ci = commit
     cl = clone
     co = checkout
     commitall = commit --all
     # da = "diff added"
-    da = diff --cached
-    di = diff
+    da = diff --patience --cached
+    di = diff --patience
     # For symmetry with the shell alias.
+    diff = diff
     diffs = diff
     gr = log --graph --pretty=oneline --decorate --abbrev-commit
     graph = log --graph --pretty=oneline --decorate --abbrev-commit
@@ -45,14 +46,20 @@
     restore = checkout
     # rewind [<commit>] = move the index back to commit
     rewind = reset
+    rollback = reset --hard
+    root = rev-parse --show-toplevel
     rs = reset
+    rv = revert
     st = status --short
+    staged = diff --patience --cached
     state = status --short
     # switch [<branch>] = change to a different branch
     switch = checkout
+    tg = tag
     track = add --intent-to-add
     # XXX why does this print "needs update"?
     unadd = reset HEAD
+    unaddall = reset HEAD
     # unchange <file> = restore a file from index
     unchange = checkout-index --force
     # unchangeall = restore all files from index
@@ -73,6 +80,7 @@
     renames = true
     tool = vimdiff
     guitool = meld
+    algorithm = patience
 
 [difftool]
     prompt = no
@@ -88,6 +96,7 @@
     authorsfile = /home/mikel/.gitauthors
 
 [push]
-	default = upstream
+    default = upstream
+
 [init]
-	templatedir = /home/mikel/.gittemplates
+    templatedir = /home/mikel/.gittemplates
