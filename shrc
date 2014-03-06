@@ -757,6 +757,9 @@ EOF
         bindkey -M vicmd '\eF' vi-forward-blank-word
         bindkey -M viins '\ey' yank-pop
         bindkey -M vicmd '\ey' yank-pop
+
+        # try to differentiate between Esc vi command and Alt+something
+        KEYTIMEOUT=1
     elif is_bash; then
         # bash enhancements
         shopt -s autocd
@@ -837,9 +840,6 @@ EOF
 
         # Make Esc toggle between command and insert mode
         bind -m vi-command '"\e": vi-insertion-mode'
-
-        # try to differentiate between Esc vi command and Alt+something
-        KEYTIMEOUT=1
     fi
     # set a simple prompt for non-bash non-zsh
     # (will be overridden immediately by bash and zsh)
