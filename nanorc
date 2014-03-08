@@ -1,6 +1,5 @@
 set autoindent
 set backup
-set cut
 set multibuffer
 set nohelp
 set nowrap
@@ -23,3 +22,36 @@ color blue start="/\*" end="\*/"
 syntax "sh" ".*\.sh$"
 color green ""(\\.|[^\"])*""
 color blue "^[^\"]*#.*$"
+
+bind F1 help all
+bind ^C cancel all
+bind ^X exit all
+bind ^S writeout all
+bind ^F whereis all
+bind ^G searchagain all
+bind ^U cut all
+bind ^Y uncut all
+bind M-g gotoline all
+bind ^H replace all
+bind ^space mark all
+bind M-f nextword all
+bind M-b prevword all
+bind ^A home all
+bind ^E end all
+bind M-p prevbuf all
+bind M-n nextbuf all
+bind M-v verbatim all
+bind ^I tab all
+bind ^M enter all
+bind ^? delete all
+bind M-u undo all
+bind M-z undo all
+bind M-r redo all
+bind M-y redo all
+bind ^Z suspend all
+bind M-i casesens all
+bind M-s regexp all
+bind M-h nohelp all
+bind M-w whitespacedisplay all
+bind M-a autoindent all
+bind M-c cuttoend all
