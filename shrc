@@ -159,6 +159,23 @@ body() {
     "$@"
 }
 
+# print the name of a source file's corresponding test file
+find_test_file() {
+    local file
+    local dir
+    local base
+    local ext
+    local testfile
+
+    file=${1##*/}
+    dir=${1%$file}
+    base=${file%.*}
+    ext=${file#$base}
+
+    testfile=${dir:+$dir/}${base}_test$ext
+    [ -e "$testfile" ] && printf '%s' "$testfile"
+}
+
 # make a directory and cd to it
 mcd()
 {
@@ -316,6 +333,15 @@ if is_interactive; then
     alias cx='chmod +x'
     download() { cd "$HOME/Downloads"; wget "$@"; }
     alias e='${EDITOR:-vi}'
+    et() {
+        local file
+        local testfile
+
+        file=$1
+        testfile=$(find_test_file "$file")
+
+        vim -O "$file" ${testfile:+"$testfile"}
+    }
     alias f='fg'
     alias g='grep -HIn'
     alias gdb='gdb -q '
@@ -339,6 +365,9 @@ if is_interactive; then
         alias lt='ll -t'
     fi
     alias j='jobs'
+    alias m='make'
+    # shadows magtape command, but who uses that?
+    alias mt='make test'
     alias p='${PAGER:-more}'
     alias phup='pkill -HUP'
     alias popd='popd >/dev/null'
