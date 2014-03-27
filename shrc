@@ -345,6 +345,7 @@ if is_interactive; then
     alias f='fg'
     alias g='grep -HIn'
     alias gdb='gdb -q '
+    alias h='head'
     alias headers='curl -L -i -sS -o/dev/null -D-'
     if is_command l; then
         alias l='l -Kv'
@@ -381,6 +382,7 @@ if is_interactive; then
     alias s='ssh'
     alias sr='ssh -l root'
     alias symlink='ln -s'
+    alias t='tail'
     alias v='view'
     alias x='_exit'
     alias I='make install'
