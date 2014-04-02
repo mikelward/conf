@@ -102,7 +102,8 @@
 #"gnome-terminal --geometry 132x50"
 #"gnome-terminal --geometry 207x58"
 #"/usr/bin/gnome-terminal"
-"gnome-terminal --maximize"
+#"gnome-terminal --maximize"
+"terminator"
 	Mod4 + t
 
 # word
