@@ -74,8 +74,8 @@ set esckeys	" allow arrow keys in insert mode
 set noerrorbells visualbell	" flash screen instead of ringing bell
 set showbreak=+	" specially mark continued lines with a plus
 
-if has("x11")
-    set clipboard=unnamed	" yank to X selection buffer
+if has("x11") && has("unnamedplus")
+    set clipboard=unnamedplus	" yank to X selection buffer
 endif
 
 " allow # character at current indentation level (must appear on own line)
