@@ -1,21 +1,3 @@
-# For the benefit of emacs users: -*- shell-script -*-
-###########################
-# xbindkeys configuration #
-###########################
-#
-# Version: 1.8.2
-#
-# If you edit this file, do not forget to uncomment any lines
-# that you change.
-# The pound(#) symbol may be used anywhere for comments.
-#
-# To specify a key, you can use 'xbindkeys --key' or
-# 'xbindkeys --multikey' and put one of the two lines in this file.
-#
-# The format of a command line is:
-#    "command to start"
-#       associated key
-#
 #
 # A list of keys is in /usr/include/X11/keysym.h and in
 # /usr/include/X11/keysymdef.h
@@ -26,33 +8,15 @@
 #   Mod3 (CapsLock), Mod4, Mod5 (Scroll).
 #
 
-# The release modifier is not a standard X modifier, but you can
-# use it if you want to catch release events instead of press events
-
-# By defaults, xbindkeys does not pay attention with the modifiers
-# NumLock, CapsLock and ScrollLock.
-# Uncomment the lines above if you want to pay attention to them.
-
-#keystate_numlock = enable
-#keystate_capslock = enable
-#keystate_scrolllock= enable
-
-"/home/mward/thunderbird/thunderbird"
-	Mod4 + b
-
 # calculator
-"gnome-calculator"
+"google-calendar"
 	Mod4 + c
-
-# epiphany web browser
-"epiphany-browser"
-	Mod4 + e
 
 # firefox
 "firefox"
 	Mod4 + f
 
-# chromium (Google Chrome)
+# Google Chrome/chromium
 #"chromium-browser"
 "google-chrome"
 	Mod4 + g
@@ -62,6 +26,7 @@
 "nautilus ~"
 	Mod4 + h
 
+# IRC
 "xchat"
 	Mod4 + i
 
@@ -70,8 +35,7 @@
 	Mod4 + l
 
 # mail
-#"/home/mward/thunderbird/thunderbird"
-"evolution -c mail"
+"gmail"
 	Mod4 + m
 
 # notepad
@@ -81,48 +45,14 @@
 "leafpad"
 	Mod4 + n
 
-# opera browser
-"opera -notrayicon -nomail"
-	Mod4 + o
-
 # PyCharm IDE
 "env JAVA_HOME=/usr/java/current charm"
 	Mod4 + p
 
-# rhythmbox music player
-"rhythmbox"
-	Mod4 + r
-
-# Sublime Text editor
-""/home/mikel/Programs/Sublime Text 2/sublime_text""
-    Mod4 + s
-
 # terminal
-#"gnome-terminal --geometry 1680x1050"
-#"gnome-terminal --geometry 132x50"
-#"gnome-terminal --geometry 207x58"
-#"/usr/bin/gnome-terminal"
-#"gnome-terminal --maximize"
+#"gnome-terminal"
 "terminator"
 	Mod4 + t
-
-# word
-#"abiword"
-"oowriter"
-	Mod4 + w
-
-# spreadsheet (x = excel)
-#"gnumeric"
-#"oocalc"
-"xchat"
-	Mod4 + x
-
-"zdesktop"
-	Mod4 + z
-
-# desktop search
-#"beagle-search"
-#	Mod4 + space
 
 # mute
 "amixer set Master toggle"
@@ -132,11 +62,9 @@
 	Mod4 + Delete
 
 # play/pause
-#"banshee --toggle-playing"
 "rhythmbox-client --play-pause"
 	Mod4 + KP_Insert
 
-#"banshee --toggle-playing"
 "rhythmbox-client --play-pause"
 	Mod4 + Insert
 
@@ -151,12 +79,10 @@
 
 # XXX would be nice to figure out how to send XF86AudioNext, etc.
 # next song
-#"banshee --next"
 "rhythmbox-client --next"
 	Mod4 + Right
 
 # previous song
-#"banshee --previous"
 "rhythmbox-client --previous"
 	Mod4 + Left
 
@@ -182,7 +108,3 @@
 
 "moveto 4"
     Mod4 + Shift + 4
-
-##################################
-# End of xbindkeys configuration #
-##################################
