@@ -72,6 +72,9 @@ fi
 # TODO Re-add addpath, delpath, etc.?
 PATH="$HOME/scripts:$PATH"
 CDPATH=".:$HOME"
+GOPATH="$HOME"
+export GOPATH
+PATH="$PATH:$GOPATH/bin"
 
 #################
 # BASIC FUNCTIONS
