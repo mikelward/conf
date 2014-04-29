@@ -8,29 +8,30 @@
 #   Mod3 (CapsLock), Mod4, Mod5 (Scroll).
 #
 
-# calculator
+# b = (an unused key)
+"hangouts"
+	Mod4 + b
+
 "google-calendar"
 	Mod4 + c
 
-# firefox
 "firefox"
 	Mod4 + f
 
-# Google Chrome/chromium
 #"chromium-browser"
 "google-chrome"
 	Mod4 + g
 
-# home folder
+# h = home folder
 #"thunar"
 "nautilus ~"
 	Mod4 + h
 
-# IRC
+# i = IRC
 "xchat"
 	Mod4 + i
 
-# lock screen
+# l = lock screen
 "xscreensaver-command -lock"
 	Mod4 + l
 
@@ -38,18 +39,15 @@
 "gmail"
 	Mod4 + m
 
-# notepad
-#"mousepad"
-#"tomboy --new-note"
-#"gedit"
+# n = notepad
 "leafpad"
 	Mod4 + n
 
-# PyCharm IDE
+# p = pycharm
 "env JAVA_HOME=/usr/java/current charm"
 	Mod4 + p
 
-# terminal
+# t = terminal
 #"gnome-terminal"
 "terminator"
 	Mod4 + t
