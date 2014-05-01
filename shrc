@@ -69,12 +69,80 @@ fi
 : ${HOSTNAME:=$(hostname --fqdn)}
 : ${UID:=$(id -u)}
 
-# TODO Re-add addpath, delpath, etc.?
-PATH="$HOME/scripts:$PATH"
-CDPATH=".:$HOME"
-GOPATH="$HOME"
-export GOPATH
-PATH="$PATH:$GOPATH/bin"
+#######
+# PATH FUNCTIONS
+# Functions used to modify $PATH
+#
+prependpath() {
+  local _dir=$1
+  deletepath "$_dir"
+  if test -n "$PATH"; then
+    PATH="$_dir:$PATH"
+  else
+    PATH="$_dir"
+  fi
+}
+
+appendpath() {
+  local _dir=$1
+  deletepath "$_dir"
+  if test -n "$PATH"; then
+    PATH="$PATH:$_dir"
+  else
+    PATH="$_dir"
+  fi
+}
+
+deletepath() {
+  local _dir=$1
+  PATH=$(
+    _newpath=
+    IFS=:
+    for dir in $PATH; do
+      if test "$dir" != "$_dir"; then
+        _newpath=${_newpath:+$_newpath:}$dir
+      fi
+    done
+    printf '%s' "$_newpath"
+  )
+}
+
+inpath() {
+  local _dir=$1
+  (
+    IFS=:
+    for dir in $PATH; do
+      if test "$dir" == "$_dir"; then
+        return 0
+      fi
+    done
+    return 1
+  )
+}
+
+addpath() {
+  local _dir=$1
+  local _where=$2
+  local _newpath=$PATH
+
+  case "$_where" in start|end)
+    deletepath "$_dir" "$_newpath"
+    case "$_where" in
+    start)
+      prependpath "$_dir" "$_newpath"
+      ;;
+    end)
+      appendpath "$_dir" "$_newpath"
+      ;;
+    esac
+    ;;
+  *)
+    if ! inpath "$_dir"; then
+      appendpath "$_dir"
+    fi
+    ;;
+  esac
+}
 
 #################
 # BASIC FUNCTIONS
@@ -241,6 +309,19 @@ retry()
         fi
     done
 }
+
+##################################
+# ENVIRONMENT SETUP FOR ALL SHELLS
+# Set $PATH early in case other stuff here needs it.
+
+addpath ~/bin start
+addpath ~/scripts start
+addpath /sbin end
+addpath /usr/sbin end
+
+CDPATH=".:$HOME"
+GOPATH="$HOME"
+export GOPATH
 
 #########################
 # INTERACTIVE SHELL SETUP
