@@ -73,9 +73,9 @@ fi
 # PATH FUNCTIONS
 # Functions used to modify $PATH
 #
-prependpath() {
+prepend_path() {
   local _dir=$1
-  deletepath "$_dir"
+  delete_path "$_dir"
   if test -n "$PATH"; then
     PATH="$_dir:$PATH"
   else
@@ -83,9 +83,9 @@ prependpath() {
   fi
 }
 
-appendpath() {
+append_path() {
   local _dir=$1
-  deletepath "$_dir"
+  delete_path "$_dir"
   if test -n "$PATH"; then
     PATH="$PATH:$_dir"
   else
@@ -93,7 +93,7 @@ appendpath() {
   fi
 }
 
-deletepath() {
+delete_path() {
   local _dir=$1
   PATH=$(
     _newpath=
@@ -120,25 +120,25 @@ inpath() {
   )
 }
 
-addpath() {
+add_path() {
   local _dir=$1
   local _where=$2
   local _newpath=$PATH
 
   case "$_where" in start|end)
-    deletepath "$_dir" "$_newpath"
+    delete_path "$_dir" "$_newpath"
     case "$_where" in
     start)
-      prependpath "$_dir" "$_newpath"
+      prepend_path "$_dir" "$_newpath"
       ;;
     end)
-      appendpath "$_dir" "$_newpath"
+      append_path "$_dir" "$_newpath"
       ;;
     esac
     ;;
   *)
     if ! inpath "$_dir"; then
-      appendpath "$_dir"
+      append_path "$_dir"
     fi
     ;;
   esac
@@ -314,10 +314,10 @@ retry()
 # ENVIRONMENT SETUP FOR ALL SHELLS
 # Set $PATH early in case other stuff here needs it.
 
-addpath ~/bin start
-addpath ~/scripts start
-addpath /sbin end
-addpath /usr/sbin end
+add_path ~/bin start
+add_path ~/scripts start
+add_path /sbin end
+add_path /usr/sbin end
 
 CDPATH=".:$HOME"
 GOPATH="$HOME"
