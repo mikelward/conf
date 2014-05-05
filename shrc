@@ -68,6 +68,10 @@ fi
 : ${USERNAME:=$(id -un)}
 : ${HOSTNAME:=$(hostname --fqdn)}
 : ${UID:=$(id -u)}
+: ${TTY:=$(tty)}
+
+# set HISTORY_FILE for log_history
+HISTORY_FILE=$HOME/.history
 
 #######
 # PATH FUNCTIONS
@@ -183,6 +187,11 @@ is_interactive() {
         false
         ;;
     esac
+}
+
+# log the running of a command to a file
+log_history() {
+    printf '%s\n' "$(date "+%Y%m%d %H%M%S %z") $TTY $*" >> "$HISTORY_FILE"
 }
 
 # run a command with output silenced
@@ -328,6 +337,8 @@ export GOPATH
 # Set up the prompt, title, key bindings, etc.
 
 if is_interactive; then
+
+    log_history "New session as $USERNAME: $0 $*"
 
     # regain use of Ctrl+S and Ctrl+Q
     stty start undef stop undef
@@ -735,6 +746,7 @@ EOF
     # see also preexec (zsh) and DEBUG (bash)
     # the first argument is the command line being run
     precommand() {
+        log_history "$*"
         set_title "$(short_hostname) $(expand_job "$*")"
         set_color 'normal'
     }
