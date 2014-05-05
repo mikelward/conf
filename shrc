@@ -323,14 +323,15 @@ retry()
 # ENVIRONMENT SETUP FOR ALL SHELLS
 # Set $PATH early in case other stuff here needs it.
 
-add_path ~/bin start
-add_path ~/scripts start
-add_path /sbin end
-add_path /usr/sbin end
-
 CDPATH=".:$HOME"
 GOPATH="$HOME"
 export GOPATH
+
+add_path "$HOME/bin" start
+add_path "$GOPATH/bin" start
+add_path "$HOME/scripts" start
+add_path /sbin end
+add_path /usr/sbin end
 
 #########################
 # INTERACTIVE SHELL SETUP
