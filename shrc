@@ -690,6 +690,25 @@ EOF
         expr substr "$1" 1 $(( $(expr match "$1" '[^.]*\.[^.]*\.') - 1))
     }
 
+    # ssh to remote host using current shell's config
+    mssh() {
+        case $SHELL in
+        *bash) bssh "$@";;
+        *zsh)  zssh "$@";;
+        *)     ssh "$@";;
+        esac
+    }
+
+    # ssh to remote host using this host's bashrc
+    bssh() {
+        ssh -t "$@" 'export BASHRC=$(mktemp /tmp/bash.XXXXXXXX); scp '"$HOSTNAME:${BASHRC:-.bashrc}"' "$BASHRC"; exec bash --rcfile "$BASHRC" -i'
+    }
+
+    # ssh to remote host using this host's zshrc
+    zssh() {
+        ssh -t "$@" 'export ZDOTDIR=$(mktemp -d /tmp/zsh.XXXXXXXX); scp '"$HOSTNAME:${ZDOTDIR:-$HOME}/.zshrc"' "$ZDOTDIR"; exec zsh -i'
+    }
+
     # print the current directory with $HOME changed to ~
     tilde_directory() {
         pwd | sed -e 's#^'"$HOME"'#~#'
