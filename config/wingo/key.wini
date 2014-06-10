@@ -84,8 +84,8 @@ Mod1-F2 := Shell "gmrun"
 # Mod4-c := Close (GetActive)
 Mod4-Shift-q := Quit
 Mod4-Shift-r := Restart
-# Mod4-x := ToggleMaximize (GetActive)
-# Mod1-f := ToggleFloating (GetActive)
+Mod4-Shift-x := ToggleMaximize (GetActive)
+Mod4-Shift-f := ToggleFloating (GetActive)
 # Mod1-s := ToggleSticky (GetActive)
 
 # WingoExec will allow you to execute *any* Wingo command.
