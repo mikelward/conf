@@ -278,13 +278,13 @@ psgrep()
 {
     eval "local pattern=\"\$$#\""
     if test $# -eq 1; then
-        set -- -o user,pid,ppid,pgid,start_time,pcpu,rss,comm=EXE,args=ARGS
+        set -- -o user,pid,ppid,start_time,pcpu,rss,comm=EXE,args=ARGS
     else
         eval "set -- $(for i in $(seq $(($# - 1))); do echo -n "\"\$$i\" "; done)"
     fi
     local pids="$(pgrep -d , -f "$pattern")"
     if test -n "$pids"; then
-        ps "$@" -p "$pids"
+        ps -w "$@" -p "$pids"
     else
         error "No processes matching $pattern"
     fi
