@@ -443,6 +443,7 @@ if is_interactive; then
     alias gdb='gdb -q '
     alias h='head'
     alias headers='curl -L -i -sS -o/dev/null -D-'
+    alias hosts='getent hosts'
     if is_command l; then
         alias l='l -Kv'
     elif quiet ls --color=auto -v -d /; then
