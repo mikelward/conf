@@ -32,7 +32,7 @@
 	Mod4 + i
 
 # l = lock screen
-"xscreensaver-command -lock"
+"gnome-screensaver-command -l"
 	Mod4 + l
 
 # mail
@@ -52,8 +52,8 @@
 	Mod4 + s
 
 # t = terminal
-#"gnome-terminal"
-"terminator"
+#"terminator"
+"gnome-terminal"
 	Mod4 + t
 
 # mute
@@ -90,8 +90,8 @@
 
 # screen shot (print screen)
 #"gnome-screenshot"
-"xfce4-screenshooter -f"
-	Print
+#"xfce4-screenshooter -f"
+#	Print
 
 "snap left"
     Mod4 + Shift + Left
