@@ -47,8 +47,8 @@
 "env JAVA_HOME=/usr/java/current charm"
 	Mod4 + p
 
-# s = SshInATab/SecureShell/etc.
-"sshinatab"
+# s = shell
+"shell"
 	Mod4 + s
 
 # t = terminal
