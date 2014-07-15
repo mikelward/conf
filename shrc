@@ -426,6 +426,7 @@ if is_interactive; then
         esac
     }
 
+    alias bindkeys='pkill xbindkeys; (setsid xbindkeys&)'
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.go,*.swig}"
     code_includes="$(eval echo --include=$code_patterns)"
     dir_patterns="{.git,.hg,.svn}"
