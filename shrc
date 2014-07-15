@@ -79,6 +79,7 @@ HISTORY_FILE=$HOME/.history
 #
 prepend_path() {
   local _dir=$1
+  test -d "$_dir" || return
   delete_path "$_dir"
   if test -n "$PATH"; then
     PATH="$_dir:$PATH"
@@ -89,6 +90,7 @@ prepend_path() {
 
 append_path() {
   local _dir=$1
+  test -d "$_dir" || return
   delete_path "$_dir"
   if test -n "$PATH"; then
     PATH="$PATH:$_dir"
