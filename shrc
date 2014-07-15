@@ -330,6 +330,10 @@ export GOPATH
 add_path "$HOME/bin" start
 add_path "$GOPATH/bin" start
 add_path "$HOME/scripts" start
+# scripts.home, scripts.work, etc. override scripts
+for dir in "$HOME"/scripts.*; do
+    add_path "$dir" start
+done
 add_path /sbin end
 add_path /usr/sbin end
 
