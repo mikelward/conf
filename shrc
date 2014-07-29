@@ -241,6 +241,10 @@ body() {
     "$@"
 }
 
+delline() {
+    sed -i -e ${1}d "$2"
+}
+
 # print the name of a source file's corresponding test file
 find_test_file() {
     local file
