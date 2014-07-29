@@ -45,6 +45,12 @@ if has("syntax")
     syntax on	" turn syntax highlighting on by default
 endif
 
+" Show a gray vertical line at &textwidth (default 80) columns
+if exists("+colorcolumn")
+  set colorcolumn=+1
+endif
+highlight ColorColumn term=reverse ctermbg=lightgrey guibg=lightgrey
+
 if &term == "putty"
     set background=dark	" PuTTY has a black background by default
 endif
