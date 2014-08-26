@@ -284,6 +284,22 @@ myip()
     dig +short o-o.myaddr.l.google.com txt @ns1.google.com
 }
 
+# print the full path to an executable, ignoring aliases and functions
+# like whence -p/type -P, but should work in all shells
+path()
+{
+    (
+        IFS=:
+        for d in $PATH; do
+            if test -x "$d/$1"; then
+                echo "$d/$1"
+                return
+            fi
+        done
+        false
+    )
+}
+
 # pgrep with default ps options
 # psgrep [<ps options>] <pattern>
 psgrep()
@@ -554,6 +570,7 @@ if is_interactive; then
     # can't override it using git aliases, so do it here :-/
     alias stage="git add --update"
 
+    alias ginfo=$(path info)
     # aliases to abstract away differences between package managers
     if is_command yum; then
         alias yum='root yum --cacheonly'
