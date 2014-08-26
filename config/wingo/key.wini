@@ -81,7 +81,7 @@ Mod1-F2 := Shell "gmrun"
 
 # Some basic window manager commands. Closing/maximizing can also be done with
 # buttons on fully decorated windows.
-# Mod4-c := Close (GetActive)
+Mod4-Shift-c := Close (GetActive)
 Mod4-Shift-q := Quit
 Mod4-Shift-r := Restart
 Mod4-Shift-x := ToggleMaximize (GetActive)
