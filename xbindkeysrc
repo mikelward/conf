@@ -35,13 +35,17 @@
 "gnome-screensaver-command -l"
 	Mod4 + l
 
-# mail
+# m = mail
 "gmail"
 	Mod4 + m
 
 # n = notepad
 "leafpad"
 	Mod4 + n
+
+# o = opera
+"opera"
+        Mod4 + o
 
 # p = pycharm
 "env JAVA_HOME=/usr/java/current charm"
