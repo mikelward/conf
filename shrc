@@ -436,6 +436,17 @@ if is_interactive; then
         esac
     }
 
+    path_or_empty() {
+        local pathname
+        pathname=$(command -v $1)
+        if test -e "$pathname"; then
+            echo "$pathname"
+        else
+            echo
+        fi
+    }
+
+    alias '?'='path_or_empty'
     alias bindkeys='pkill xbindkeys; (setsid xbindkeys&)'
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.go,*.swig}"
     code_includes="$(eval echo --include=$code_patterns)"
