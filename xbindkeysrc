@@ -32,7 +32,7 @@
 	Mod4 + i
 
 # l = lock screen
-"gnome-screensaver-command -l"
+"xdg-screensaver lock"
 	Mod4 + l
 
 # m = mail
