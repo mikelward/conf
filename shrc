@@ -489,6 +489,7 @@ if is_interactive; then
     alias h='head'
     alias headers='curl -L -i -sS -o/dev/null -D-'
     alias hosts='getent hosts'
+    alias kssh='ssh -o PreferredAuthentications=publickey'
     if is_command l; then
         alias l='l -Kv'
     elif quiet ls --color=auto -v -d /; then
@@ -518,6 +519,7 @@ if is_interactive; then
     alias pushd='pushd >/dev/null'
     alias pd='pushd'
     alias po='popd'
+    alias pssh='ssh -o PreferredAuthentications=keyboard-interactive,password'
     alias py='python'
     alias r='fc -s --'
     alias rg='g -IR '"$dir_excludes"
