@@ -1,0 +1,68 @@
+
+# print the name of the version control system in use in $PWD
+# TODO: cache the result
+vcs() {
+    if quiet git branch; then
+        echo git
+        return
+    fi
+    if quiet hg branch; then
+        echo hg
+        return
+    fi
+    if quiet g4 change -o; then
+        echo g4
+        return
+    fi
+}
+
+# create version control functions to do the right thing based on vcs "$PWD"
+# TODO: add commit fork merge pull push, etc.
+for command in branch; do
+    # remove any alias created in .shrc
+    case "$(type "$command")" in *alias*)
+        unalias "$command"
+        ;;
+    esac
+    # create the function
+    eval "$command"'() {
+    local vcs=$(vcs "$PWD")
+    "${vcs}_'"$command"'"
+    }'
+done
+
+# print one line of info about the current directory's version control status
+vcs_info() {
+    branch
+}
+
+# print info about the current branch for whichever vcs is in use
+branch() {
+    local vcs=$(vcs "$PWD")
+    local func="${vcs}_branch"
+    quiet type "$func" && "$func"
+}
+
+# print the CL number of the current change
+g4_branch() {
+    #g4 pending |
+    #    sed -ne '/^[^ ]/{s/^Change \([0-9]*\).*/\1/;s/^Unreconciled.*/*/;p}' |
+    #    tr '\n' ' '
+    g4 change -o | sed -ne '/^Change:\t/{s/Change:\t//;p}'
+}
+
+# print the name of the currently active git branch
+git_branch() {
+    git branch 2>/dev/null | while read star branch; do
+        if test "$star" = "*"; then
+            echo "$branch"
+            break
+        fi
+    done
+}
+
+# print the name of the currently active mercurial branch
+hg_branch() {
+    hg branch 2>/dev/null
+}
+
