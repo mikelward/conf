@@ -18,8 +18,8 @@ vcs() {
 }
 
 # create version control functions to do the right thing based on vcs "$PWD"
-# TODO: add commit fork merge pull push, etc.
-for command in branch; do
+# TODO: add commit fork merge push, etc.
+for command in branch pull; do
     # remove any alias created in .shrc
     case "$(type "$command")" in *alias*)
         unalias "$command"
@@ -28,20 +28,15 @@ for command in branch; do
     # create the function
     eval "$command"'() {
     local vcs=$(vcs "$PWD")
-    "${vcs}_'"$command"'"
+    if test -n "$vcs"; then
+        "${vcs}_'"$command"'"
+    fi
     }'
 done
 
 # print one line of info about the current directory's version control status
 vcs_info() {
     branch
-}
-
-# print info about the current branch for whichever vcs is in use
-branch() {
-    local vcs=$(vcs "$PWD")
-    local func="${vcs}_branch"
-    quiet type "$func" && "$func"
 }
 
 # print the CL number of the current change
@@ -67,3 +62,14 @@ hg_branch() {
     hg branch 2>/dev/null
 }
 
+g4_pull() {
+    g4 sync
+}
+
+git_pull() {
+    git pull
+}
+
+hg_pull() {
+    hg fetch
+}
