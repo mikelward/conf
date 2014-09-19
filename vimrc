@@ -25,6 +25,8 @@ set nostartofline	" keep the current cursor position when reediting a file
 set wildmode=list:longest	" filename completion lists when ambiguous
 
 " DISPLAY OPTIONS
+set list listchars=extends:»,precedes:«,tab:\ \ ,trail:-  " base rules used whether show_whitespace is on or off
+set list	" list is always enabled, see ToogleWhitespace()
 set nowrap	" don't wrap long lines (show extends character instead)
 set more	" use a pager for long listings
 set nonumber	" don't show line numbers
@@ -87,31 +89,23 @@ endif
 " allow # character at current indentation level (must appear on own line)
 inoremap # X<BS>#
 
-function! ShowWhitespace()
-    let b:show_whitespace = 1
-    echo "Showing whitespace"
-    set list
-endfunction
-function! HideWhitespace()
-    let b:show_whitespace = 0
-    echo "Hiding whitespace"
-    set nolist
-endfunction
 function! ToggleWhitespace()
-    if !exists("b:show_whitespace") || !b:show_whitespace
-        call ShowWhitespace()
-    else
-        call HideWhitespace()
-    endif
+  if exists("b:show_whitespace")
+    let b:show_whitespace = !b:show_whitespace
+  else
+    let b:show_whitespace = 1
+  endif
+  if b:show_whitespace
+    set listchars-=tab:\ \ 	" revert previous whitespace chars
+    set listchars+=tab:\|\ 	" show tabs as "|   "
+    echo "Showing whitespace"
+  else
+    set listchars-=tab:\|\ 	" revert previous whitespace chars
+    set listchars+=tab:\ \ 	" show tabs as "    " even with list mode on
+    echo "Hiding whitespace"
+  endif
 endfunction
-set listchars=tab:\|\ ,trail:_       " tab is "|   ", trail is "_"
-if version >= 600
-    set listchars+=extends:>,precedes:<
-endif
-if version >= 700
-    set listchars+=nbsp:%
-endif
-set nolist
+
 
 function! TogglePaste()
   if &paste
@@ -133,7 +127,7 @@ nnoremap <leader>1 yypVr=
 nnoremap <leader>2 yypVr-
 nnoremap <leader>3 yypVr~
 
-" swap commented setting and uncommented setting
+" swap commented line and uncommented line, e.g. in ~/.xbindkeysrc
 nnoremap <leader>s 0xddpki#<Esc>
 
 if version >= 600
@@ -179,24 +173,13 @@ if has("autocmd")
 
     nnoremap <leader>m :call AppendModeline()<CR>
 
-    " edit binary files in binary mode using the output of xxd
-    augroup Binary
-        au!
-        au BufReadPre  *.bin,*.exe.*.jpg,*.pcx let &bin=1
-        au BufReadPost *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd
-        au BufReadPost *.bin,*.exe.*.jpg,*.pcx set ft=xxd | endif
-        au BufWritePre *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd -r
-        au BufWritePre *.bin,*.exe.*.jpg,*.pcx endif
-        au BufWritePost *.bin,*.exe.*.jpg,*.pcx if &bin | %!xxd
-        au BufWritePost *.bin,*.exe.*.jpg,*.pcx set nomod | endif
-    augroup END
-
     " per-project rules
     au BufRead,BufNewFile */apt*/*.{c,cc,h} setlocal sw=4 ts=8 noexpandtab
     au BufRead,BufNewFile */bash*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
     au BufRead,BufNewFile */coreutils*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
     au BufRead,BufNewFile */ersatz*/*.{c,h} setlocal sw=2 ts=8 noexpandtab
     au BufRead,BufNewFile */gnome-terminal*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
+    au BufRead,BufNewFile */inspircd/*.{c,cpp,h} setlocal shiftwidth=4 tabstop=4 noexpandtab
     au BufRead,BufNewFile */nagios*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
     au BufRead,BufNewFile */openbsd*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
     au BufRead,BufNewFile */postfix*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
@@ -205,6 +188,7 @@ if has("autocmd")
     au BufRead,BufNewFile */sudo*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
     au BufRead,BufNewFile */terminal*/*.{c,h} setlocal sw=4 ts=8 expandtab
     au BufRead,BufNewFile */uemacs*/*.{c,h} setlocal sw=8 ts=8 noexpandtab
+    au BufRead,BufNewFile */unreal*/*.{c,cpp,h} setlocal shiftwidth=4 tabstop=4 noexpandtab
     au BufRead,BufNewFile */zsh*/*.[ch] setlocal sw=4 ts=8 noexpandtab
 endif
 
