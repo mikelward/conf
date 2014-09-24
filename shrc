@@ -529,6 +529,7 @@ if is_interactive; then
     alias t='tail'
     alias tf='t -f'
     alias v='view'
+    alias vl='view /var/log/syslog'
     alias x='_exit'
     alias I='make install'
     alias M='make'
