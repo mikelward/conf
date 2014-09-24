@@ -86,7 +86,12 @@ Mod4-Shift-q := Quit
 Mod4-Shift-r := Restart
 Mod4-Shift-x := ToggleMaximize (GetActive)
 Mod4-Shift-f := ToggleFloating (GetActive)
-# Mod1-s := ToggleSticky (GetActive)
+Mod4-Shift-s := ToggleSticky (GetActive)
+
+# Execute a script from an input prompt.
+# Scripts are executable files in your $XDG_CONFIG_HOME/wingo/scripts directory.
+# Mod4-`
+Mod4-grave := Script (Input "Script command:")
 
 # WingoExec will allow you to execute *any* Wingo command.
 # Mod4-Shift-r := WingoExec (Input "Wingo command:")
@@ -94,10 +99,6 @@ Mod4-Shift-f := ToggleFloating (GetActive)
 # WingoHelp will show you everything you could possibly want to know about
 # any of Wingo's commands.
 # Mod4-Shift-h := WingoHelp (Input "Wingo command name:")
-
-# Execute a script from an input prompt.
-# Scripts are executable files in your $XDG_CONFIG_HOME/wingo/scripts directory.
-Mod4-Shift-s := Script (Input "Script command:")
 
 # Allows you to specify precisely which layout you want to be active.
 # Mod4-Shift-l := SetLayout (GetWorkspace) (Input "Layout name:")
@@ -170,11 +171,11 @@ Mod1-Shift-Tab := CycleClientPrev "yes" "no" "yes"
 # Mod4-space := FocusRaise (SelectClient "Any" "no" "no" "yes")
 
 # List all workspaces, and greedily switch to the one selected.
-Mod4-return := WorkspaceGreedy (SelectWorkspace "Prefix")
+Mod4-Return := WorkspaceGreedy (SelectWorkspace "Prefix")
 
 # List all workspaces, and greedily switch to the one selected with the
 # active window.
-Mod4-Shift-return := WorkspaceWithClient \
+Mod4-Shift-Return := WorkspaceWithClient \
                        (SelectWorkspace "Prefix") \
                        (GetActive)
 
@@ -195,10 +196,10 @@ Mod4-Shift-Space := WorkspaceWithClient \
 # Mod1-n := AutoResizeWindow (GetWorkspace) 0.02
 # Mod1-k := AutoNext (GetWorkspace)
 # Mod1-j := AutoPrev (GetWorkspace)
-# Mod1-Shift-k := AutoSwitchNext (GetWorkspace)
-# Mod1-Shift-j := AutoSwitchPrev (GetWorkspace)
 # Mod1-m := AutoMaster (GetWorkspace)
 Mod4-1 := AutoMakeMaster (GetWorkspace)
 Mod4-comma := AutoMastersFewer (GetWorkspace)
 Mod4-period := AutoMastersMore (GetWorkspace)
+Mod4-Shift-greater := AutoSwitchNext (GetWorkspace)
+Mod4-Shift-less := AutoSwitchPrev (GetWorkspace)
 
