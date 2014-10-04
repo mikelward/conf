@@ -28,6 +28,16 @@ is_ksh() {
 }
 
 if is_zsh; then
+    shell=zsh
+elif is_bash; then
+    shell=bash
+elif is_ksh; then
+    shell=ksh
+else
+    shell=sh
+fi
+
+if is_zsh; then
     # Red Hat's /etc/zshrc and /etc/zprofile break things
     unsetopt GLOBAL_RCS
 
@@ -462,7 +472,7 @@ if is_interactive; then
         fi
     }
 
-    alias '?'='path_or_empty'
+    #alias '?'='path_or_empty'
     alias @='path_or_empty'
     alias bindkeys='pkill xbindkeys; (setsid xbindkeys&)'
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.go,*.swig}"
@@ -646,11 +656,15 @@ if is_interactive; then
 
     # commands to execute before the prompt is displayed
     preprompt() {
-        laststatus=$?
+        local last_error="$(${shell}_last_error)"
 
         printf '\n'
         set_color "normal"
-        last_command_info
+        if test -n "$last_error"; then
+            set_color 'red'
+            printf '%s\n' "$last_error"
+            set_color 'normal'
+        fi
         host_info
         auth_info
         dir_info
@@ -707,20 +721,35 @@ EOF
         . "$HOME/.shrc.vcs"
     fi
 
-    # print info about whether the last command exited successfully
-    last_command_info() {
-        case ${laststatus:-0} in
-        0)
-            # success
-            ;;
-        148)
-            # suspended (bash)
-            ;;
-        *)
-            set_color 'red'
-            printf 'exit status %d\n' "$laststatus"
-            set_color 'normal'
-            ;;
+    # print a message describing the last error, or empty if no error
+    bash_last_error() {
+        laststatus=$?
+        case $laststatus in
+        0)   ;;
+        130) echo "Interrupted";;
+        148) ;;  # suspended
+        *)   echo "Exit status $laststatus";;
+        esac
+    }
+
+    # print a message describing the last error, or empty if no error
+    sh_last_error() {
+        laststatus=$?
+        case $laststatus in
+        0)   ;;
+        *)   echo "Exit status $laststatus";;
+        esac
+    }
+    alias ksh_last_error=sh_last_error
+
+    # print a message describing the last error, or empty if no error
+    zsh_last_error() {
+        laststatus=$?
+        case $laststatus in
+        0)   ;;
+        20)  ;;  # suspended; TODO: differentiate from exit 20 using $pipestatus
+        130) echo "Interrupted";;
+        *)   echo "Exit status $laststatus";;
         esac
     }
 
@@ -858,8 +887,6 @@ EOF
         esac
         printf '%s' "$arg" "$@"
     }
-
-    laststatus=0
 
     # print the supplied string inside prompt escape sequences
     # that tell the shell the escape sequences do not move the cursor
