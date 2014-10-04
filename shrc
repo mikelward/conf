@@ -709,11 +709,19 @@ EOF
 
     # print info about whether the last command exited successfully
     last_command_info() {
-        if test ${laststatus:-0} -ne 0; then
+        case ${laststatus:-0} in
+        0)
+            # success
+            ;;
+        148)
+            # suspended (bash)
+            ;;
+        *)
             set_color 'red'
             printf 'exit status %d\n' "$laststatus"
             set_color 'normal'
-        fi
+            ;;
+        esac
     }
 
     # get a short version of the hostname for use in the prompt or window title
