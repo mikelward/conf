@@ -552,7 +552,7 @@ if is_interactive; then
     # TODO: Write a script that supports multiple version control systems,
     # and make it an alias for that instead?
     for command in ad add addall added addremove adds am amend an ap apply \
-        blame br checkout changed changes cherry-pick ci cl clone co \
+        blame br branch checkout changed changes cherry-pick ci cl clone co \
         commit commitall describe da di diffs \
         fetch format-patch gc gr graph hi hist history \
         lo log logs ls-files ls-tree \
