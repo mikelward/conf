@@ -340,7 +340,7 @@ recent()
         shift
         ;;
     esac
-    l -t -1 "$@" | head -n $lines
+    ls -t -1 "$@" | head -n $lines
 }
 
 # keep trying a command until it works
@@ -365,6 +365,7 @@ CDPATH=".:$HOME"
 GOPATH="$HOME"
 export GOPATH
 
+add_path "$HOME/android-sdk-linux/platform-tools"
 add_path "$HOME/bin" start
 add_path "$GOPATH/bin" start
 add_path "$HOME/scripts" start
