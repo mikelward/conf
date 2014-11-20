@@ -272,6 +272,12 @@ find_test_file() {
     [ -e "$testfile" ] && printf '%s' "$testfile"
 }
 
+# replace a file with a sorted version of itself
+isort() {
+    sort "$1" >"$1".bak
+    mv "$1".bak "$1"
+}
+
 # make a directory and cd to it
 mcd()
 {
