@@ -82,6 +82,7 @@ fi
 
 # set HISTORY_FILE for log_history
 HISTORY_FILE=$HOME/.history
+test -f "$HOME/scripts/lessopen" && export LESSOPEN="|$HOME"'/scripts/lessopen "%s"'
 
 #######
 # PATH FUNCTIONS
