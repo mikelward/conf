@@ -223,7 +223,11 @@ warn() {
 
 # list this machine's IP addresses
 addrs() {
-    ip -o a sh up scope global primary | grep inet | sed 's/^[0-9]*: //;s/\\.*//'
+    ip -o a sh up primary scope global | while read num iface afam addr rest; do
+      case "$afam" in inet*)
+          echo $iface $addr;;
+      esac
+    done
 }
 
 # ring the terminal's bell
