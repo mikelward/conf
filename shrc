@@ -221,9 +221,13 @@ warn() {
 # GENERAL FUNCTIONS
 # Useful things that could be commands if distributing them wasn't impractical.
 
+# list this machine's IP addresses
+addrs() {
+    ip -o a sh up scope global primary | grep inet | sed 's/^[0-9]*: //;s/\\.*//'
+}
+
 # ring the terminal's bell
-bell()
-{
+bell() {
     printf "\a"
 }
 
