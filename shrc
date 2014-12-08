@@ -309,6 +309,11 @@ myip()
     dig +short o-o.myaddr.l.google.com txt @ns1.google.com
 }
 
+# print the list of nameservers configured in /etc/resolv.conf
+names() {
+    grep '^nameserver' /etc/resolv.conf
+}
+
 # print the full path to an executable, ignoring aliases and functions
 # like whence -p/type -P, but should work in all shells
 path()
