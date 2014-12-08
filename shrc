@@ -372,6 +372,11 @@ retry()
     done
 }
 
+# remove the ssh known host from the specified line number
+rmkey() {
+    delline "$1" "$HOME/.ssh/known_hosts"
+}
+
 ##################################
 # ENVIRONMENT SETUP FOR ALL SHELLS
 # Set $PATH early in case other stuff here needs it.
