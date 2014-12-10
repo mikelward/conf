@@ -212,6 +212,15 @@ quiet() {
     "$@" >/dev/null 2>&1
 }
 
+# run a command, or just print what would be run if SIMULATE is true
+run() {
+    if ${SIMULATE:-false}; then
+        echo "Would run $*"
+    else
+        "$@"
+    fi
+}
+
 # print an important message that's not quite an error
 warn() {
     printf "$*\n" >&2
