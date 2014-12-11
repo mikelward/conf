@@ -273,6 +273,15 @@ delline() {
     sed -i -e ${1}d "$2"
 }
 
+# print the block device associated with the given mount point (or file)
+dev() {
+    df -Pk "$1" | while read fs blocks used avail cap mount; do
+        case "$mount" in /*)
+            echo "$fs"
+        esac
+    done
+}
+
 # print the name of a source file's corresponding test file
 find_test_file() {
     local file
