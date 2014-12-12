@@ -722,9 +722,18 @@ if is_interactive; then
         :
     }
 
+    # for overriding in .shrc.local
+    on_production_host() {
+        true
+    }
+
     # print information about this machine
     host_info() {
+        if on_production_host; then
+            set_color 'red'
+        fi
         printf '%s\n' "$(short_hostname)"
+        set_color 'normal'
     }
 
     # print information about all shell jobs
