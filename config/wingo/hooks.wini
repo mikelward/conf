@@ -79,6 +79,7 @@ startup := Script "startup"
 # You probably don't need to add windows like "gmrun" or "krunner", since
 # they are automatically inferred to be floating.
 match := MatchClientClass ":client:" "gimp"
+match := MatchClientClass ":client:" "Meld"
 
 # Typically match conditions are combined as a set of conjunctions. That is,
 # all match conditions must be met for the hook to fire. But here, we want

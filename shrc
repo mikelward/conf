@@ -212,6 +212,15 @@ quiet() {
     "$@" >/dev/null 2>&1
 }
 
+# run a command, or just print what would be run if SIMULATE is true
+run() {
+    if ${SIMULATE:-false}; then
+        echo "Would run $*"
+    else
+        "$@"
+    fi
+}
+
 # print an important message that's not quite an error
 warn() {
     printf "$*\n" >&2
@@ -221,9 +230,17 @@ warn() {
 # GENERAL FUNCTIONS
 # Useful things that could be commands if distributing them wasn't impractical.
 
+# list this machine's IP addresses
+addrs() {
+    ip -o a sh up primary scope global | while read num iface afam addr rest; do
+      case "$afam" in inet*)
+          echo $iface $addr;;
+      esac
+    done
+}
+
 # ring the terminal's bell
-bell()
-{
+bell() {
     printf "\a"
 }
 
@@ -254,6 +271,15 @@ body() {
 
 delline() {
     sed -i -e ${1}d "$2"
+}
+
+# print the block device associated with the given mount point (or file)
+dev() {
+    df -Pk "$1" | while read fs blocks used avail cap mount; do
+        case "$mount" in /*)
+            echo "$fs"
+        esac
+    done
 }
 
 # print the name of a source file's corresponding test file
@@ -299,6 +325,11 @@ mtd()
 myip()
 {
     dig +short o-o.myaddr.l.google.com txt @ns1.google.com
+}
+
+# print the list of nameservers configured in /etc/resolv.conf
+names() {
+    grep '^nameserver' /etc/resolv.conf
 }
 
 # print the full path to an executable, ignoring aliases and functions
@@ -362,6 +393,11 @@ retry()
             sleep 10
         fi
     done
+}
+
+# remove the ssh known host from the specified line number
+rmkey() {
+    delline "$1" "$HOME/.ssh/known_hosts"
 }
 
 ##################################
@@ -686,9 +722,18 @@ if is_interactive; then
         :
     }
 
+    # for overriding in .shrc.local
+    on_production_host() {
+        true
+    }
+
     # print information about this machine
     host_info() {
+        if on_production_host; then
+            set_color 'red'
+        fi
         printf '%s\n' "$(short_hostname)"
+        set_color 'normal'
     }
 
     # print information about all shell jobs
