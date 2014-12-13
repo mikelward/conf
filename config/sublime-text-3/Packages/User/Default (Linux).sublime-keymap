@@ -1,0 +1,12 @@
+[
+  { "keys": ["ctrl+g"], "command": "find_next" },
+  { "keys": ["ctrl+shift+g"], "command": "find_prev" },
+  { "keys": ["ctrl+l"], "command": "show_overlay", "args": {"overlay": "goto", "text": ":"} },
+  { "keys": ["ctrl+="], "command": "reindent" },
+  { "keys": ["ctrl+shift+alt+["], "command": "fold_all" },
+  { "keys": ["ctrl+shift+alt+]"], "command": "unfold_all" },
+  { "keys": ["ctrl+."], "command": "navigate_to_definition" },
+  { "keys": ["ctrl+,"], "command": "jump_back" },
+  { "keys": ["ctrl+r"], "command": "build", "args": {"variant": "Run"} },
+  { "keys": ["ctrl+t"], "command": "build", "args": {"variant": "Test"} },
+]
