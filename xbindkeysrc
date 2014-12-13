@@ -8,9 +8,8 @@
 #   Mod3 (CapsLock), Mod4, Mod5 (Scroll).
 #
 
-# b = (an unused key)
-"hangouts"
-	Mod4 + b
+"code-browser"
+    Mod4 + b
 
 "google-calendar"
 	Mod4 + c
@@ -48,7 +47,9 @@
         Mod4 + o
 
 # p = pycharm
-"env JAVA_HOME=/usr/java/current charm"
+#"env JAVA_HOME=/usr/java/current charm"
+# p = programming
+"subl"
 	Mod4 + p
 
 # s = shell
@@ -59,6 +60,10 @@
 #"terminator"
 "gnome-terminal"
 	Mod4 + t
+
+# z = (an unused key)
+"hangouts"
+	Mod4 + z
 
 # mute
 "amixer set Master toggle"
