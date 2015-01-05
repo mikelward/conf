@@ -327,9 +327,10 @@ myip()
     dig +short o-o.myaddr.l.google.com txt @ns1.google.com
 }
 
-# print the list of nameservers configured in /etc/resolv.conf
+# print the list of nameservers
 names() {
     grep '^nameserver' /etc/resolv.conf
+    nmcli dev list 2>/dev/null | sed -ne '/domain_name_servers/{s/[^ ]*: *//;p}'
 }
 
 # print the full path to an executable, ignoring aliases and functions
