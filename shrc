@@ -723,9 +723,17 @@ if is_interactive; then
         :
     }
 
+    # return true if this machine is my workstation
+    on_my_workstation() {
+        case $HOSTNAME in
+        $USERNAME-*) true;;
+        *)           false;;
+        esac
+    }
+
     # for overriding in .shrc.local
     on_production_host() {
-        true
+        ! on_my_workstation
     }
 
     # print information about this machine
