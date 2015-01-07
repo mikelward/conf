@@ -4,17 +4,10 @@ xsetroot -bg black -cursor_name left_ptr
 
 gnome-settings-daemon&
 
-wingo-cmd 'AddWorkspace "mail"'
+wingo-cmd 'AddWorkspace "main"'
 wingo-cmd 'AddWorkspace "music"'
-wingo-cmd 'AddWorkspace "web"'
 
-# Chrome and Firefox first, since they take longer to start
-wingo-cmd 'Shell "firefox"'
 wingo-cmd 'Shell "xchat"'
-sleep 3
-# Chrome and Firefox last, since they take longer to start
-wingo-cmd 'WorkspaceSendClient "chat" "xchat"'
-wingo-cmd 'WorkspaceSendClient "music" "Google Play Music"'
 
 wingo-cmd 'RemoveWorkspace "Workspace 1"'
 wingo-cmd 'RemoveWorkspace "Workspace 2"'
