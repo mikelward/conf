@@ -401,6 +401,11 @@ rmkey() {
     delline "$1" "$HOME/.ssh/known_hosts"
 }
 
+# convert from UTC to local time
+utc2() {
+    date -d 'TZ="UTC" '"$1"
+}
+
 ##################################
 # ENVIRONMENT SETUP FOR ALL SHELLS
 # Set $PATH early in case other stuff here needs it.
