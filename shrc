@@ -699,7 +699,6 @@ if is_interactive; then
             alias %$i='fg %'$i
         done
     fi
-    alias f='fg'
 
     # set a basic prompt that doesn't rely on precommand and preprompt hooks
     basic_prompt() {
