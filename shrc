@@ -534,6 +534,7 @@ if is_interactive; then
     alias cx='chmod +x'
     download() { cd "$HOME/Downloads"; wget "$@"; }
     alias e='${EDITOR:-vi}'
+    alias eg='g -E'
     et() {
         local file
         local testfile
@@ -543,7 +544,9 @@ if is_interactive; then
 
         vim -O "$file" ${testfile:+"$testfile"}
     }
-    alias f='fg'
+    alias f='command fg'
+    # fg = fgrep, NOTE: not fg = foreground, use 'f' or '%'
+    alias fg='g -F'
     alias g='grep -HIn'
     alias gdb='gdb -q '
     alias h='head'
@@ -560,7 +563,7 @@ if is_interactive; then
     alias l1='l -1'
     alias la='l -a'
     alias lc='l -C'
-    # lg = line grep (or literal grep) -- fg was taken
+    # lg = line grep
     alias lg='g -F'
     alias ll='l -l'
     if quiet l -T; then
