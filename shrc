@@ -588,6 +588,7 @@ if is_interactive; then
     alias symlink='ln -s'
     alias t='tail'
     alias tf='t -f'
+    alias ts='t -f /var/log/syslog'
     alias v='view'
     alias vl='view /var/log/syslog'
     alias x='_exit'
