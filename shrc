@@ -547,7 +547,7 @@ if is_interactive; then
     alias f='command fg'
     # fg = fgrep, NOTE: not fg = foreground, use 'f' or '%'
     alias fg='g -F'
-    alias g='grep -HIn'
+    alias g='grep -I'
     alias gdb='gdb -q '
     alias h='head'
     alias headers='curl -L -i -sS -o/dev/null -D-'
