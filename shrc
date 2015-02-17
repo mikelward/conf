@@ -401,6 +401,16 @@ rmkey() {
     delline "$1" "$HOME/.ssh/known_hosts"
 }
 
+# convert a time from one timezone to another
+# tz2tz <from timezone> <to timezone> <date spec>
+tz2tz() {
+    local from="$1"
+    local to="$2"
+    shift 2
+    TZ="$to" date -d 'TZ="'"$from"'"'" $*"
+}
+
+
 # convert from UTC to local time
 utc2() {
     date -d 'TZ="UTC" '"$1"
