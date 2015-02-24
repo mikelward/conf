@@ -26,8 +26,7 @@
 "nautilus ~"
 	Mod4 + h
 
-# i = IRC
-"xchat"
+"irc"
 	Mod4 + i
 
 # l = lock screen
