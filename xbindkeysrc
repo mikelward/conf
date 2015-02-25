@@ -37,8 +37,7 @@
 "gmail"
 	Mod4 + m
 
-# n = notepad
-"leafpad"
+"notepad"
 	Mod4 + n
 
 # o = opera
