@@ -746,7 +746,7 @@ if is_interactive; then
     on_my_workstation() {
         case $HOSTNAME in
         $USERNAME-*) true;;
-        *)           false;;
+        *)           test -f "$HOME"/.workstation;;
         esac
     }
 
