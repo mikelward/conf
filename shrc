@@ -744,10 +744,21 @@ if is_interactive; then
 
     # return true if this machine is my workstation
     on_my_workstation() {
-        case $HOSTNAME in
-        $USERNAME-*) true;;
-        *)           test -f "$HOME"/.workstation;;
-        esac
+        if test -z "$WORKSTATION"; then
+            case $HOSTNAME in
+            $USERNAME-*)
+                WORKSTATION=true
+                ;;
+            *)
+                if test -f "$HOME"/.workstation; then
+                    WORKSTATION=true
+                else
+                    WORKSTATION=false
+                fi
+                ;;
+            esac
+        fi
+        "$WORKSTATION"
     }
 
     # for overriding in .shrc.local
