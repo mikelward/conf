@@ -742,17 +742,66 @@ if is_interactive; then
         :
     }
 
-    # return true if this machine is my workstation
-    on_my_workstation() {
-        case $HOSTNAME in
-        $USERNAME-*) true;;
-        *)           test -f "$HOME"/.workstation;;
-        esac
+    # return true if this machine is my laptop
+    _on_my_laptop() {
+        if test -f "$HOME"/.laptop; then
+            true
+        else
+            case $HOSTNAME in
+            *laptop*) true;;
+            *)        false;;
+            esac
+        fi
     }
 
-    # for overriding in .shrc.local
+    # return true if this machine is my laptop
+    on_my_laptop() {
+        if test -z "$LAPTOP"; then
+            if _on_my_laptop; then
+                LAPTOP=true
+            else
+                LAPTOP=false
+            fi
+        fi
+        "$LAPTOP"
+    }
+
+    # return true if this machine is my workstation
+    _on_my_workstation() {
+        if test -f "$HOME"/.workstation; then
+            true
+        else
+            case $HOSTNAME in
+            *laptop*)    false;;
+            $USERNAME-*) true;;
+            *)           false;;
+            esac
+        fi
+    }
+
+    # return true if this machine is my workstation (cached version)
+    on_my_workstation() {
+        if test -z "$WORKSTATION"; then
+            if _on_my_workstation; then
+                WORKSTATION=true
+            else
+                WORKSTATION=false
+            fi
+        fi
+        "$WORKSTATION"
+    }
+
+    # return true if this machine is a production machine
     on_production_host() {
-        ! on_my_workstation
+        ! on_my_workstation && ! on_my_laptop && ! on_test_host
+    }
+
+    # return true if this machine is a test (i.e. non production) machine
+    on_test_host() {
+        case $HOSTNAME in
+            *test*) true;;
+            *)      false;;
+        esac
     }
 
     # print information about this machine
