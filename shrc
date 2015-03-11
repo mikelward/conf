@@ -747,7 +747,7 @@ if is_interactive; then
         if test -f "$HOME"/.laptop; then
             true
         else
-            case $HOSTNAME in
+            case "$HOSTNAME" in
             *laptop*) true;;
             *)        false;;
             esac
@@ -766,12 +766,17 @@ if is_interactive; then
         "$LAPTOP"
     }
 
+    # return true if this is a non-production machine I use to get work done
+    on_my_machine() {
+        on_my_workstation || on_my_laptop
+    }
+
     # return true if this machine is my workstation
     _on_my_workstation() {
         if test -f "$HOME"/.workstation; then
             true
         else
-            case $HOSTNAME in
+            case "$HOSTNAME" in
             *laptop*)    false;;
             $USERNAME-*) true;;
             *)           false;;
@@ -798,7 +803,7 @@ if is_interactive; then
 
     # return true if this machine is a test (i.e. non production) machine
     on_test_host() {
-        case $HOSTNAME in
+        case "$HOSTNAME" in
             *test*) true;;
             *)      false;;
         esac
@@ -886,26 +891,30 @@ EOF
     # get a short version of the hostname for use in the prompt or window title
     short_hostname() {
         local hostname
-
-        case "$HOSTNAME" in "$USERNAME"-*)
-            hostname="${HOSTNAME%%.*}"
-            hostname="${hostname#$USERNAME-}"
-            ;;
-        *)
-            if _has_four_dots "$HOSTNAME"; then
-                hostname=$(_substr_before_second_dot "$HOSTNAME")
-            else
-                hostname=${HOSTNAME%%.*}
+        local site
+        hostname="${HOSTNAME%%.*}"
+        hostname="${hostname#$USERNAME-}"
+        if ! on_my_machine; then
+            sitename="$(short_sitename)"
+            if test -n "$sitename"; then
+                hostname="$hostname.$sitename"
             fi
-            ;;
-        esac
+        fi
         printf "%s" "$hostname"
     }
-    _has_four_dots() {
-        expr match "$1" '[^.]*\.[^.]*\.[^.]*\.[^.]*\..*' >/dev/null
-    }
-    _substr_before_second_dot() {
-        expr substr "$1" 1 $(( $(expr match "$1" '[^.]*\.[^.]*\.') - 1))
+
+    # get a short version of the domain name for use in the prompt etc.
+    short_sitename() {
+        local sitename
+        case "$HOSTNAME" in *.???.*.*)
+            sitename="${HOSTNAME#*.}"
+            sitename="${sitename%%.*}"
+            ;;
+        *)
+            sitename=
+            ;;
+        esac
+        printf "%s" "$sitename"
     }
 
     # ssh to remote host using current shell's config
