@@ -741,6 +741,11 @@ if is_interactive; then
         :
     }
 
+    # return true if the current user is root
+    i_am_root() {
+        test $UID -eq 0
+    }
+
     # return true if this machine is my laptop
     _on_my_laptop() {
         if test -f "$HOME"/.laptop; then
