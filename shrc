@@ -729,8 +729,7 @@ if is_interactive; then
             printf '%s\n' "$last_error"
             set_color 'normal'
         fi
-        host_info
-        auth_info
+        printf '%s %s\n' "$(host_info)" "$(auth_info)"
         dir_info
         job_info
         set_title "$(title)"
@@ -814,8 +813,9 @@ if is_interactive; then
         if on_production_host; then
             set_color 'red'
         fi
-        printf '%s\n' "$(short_hostname)"
+        printf '%s' "$(short_hostname)"
         set_color 'normal'
+        printf '\n'
     }
 
     # print information about all shell jobs
