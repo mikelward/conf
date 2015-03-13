@@ -594,7 +594,7 @@ if is_interactive; then
     alias po='popd'
     alias pssh='ssh -o PreferredAuthentications=keyboard-interactive,password'
     alias py='python'
-    alias r='fc -s --'
+    alias r='fc -e - --'
     alias rg='g -IR '"$dir_excludes"
     alias s='ssh'
     alias sr='ssh -l root'
