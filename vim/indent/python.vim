@@ -10,6 +10,9 @@ if exists("b:did_indent")
     finish
 endif
 let b:did_indent = 1
+if !exists("hanging_indent_multiplier")
+  let hanging_indent_multiplier = 1
+endif
 
 setlocal expandtab
 setlocal nolisp
@@ -131,7 +134,7 @@ function! s:indent_like_opening_paren(lnum)
         if starts_with_closing_paren
             let res = base
         else
-            let res = base + s:sw()
+            let res = base + s:sw() * g:hanging_indent_multiplier
         endif
     else
         " Indent to match position of opening paren.
