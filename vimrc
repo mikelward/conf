@@ -143,7 +143,7 @@ if has("autocmd")
 
     " per file-type rules
     au BufRead,BufNewFile * if &filetype == 'fstab' | set listchars+=tab:>\  | endif
-    au BufRead,BufNewFile * if &filetype == 'go' | set shiftwidth=8 tabstop=8 textwidth=0 noexpandtab | endif
+    au BufRead,BufNewFile * if &filetype == 'go' | set shiftwidth=8 tabstop=8 textwidth=0 noexpandtab colorcolumn=0 | endif
     au BufRead,BufNewFile * if &filetype == 'svn' | set viminfo= | endif
 
     " make :make jump to C assertion errors
