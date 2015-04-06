@@ -26,7 +26,7 @@ set keymap emacs
 "\e\C-?": unix-word-rubout
 "\eOH": beginning-of-line
 "\e[1~": beginning-of-line
-"\eOH": end-of-line
+"\eOF": end-of-line
 "\e[4~": end-of-line
 "\e[3~": delete-char
 "\e[A": history-search-backward
@@ -51,7 +51,7 @@ set keymap vi-insert
 "\ey": yank-pop
 "\eOH": beginning-of-line
 "\e[1~": beginning-of-line
-"\eOH": end-of-line
+"\eOF": end-of-line
 "\e[4~": end-of-line
 "\e[3~": delete-char
 set keymap vi-command
