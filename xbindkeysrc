@@ -55,8 +55,7 @@
 	Mod4 + s
 
 # t = terminal
-#"terminator"
-"gnome-terminal"
+"terminal"
 	Mod4 + t
 
 # z = (an unused key)
