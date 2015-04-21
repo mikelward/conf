@@ -324,7 +324,7 @@ mtd()
 # get this machine's public IP address as seen by Google
 myip()
 {
-    dig +short o-o.myaddr.l.google.com txt @ns1.google.com
+    dig +short o-o.myaddr.l.google.com txt @ns1.google.com | tr -d '"'
 }
 
 # print the list of nameservers
