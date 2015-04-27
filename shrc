@@ -349,19 +349,27 @@ path()
     )
 }
 
+# ps with useful default options
+psc()
+{
+    # user,pid,ppid,start_time,pcpu,rss,comm are first, followed by any -o option
+    # the user supplies, then args are last.
+    ps -w -o user,pid,ppid,start_time,pcpu,rss,comm=EXE "$@" -o args=ARGS
+}
+
 # pgrep with default ps options
 # psgrep [<ps options>] <pattern>
 psgrep()
 {
-    eval "local pattern=\"\$$#\""
-    if test $# -eq 1; then
-        set -- -o user,pid,ppid,start_time,pcpu,rss,comm=EXE,args=ARGS
-    else
-        eval "set -- $(for i in $(seq $(($# - 1))); do echo -n "\"\$$i\" "; done)"
-    fi
+    # last arg is pgrep pattern, rest are args for ps
+    local pattern="${@:$#:1}"
+    local last=$#
+    local second_last=$((last-1))  # bash doesn't support ${@:1:-1}
+    local -a ps_opts               # must be separate line for zsh
+    ps_opts=( "${@:1:$second_last}" )
     local pids="$(pgrep -d , -f "$pattern")"
     if test -n "$pids"; then
-        ps -w "$@" -p "$pids"
+        psc -p "$pids" "${ps_opts[@]}"
     else
         error "No processes matching $pattern"
     fi
