@@ -324,7 +324,7 @@ mtd()
 # get this machine's public IP address as seen by Google
 myip()
 {
-    dig +short o-o.myaddr.l.google.com txt @ns1.google.com
+    dig +short o-o.myaddr.l.google.com txt @ns1.google.com | tr -d '"'
 }
 
 # print the list of nameservers
@@ -349,19 +349,27 @@ path()
     )
 }
 
+# ps with useful default options
+psc()
+{
+    # user,pid,ppid,start_time,pcpu,rss,comm are first, followed by any -o option
+    # the user supplies, then args are last.
+    ps -w -o user,pid,ppid,start_time,pcpu,rss,comm=EXE "$@" -o args=ARGS
+}
+
 # pgrep with default ps options
 # psgrep [<ps options>] <pattern>
 psgrep()
 {
-    eval "local pattern=\"\$$#\""
-    if test $# -eq 1; then
-        set -- -o user,pid,ppid,start_time,pcpu,rss,comm=EXE,args=ARGS
-    else
-        eval "set -- $(for i in $(seq $(($# - 1))); do echo -n "\"\$$i\" "; done)"
-    fi
+    # last arg is pgrep pattern, rest are args for ps
+    local pattern="${@:$#:1}"
+    local last=$#
+    local second_last=$((last-1))  # bash doesn't support ${@:1:-1}
+    local -a ps_opts               # must be separate line for zsh
+    ps_opts=( "${@:1:$second_last}" )
     local pids="$(pgrep -d , -f "$pattern")"
     if test -n "$pids"; then
-        ps -w "$@" -p "$pids"
+        psc -p "$pids" "${ps_opts[@]}"
     else
         error "No processes matching $pattern"
     fi
@@ -400,6 +408,16 @@ retry()
 rmkey() {
     delline "$1" "$HOME/.ssh/known_hosts"
 }
+
+# convert a time from one timezone to another
+# tz2tz <from timezone> <to timezone> <date spec>
+tz2tz() {
+    local from="$1"
+    local to="$2"
+    shift 2
+    TZ="$to" date -d 'TZ="'"$from"'"'" $*"
+}
+
 
 # convert from UTC to local time
 utc2() {
@@ -584,7 +602,7 @@ if is_interactive; then
     alias po='popd'
     alias pssh='ssh -o PreferredAuthentications=keyboard-interactive,password'
     alias py='python'
-    alias r='fc -s --'
+    alias r='fc -e - --'
     alias rg='g -IR '"$dir_excludes"
     alias s='ssh'
     alias sr='ssh -l root'
@@ -731,8 +749,7 @@ if is_interactive; then
             printf '%s\n' "$last_error"
             set_color 'normal'
         fi
-        host_info
-        auth_info
+        printf '%s %s\n' "$(host_info)" "$(auth_info)"
         dir_info
         job_info
         set_title "$(title)"
@@ -744,17 +761,76 @@ if is_interactive; then
         :
     }
 
-    # return true if this machine is my workstation
-    on_my_workstation() {
-        case $HOSTNAME in
-        $USERNAME-*) true;;
-        *)           false;;
-        esac
+    # return true if the current user is root
+    i_am_root() {
+        test $UID -eq 0
     }
 
-    # for overriding in .shrc.local
+    # return true if this machine is my laptop
+    _on_my_laptop() {
+        if test -f "$HOME"/.laptop; then
+            true
+        else
+            case "$HOSTNAME" in
+            *laptop*) true;;
+            *)        false;;
+            esac
+        fi
+    }
+
+    # return true if this machine is my laptop
+    on_my_laptop() {
+        if test -z "$LAPTOP"; then
+            if _on_my_laptop; then
+                LAPTOP=true
+            else
+                LAPTOP=false
+            fi
+        fi
+        "$LAPTOP"
+    }
+
+    # return true if this is a non-production machine I use to get work done
+    on_my_machine() {
+        on_my_workstation || on_my_laptop
+    }
+
+    # return true if this machine is my workstation
+    _on_my_workstation() {
+        if test -f "$HOME"/.workstation; then
+            true
+        else
+            case "$HOSTNAME" in
+            *laptop*)    false;;
+            $USERNAME-*) true;;
+            *)           false;;
+            esac
+        fi
+    }
+
+    # return true if this machine is my workstation (cached version)
+    on_my_workstation() {
+        if test -z "$WORKSTATION"; then
+            if _on_my_workstation; then
+                WORKSTATION=true
+            else
+                WORKSTATION=false
+            fi
+        fi
+        "$WORKSTATION"
+    }
+
+    # return true if this machine is a production machine
     on_production_host() {
-        ! on_my_workstation
+        ! on_my_workstation && ! on_my_laptop && ! on_test_host
+    }
+
+    # return true if this machine is a test (i.e. non production) machine
+    on_test_host() {
+        case "$HOSTNAME" in
+            *test*) true;;
+            *)      false;;
+        esac
     }
 
     # print information about this machine
@@ -762,8 +838,9 @@ if is_interactive; then
         if on_production_host; then
             set_color 'red'
         fi
-        printf '%s\n' "$(short_hostname)"
+        printf '%s' "$(short_hostname)"
         set_color 'normal'
+        printf '\n'
     }
 
     # print information about all shell jobs
@@ -839,26 +916,30 @@ EOF
     # get a short version of the hostname for use in the prompt or window title
     short_hostname() {
         local hostname
-
-        case "$HOSTNAME" in "$USERNAME"-*)
-            hostname="${HOSTNAME%%.*}"
-            hostname="${hostname#$USERNAME-}"
-            ;;
-        *)
-            if _has_four_dots "$HOSTNAME"; then
-                hostname=$(_substr_before_second_dot "$HOSTNAME")
-            else
-                hostname=${HOSTNAME%%.*}
+        local site
+        hostname="${HOSTNAME%%.*}"
+        hostname="${hostname#$USERNAME-}"
+        if ! on_my_machine; then
+            sitename="$(short_sitename)"
+            if test -n "$sitename"; then
+                hostname="$hostname.$sitename"
             fi
-            ;;
-        esac
+        fi
         printf "%s" "$hostname"
     }
-    _has_four_dots() {
-        expr match "$1" '[^.]*\.[^.]*\.[^.]*\.[^.]*\..*' >/dev/null
-    }
-    _substr_before_second_dot() {
-        expr substr "$1" 1 $(( $(expr match "$1" '[^.]*\.[^.]*\.') - 1))
+
+    # get a short version of the domain name for use in the prompt etc.
+    short_sitename() {
+        local sitename
+        case "$HOSTNAME" in *.???.*.*)
+            sitename="${HOSTNAME#*.}"
+            sitename="${sitename%%.*}"
+            ;;
+        *)
+            sitename=
+            ;;
+        esac
+        printf "%s" "$sitename"
     }
 
     # ssh to remote host using current shell's config

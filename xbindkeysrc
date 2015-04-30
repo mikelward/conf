@@ -26,8 +26,7 @@
 "nautilus ~"
 	Mod4 + h
 
-# i = IRC
-"xchat"
+"irc"
 	Mod4 + i
 
 # l = lock screen
@@ -38,8 +37,7 @@
 "gmail"
 	Mod4 + m
 
-# n = notepad
-"leafpad"
+"notepad"
 	Mod4 + n
 
 # o = opera
@@ -57,8 +55,7 @@
 	Mod4 + s
 
 # t = terminal
-#"terminator"
-"gnome-terminal"
+"terminal"
 	Mod4 + t
 
 # z = (an unused key)
