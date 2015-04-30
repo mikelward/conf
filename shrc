@@ -652,6 +652,18 @@ if is_interactive; then
         alias versions='yum list'
         alias changelog='repoquery --changelog'
         alias files='repoquery --file'
+    elif is_command aptitude; then
+        alias update='root aptitude -q -q update'
+        alias search='aptitude search'
+        alias info='aptitude show'
+        alias install='root aptitude install'
+        alias installed='dpkg-query --show'
+        alias uninstall='root aptitude remove'
+        alias reinstall='root aptitude reinstall'
+        alias upgrade='root aptitude safe-upgrade'
+        alias versions='aptitude versions'
+        alias changelog='aptitude changelog'
+        alias files='apt-file search'
     elif is_command apt-get; then
         alias update='root apt-get update'
         alias search='apt-cache search --names-only'
