@@ -36,6 +36,9 @@ if &background == "light"
 	highlight LineNr term=reverse cterm=NONE ctermfg=DarkYellow guifg=DarkYellow
 	highlight NonText term=bold cterm=NONE ctermfg=DarkYellow guifg=DarkYellow
 	highlight SpecialKey term=bold cterm=NONE ctermfg=DarkYellow guifg=DarkYellow
+    if exists("+colorcolumn")
+        highlight ColorColumn term=NONE ctermfg=Red ctermbg=NONE
+    endif
 else
 	highlight String term=underline cterm=NONE ctermfg=Magenta guifg=Magenta
 	highlight Comment term=bold cterm=NONE ctermfg=Cyan guifg=Cyan
@@ -43,5 +46,8 @@ else
 	highlight LineNr term=reverse cterm=NONE ctermfg=Yellow guifg=Yellow
 	highlight NonText term=bold cterm=NONE ctermfg=Yellow guifg=Yellow
 	highlight SpecialKey term=bold cterm=NONE ctermfg=Yellow guifg=Yellow
+    if exists("+colorcolumn")
+        highlight ColorColumn term=NONE ctermfg=Red ctermbg=NONE
+    endif
 endif
 
