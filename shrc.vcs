@@ -11,10 +11,6 @@ vcs() {
         echo hg
         return
     fi
-    if quiet memoize g4 change -o; then
-        echo g4
-        return
-    fi
 }
 
 # create version control functions to do the right thing based on vcs "$PWD"
