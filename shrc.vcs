@@ -45,12 +45,7 @@ g4_branch() {
 
 # print the name of the currently active git branch
 git_branch() {
-    git branch 2>/dev/null | while read star branch; do
-        if test "$star" = "*"; then
-            echo "$branch"
-            break
-        fi
-    done
+    git rev-parse --abbrev-ref HEAD
 }
 
 # print the name of the currently active mercurial branch
