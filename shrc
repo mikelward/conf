@@ -1075,6 +1075,27 @@ EOF
     }
     escape_start=
     escape_end=
+
+    terminal_supports_bracketed_paste() {
+        case $TERM in rxvt-unicode|xterm)
+            true;;
+        *)
+            false;;
+        esac
+    }
+
+    enable_bracketed_paste() {
+        if terminal_supports_bracketed_paste; then
+            printf '\e[?2004h'
+        fi
+    }
+
+    disable_bracketed_paste() {
+        if terminal_supports_bracketed_paste; then
+            printf '\e[?2004l'
+        fi
+    }
+
     if is_zsh; then
         # zsh enhancements
         setopt AUTO_CD
@@ -1117,12 +1138,14 @@ EOF
         }
         zle_line_init() {
             zle_keymap
+            enable_bracketed_paste
         }
         zle_keymap_select() {
             zle_keymap
         }
         zle_line_finish() {
             zle_keymap
+            disable_bracketed_paste
         }
         zle -N zle-line-init zle_line_init
         zle -N zle-keymap-select zle_keymap_select
@@ -1165,6 +1188,45 @@ EOF
 
         # try to differentiate between Esc vi command and Alt+something
         KEYTIMEOUT=1
+
+        # enable support for xterm bracketed paste
+        bindkey -M emacs '^[[200~' start-paste
+        bindkey -M viins '^[[200~' start-paste
+        bindkey -M vicmd '^[[200~' start-paste
+        zle -N start-paste start_paste
+
+        # switch to the paste keymap
+        start_paste() {
+            # create a new keymap at runtime so this just works,
+            # whether the current keymap is vi, emacs, or other
+            bindkey -N paste main
+            bindkey -M paste '^[[201~' end-paste
+            # make newlines not act like Enter
+            bindkey -M paste '^J' self-insert
+            # terminal sends ^M but zsh wants ^J
+            bindkey -M paste -s '^M' '^J'
+            # translate some hard-to-spot Unicode characters to ASCII
+            bindkey -M paste -s '“' '"'
+            bindkey -M paste -s '”' '"'
+            bindkey -M paste -s '…' '...'
+            bindkey -M paste -s ' ' ' '
+            zle -N end-paste end_paste
+            bindkey -A main previous
+            bindkey -A paste main
+        }
+
+        # store the pasted text
+        paste_insert() {
+            _paste_content+=$KEYS
+        }
+
+        # insert the pasted text without a final newline, and switch back
+        end_paste() {
+            LBUFFER+=$_paste_content
+            unset _paste_content
+            bindkey -A previous main
+        }
+
     elif is_bash; then
         # bash enhancements
         shopt -s autocd
