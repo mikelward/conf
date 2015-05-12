@@ -37,7 +37,8 @@ if &background == "light"
     highlight NonText term=bold cterm=NONE ctermfg=DarkYellow guifg=DarkYellow
     highlight SpecialKey term=bold cterm=NONE ctermfg=DarkYellow guifg=DarkYellow
     if exists("+colorcolumn")
-        highlight ColorColumn term=NONE ctermfg=Red ctermbg=NONE
+        highlight clear ColorColumn
+        highlight link ColorColumn Error
     endif
 else
     highlight String term=underline cterm=NONE ctermfg=Magenta guifg=Magenta
@@ -47,7 +48,8 @@ else
     highlight NonText term=bold cterm=NONE ctermfg=Yellow guifg=Yellow
     highlight SpecialKey term=bold cterm=NONE ctermfg=Yellow guifg=Yellow
     if exists("+colorcolumn")
-        highlight ColorColumn term=NONE ctermfg=Red ctermbg=NONE
+        highlight clear ColorColumn
+        highlight link ColorColumn Error
     endif
 endif
 
