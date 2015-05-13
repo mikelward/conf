@@ -30,7 +30,7 @@
 	Mod4 + i
 
 # l = lock screen
-"xdg-screensaver lock"
+"lock-screensaver"
 	Mod4 + l
 
 # m = mail
