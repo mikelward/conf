@@ -3,6 +3,7 @@ xterm*altSendsEscape: true
 urxvt*font: xft:Ubuntu Mono:pixelsize=18
 urxvt*scrollBar: false
 urxvt*scrollBar_right: true
-urxvt*background: white
+urxvt*background: WhiteSmoke
 urxvt*foreground: black
+urxvt*cursorBlink: true
 urxvt*urgentOnBell: true
