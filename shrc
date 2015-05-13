@@ -604,6 +604,7 @@ if is_interactive; then
     alias p='${PAGER:-more}'
     alias phup='pkill -HUP'
     alias popd='popd >/dev/null'
+    alias psg='psgrep'
     alias psu='ps -o user,pid,start,time,pcpu,stat,cmd'
     alias pushd='pushd >/dev/null'
     alias pd='pushd'
