@@ -3,11 +3,11 @@
 # print the name of the version control system in use in $PWD
 # TODO: cache the result
 vcs() {
-    if quiet memoize git branch; then
+    if quiet git branch; then
         echo git
         return
     fi
-    if quiet memoize hg branch; then
+    if quiet hg branch; then
         echo hg
         return
     fi
