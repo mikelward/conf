@@ -362,14 +362,18 @@ psc()
 psgrep()
 {
     # last arg is pgrep pattern, rest are args for ps
-    local pattern="${@:$#:1}"
-    local last=$#
-    local second_last=$((last-1))  # bash doesn't support ${@:1:-1}
-    local -a ps_opts               # must be separate line for zsh
-    ps_opts=( "${@:1:$second_last}" )
+    local ps_args
+    while test $# -gt 1; do
+        ps_args="$ps_args $1"
+        shift
+    done
+
+    local pattern="$1"
+
     local pids="$(pgrep -d , -f "$pattern")"
+    echo "pid=$pids ps_args=$ps_args pattern=$pattern"
     if test -n "$pids"; then
-        psc -p "$pids" "${ps_opts[@]}"
+        psc -p "$pids" $ps_args
     else
         error "No processes matching $pattern"
     fi
