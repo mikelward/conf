@@ -371,7 +371,6 @@ psgrep()
     local pattern="$1"
 
     local pids="$(pgrep -d , -f "$pattern")"
-    echo "pid=$pids ps_args=$ps_args pattern=$pattern"
     if test -n "$pids"; then
         psc -p "$pids" $ps_args
     else
