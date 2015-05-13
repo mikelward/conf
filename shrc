@@ -1193,42 +1193,44 @@ EOF
         KEYTIMEOUT=1
 
         # enable support for xterm bracketed paste
-        bindkey -M emacs '^[[200~' start-paste
-        bindkey -M viins '^[[200~' start-paste
-        bindkey -M vicmd '^[[200~' start-paste
-        zle -N start-paste start_paste
 
         # switch to the paste keymap
         start_paste() {
-            # create a new keymap at runtime so this just works,
-            # whether the current keymap is vi, emacs, or other
-            bindkey -N paste main
-            bindkey -M paste '^[[201~' end-paste
-            # make newlines not act like Enter
-            bindkey -M paste '^J' self-insert
-            # terminal sends ^M but zsh wants ^J
-            bindkey -M paste -s '^M' '^J'
-            # translate some hard-to-spot Unicode characters to ASCII
-            bindkey -M paste -s '“' '"'
-            bindkey -M paste -s '”' '"'
-            bindkey -M paste -s '…' '...'
-            bindkey -M paste -s ' ' ' '
-            zle -N end-paste end_paste
             bindkey -A main previous
             bindkey -A paste main
         }
-
         # store the pasted text
         paste_insert() {
             _paste_content+=$KEYS
         }
-
         # insert the pasted text without a final newline, and switch back
         end_paste() {
             LBUFFER+=$_paste_content
             unset _paste_content
             bindkey -A previous main
         }
+        # associate the bindkey widgets with the corresponding functions
+        zle -N start-paste start_paste
+        zle -N end-paste end_paste
+        # .safe is self-insert except for ^J and ^M
+        bindkey -N paste .safe
+        # make newlines not act like Enter
+        # (have it insert a newline, not do accept-line)
+        bindkey -M paste '^J' self-insert
+        # make pasted newlines appear as newlines
+        # (terminal sends ^M but zsh wants ^J)
+        bindkey -M paste -s '^M' '^J'
+        # start pasting when seeing the start escape sequence
+        bindkey -M emacs '^[[200~' start-paste
+        bindkey -M viins '^[[200~' start-paste
+        bindkey -M vicmd '^[[200~' start-paste
+        # end pasting when seeing the finish escape sequence
+        bindkey -M paste '^[[201~' end-paste
+        # translate some hard-to-spot Unicode characters to ASCII
+        bindkey -M paste -s '“' '"'
+        bindkey -M paste -s '”' '"'
+        bindkey -M paste -s '…' '...'
+        bindkey -M paste -s ' ' ' '
 
     elif is_bash; then
         # bash enhancements
