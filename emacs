@@ -56,6 +56,10 @@
 ;; Add a binding to kill the current buffer
 (global-set-key "\C-x\C-k" 'kill-this-buffer)
 
+;; Make C-u kill a line like it does in a tty
+;; TODO make kill-whole-line work more logically
+(global-set-key "\C-u" 'kill-whole-line)
+
 ;; PROGRAMMING
 ;; Default to Bourne shell for new shell scripts
 (setq-default sh-shell-file "sh")
