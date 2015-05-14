@@ -1208,14 +1208,10 @@ EOF
             bindkey -A main previous
             bindkey -A paste main
         }
-        # store the pasted text
-        paste_insert() {
-            _paste_content+=$KEYS
-        }
-        # insert the pasted text without a final newline, and switch back
+        # insert the pasted text without a final newline and switch back
         end_paste() {
-            LBUFFER+=$_paste_content
-            unset _paste_content
+            LBUFFER=${LBUFFER%
+}
             bindkey -A previous main
         }
         # associate the bindkey widgets with the corresponding functions
