@@ -1208,7 +1208,7 @@ EOF
             bindkey -A main previous
             bindkey -A paste main
         }
-        # insert the pasted text without a final newline and switch back
+        # strip a single final newline and switch back to the previous keymap
         end_paste() {
             LBUFFER=${LBUFFER%
 }
