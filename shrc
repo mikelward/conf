@@ -1114,6 +1114,9 @@ EOF
         setopt PROMPT_PERCENT
         setopt PUSHD_SILENT
 
+        # fall back to case-insensitive completion if there's no exact match
+        zstyle ':completion:*' matcher-list '' 'm:{a-zA-Z}={A-Za-z}'
+
         # user input appears in bold
         declare -a zle_highlight
         zle_highlight[0]="default:bold"
