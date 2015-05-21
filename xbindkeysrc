@@ -18,7 +18,7 @@
 	Mod4 + f
 
 #"chromium-browser"
-"google-chrome"
+"chrome"
 	Mod4 + g
 
 # h = home folder
