@@ -37,7 +37,8 @@ else
     shell=sh
 fi
 
-if is_zsh; then
+case "$shell" in
+zsh)
     # Red Hat's /etc/zshrc and /etc/zprofile break things
     unsetopt GLOBAL_RCS
 
@@ -60,8 +61,8 @@ if is_zsh; then
 
     # zsh-style autoload, required for e.g. bashcompinit
     unsetopt KSH_AUTOLOAD
-elif is_bash; then
-
+    ;;
+bash)
     # set_prompt sets PS1 to a string likely including '$', don't expand it
     shopt -u promptvars
 
@@ -70,9 +71,11 @@ elif is_bash; then
 
     # enable zsh default features
     shopt -s globstar       # recursive globbing with **
-elif is_ksh; then
+    ;;
+ksh)
     alias local=typeset
-fi
+    ;;
+esac
 
 # standardize on bash-like variables that everyone assumes are preset
 : ${USERNAME:=$(id -un)}
@@ -125,7 +128,7 @@ inpath() {
   (
     IFS=:
     for dir in $PATH; do
-      if test "$dir" == "$_dir"; then
+      if test "$dir" = "$_dir"; then
         return 0
       fi
     done
@@ -709,7 +712,8 @@ if is_interactive; then
 
     # make +<num> change directories and %<num> resume jobs
     # this matches the first column in the prompt output
-    if test -n "${BASH_VERSION:-}" || test -n "${ZSH_VERSION:-}"; then
+    case "$shell" in
+    bash|zsh)
         # use legacy function syntax then alias to prevent dash syntax errors,
         # which could cause X session errors on Debian/Ubuntu
         plus() {
@@ -731,13 +735,15 @@ if is_interactive; then
         for i in $(seq 0 9); do
             alias -- +$i='pushpop '$i
         done
-    else
-        # ksh lacks %, %1, etc.
+        ;;
+    *)
+        # ksh and dash lack %, %1, etc.
         alias %='fg'
         for i in $(seq 0 9); do
             alias %$i='fg %'$i
         done
-    fi
+        ;;
+    esac
 
     # set a basic prompt that doesn't rely on precommand and preprompt hooks
     basic_prompt() {
@@ -1105,7 +1111,8 @@ EOF
         fi
     }
 
-    if is_zsh; then
+    case "$shell" in
+    zsh)
         # zsh enhancements
         setopt AUTO_CD
         setopt CORRECT
@@ -1210,8 +1217,8 @@ EOF
         }
         # strip a single final newline and switch back to the previous keymap
         end_paste() {
-            LBUFFER=${LBUFFER%
-}
+            LBUFFER="${LBUFFER%
+}"
             bindkey -A previous main
         }
         # associate the bindkey widgets with the corresponding functions
@@ -1237,7 +1244,8 @@ EOF
         bindkey -M paste -s '…' '...'
         bindkey -M paste -s ' ' ' '
 
-    elif is_bash; then
+        ;;
+    bash)
         # bash enhancements
         shopt -s autocd
         shopt -s checkwinsize
@@ -1317,7 +1325,7 @@ EOF
 
         # Make Esc toggle between command and insert mode
         bind -m vi-command '"\e": vi-insertion-mode'
-    fi
+    esac
     # set a simple prompt for non-bash non-zsh
     # (will be overridden immediately by bash and zsh)
     basic_prompt
