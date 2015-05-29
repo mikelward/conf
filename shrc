@@ -562,8 +562,9 @@ if is_interactive; then
     alias ct='ctags -R'
     alias cx='chmod +x'
     download() { cd "$HOME/Downloads"; wget "$@"; }
-    alias e='${EDITOR:-vi}'
     alias eg='g -E'
+    # function rather than an alias so it looks better in the xterm title.
+    e() { "${EDITOR:-vi}" "$@"; }
     et() {
         local file
         local testfile
@@ -604,7 +605,8 @@ if is_interactive; then
     alias m='make'
     # shadows magtape command, but who uses that?
     alias mt='make test'
-    alias p='${PAGER:-more}'
+    # function rather than an alias so it looks better in the xterm title.
+    p() { "${PAGER:-more}" "$@"; }
     alias phup='pkill -HUP'
     alias popd='popd >/dev/null'
     alias psg='psgrep'
