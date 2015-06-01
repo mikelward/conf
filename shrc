@@ -582,6 +582,7 @@ if is_interactive; then
     alias h='head'
     alias headers='curl -L -i -sS -o/dev/null -D-'
     alias hosts='getent hosts'
+    alias ipy='ipython'
     alias kssh='ssh -o PreferredAuthentications=publickey'
     if is_command l; then
         alias l='l -Kv'
