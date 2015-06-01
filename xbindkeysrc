@@ -63,35 +63,33 @@
 	Mod4 + z
 
 # mute
-"amixer set Master toggle"
+"vol mute"
 	Mod4 + KP_Delete
 
-"amixer set Master toggle"
+"vol mute"
 	Mod4 + Delete
 
 # play/pause
-"rhythmbox-client --play-pause"
+"media playpause"
 	Mod4 + KP_Insert
 
-"rhythmbox-client --play-pause"
+"media playpause"
 	Mod4 + Insert
 
 # volume down
-#"amixer set Master 5%-"
-"amixer set 'Master Front' 5%-"
+"vol down"
 	Mod4 + Down
 
 # volume up
-"amixer set 'Master Front' 5%+"
+"vol up"
 	Mod4 + Up
 
-# XXX would be nice to figure out how to send XF86AudioNext, etc.
 # next song
-"rhythmbox-client --next"
+"media next"
 	Mod4 + Right
 
 # previous song
-"rhythmbox-client --previous"
+"media prev"
 	Mod4 + Left
 
 # screen shot (print screen)
