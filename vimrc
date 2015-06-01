@@ -148,16 +148,23 @@ if has("autocmd")
     " make :make jump to C assertion errors
     au BufRead,BufNewFile * if &filetype == 'c' | set errorformat^=%*[^:]:\ %f:%l:\ %m | endif
 
-    " when creating a new file, use a template from ~/templates/template.<filetype extension>
+    " when creating a new file, use a template from ~/templates if it exists
+    fun! InsertFile(filename)
+        call setline(1, readfile(a:filename))
+        let b:lastline = line('$')
+        call setpos('.', [0, b:lastline, 0, 0])
+    endfun
     au BufNewFile * call ReadTemplate() | call AppendModeline()
     fun! ReadTemplate()
         let b:filename = bufname('%')
-        let b:extension = substitute(b:filename, '.*\.\(.*\)', '\1', '')
+        let b:basename = substitute(b:filename, '\(.*\)\.\(.*\)', '\1', '')
+        let b:extension = substitute(b:filename, '\(.*\)\.\(.*\)', '\2', '')
+        let b:test_template = $HOME . '/templates/test_template.' . b:extension
         let b:template = $HOME . '/templates/template.' . b:extension
-        if filereadable(b:template)
-          call setline(1, readfile(b:template))
-          let b:lastline = line('$')
-          call setpos('.', [0, b:lastline, 0, 0])
+        if b:basename =~ '_test' && filereadable(b:test_template)
+            call InsertFile(b:test_template)
+        elseif filereadable(b:template)
+            call InsertFile(b:template)
         endif
     endfun
 
