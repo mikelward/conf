@@ -45,7 +45,7 @@ g4_branch() {
 
 # print the name of the currently active git branch
 git_branch() {
-    git rev-parse --abbrev-ref HEAD
+    git rev-parse --abbrev-ref HEAD 2>/dev/null
 }
 
 # print the name of the currently active mercurial branch
