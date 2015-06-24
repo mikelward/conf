@@ -620,6 +620,7 @@ if is_interactive; then
     alias r='fc -e - --'
     alias rg='g -IR '"$dir_excludes"
     alias s='ssh'
+    alias spell='aspell -a'
     alias sr='ssh -l root'
     alias symlink='ln -s'
     alias t='tail'
