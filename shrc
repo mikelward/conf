@@ -304,6 +304,16 @@ isort() {
     mv "$1".bak "$1"
 }
 
+# join the arguments list by inserting a character between each element
+# the first argument is the separator, the rest are the words to join
+join() {
+  (
+    IFS=$1
+    shift
+    echo "$*"
+  )
+}
+
 # make a directory and cd to it
 mcd()
 {
