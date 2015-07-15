@@ -138,15 +138,15 @@ endif
 
 if has("autocmd")
     " teach Vim about .go files
-    au BufRead,BufNewFile *.go setfiletype go
+    autocmd BufRead,BufNewFile *.go setfiletype go
 
     " per file-type rules
-    au BufRead,BufNewFile * if &filetype == 'fstab' | setlocal listchars+=tab:>\  | endif
-    au BufRead,BufNewFile * if &filetype == 'go' | setlocal shiftwidth=8 tabstop=8 textwidth=0 noexpandtab colorcolumn=0 | endif
-    au BufRead,BufNewFile * if &filetype == 'svn' | setlocal viminfo= | endif
+    autocmd FileType fstab setlocal listchars+=tab:>\  " intentional trailing space
+    autocmd FileType go setlocal shiftwidth=8 tabstop=8 textwidth=0 noexpandtab colorcolumn=0
+    autocmd FileType svn setlocal viminfo=
 
     " make :make jump to C assertion errors
-    au BufRead,BufNewFile * if &filetype == 'c' | set errorformat^=%*[^:]:\ %f:%l:\ %m | endif
+    autocmd FileType c set errorformat^=%*[^:]:\ %f:%l:\ %m
 
     " when creating a new file, use a template from ~/templates if it exists
     fun! InsertFile(filename)
