@@ -141,9 +141,9 @@ if has("autocmd")
     au BufRead,BufNewFile *.go setfiletype go
 
     " per file-type rules
-    au BufRead,BufNewFile * if &filetype == 'fstab' | set listchars+=tab:>\  | endif
-    au BufRead,BufNewFile * if &filetype == 'go' | set shiftwidth=8 tabstop=8 textwidth=0 noexpandtab colorcolumn=0 | endif
-    au BufRead,BufNewFile * if &filetype == 'svn' | set viminfo= | endif
+    au BufRead,BufNewFile * if &filetype == 'fstab' | setlocal listchars+=tab:>\  | endif
+    au BufRead,BufNewFile * if &filetype == 'go' | setlocal shiftwidth=8 tabstop=8 textwidth=0 noexpandtab colorcolumn=0 | endif
+    au BufRead,BufNewFile * if &filetype == 'svn' | setlocal viminfo= | endif
 
     " make :make jump to C assertion errors
     au BufRead,BufNewFile * if &filetype == 'c' | set errorformat^=%*[^:]:\ %f:%l:\ %m | endif
