@@ -945,8 +945,9 @@ EOF
         laststatus=$?
         case $laststatus in
         0)   ;;
-        20)  ;;  # suspended; TODO: differentiate from exit 20 using $pipestatus
+        20)  ;;  # suspended (zsh < 5.0.7)
         130) echo "Interrupted";;
+        148) ;;  # suspended (zsh >= 5.0.7)
         *)   echo "Exit status $laststatus";;
         esac
     }
