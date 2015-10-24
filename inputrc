@@ -14,12 +14,21 @@ set visible-stats on
 
 # emacs mode customizations
 set keymap emacs
+$if Bash
 "\eb": vi-bWord
 "\eB": vi-bWord
 "\ed": shell-kill-word
 "\eD": shell-kill-word
 "\ef": vi-fWord
 "\eF": vi-fWord
+$else
+"\eb": backward-word
+"\eB": backward-word
+"\ed": kill-word
+"\eD": kill-word
+"\ef": forward-word
+"\eF": forward-word
+$endif
 "\en": history-search-forward
 "\ep": history-search-backward
 "\ew": copy-region-as-kill
@@ -42,12 +51,21 @@ set keymap vi-insert
 "\C-s": forward-search-history
 "\C-w": backward-kill-word
 "\C-y": yank
+$if Bash
 "\eb": vi-bWord
 "\eB": vi-bWord
 "\ed": shell-kill-word
 "\eD": shell-kill-word
 "\ef": vi-fWord
 "\eF": vi-fWord
+$else
+"\eb": backward-word
+"\eB": backward-word
+"\ed": kill-word
+"\eD": kill-word
+"\ef": forward-word
+"\eF": forward-word
+$endif
 "\ey": yank-pop
 "\eOH": beginning-of-line
 "\e[1~": beginning-of-line
@@ -63,12 +81,21 @@ set keymap vi-command
 "\C-s": forward-search-history
 "\C-w": backward-kill-word
 "\C-y": yank
+$if Bash
 "\eb": vi-bWord
 "\eB": vi-bWord
 "\ed": shell-kill-word
 "\eD": shell-kill-word
 "\ef": vi-fWord
 "\eF": vi-fWord
+$else
+"\eb": backward-word
+"\eB": backward-word
+"\ed": kill-word
+"\eD": kill-word
+"\ef": forward-word
+"\eF": forward-word
+$endif
 "\ey": yank-pop
 "\eOH": beginning-of-line
 "\e[1~": beginning-of-line
