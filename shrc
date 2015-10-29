@@ -571,7 +571,7 @@ if is_interactive; then
     alias cg='rg '"$code_includes"
     alias ct='ctags -R'
     alias cx='chmod +x'
-    alias digs='dig +short'
+    alias digs='dig +short +search'
     download() { cd "$HOME/Downloads"; wget "$@"; }
     alias eg='g -E'
     # function rather than an alias so it looks better in the xterm title.
