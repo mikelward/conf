@@ -641,6 +641,7 @@ if is_interactive; then
     alias v='view'
     alias vl='view /var/log/syslog'
     alias x='_exit'
+    alias xr='DISPLAY=:0.0 xrandr'
     alias I='make install'
     alias M='make'
     alias T='make test'
