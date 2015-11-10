@@ -568,7 +568,7 @@ if is_interactive; then
     alias cg='rg '"$code_includes"
     alias ct='ctags -R'
     alias cx='chmod +x'
-    alias digs='dig +short'
+    alias digs='dig +short +search'
     download() { cd "$HOME/Downloads"; wget "$@"; }
     alias eg='g -E'
     # function rather than an alias so it looks better in the xterm title.
@@ -638,6 +638,7 @@ if is_interactive; then
     alias v='view'
     alias vl='view /var/log/syslog'
     alias x='_exit'
+    alias xr='DISPLAY=:0.0 xrandr'
     alias I='make install'
     alias M='make'
     alias T='make test'
