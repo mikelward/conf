@@ -39,9 +39,6 @@ fi
 
 case "$shell" in
 zsh)
-    # Red Hat's /etc/zshrc and /etc/zprofile break things
-    unsetopt GLOBAL_RCS
-
     # make zsh as similar to bash as possible
     emulate sh
     setopt BRACE_EXPAND
