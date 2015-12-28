@@ -438,6 +438,21 @@ utc2() {
     date -d 'TZ="UTC" '"$1"
 }
 
+# print the definition of the given command, alias, or function
+what() {
+    if is_zsh; then
+        whence -f "$1"
+    elif is_bash; then
+        case "$(type -t "$1")" in function)
+            typeset -f "$1";;
+        *)
+            command -v "$1";;
+        esac
+    else
+        type "$1"
+    fi
+}
+
 ##################################
 # ENVIRONMENT SETUP FOR ALL SHELLS
 # Set $PATH early in case other stuff here needs it.
