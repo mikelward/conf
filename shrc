@@ -671,7 +671,7 @@ if is_interactive; then
         lo log logs ls-files ls-tree \
         merge merge-base pick pu pull push \
         rebase remote remove reset restore rewind rollback \
-        show show-branch st staged stash state status switch \
+        show-branch st staged stash state status switch \
         tag track unadd unchange unchangeall undo undoall untrack
     do
         alias $command="git $command"
@@ -691,7 +691,7 @@ if is_interactive; then
         alias yum='root yum --cacheonly'
         alias update='root yum makecache'
         alias search='yum search'
-        alias info='yum info'
+        alias show='yum info'
         alias install='root yum install'
         alias installed='rpm -qa'
         alias uninstall='root yum erase'
@@ -703,7 +703,7 @@ if is_interactive; then
     elif is_command aptitude; then
         alias update='root aptitude -q -q update'
         alias search='aptitude search'
-        alias info='aptitude show'
+        alias show='aptitude show'
         alias install='root aptitude install'
         alias installed='dpkg-query --show'
         alias uninstall='root aptitude remove'
@@ -715,7 +715,7 @@ if is_interactive; then
     elif is_command apt-get; then
         alias update='root apt-get update'
         alias search='apt-cache search --names-only'
-        alias info='apt-cache show'
+        alias show='apt-cache show'
         alias install='root apt-get install'
         alias installed='dpkg-query --show'
         alias uninstall='root apt-get remove'
