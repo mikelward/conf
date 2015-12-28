@@ -384,6 +384,11 @@ psgrep()
     fi
 }
 
+# print the absolute path of the directory containing the specified file
+realdir() {
+    dirname "$(readlink -f "$1")"
+}
+
 # show the most recently changed files
 # defaults to the showing the last 10, override with -<number>
 recent()
