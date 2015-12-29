@@ -265,6 +265,11 @@ body() {
     "$@"
 }
 
+# cd to the real directory that the specified file is in, resolving symlinks
+cdfile() {
+    cd "$(realdir "$1")"
+}
+
 delline() {
     sed -i -e ${1}d "$2"
 }
@@ -585,6 +590,7 @@ if is_interactive; then
     dir_patterns="{.git,.hg,.svn}"
     dir_excludes="$(eval echo --exclude-dir=$dir_patterns)"
     alias c='less -FX'
+    alias cdf='cdfile'
     alias cg='rg '"$code_includes"
     alias ct='ctags -R'
     alias cx='chmod +x'
