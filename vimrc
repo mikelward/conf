@@ -143,6 +143,7 @@ if has("autocmd")
     " per file-type rules
     autocmd FileType fstab setlocal listchars+=tab:>\  " intentional trailing space
     autocmd FileType go setlocal shiftwidth=8 tabstop=8 textwidth=0 noexpandtab colorcolumn=0
+    autocmd FileType markdown setlocal textwidth=80
     autocmd FileType svn setlocal viminfo=
 
     " make :make jump to C assertion errors

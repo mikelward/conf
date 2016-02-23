@@ -94,8 +94,8 @@
 
 # screen shot (print screen)
 #"gnome-screenshot"
-#"xfce4-screenshooter -f"
-#	Print
+"xfce4-screenshooter -f"
+	Print
 
 "snap left"
     Mod4 + Shift + Left
