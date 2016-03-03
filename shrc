@@ -843,7 +843,7 @@ if is_interactive; then
 
     # return true if this machine is my laptop
     on_my_laptop() {
-        if test -z "$LAPTOP"; then
+        if test -z "${LAPTOP:-}"; then
             if _on_my_laptop; then
                 LAPTOP=true
             else
@@ -873,7 +873,7 @@ if is_interactive; then
 
     # return true if this machine is my workstation (cached version)
     on_my_workstation() {
-        if test -z "$WORKSTATION"; then
+        if test -z "${WORKSTATION:-}"; then
             if _on_my_workstation; then
                 WORKSTATION=true
             else
