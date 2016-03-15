@@ -1227,32 +1227,23 @@ EOF
         bindkey -M vicmd '\e' vi-insert
 
         # add Emacs bindings to Vi editing mode
-        bindkey -M viins '^a' beginning-of-line
-        bindkey -M vicmd '^a' beginning-of-line
-        bindkey -M viins '^e' end-of-line
-        bindkey -M vicmd '^e' end-of-line
-        bindkey -M viins '^n' down-line-or-history
-        bindkey -M vicmd '^n' down-line-or-history
-        bindkey -M viins '^p' up-line-or-history
-        bindkey -M vicmd '^p' up-line-or-history
-        bindkey -M viins '^r' history-incremental-search-backward
-        bindkey -M vicmd '^r' history-incremental-search-backward
-        bindkey -M viins '^s' history-incremental-search-forward
-        bindkey -M vicmd '^s' history-incremental-search-forward
-        bindkey -M viins '^w' backward-kill-word
-        bindkey -M vicmd '^w' backward-kill-word
-        bindkey -M viins '^y' yank
-        bindkey -M vicmd '^y' yank
-        bindkey -M viins '\eb' backward-word
-        bindkey -M vicmd '\eb' backward-word
-        bindkey -M viins '\eB' vi-backward-blank-word
-        bindkey -M vicmd '\eB' vi-backward-blank-word
-        bindkey -M viins '\ef' forward-word
-        bindkey -M vicmd '\ef' forward-word
-        bindkey -M viins '\eF' vi-forward-blank-word
-        bindkey -M vicmd '\eF' vi-forward-blank-word
-        bindkey -M viins '\ey' yank-pop
-        bindkey -M vicmd '\ey' yank-pop
+        _bind_vi() {
+            bindkey -M viins "$@"
+            bindkey -M vicmd "$@"
+        }
+        _bind_vi '^a' beginning-of-line
+        _bind_vi '^e' end-of-line
+        _bind_vi '^n' down-line-or-history
+        _bind_vi '^p' up-line-or-history
+        _bind_vi '^r' history-incremental-search-backward
+        _bind_vi '^s' history-incremental-search-forward
+        _bind_vi '^w' backward-kill-word
+        _bind_vi '^y' yank
+        _bind_vi '\eb' backward-word
+        _bind_vi '\eB' vi-backward-blank-word
+        _bind_vi '\ef' forward-word
+        _bind_vi '\eF' vi-forward-blank-word
+        _bind_vi '\ey' yank-pop
 
         # try to differentiate between Esc vi command and Alt+something
         KEYTIMEOUT=1
