@@ -497,6 +497,7 @@ if is_interactive; then
     stty start undef stop undef
 
     # determine the graphics mode escape sequences
+    color=false
     if is_command tput; then
         if quiet tput longname; then
             bold="$(tput bold)"
@@ -511,6 +512,7 @@ if is_interactive; then
             magenta="$(tput setaf 5)"
             cyan="$(tput setaf 6)"
             white="$(tput setaf 7)"
+            color=true
 
             khome="$(tput khome)"
             kend="$(tput kend)"
@@ -795,9 +797,10 @@ if is_interactive; then
     # commands to execute before the prompt is displayed
     preprompt() {
         local last_error="$(${shell}_last_error)"
+        current_command=
 
         printf '\n'
-        set_color "normal"
+        set_color 'normal'
         if test -n "$last_error"; then
             set_color 'red'
             printf '%s\n' "$last_error"
@@ -918,12 +921,14 @@ if is_interactive; then
     dir_info() {
         if is_builtin dirs; then
             while read num dir; do
-                printf "%s+%s %s\n" "$blue" "$num" "$(_dir_info "$dir")"
+                blue "+$num $(_dir_info "$dir")"
+                echo
             done <<EOF
 $(dirs -v -l)
 EOF
         else
-            printf "%s%s%s\n" "$blue" "$PWD" "$normal"
+            blue "$PWD"
+            echo
         fi
     }
     _dir_info() {
@@ -933,16 +938,18 @@ EOF
         cd "$1"
         local projectroot="$(projectroot)"
         if test -n "$projectroot"; then
-            printf "%s%s%s" "$green" "$(basename "$projectroot")" "$normal"
+            green "$(basename "$projectroot")"
             local projectsubdir
             projectsubdir="$(trim_prefix "$(projectroot)" "$PWD")"
             if test -n "$projectsubdir"; then
-                printf " %s%s%s" "$blue" "$projectsubdir" "$normal"
+                printf ' '
+                blue "$projectsubdir"
             fi
             local branch
             branch="$(branch)"
             if test -n "$branch"; then
-                printf " %s%s%s" "$green" "$branch" "$normal"
+                printf ' '
+                green "$branch"
             fi
         else
             tilde_directory
@@ -952,6 +959,26 @@ EOF
     # print the name of the current branch
     branch() {
         :
+    }
+
+    blue() {
+        if $color; then
+            printf '%s%s%s' "$blue" "$*" "$normal"
+        else
+            printf '%s' "$*"
+        fi
+    }
+    green() {
+        if $color; then
+            printf '%s%s%s' "$green" "$*" "$normal"
+        else
+            printf '%s' "$*"
+        fi
+    }
+
+    # print the name of the current project
+    projectname() {
+        basename "$(projectroot)"
     }
 
     # print the root directory of the current project
@@ -1051,7 +1078,7 @@ EOF
 
     # print the current directory with $HOME changed to ~
     tilde_directory() {
-        pwd | sed -e 's#^'"$HOME"'#~#'
+        printf '%s' "$PWD" | sed -e 's#^'"$HOME"'#~#'
     }
 
     # trim leading parts of a directory so it's no more than three entries long
@@ -1066,7 +1093,15 @@ EOF
 
     # print the string that should be used as the xterm title
     title() {
-        printf '%s %s' "$(short_hostname)" "$(shorten_directory "$(tilde_directory)")"
+        short_hostname
+        printf ' '
+        (
+            color=false
+            _dir_info "$PWD"
+        )
+        if test -n "${current_command:-}"; then
+            printf ' %s' "$current_command"
+        fi
     }
 
     # set all the prompt strings
@@ -1108,7 +1143,8 @@ EOF
     # the first argument is the command line being run
     precommand() {
         log_history "$*"
-        set_title "$(short_hostname) $(expand_job "$*")"
+        current_command="$(expand_job "$*")"
+        set_title "$(title)"
         set_color 'normal'
     }
 
