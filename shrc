@@ -686,7 +686,7 @@ if is_interactive; then
     # TODO: Write a script that supports multiple version control systems,
     # and make it an alias for that instead?
     for command in ad add addall added addremove adds am amend an ap apply \
-        blame br branch checkout changed changes cherry-pick ci cl clone co \
+        blame br checkout changed changes cherry-pick ci cl clone co \
         commit commitall describe da di diffs \
         fetch format-patch gc gr graph hi hist history \
         lo log logs ls-files ls-tree \
@@ -927,19 +927,43 @@ EOF
         fi
     }
     _dir_info() {
+        # if the directory is under version control, print
+        # <project name> <subdir under project root> <branch>,
+        # otherwise just the directory with $HOME turned into ~
         cd "$1"
-        dir=$(tilde_directory)
-        vcs_info=$(vcs_info)
-        printf "%s%s %s%s%s" \
-            "$dir" "$normal" "$green" "$vcs_info" "$normal"
+        local projectroot="$(projectroot)"
+        if test -n "$projectroot"; then
+            printf "%s%s%s" "$green" "$(basename "$projectroot")" "$normal"
+            local projectsubdir
+            projectsubdir="$(trim_prefix "$(projectroot)" "$PWD")"
+            if test -n "$projectsubdir"; then
+                printf " %s%s%s" "$blue" "$projectsubdir" "$normal"
+            fi
+            local branch
+            branch="$(branch)"
+            if test -n "$branch"; then
+                printf " %s%s%s" "$green" "$branch" "$normal"
+            fi
+        else
+            tilde_directory
+        fi
     }
 
-    # print info about the current directory's version control status
-    vcs_info() {
+    # print the name of the current branch
+    branch() {
         :
     }
 
-    # load all the version control functions
+    # print the root directory of the current project
+    projectroot() {
+        :
+    }
+
+    trim_prefix() {
+        expr substr "$2" $(expr length "$1" + 2) 9999
+    }
+
+    # load all the version control functions (git_*, hg_*, etc.)
     if test -f "$HOME/.shrc.vcs"; then
         . "$HOME/.shrc.vcs"
     fi
