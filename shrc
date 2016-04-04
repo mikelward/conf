@@ -360,12 +360,18 @@ path()
     )
 }
 
+# list processes in the specified process group
+# pgroup <pgid> [<pgrep args>]
+pgroup() {
+    pgrep -g "$@"
+}
+
 # ps with useful default options
 psc()
 {
-    # user,pid,ppid,start_time,pcpu,rss,comm are first, followed by any -o option
+    # user,pid,ppid,pgid,start_time,pcpu,rss,comm are first, followed by any -o option
     # the user supplies, then args are last.
-    ps -w -o user,pid,ppid,start_time,pcpu,rss,comm=EXE "$@" -o args=ARGS
+    ps -w -o user,pid,ppid,pgid,start_time,pcpu,rss,comm=EXE "$@" -o args=ARGS
 }
 
 # pgrep with default ps options
@@ -386,6 +392,26 @@ psgrep()
         psc -p "$pids" $ps_args
     else
         error "No processes matching $pattern"
+    fi
+}
+
+# like psgrep, but taking a process group number
+psgrepgroup()
+{
+    # last arg is pgid, rest are args for ps
+    local ps_args
+    while test $# -gt 1; do
+        ps_args="$ps_args $1"
+        shift
+    done
+
+    local pgid="$1"
+
+    local pids="$(pgrep -d , -g "$pgid")"
+    if test -n "$pids"; then
+        psc -p "$pids" $ps_args
+    else
+        error "No processes in process group $pgid"
     fi
 }
 
@@ -647,6 +673,7 @@ if is_interactive; then
     alias phup='pkill -HUP'
     alias popd='popd >/dev/null'
     alias psg='psgrep'
+    alias psgg='psgrepgroup'
     alias psu='ps -o user,pid,start,time,pcpu,stat,cmd'
     alias pushd='pushd >/dev/null'
     alias pd='pushd'
