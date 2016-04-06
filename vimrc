@@ -185,6 +185,7 @@ if has("autocmd")
     au BufRead,BufNewFile */bash*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
     au BufRead,BufNewFile */coreutils*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
     au BufRead,BufNewFile */ersatz*/*.{c,h} setlocal sw=2 ts=8 noexpandtab
+    au BufRead,BufNewFile */glibc*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
     au BufRead,BufNewFile */gnome-terminal*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
     au BufRead,BufNewFile */inspircd/*.{c,cpp,h} setlocal shiftwidth=4 tabstop=4 noexpandtab
     au BufRead,BufNewFile */nagios*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
