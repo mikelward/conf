@@ -81,7 +81,20 @@ set esckeys	" allow arrow keys in insert mode
 set noerrorbells visualbell	" flash screen instead of ringing bell
 set showbreak=+	" specially mark continued lines with a plus
 
+" run goimports when saving a .go file
 let g:gofmt_command = "goimports"
+
+" teach tagbar how to use exuberant-ctags tags files
+let g:tagbar_type_go = {
+    \ 'ctagstype': 'go',
+    \ 'kinds' : [
+        \'p:package',
+        \'f:function',
+        \'v:variables',
+        \'t:type',
+        \'c:const'
+    \]
+\}
 
 if has("x11")
     set clipboard=unnamed	" yank to X selection buffer
@@ -121,6 +134,7 @@ endfunction
 map <Leader>c :TComment<CR>
 map <Leader>w :call ToggleWhitespace()<CR>
 map <Leader>p :call TogglePaste()<CR>
+map <Leader>t :TagbarToggle<CR>
 
 " MARKDOWN SHORTCUTS
 " http://stevelosh.com/blog/2010/09/coming-home-to-vim/
