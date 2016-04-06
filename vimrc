@@ -81,6 +81,8 @@ set esckeys	" allow arrow keys in insert mode
 set noerrorbells visualbell	" flash screen instead of ringing bell
 set showbreak=+	" specially mark continued lines with a plus
 
+let g:gofmt_command = "goimports"
+
 if has("x11")
     set clipboard=unnamed	" yank to X selection buffer
 endif
@@ -138,11 +140,12 @@ endif
 
 if has("autocmd")
     " teach Vim about .go files
-    autocmd BufRead,BufNewFile *.go setfiletype go
+    autocmd BufRead,BufNewFile *.go setlocal filetype=go
 
     " per file-type rules
     autocmd FileType fstab setlocal listchars+=tab:>\  " intentional trailing space
     autocmd FileType go setlocal shiftwidth=8 tabstop=8 textwidth=0 noexpandtab colorcolumn=0
+    autocmd FileType go autocmd BufWritePre <buffer> Fmt
     autocmd FileType markdown setlocal textwidth=80
     autocmd FileType svn setlocal viminfo=
 
