@@ -227,12 +227,31 @@ warn() {
 # Useful things that could be commands if distributing them wasn't impractical.
 
 # list this machine's IP addresses
-addrs() {
+ips() {
     ip -o a sh up primary scope global | while read num iface afam addr rest; do
       case "$afam" in inet*)
           echo $iface $addr;;
       esac
     done
+}
+alias addrs=ips
+
+# list this machine's MAC addresses
+# format: <iface> <MAC addr>[\n<iface> <MAC addr>]*
+macs() {
+    ip -s l sh | sed -n '
+/^[0-9][0-9]*:/{
+s/^[0-9][0-9]*: \([^:]*\).*/\1/
+h
+}
+/^    link\/ether/{
+s/^    link\/ether \([^ ]*\).*/ \1/
+H
+x
+s/\n//
+p
+}
+'
 }
 
 # ring the terminal's bell
