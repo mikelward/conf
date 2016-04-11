@@ -473,6 +473,17 @@ rmkey() {
     delline "$1" "$HOME/.ssh/known_hosts"
 }
 
+# run a command with the first argument moved to the end
+# e.g. first_arg_last grep ~/.history <args> runs grep <args> ~/.history
+first_arg_last() {
+    local command
+    local arg
+    command=$1
+    arg=$2
+    shift 2
+    "$command" "$@" "$arg"
+}
+
 # convert a time from one timezone to another
 # tz2tz <from timezone> <to timezone> <date spec>
 tz2tz() {
@@ -660,6 +671,7 @@ if is_interactive; then
     alias fg='g -F'
     alias g='grep -I'
     alias gdb='gdb -q '
+    alias gh='first_arg_last grep ~/.history'
     alias h='head'
     alias headers='curl -L -i -sS -o/dev/null -D-'
     alias hosts='getent hosts'
