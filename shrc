@@ -978,12 +978,10 @@ if is_interactive; then
     # intended to be used in the preprompt
     dir_info() {
         if is_builtin dirs; then
-            while read num dir; do
+            dirs -v -l | while read num dir; do
                 blue "+$num $(_dir_info "$dir")"
                 echo
-            done <<EOF
-$(dirs -v -l)
-EOF
+            done
         else
             blue "$PWD"
             echo
