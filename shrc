@@ -213,6 +213,7 @@ run() {
     if ${SIMULATE:-false}; then
         echo "Would run $*"
     else
+        logger -p user.info "Running $*"
         "$@"
     fi
 }
