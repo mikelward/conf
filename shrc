@@ -1013,6 +1013,15 @@ if is_interactive; then
         fi
     }
 
+    short_pwd() {
+        local projectname="$(projectname)"
+        if test -n "$projectname"; then
+            printf '%s' "$projectname"
+        else
+            printf '%s' "$(basename "$PWD")"
+        fi
+    }
+
     # print the name of the current branch
     branch() {
         :
@@ -1152,10 +1161,7 @@ if is_interactive; then
     title() {
         short_hostname
         printf ' '
-        (
-            color=false
-            _dir_info "$PWD"
-        )
+        short_pwd
         if test -n "${current_command:-}"; then
             printf ' %s' "$current_command"
         fi
