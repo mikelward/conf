@@ -46,6 +46,7 @@ zsh)
     setopt CSH_JUNKIE_HISTORY
     setopt INTERACTIVE_COMMENTS
     setopt KSH_TYPESET
+    HISTSIZE=500
     # so we can display jobs in the prompt
     unsetopt POSIX_JOBS >/dev/null 2>&1
 
