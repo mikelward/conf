@@ -228,6 +228,25 @@ warn() {
 # GENERAL FUNCTIONS
 # Useful things that could be commands if distributing them wasn't impractical.
 
+# look up a hostname in DNS, output both A and AAAA records
+addr() {
+    dig +noall +answer +search "$1" a "$1" aaaa | get_address_records
+}
+
+ptr() {
+    dig +noall +answer -x "$1" ptr | get_ptr_records
+}
+
+# read BIND-style DNS entries, print the A and AAAA records
+get_address_records() {
+    awk '$3 == "IN" && $4 ~ /^A/ { print $5 }'
+}
+
+# read BIND-style DNS entries, print the PTR records
+get_ptr_records() {
+    awk '$3 == "IN" && $4 == "PTR" { print $5 }'
+}
+
 # list this machine's IP addresses
 ips() {
     ip -o a sh up primary scope global | while read num iface afam addr rest; do
@@ -654,6 +673,7 @@ if is_interactive; then
     alias cg='rg '"$code_includes"
     alias ct='ctags -R'
     alias cx='chmod +x'
+    alias diga='dig +noall +answer +search'
     alias digs='dig +short +search'
     download() { cd "$HOME/Downloads"; wget "$@"; }
     alias eg='g -E'
