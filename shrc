@@ -1183,9 +1183,9 @@ if is_interactive; then
         short_hostname
         printf ' '
         short_pwd
-        if test -n "${current_command:-}"; then
-            printf ' %s' "$current_command"
-        fi
+        #if test -n "${current_command:-}"; then
+        #    printf ' %s' "$current_command"
+        #fi
     }
 
     # set all the prompt strings
