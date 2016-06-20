@@ -686,9 +686,8 @@ if is_interactive; then
     alias diga='dig +noall +answer +search'
     alias digs='dig +short +search'
     download() { cd "$HOME/Downloads"; wget "$@"; }
+    alias e='edit'
     alias eg='g -E'
-    # function rather than an alias so it looks better in the xterm title.
-    e() { "${EDITOR:-vi}" "$@"; }
     et() {
         local file
         local testfile
