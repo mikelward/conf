@@ -1052,6 +1052,17 @@ if is_interactive; then
         fi
     }
 
+    project_or_command_or_pwd() {
+        local projectname="$(projectname)"
+        if test -n "$projectname"; then
+            printf '%s' "$projectname"
+        elif test -n "${current_command:-}"; then
+            printf '%s' "$current_command"
+        else
+            printf '%s' "$(basename "$PWD")"
+        fi
+    }
+
     # print the name of the current branch
     branch() {
         :
@@ -1191,10 +1202,7 @@ if is_interactive; then
     title() {
         short_hostname
         printf ' '
-        short_pwd
-        #if test -n "${current_command:-}"; then
-        #    printf ' %s' "$current_command"
-        #fi
+        project_or_command_or_pwd
     }
 
     # set all the prompt strings
