@@ -1057,7 +1057,7 @@ if is_interactive; then
         if test -n "$projectname"; then
             printf '%s' "$projectname"
         elif test -n "${current_command:-}"; then
-            printf '%s' "$current_command"
+            printf '%s' "${current_command%% *}"
         else
             printf '%s' "$(basename "$PWD")"
         fi
