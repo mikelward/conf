@@ -686,7 +686,7 @@ if is_interactive; then
     alias diga='dig +noall +answer +search'
     alias digs='dig +short +search'
     download() { cd "$HOME/Downloads"; wget "$@"; }
-    alias e='edit'
+    alias e='editroot'
     alias eg='g -E'
     et() {
         local file
