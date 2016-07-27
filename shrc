@@ -561,6 +561,9 @@ add_path "$HOME/scripts" start
 for dir in "$HOME"/scripts.*; do
     add_path "$dir" start
 done
+for dir in /opt/*/bin; do
+    add_path "$dir" end
+done
 add_path /sbin end
 add_path /usr/sbin end
 
