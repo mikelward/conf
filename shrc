@@ -689,7 +689,7 @@ if is_interactive; then
     alias diga='dig +noall +answer +search'
     alias digs='dig +short +search'
     download() { cd "$HOME/Downloads"; wget "$@"; }
-    alias e='editroot'
+    is_command editroot && alias e='editroot' || alias e='${EDITOR:-vim}'
     alias eg='g -E'
     et() {
         local file
