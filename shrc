@@ -732,6 +732,7 @@ if is_interactive; then
     fi
     alias l1='l -1'
     alias la='l -a'
+    alias latest='recent -1'
     alias lc='l -C'
     # lg = line grep
     alias lg='g -F'
