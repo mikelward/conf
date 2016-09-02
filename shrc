@@ -1182,21 +1182,48 @@ if is_interactive; then
 
     # ssh to remote host using current shell's config
     mssh() {
+        # allow passing a single block of options to ssh/scp, e.g. -4
+        local ssh_opts=
+        case "$1" in -*)
+            ssh_opts="$1"
+            shift
+            ;;
+        esac
         case $SHELL in
-        *bash) bssh "$@";;
-        *zsh)  zssh "$@";;
-        *)     ssh "$@";;
+        *bash) bssh $ssh_opts "$@";;
+        *zsh)  zssh $ssh_opts "$@";;
+        *)     ssh  $ssh_opts "$@";;
         esac
     }
 
     # ssh to remote host using this host's bashrc
     bssh() {
-        ssh -t "$@" 'export BASHRC=$(mktemp /tmp/bash.XXXXXXXX); scp '"$HOSTNAME:${BASHRC:-.bashrc}"' "$BASHRC"; exec bash --rcfile "$BASHRC" -i'
+        # allow passing a single block of options to ssh/scp, e.g. -4
+        local ssh_opts=
+        case "$1" in -*)
+            ssh_opts="$1"
+            shift
+            ;;
+        esac
+        ssh $ssh_opts -t "$@" '
+export BASHRC=$(mktemp /tmp/bash.XXXXXXXX);
+scp $ssh_opts '"$HOSTNAME:${BASHRC:-.bashrc}"' "$BASHRC";
+exec bash --rcfile "$BASHRC" -i'
     }
 
     # ssh to remote host using this host's zshrc
     zssh() {
-        ssh -t "$@" 'export ZDOTDIR=$(mktemp -d /tmp/zsh.XXXXXXXX); scp '"$HOSTNAME:${ZDOTDIR:-$HOME}/.zshrc"' "$ZDOTDIR"; exec zsh -i'
+        # allow passing a single block of options to ssh/scp, e.g. -4
+        local ssh_opts=
+        case "$1" in -*)
+            ssh_opts="$1"
+            shift
+            ;;
+        esac
+        ssh $ssh_opts -t "$@" '
+export ZDOTDIR=$(mktemp -d /tmp/zsh.XXXXXXXX);
+scp $ssh_opts '"$HOSTNAME:${ZDOTDIR:-$HOME}/.zshrc"' "$ZDOTDIR";
+exec zsh -i'
     }
 
     # print the current directory with $HOME changed to ~
