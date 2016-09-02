@@ -411,10 +411,22 @@ pgroup() {
 # e.g. pegrep SSH_AUTH_SOCK xfce4
 pegrep() {
     for pid in $(pgrep -f "^$2"); do
-        printf '%s %s\n' "$(ps -o pid= -o args= -p $pid)" "$(grep -z "$1" /proc/$pid/environ)"
+        printf '%s %s\n' "$(ps -o pid= -o args= -p $pid)" "$(envgrep "$1" $pid)"
     done
 }
 alias peg=pegrep
+
+# grep for a pattern in the environment of processes with the given pids
+# envgrep <environment pattern> <pid>...
+envgrep() {
+    local pattern
+    local pid
+    pattern="$1"
+    shift
+    for pid in "$@"; do
+        grep -z "$pattern" /proc/$pid/environ
+    done
+}
 
 # ps with useful default options
 psc()
