@@ -830,7 +830,7 @@ if is_interactive; then
         alias files='repoquery --file'
     elif is_command aptitude; then
         alias update='root aptitude -q -q update'
-        alias search='aptitude search'
+        alias search='aptitude search -F "%c %p %30t %d"'
         alias show='aptitude show'
         alias install='root aptitude install'
         alias installed='dpkg-query --show'
