@@ -1,5 +1,6 @@
 xterm*altIsNotMeta: true
 xterm*altSendsEscape: true
+xterm*faceName: xft:Ubuntu Mono:pixelsize=18
 urxvt*font: xft:Ubuntu Mono:pixelsize=18
 urxvt*scrollBar: false
 urxvt*scrollBar_right: true
