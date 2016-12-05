@@ -1584,6 +1584,29 @@ exec zsh -i'
         # Make Esc toggle between command and insert mode
         bind -m vi-command '"\e": vi-insertion-mode'
     esac
+
+    # set up per-package tab completion
+    case "$shell" in bash|zsh)
+        # define "have", used by some scripts in /etc/bash_complete.d/*
+        have() {
+            unset have
+            if type "$1" >/dev/null 2>&1; then
+                have=yes
+                true
+            else
+                false
+            fi
+        }
+
+        # /etc/bash_completion doesn't work in zsh, but most of the scripts
+        # under /etc/bash_completion.d do.  silence the output to ignore the
+        # ones that don't.
+        for f in /etc/bash_completion.d/*; do
+            source "$f" >/dev/null 2>&1
+        done
+        ;;
+    esac
+
     # set a simple prompt for non-bash non-zsh
     # (will be overridden immediately by bash and zsh)
     basic_prompt
