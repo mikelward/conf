@@ -769,6 +769,7 @@ if is_interactive; then
     alias tf='t -f'
     alias tl='t -f /var/log/syslog'
     alias ts='t -f /var/log/syslog'
+    alias view='vim -R -c ":set mouse="'
     alias v='view'
     alias vl='view /var/log/syslog'
     alias x='_exit'
