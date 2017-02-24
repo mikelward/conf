@@ -56,6 +56,7 @@
     # switch [<branch>] = change to a different branch
     switch = checkout
     tg = tag
+    # TODO: make this branch --track?  or maybe checkout --track?
     track = add --intent-to-add
     # XXX why does this print "needs update"?
     unadd = reset HEAD
@@ -68,6 +69,12 @@
     undo = checkout HEAD
     undoall = reset --hard
     untrack = rm --cached
+
+[branch]
+    # track remote branches automatically
+    autoSetupMerge = true
+    # when pulling, always rebase instead of merging
+    autoSetupRebase = always
 
 [color]
     diff = auto
