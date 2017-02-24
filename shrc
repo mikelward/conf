@@ -1088,6 +1088,11 @@ if is_interactive; then
         :
     }
 
+    # print the name of all branches
+    branches() {
+        :
+    }
+
     blue() {
         if $color; then
             printf '%s%s%s' "$blue" "$*" "$normal"
