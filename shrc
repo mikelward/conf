@@ -1108,6 +1108,16 @@ if is_interactive; then
         fi
     }
 
+    # print what remote commits would get pulled
+    incoming() {
+        :
+    }
+
+    # print what local commits would get pushed
+    outgoing() {
+        :
+    }
+
     # print the name of the current project
     projectname() {
         basename "$(projectroot)"

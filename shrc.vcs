@@ -15,7 +15,7 @@ vcs() {
 
 # create version control functions to do the right thing based on vcs "$PWD"
 # TODO: add commit fork merge push, etc.
-for command in branch branches pull projectroot; do
+for command in branch branches incoming outgoing pull projectroot; do
     # remove any alias created in .shrc
     case "$(type "$command")" in *alias*)
         unalias "$command"
@@ -49,8 +49,22 @@ git_branches() {
     git branch "$@"
 }
 
+# print commits that would be pulled
+git_incoming() {
+    git log --oneline HEAD..origin/HEAD
+}
+
+# print commits that would be pushed
+git_outgoing() {
+    git log --oneline origin/HEAD..HEAD
+}
+
 git_projectroot() {
-  git root
+    git root
+}
+
+git_pull() {
+    git pull
 }
 
 # print the name of the currently active mercurial branch
@@ -63,12 +77,18 @@ hg_branches() {
     hg branches
 }
 
-hg_projectroot() {
-    hg root
+# show changesets that would be fetched
+hg_incoming() {
+    hg incoming "$@"
 }
 
-git_pull() {
-    git pull
+# show changesets that would be pushed
+hg_outgoing() {
+    hg outgoing "$@"
+}
+
+hg_projectroot() {
+    hg root
 }
 
 hg_pull() {
