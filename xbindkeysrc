@@ -8,16 +8,12 @@
 #   Mod3 (CapsLock), Mod4, Mod5 (Scroll).
 #
 
-"code-browser"
-    Mod4 + b
-
-"google-calendar"
+"gnome-calculator"
 	Mod4 + c
 
 "firefox"
 	Mod4 + f
 
-#"chromium-browser"
 "chrome"
 	Mod4 + g
 
@@ -44,8 +40,6 @@
 "opera"
         Mod4 + o
 
-# p = pycharm
-#"env JAVA_HOME=/usr/java/current charm"
 # p = programming
 "subl"
 	Mod4 + p
@@ -58,9 +52,8 @@
 "terminal"
 	Mod4 + t
 
-# z = (an unused key)
-"hangouts"
-	Mod4 + z
+"code"
+	Mod4 + v
 
 # mute
 "vol mute"
