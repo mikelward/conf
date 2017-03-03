@@ -721,6 +721,8 @@ if is_interactive; then
     alias gh='first_arg_last grep ~/.history'
     alias h='head'
     alias headers='curl -L -i -sS -o/dev/null -D-'
+    alias hms='date +"%H:%M:%S"'
+    alias hmsns='date +"%H:%M:%S.%N"'
     alias hosts='getent hosts'
     alias ipy='ipython'
     alias kssh='ssh -o PreferredAuthentications=publickey'
@@ -747,6 +749,8 @@ if is_interactive; then
     alias m='make'
     # shadows magtape command, but who uses that?
     alias mt='make test'
+    alias now='date +"%Y-%m-%dT%H:%M:%S"'
+    alias nowns='date +"%Y-%m-%dT%H:%M:%S.%N"'
     # function rather than an alias so it looks better in the xterm title.
     p() { "${PAGER:-more}" "$@"; }
     alias phup='pkill -HUP'
@@ -768,6 +772,7 @@ if is_interactive; then
     alias t='tail'
     alias tf='t -f'
     alias tl='t -f /var/log/syslog'
+    alias today='date +"%Y-%m-%d"'
     alias ts='t -f /var/log/syslog'
     alias view='vim -R -c ":set mouse="'
     alias v='view'
