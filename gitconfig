@@ -31,6 +31,7 @@
     # For symmetry with the shell alias.
     diff = diff
     diffs = diff
+    ff = pull --ff-only
     gr = log --graph --pretty=oneline --decorate --abbrev-commit
     graph = log --graph --pretty=oneline --decorate --abbrev-commit
     hi = log --pretty=oneline --abbrev-commit

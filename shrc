@@ -803,7 +803,7 @@ if is_interactive; then
     for command in ad add addall added addremove adds am amend an ap apply \
         blame br checkout changed changes cherry-pick ci cl clone co \
         commit commitall describe da di diffs \
-        fetch format-patch gc gr graph hi hist history \
+        fetch ff format-patch gc gr graph hi hist history \
         lo log logs ls-files ls-tree \
         merge merge-base pick pu pull push \
         rebase remote remove reset restore rewind rollback \
