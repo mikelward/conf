@@ -15,7 +15,7 @@ vcs() {
 
 # create version control functions to do the right thing based on vcs "$PWD"
 # TODO: add commit fork merge push, etc.
-for command in branch branches incoming outgoing pull projectroot; do
+for command in branch branches incoming outgoing pull projectroot review; do
     # remove any alias created in .shrc
     case "$(type "$command")" in *alias*)
         unalias "$command"
@@ -67,6 +67,15 @@ git_pull() {
     git pull
 }
 
+# send the current change for Gerrit review
+git_review() {
+    if test -z "${1:-}"; then
+        echo "git review: reviewer username required"
+        return 1
+    fi
+    git push origin HEAD:refs/for/master%r=$1
+}
+
 # print the name of the currently active mercurial branch
 hg_branch() {
     hg branch 2>/dev/null
@@ -93,4 +102,9 @@ hg_projectroot() {
 
 hg_pull() {
     hg fetch
+}
+
+hg_review() {
+    echo "hg review not supported" >&2
+    false
 }
