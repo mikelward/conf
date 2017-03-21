@@ -23,9 +23,9 @@ for command in branch branches incoming outgoing pull projectroot review; do
     esac
     # create the function
     eval "$command"'() {
-    local vcs=$(vcs "$PWD")
+    local vcs="$(vcs "$PWD")"
     if test -n "$vcs"; then
-        "${vcs}_'"$command"'"
+        "${vcs}_'"$command"'" "$@"
     fi
     }'
 done
