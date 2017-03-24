@@ -73,7 +73,7 @@
 
 [branch]
     # track remote branches automatically
-    autoSetupMerge = true
+    autoSetupMerge = always
     # when pulling, always rebase instead of merging
     autoSetupRebase = always
 
