@@ -72,7 +72,7 @@
     untrack = rm --cached
 
 [branch]
-    # track remote branches automatically
+    # track branches automatically
     autoSetupMerge = always
     # when pulling, always rebase instead of merging
     autoSetupRebase = always
