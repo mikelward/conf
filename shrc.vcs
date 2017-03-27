@@ -69,11 +69,7 @@ git_pull() {
 
 # send the current change for Gerrit review
 git_review() {
-    if test -z "${1:-}"; then
-        echo "git review: reviewer username required"
-        return 1
-    fi
-    git push origin HEAD:refs/for/master%r=$1
+    git push origin HEAD:refs/for/master/$(git_branch)${1+%r=$1}
 }
 
 # print the name of the currently active mercurial branch
