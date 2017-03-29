@@ -4,6 +4,7 @@
 
 [core]
     excludesfile = /home/mikel/.gitexclude
+    pager = less -FRX
 
 # git command aliases
 # where possible, use a name that's not a Unix command
