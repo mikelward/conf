@@ -17,7 +17,7 @@ vcs() {
 # TODO: add commit fork merge push, etc.
 for command in branch branches incoming outgoing pull projectroot review; do
     # remove any alias created in .shrc
-    case "$(type "$command")" in *alias*)
+    case "$(type "$command" 2>/dev/null)" in *alias*)
         unalias "$command"
         ;;
     esac
