@@ -323,6 +323,22 @@ dev() {
     done
 }
 
+# run a command on each line of stdin
+each() {
+  local _line
+  while IFS=$'\n' read -r _line; do
+    "$@" "$_line"
+  done
+}
+
+# run a command on each null-delimited parameter from stdin
+each0() {
+  local _arg
+  while IFS= read -d '' -r _arg; do
+    "$@" "$_arg"
+  done
+}
+
 # print the name of a source file's corresponding test file
 find_test_file() {
     local file
