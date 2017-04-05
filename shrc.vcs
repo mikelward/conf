@@ -35,7 +35,7 @@ project() {
     basename "$(projectroot)"
 }
 
-for f in "$HOME/.shrc.vcs.*"; do
+for f in "$HOME"/.shrc.vcs.*; do
     if ! test -f "$f"; then
         echo "$f is not readable"
         continue
