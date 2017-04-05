@@ -824,7 +824,7 @@ if is_interactive; then
         lo log logs ls-files ls-tree \
         merge merge-base pick pu pull push \
         rebase remote remove reset restore rewind rollback \
-        show-branch st staged stash state status switch \
+        show-branch st staged stash state switch \
         tag toplevel track unadd unchange unchangeall undo undoall untrack
     do
         alias $command="git $command"

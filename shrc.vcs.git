@@ -31,6 +31,10 @@ git_outgoing() {
     git log --oneline origin/HEAD..HEAD
 }
 
+git_pending() {
+    git status "$@"
+}
+
 git_presubmit() {
     echo "git presubmit not supported" >&2
     false
@@ -50,6 +54,9 @@ git_review() {
 }
 
 git_rootdir() {
-   git rootdir
+    git rootdir
 }
 
+git_status() {
+    git status "$@"
+}

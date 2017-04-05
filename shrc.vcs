@@ -16,7 +16,7 @@ vcs() {
 # create version control functions to do the right thing based on vcs "$PWD"
 # TODO: add commit fork merge push, etc.
 for command in branch branches changes diffs incoming outgoing \
-    presubmit projectroot pull review rootdir; do
+    pending presubmit projectroot pull review rootdir status; do
     # remove any alias created in .shrc
     case "$(type "$command" 2>/dev/null)" in *alias*)
         unalias "$command"

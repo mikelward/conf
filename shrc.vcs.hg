@@ -26,6 +26,10 @@ hg_outgoing() {
     hg outgoing "$@"
 }
 
+hg_pending() {
+   hg status "$@"
+}
+
 hg_presubmit() {
     echo "hg presubmit not supported" >&2
     false
@@ -46,4 +50,8 @@ hg_review() {
 
 hg_rootdir() {
     hg root
+}
+
+hg_status() {
+    hg status "$@"
 }
