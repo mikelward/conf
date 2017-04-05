@@ -1,0 +1,42 @@
+# print the name of the currently active git branch
+git_branch() {
+    git branch 2>/dev/null | while read star branch; do
+        if test "$star" = "*"; then
+            echo "$branch"
+            break
+        fi
+    done
+}
+
+# print the name of all (local by default) git branches
+git_branches() {
+    git branch "$@"
+}
+
+# print commits that would be pulled
+git_incoming() {
+    git log --oneline HEAD..origin/HEAD
+}
+
+# print commits that would be pushed
+git_outgoing() {
+    git log --oneline origin/HEAD..HEAD
+}
+
+git_projectroot() {
+    git root
+}
+
+git_pull() {
+    git pull
+}
+
+# send the current change for Gerrit review
+git_review() {
+    git push origin HEAD:refs/for/master/$(git_branch)${1+%r=$1}
+}
+
+git_rootdir() {
+   git rootdir
+}
+

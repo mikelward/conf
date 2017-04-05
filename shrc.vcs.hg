@@ -1,0 +1,36 @@
+# print the name of the currently active mercurial branch
+hg_branch() {
+    hg branch 2>/dev/null
+}
+
+# print the name of all mercurial branches
+hg_branches() {
+    hg branches
+}
+
+# show changesets that would be fetched
+hg_incoming() {
+    hg incoming "$@"
+}
+
+# show changesets that would be pushed
+hg_outgoing() {
+    hg outgoing "$@"
+}
+
+hg_projectroot() {
+    hg root
+}
+
+hg_pull() {
+    hg fetch
+}
+
+hg_review() {
+    echo "hg review not supported" >&2
+    false
+}
+
+hg_rootdir() {
+    hg root
+}

@@ -1173,7 +1173,7 @@ if is_interactive; then
 
     # load all the version control functions (git_*, hg_*, etc.)
     if test -f "$HOME/.shrc.vcs"; then
-        . "$HOME/.shrc.vcs"
+        source "$HOME/.shrc.vcs"
     fi
 
     # print a message describing the last error, or empty if no error
