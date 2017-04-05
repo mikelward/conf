@@ -8,6 +8,14 @@ hg_branches() {
     hg branches
 }
 
+hg_changes() {
+   hg diff "$@"
+}
+
+hg_diffs() {
+    hg diff "$@"
+}
+
 # show changesets that would be fetched
 hg_incoming() {
     hg incoming "$@"
@@ -16,6 +24,11 @@ hg_incoming() {
 # show changesets that would be pushed
 hg_outgoing() {
     hg outgoing "$@"
+}
+
+hg_presubmit() {
+    echo "hg presubmit not supported" >&2
+    false
 }
 
 hg_projectroot() {

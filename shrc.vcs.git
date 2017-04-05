@@ -13,6 +13,14 @@ git_branches() {
     git branch "$@"
 }
 
+git_changes() {
+    git diff --patience "$@"
+}
+
+git_diffs() {
+    git diff --patience "$@"
+}
+
 # print commits that would be pulled
 git_incoming() {
     git log --oneline HEAD..origin/HEAD
@@ -21,6 +29,11 @@ git_incoming() {
 # print commits that would be pushed
 git_outgoing() {
     git log --oneline origin/HEAD..HEAD
+}
+
+git_presubmit() {
+    echo "git presubmit not supported" >&2
+    false
 }
 
 git_projectroot() {
