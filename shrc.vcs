@@ -15,7 +15,8 @@ vcs() {
 
 # create version control functions to do the right thing based on vcs "$PWD"
 # TODO: add commit fork merge push, etc.
-for command in branch branches incoming outgoing pull projectroot review; do
+for command in branch branches incoming outgoing pull projectroot review \
+    rootdir; do
     # remove any alias created in .shrc
     case "$(type "$command" 2>/dev/null)" in *alias*)
         unalias "$command"
@@ -72,6 +73,10 @@ git_review() {
     git push origin HEAD:refs/for/master/$(git_branch)${1+%r=$1}
 }
 
+git_rootdir() {
+   git rootdir
+}
+
 # print the name of the currently active mercurial branch
 hg_branch() {
     hg branch 2>/dev/null
@@ -103,4 +108,8 @@ hg_pull() {
 hg_review() {
     echo "hg review not supported" >&2
     false
+}
+
+hg_rootdir() {
+    hg root
 }

@@ -735,6 +735,7 @@ if is_interactive; then
     alias g='grep -I'
     alias gdb='gdb -q '
     alias gh='first_arg_last grep ~/.history'
+    alias gitdir='git rev-parse --git-dir'
     alias h='head'
     alias headers='curl -L -i -sS -o/dev/null -D-'
     alias hms='date +"%H:%M:%S"'
@@ -818,13 +819,13 @@ if is_interactive; then
     # and make it an alias for that instead?
     for command in ad add addall added addremove adds am amend an ap apply \
         blame br checkout changed changes cherry-pick ci cl clone co \
-        commit commitall describe da di diffs \
+        commit commitall describe da di diffs dir \
         fetch ff format-patch gc gr graph hi hist history \
         lo log logs ls-files ls-tree \
         merge merge-base pick pu pull push \
         rebase remote remove reset restore rewind rollback \
         show-branch st staged stash state status switch \
-        tag track unadd unchange unchangeall undo undoall untrack
+        tag toplevel track unadd unchange unchangeall undo undoall untrack
     do
         alias $command="git $command"
     done
