@@ -1,16 +1,19 @@
 # Version control additions to .shrc.
 
+# Functions to run to determine the current version control system, registered
+# by each VCS, e.g. vcs_detect[git]=git_detect in ~/.shrc.vcs.git.
+# vcs_detect functions should echo the name of the detected vcs (e.g. "git")
+# or silently return false.
+declare -A vcs_detect
+
 # print the name of the version control system in use in $PWD
 # TODO: cache the result
 vcs() {
-    if quiet git branch; then
-        echo git
-        return
-    fi
-    if quiet hg branch; then
-        echo hg
-        return
-    fi
+    local detect
+    for detect in "${vcs_detect[@]}"; do
+        "$detect" && return
+    done
+    false
 }
 
 # create version control functions to do the right thing based on vcs "$PWD"

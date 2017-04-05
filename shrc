@@ -356,6 +356,22 @@ find_test_file() {
     [ -e "$testfile" ] && printf '%s' "$testfile"
 }
 
+# search for a file in parent directories, print the first one found
+find_up() {
+    (
+        while true; do
+            if test -f "./$1"; then
+                echo "$PWD/$1"
+                return 0
+            fi
+            if test "$PWD" = "/"; then
+                return 1
+            fi
+            cd .. || return 1
+        done
+    )
+}
+
 # replace a file with a sorted version of itself
 isort() {
     sort "$1" >"$1".bak

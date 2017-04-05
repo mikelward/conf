@@ -1,3 +1,9 @@
+# register hg VCS
+hg_detect() {
+    quiet hg branch && echo hg
+}
+vcs_detect[hg]=hg_detect
+
 # print the name of the currently active mercurial branch
 hg_branch() {
     hg branch 2>/dev/null

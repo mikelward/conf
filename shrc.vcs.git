@@ -1,3 +1,10 @@
+# register git VCS
+git_detect() {
+    quiet git branch --color=never && echo git
+}
+
+vcs_detect[git]=git_detect
+
 # print the name of the currently active git branch
 git_branch() {
     git branch 2>/dev/null | while read star branch; do
