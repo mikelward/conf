@@ -730,6 +730,7 @@ if is_interactive; then
     alias cg='rg '"$code_includes"
     alias ct='ctags -R'
     alias cx='chmod +x'
+    alias d='maketasks; code -n .'
     alias diga='dig +noall +answer +search'
     alias digs='dig +short +search'
     download() { cd "$HOME/Downloads"; wget "$@"; }
