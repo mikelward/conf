@@ -105,5 +105,6 @@ $endif
 "\e": vi-insertion-mode
 
 # use emacs mode by default
+set keymap emacs
 set editing-mode emacs
 
