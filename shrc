@@ -779,6 +779,14 @@ if is_interactive; then
     else
         alias lt='ll -t'
     fi
+    lssock() {
+        lsof -a -n -P -i "$@"
+    }
+    alias lss='lssock'
+    lssockpgrep() {
+        lsof -a -n -P -i -p "$(pgrep -d -f "$@")"
+    }
+    alias lssg='lssockpgrep'
     alias j='jobs'
     alias m='make'
     # shadows magtape command, but who uses that?
@@ -787,6 +795,8 @@ if is_interactive; then
     alias nowns='date +"%Y-%m-%dT%H:%M:%S.%N"'
     # function rather than an alias so it looks better in the xterm title.
     p() { "${PAGER:-more}" "$@"; }
+    alias pgrep,='pgrep -d , -f'
+    alias pg,='pgrep'
     alias phup='pkill -HUP'
     alias popd='popd >/dev/null'
     alias psg='psgrep'
