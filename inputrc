@@ -16,11 +16,11 @@ set visible-stats on
 set keymap emacs
 $if Bash
 "\eb": vi-bWord
-"\eB": vi-bWord
+"\eB": vi-bword
 "\ed": shell-kill-word
 "\eD": shell-kill-word
 "\ef": vi-fWord
-"\eF": vi-fWord
+"\eF": vi-fword
 $else
 "\eb": backward-word
 "\eB": backward-word
@@ -53,11 +53,11 @@ set keymap vi-insert
 "\C-y": yank
 $if Bash
 "\eb": vi-bWord
-"\eB": vi-bWord
+"\eB": vi-bword
 "\ed": shell-kill-word
 "\eD": shell-kill-word
 "\ef": vi-fWord
-"\eF": vi-fWord
+"\eF": vi-fword
 $else
 "\eb": backward-word
 "\eB": backward-word
@@ -83,11 +83,11 @@ set keymap vi-command
 "\C-y": yank
 $if Bash
 "\eb": vi-bWord
-"\eB": vi-bWord
+"\eB": vi-bword
 "\ed": shell-kill-word
 "\eD": shell-kill-word
 "\ef": vi-fWord
-"\eF": vi-fWord
+"\eF": vi-fword
 $else
 "\eb": backward-word
 "\eB": backward-word

@@ -1644,11 +1644,13 @@ exec zsh -i'
         # make motion commands treat all non-space characters as word chars
         _bind_emacs '"\eb": vi-bWord'
         _bind_emacs '"\ef": vi-fWord'
-        _bind_emacs '"\eB": vi-bword'
-        _bind_emacs '"\eF": vi-fword'
         _bind_emacs '"\ed": shell-kill-word'
         _bind_emacs '"\eD": shell-kill-word'
         _bind_all '"\e\C-?": unix-word-rubout'
+
+        # add motion commands that treat alpha<->non-alpha as the word boundary
+        _bind_emacs '"\eB": vi-bword'
+        _bind_emacs '"\eF": vi-fword'
 
         # prevent Page Up and Page Down from inserting a bogus ~
         # TODO: use terminfo
@@ -1669,9 +1671,9 @@ exec zsh -i'
         _bind_vi '"\C-w": backward-kill-word'
         _bind_vi '"\C-y": yank'
         _bind_vi '"\eb": vi-bWord'
-        _bind_vi '"\eB": vi-bWord'
+        _bind_vi '"\eB": vi-bword'
         _bind_vi '"\ef": vi-fWord'
-        _bind_vi '"\eF": vi-fWord'
+        _bind_vi '"\eF": vi-fword'
         _bind_vi '"\ey": yank-pop'
 
         # Make Esc toggle between command and insert mode
