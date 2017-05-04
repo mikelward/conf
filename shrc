@@ -818,7 +818,7 @@ if is_interactive; then
     alias tl='t -f /var/log/syslog'
     alias today='date +"%Y-%m-%d"'
     alias ts='t -f /var/log/syslog'
-    alias view='vim -R -c ":set mouse="'
+    view() { vim -R -c ":set mouse=" "$@"; }
     alias v='view'
     alias vl='view /var/log/syslog'
     alias x='_exit'
