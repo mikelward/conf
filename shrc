@@ -730,7 +730,7 @@ if is_interactive; then
     alias cg='rg '"$code_includes"
     alias ct='ctags -R'
     alias cx='chmod +x'
-    alias d='maketasks; code -n .'
+    alias d='maketasks; makeensime; code -n .'
     alias diga='dig +noall +answer +search'
     alias digs='dig +short +search'
     download() { cd "$HOME/Downloads"; wget "$@"; }
@@ -749,9 +749,9 @@ if is_interactive; then
     alias f='command fg'
     # fg = fgrep, NOTE: not fg = foreground, use 'f' or '%'
     alias fg='g -F'
-    alias g='grep -I'
+    alias g='grep -In'
     alias gdb='gdb -q '
-    alias gh='first_arg_last grep ~/.history'
+    alias gh='first_arg_last grep -a ~/.history'
     alias gitdir='git rev-parse --git-dir'
     alias h='head'
     alias headers='curl -L -i -sS -o/dev/null -D-'
@@ -779,6 +779,14 @@ if is_interactive; then
     else
         alias lt='ll -t'
     fi
+    lssock() {
+        lsof -a -n -P -i "$@"
+    }
+    alias lss='lssock'
+    lssockpgrep() {
+        lsof -a -n -P -i -p "$(pgrep -d -f "$@")"
+    }
+    alias lssg='lssockpgrep'
     alias j='jobs'
     alias m='make'
     # shadows magtape command, but who uses that?
@@ -787,6 +795,8 @@ if is_interactive; then
     alias nowns='date +"%Y-%m-%dT%H:%M:%S.%N"'
     # function rather than an alias so it looks better in the xterm title.
     p() { "${PAGER:-more}" "$@"; }
+    alias pgrep,='pgrep -d , -f'
+    alias pg,='pgrep'
     alias phup='pkill -HUP'
     alias popd='popd >/dev/null'
     alias psg='psgrep'
@@ -808,7 +818,7 @@ if is_interactive; then
     alias tl='t -f /var/log/syslog'
     alias today='date +"%Y-%m-%d"'
     alias ts='t -f /var/log/syslog'
-    alias view='vim -R -c ":set mouse="'
+    view() { vim -R -c ":set mouse=" "$@"; }
     alias v='view'
     alias vl='view /var/log/syslog'
     alias x='_exit'
@@ -1516,9 +1526,11 @@ exec zsh -i'
         _terminfo_bind knp zle-noop
         _terminfo_bind kpp zle-noop
 
-        # standardize Ctrl+U behavior
-        bindkey -M viins '^u' kill-whole-line
-        bindkey -M vicmd '^u' kill-whole-line
+        # add bindings for both blank and non-alpha word motion
+        bindkey -M emacs '\eb' vi-backward-blank-word
+        bindkey -M emacs '\eB' vi-backward-word
+        bindkey -M emacs '\ef' vi-forward-blank-word
+        bindkey -M emacs '\eF' vi-forward-word
 
         # Make Esc toggle between command and insert mode
         bindkey -M vicmd '\e' vi-insert
@@ -1534,12 +1546,13 @@ exec zsh -i'
         _bind_vi '^p' up-line-or-history
         _bind_vi '^r' history-incremental-search-backward
         _bind_vi '^s' history-incremental-search-forward
+        _bind_vi '^u' kill-whole-line
         _bind_vi '^w' backward-kill-word
         _bind_vi '^y' yank
-        _bind_vi '\eb' backward-word
-        _bind_vi '\eB' vi-backward-blank-word
-        _bind_vi '\ef' forward-word
-        _bind_vi '\eF' vi-forward-blank-word
+        _bind_vi '\eb' vi-backward-blank-word
+        _bind_vi '\eB' vi-backward-word
+        _bind_vi '\ef' vi-forward-blank-word
+        _bind_vi '\eF' vi-forward-word
         _bind_vi '\ey' yank-pop
 
         # try to differentiate between Esc vi command and Alt+something
@@ -1631,11 +1644,13 @@ exec zsh -i'
         # make motion commands treat all non-space characters as word chars
         _bind_emacs '"\eb": vi-bWord'
         _bind_emacs '"\ef": vi-fWord'
-        _bind_emacs '"\eB": vi-bWord'
-        _bind_emacs '"\eF": vi-fWord'
         _bind_emacs '"\ed": shell-kill-word'
         _bind_emacs '"\eD": shell-kill-word'
         _bind_all '"\e\C-?": unix-word-rubout'
+
+        # add motion commands that treat alpha<->non-alpha as the word boundary
+        _bind_emacs '"\eB": vi-bword'
+        _bind_emacs '"\eF": vi-fword'
 
         # prevent Page Up and Page Down from inserting a bogus ~
         # TODO: use terminfo
@@ -1656,9 +1671,9 @@ exec zsh -i'
         _bind_vi '"\C-w": backward-kill-word'
         _bind_vi '"\C-y": yank'
         _bind_vi '"\eb": vi-bWord'
-        _bind_vi '"\eB": vi-bWord'
+        _bind_vi '"\eB": vi-bword'
         _bind_vi '"\ef": vi-fWord'
-        _bind_vi '"\eF": vi-fWord'
+        _bind_vi '"\eF": vi-fword'
         _bind_vi '"\ey": yank-pop'
 
         # Make Esc toggle between command and insert mode
