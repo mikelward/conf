@@ -106,6 +106,9 @@
 [svn]
     authorsfile = /home/mikel/.gitauthors
 
+[pull]
+	rebase = true
+
 [push]
     default = upstream
 
