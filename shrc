@@ -574,6 +574,11 @@ utc2() {
     date -d 'TZ="UTC" '"$1"
 }
 
+# hook to run the given command under a custom ssh-agent
+with_agent() {
+    "$@"
+}
+
 # print the definition of the given command, alias, or function
 what() {
     if is_zsh; then
@@ -821,6 +826,8 @@ if is_interactive; then
     view() { vim -R -c ":set mouse=" "$@"; }
     alias v='view'
     alias vl='view /var/log/syslog'
+    alias wcp='with_agent scp'
+    alias wsh='with_agent ssh'
     alias x='_exit'
     xa() { while command fg; do :; done; _exit; }
     alias xr='DISPLAY=:0.0 xrandr'
