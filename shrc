@@ -59,6 +59,9 @@ zsh)
 
     # zsh-style autoload, required for e.g. bashcompinit
     unsetopt KSH_AUTOLOAD
+
+    # allow numeric glob (and incidentally, grouping of globs inside parens)
+    unsetopt SH_GLOB
     ;;
 bash)
     # set_prompt sets PS1 to a string likely including '$', don't expand it
