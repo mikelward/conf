@@ -1028,6 +1028,11 @@ if is_interactive; then
         on_my_workstation || on_my_laptop
     }
 
+    # return true if this is my machine and I'm logged in locally
+    on_my_machine_local() {
+        on_my_machine && test -z "${SSH_CONNECTION:-}"
+    }
+
     # return true if this machine is my workstation
     _on_my_workstation() {
         if test -f "$HOME"/.workstation; then
@@ -1338,7 +1343,7 @@ exec zsh -i'
 
     # print the string that should be used as the xterm title
     title() {
-        short_hostname
+        on_my_machine_local || short_hostname
         printf ' '
         project_or_command_or_pwd
     }
