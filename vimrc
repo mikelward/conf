@@ -175,7 +175,7 @@ if has("autocmd")
         let b:lastline = line('$')
         call setpos('.', [0, b:lastline, 0, 0])
     endfun
-    au BufNewFile * call ReadTemplate() | call AppendModeline()
+    au BufNewFile * call ReadTemplate()
     fun! ReadTemplate()
         let b:filename = bufname('%')
         let b:basename = substitute(b:filename, '\(.*\)\.\(.*\)', '\1', '')
