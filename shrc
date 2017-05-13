@@ -1028,9 +1028,17 @@ if is_interactive; then
         on_my_workstation || on_my_laptop
     }
 
-    # return true if this is my machine and I'm logged in locally
-    on_my_machine_local() {
-        on_my_machine && test -z "${SSH_CONNECTION:-}"
+    # return true if it's already obvious which host I'm on
+    show_hostname_in_title() {
+        ! on_my_machine || { connected_via_ssh && ! inside_tmux }
+    }
+
+    connected_via_ssh() {
+        test -z "${SSH_CONNECTION:-}"
+    }
+
+    inside_tmux() {
+        test -n "$TMUX"
     }
 
     # return true if this machine is my workstation
@@ -1343,8 +1351,10 @@ exec zsh -i'
 
     # print the string that should be used as the xterm title
     title() {
-        on_my_machine_local || short_hostname
-        printf ' '
+        if show_hostname_in_title; then
+            short_hostname
+            printf
+        fi
         project_or_command_or_pwd
     }
 
