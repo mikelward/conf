@@ -814,6 +814,7 @@ if is_interactive; then
     alias pd='pushd'
     alias po='popd'
     alias pssh='ssh -o PreferredAuthentications=keyboard-interactive,password'
+    alias pr='projectroot'
     alias py='python'
     alias r='fc -e - --'
     alias rg='g -IR '"$dir_excludes"
