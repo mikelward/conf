@@ -1069,7 +1069,7 @@ if is_interactive; then
 
     # return true if this machine is a production machine
     on_production_host() {
-        ! on_my_workstation && ! on_my_laptop && ! on_test_host
+        ! on_my_machine && ! on_test_host && ! on_dev_host
     }
 
     # return true if this machine is a test (i.e. non production) machine
@@ -1077,6 +1077,13 @@ if is_interactive; then
         case "$HOSTNAME" in
             *test*) true;;
             *)      false;;
+        esac
+    }
+
+    on_dev_host() {
+        case "$HOSTNAME" in
+            *dev*) true;;
+            *)     false;;
         esac
     }
 
