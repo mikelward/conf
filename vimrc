@@ -4,6 +4,10 @@ if has("multi_byte")
     set encoding=utf-8	" have to do this to make the Unicode listchars work
 endif
 
+if has("gui_running")
+    source $VIMRUNTIME/mswin.vim	" make Ctrl+C/Ctrl+V copy/paste in gvim
+endif
+
 " COMMON OPTIONS
 " read common startup commands for all Vi implementations
 if filereadable(expand("~/.exrc"))
