@@ -36,6 +36,11 @@ hg_pending() {
    hg status "$@"
 }
 
+hg_prereview() {
+    echo "hg prereview not supported" >&2
+    false
+}
+
 hg_presubmit() {
     echo "hg presubmit not supported" >&2
     false
