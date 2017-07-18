@@ -761,6 +761,7 @@ if is_interactive; then
     alias gdb='gdb -q '
     alias gh='GREP_OPTIONS=-a first_arg_last grep ~/.history'
     alias gitdir='git rev-parse --git-dir'
+    alias gl='cd /var/log'
     alias h='head'
     alias headers='curl -L -i -sS -o/dev/null -D-'
     alias hms='date +"%H:%M:%S"'
