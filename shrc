@@ -837,6 +837,7 @@ if is_interactive; then
     alias wsh='with_agent ssh'
     alias x='_exit'
     xa() { while command fg; do :; done; _exit; }
+    alias xevkey='xev -event keyboard'
     alias xr='DISPLAY=:0.0 xrandr'
     alias I='make install'
     alias M='make'
