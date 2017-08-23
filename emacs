@@ -113,12 +113,12 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(font-lock-comment-face ((t (:foreground "blue"))))
+ '(font-lock-comment-face ((t (:foreground "#3647D9"))))
  '(font-lock-constant-face ((t nil)))
  '(font-lock-doc-face ((t (:inherit font-lock-comment-face))))
- '(font-lock-function-name-face ((t nil)))
+ '(font-lock-function-name-face ((t (:foreground "#ED8F23"))))
  '(font-lock-keyword-face ((t nil)))
- '(font-lock-string-face ((t (:foreground "green4"))))
+ '(font-lock-string-face ((t (:foreground "#1F8C35"))))
  '(font-lock-type-face ((t nil)))
  '(font-lock-variable-name-face ((t nil))))
 (custom-set-variables
