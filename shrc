@@ -759,7 +759,8 @@ if is_interactive; then
     alias fg='g -F'
     alias g='grep -In'
     alias gdb='gdb -q '
-    alias gh='GREP_OPTIONS=-a first_arg_last grep ~/.history'
+    # Note that grep options must go after ~/.history.
+    alias gh='first_arg_last grep ~/.history -a'
     alias gitdir='git rev-parse --git-dir'
     alias gl='cd /var/log'
     alias h='head'
