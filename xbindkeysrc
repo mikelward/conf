@@ -62,9 +62,15 @@
 "vol mute"
 	Mod4 + Delete
 
+"vol mute"
+    XF86AudioMute
+
 # play/pause
 "media playpause"
 	Mod4 + KP_Insert
+
+"media playpause"
+    XF86AudioPlay
 
 "media playpause"
 	Mod4 + Insert
@@ -73,9 +79,15 @@
 "vol down"
 	Mod4 + Down
 
+"vol down"
+    XF86AudioLowerVolume
+
 # volume up
 "vol up"
 	Mod4 + Up
+
+"vol up"
+    XF86AudioRaiseVolume
 
 # next song
 "media next"
