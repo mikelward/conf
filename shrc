@@ -810,6 +810,7 @@ if is_interactive; then
     alias r='fc -e - --'
     alias rg='g -IR '"$dir_excludes"
     alias s='ssh'
+    alias sbtnew='sbt new sbt/scala-seed.g8'
     alias spell='aspell -a'
     alias sr='ssh -l root'
     alias symlink='ln -s'
@@ -1459,8 +1460,10 @@ exec zsh -i'
         setopt PROMPT_PERCENT
         setopt PUSHD_SILENT
 
+        # complete both commands and files for the first word, to support autocd
+        compctl -C -cf
         # fall back to case-insensitive completion if there's no exact match
-        zstyle ':completion:*' matcher-list '' 'm:{a-zA-Z}={A-Za-z}'
+        compctl -M '' 'm:{a-zA-Z}={A-Za-z}'
 
         # user input appears in bold
         declare -a zle_highlight
