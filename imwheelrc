@@ -1,0 +1,10 @@
+"^terminator"
+None,           Up,     Shift_L|Page_Up
+None,           Down,   Shift_L|Page_Down
+Control_L,      Up,     Up
+Control_L,      Down,   Down
+
+".*"
+None,           Up,     Page_Up
+None,           Down,   Page_Down
+

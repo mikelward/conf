@@ -1,0 +1,36 @@
+snippet go
+	go_${1:type}(
+	    name = "${2:name}",
+	    srcs = ["$2.go"],
+	    deps = [
+	        ":$2",
+	    ],
+	)
+	
+	go_test(
+	    name = "$2",
+	    srcs = ["$2_test.go"],
+	    deps = [
+	        ":$2",
+	    ],
+	)
+
+snippet py
+	py_${1:type}(
+	    name = "${2:name}",
+	    srcs = ["$2.py"],
+	    deps = [
+	        "${3:lib}",
+	        "//pyglib",
+	    ],
+	)
+	
+	py_test(
+	    name = "$2_test",
+	    srcs = ["$2.py"],
+	    deps = [
+	        ":$2",
+	        "//pyglib",
+	    ],
+	)
+

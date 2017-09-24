@@ -59,6 +59,9 @@ zsh)
 
     # zsh-style autoload, required for e.g. bashcompinit
     unsetopt KSH_AUTOLOAD
+
+    # allow numeric glob (and incidentally, grouping of globs inside parens)
+    unsetopt SH_GLOB
     ;;
 bash)
     # set_prompt sets PS1 to a string likely including '$', don't expand it
@@ -574,6 +577,11 @@ utc2() {
     date -d 'TZ="UTC" '"$1"
 }
 
+# hook to run the given command under a custom ssh-agent
+with_agent() {
+    "$@"
+}
+
 # print the definition of the given command, alias, or function
 what() {
     if is_zsh; then
@@ -751,8 +759,10 @@ if is_interactive; then
     alias fg='g -F'
     alias g='grep -In'
     alias gdb='gdb -q '
-    alias gh='first_arg_last grep -a ~/.history'
+    # Note that grep options must go after ~/.history.
+    alias gh='first_arg_last grep ~/.history -a'
     alias gitdir='git rev-parse --git-dir'
+    alias gl='cd /var/log'
     alias h='head'
     alias headers='curl -L -i -sS -o/dev/null -D-'
     alias hms='date +"%H:%M:%S"'
@@ -806,7 +816,10 @@ if is_interactive; then
     alias pd='pushd'
     alias po='popd'
     alias pssh='ssh -o PreferredAuthentications=keyboard-interactive,password'
+    alias pr='projectroot'
     alias py='python'
+    alias py2='python2'
+    alias py3='python3'
     alias r='fc -e - --'
     alias rg='g -IR '"$dir_excludes"
     alias s='ssh'
@@ -822,8 +835,11 @@ if is_interactive; then
     view() { vim -R -c ":set mouse=" "$@"; }
     alias v='view'
     alias vl='view /var/log/syslog'
+    alias wcp='with_agent scp'
+    alias wsh='with_agent ssh'
     alias x='_exit'
     xa() { while command fg; do :; done; _exit; }
+    alias xevkey='xev -event keyboard'
     alias xr='DISPLAY=:0.0 xrandr'
     alias I='make install'
     alias M='make'
@@ -1019,6 +1035,19 @@ if is_interactive; then
         on_my_workstation || on_my_laptop
     }
 
+    # return true if it's already obvious which host I'm on
+    show_hostname_in_title() {
+        ! on_my_machine || { connected_via_ssh && ! inside_tmux; }
+    }
+
+    connected_via_ssh() {
+        test -n "${SSH_CONNECTION:-}"
+    }
+
+    inside_tmux() {
+        test -n "$TMUX"
+    }
+
     # return true if this machine is my workstation
     _on_my_workstation() {
         if test -f "$HOME"/.workstation; then
@@ -1046,7 +1075,7 @@ if is_interactive; then
 
     # return true if this machine is a production machine
     on_production_host() {
-        ! on_my_workstation && ! on_my_laptop && ! on_test_host
+        ! on_my_machine && ! on_test_host && ! on_dev_host
     }
 
     # return true if this machine is a test (i.e. non production) machine
@@ -1054,6 +1083,13 @@ if is_interactive; then
         case "$HOSTNAME" in
             *test*) true;;
             *)      false;;
+        esac
+    }
+
+    on_dev_host() {
+        case "$HOSTNAME" in
+            *dev*) true;;
+            *)     false;;
         esac
     }
 
@@ -1329,8 +1365,10 @@ exec zsh -i'
 
     # print the string that should be used as the xterm title
     title() {
-        short_hostname
-        printf ' '
+        if show_hostname_in_title; then
+            short_hostname
+            printf ' '
+        fi
         project_or_command_or_pwd
     }
 

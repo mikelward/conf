@@ -4,6 +4,10 @@ if has("multi_byte")
     set encoding=utf-8	" have to do this to make the Unicode listchars work
 endif
 
+if has("gui_running")
+    source $VIMRUNTIME/mswin.vim	" make Ctrl+C/Ctrl+V copy/paste in gvim
+endif
+
 " COMMON OPTIONS
 " read common startup commands for all Vi implementations
 if filereadable(expand("~/.exrc"))
@@ -175,7 +179,7 @@ if has("autocmd")
         let b:lastline = line('$')
         call setpos('.', [0, b:lastline, 0, 0])
     endfun
-    au BufNewFile * call ReadTemplate() | call AppendModeline()
+    au BufNewFile * call ReadTemplate()
     fun! ReadTemplate()
         let b:filename = bufname('%')
         let b:basename = substitute(b:filename, '\(.*\)\.\(.*\)', '\1', '')

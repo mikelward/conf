@@ -42,9 +42,12 @@ git_pending() {
     git status "$@"
 }
 
+git_prereview() {
+    git_hook pre-commit
+}
+
 git_presubmit() {
-    echo "git presubmit not supported" >&2
-    false
+    git_hook pre-push
 }
 
 git_projectroot() {
@@ -53,6 +56,16 @@ git_projectroot() {
 
 git_pull() {
     git pull
+}
+
+git_hook() {
+    local script="$(git rev-parse --git-dir)/hooks/$1"
+	shift
+	if test -x "$script"; then
+	    "$script" "$@"
+	else
+		echo "No $script hook"
+	fi
 }
 
 # send the current change for Gerrit review

@@ -1,9 +1,8 @@
 [user]
     name = Mikel Ward
-    email = mikel@mikelward.com
 
 [core]
-    excludesfile = /home/mikel/.gitexclude
+    excludesfile = ~/.gitexclude
     pager = less -FRX
 
 # git command aliases
@@ -104,10 +103,16 @@
     date = relative
 
 [svn]
-    authorsfile = /home/mikel/.gitauthors
+    authorsfile = ~/.gitauthors
+
+[pull]
+   rebase = true
 
 [push]
     default = upstream
 
 [init]
-    templatedir = /home/mikel/.gittemplates
+    templatedir = ~/.gittemplates
+
+[include]
+    path = ~/.gitconfig.local
