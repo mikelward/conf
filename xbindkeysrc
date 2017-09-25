@@ -44,6 +44,9 @@
 "subl"
 	Mod4 + p
 
+"remote-desktop"
+    Mod4 + r
+
 # s = shell
 "shell"
 	Mod4 + s
