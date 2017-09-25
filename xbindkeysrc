@@ -38,10 +38,10 @@
 
 # o = opera
 "opera"
-        Mod4 + o
+    Mod4 + o
 
-# p = programming
-"subl"
+# p = play music
+"music"
 	Mod4 + p
 
 "remote-desktop"
