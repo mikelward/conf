@@ -11,10 +11,10 @@
 "gnome-calculator"
 	Mod4 + c
 
-"firefox"
+"browser2"
 	Mod4 + f
 
-"chrome"
+"browser1"
 	Mod4 + g
 
 # h = home folder
