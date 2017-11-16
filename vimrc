@@ -139,6 +139,10 @@ map <Leader>c :TComment<CR>
 map <Leader>w :call ToggleWhitespace()<CR>
 map <Leader>p :call TogglePaste()<CR>
 map <Leader>t :TagbarToggle<CR>
+nmap <silent> <A-Up> :wincmd k<CR>
+nmap <silent> <A-Down> :wincmd j<CR>
+nmap <silent> <A-Left> :wincmd h<CR>
+nmap <silent> <A-Right> :wincmd l<CR>
 
 " MARKDOWN SHORTCUTS
 " http://stevelosh.com/blog/2010/09/coming-home-to-vim/
