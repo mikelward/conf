@@ -250,6 +250,20 @@ get_ptr_records() {
     awk '$3 == "IN" && $4 == "PTR" { print $5 }'
 }
 
+with_address_records() {
+    local hostname
+    while read -r hostname; do
+        echo "$hostname $(join " " $(addr $hostname))"
+    done
+}
+
+with_hostnames() {
+    local ip
+    while read -r ip; do
+        echo "$ip $(join " " $(ptr $ip))"
+    done
+}
+
 # list this machine's IP addresses
 ips() {
     ip -o a sh up primary scope global | while read num iface afam addr rest; do
