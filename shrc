@@ -322,6 +322,31 @@ body() {
     "$@"
 }
 
+# print the path from buildroot to $PWD
+builddir() {
+    local buildroot=$(buildroot)
+    if test "$PWD" = "$buildroot"; then
+        echo "."
+    else
+        echo "${PWD#$(buildroot)/}"
+    fi
+}
+
+# print the directory that builds are relative to
+buildroot() {
+    projectroot
+}
+
+# print the name of the current project
+projectname() {
+    basename "$(projectroot)"
+}
+
+# print the root directory of the current project
+projectroot() {
+    :
+}
+
 # cd to the real directory that the specified file is in, resolving symlinks
 cdfile() {
     cd "$(realdir "$1")"
@@ -1232,16 +1257,6 @@ if is_interactive; then
 
     # print what local commits would get pushed
     outgoing() {
-        :
-    }
-
-    # print the name of the current project
-    projectname() {
-        basename "$(projectroot)"
-    }
-
-    # print the root directory of the current project
-    projectroot() {
         :
     }
 
