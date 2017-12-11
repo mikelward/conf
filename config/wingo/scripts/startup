@@ -2,8 +2,6 @@
 xrdb -merge .Xresources
 xsetroot -bg black -cursor_name left_ptr
 
-gnome-settings-daemon&
-
 wingo-cmd 'AddWorkspace "main"'
 
 wingo-cmd 'Shell "hexchat"'
