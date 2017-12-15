@@ -47,8 +47,7 @@
 "remote-desktop"
     Mod4 + r
 
-# s = shell
-"shell"
+"studio"
 	Mod4 + s
 
 # t = terminal
