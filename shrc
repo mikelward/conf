@@ -47,6 +47,8 @@ zsh)
     setopt INTERACTIVE_COMMENTS
     setopt KSH_TYPESET
     HISTSIZE=500
+    # so aliases can contain hyphen/minus/dash
+    unsetopt POSIX_ALIASES >/dev/null 2>&1
     # so we can display jobs in the prompt
     unsetopt POSIX_JOBS >/dev/null 2>&1
 
