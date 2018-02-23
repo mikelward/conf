@@ -1598,6 +1598,9 @@ exec zsh -i'
         _terminfo_bind knp zle-noop
         _terminfo_bind kpp zle-noop
 
+        # make Shift+Tab do menu complete backwards
+        _terminfo_bind cbt reverse-menu-complete
+
         # add bindings for both blank and non-alpha word motion
         bindkey -M emacs '\eb' vi-backward-blank-word
         bindkey -M emacs '\eB' vi-backward-word
