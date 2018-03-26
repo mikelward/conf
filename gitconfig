@@ -38,7 +38,7 @@
     hi = log --pretty=oneline --abbrev-commit
     hist = log --pretty=oneline --abbrev-commit
     # XXX use fc -l in bash?
-    history = log --pretty=format:'%h%x09%cr%x09%s%x09%d'
+    history = log --pretty=format:'%C(auto)%h%x09%C(auto)%cd%x09%C(auto,bold)%s%x09%C(auto)%d'
     lo = log
     logs = log
     pick = cherry-pick
@@ -100,7 +100,7 @@
     guitool = meld
 
 [log]
-    date = relative
+    date = format-local:%Y-%m-%d %H:%M:%S
 
 [svn]
     authorsfile = ~/.gitauthors
