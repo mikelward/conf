@@ -1810,15 +1810,9 @@ exec zsh -i'
     set -o emacs
 
     # workaround for GNOME Terminal which does a cd on startup :-(
-    if test -n "${DISPLAY:-}" && test -z "${didcd:-}"; then
-        # assuming DISPLAY=:0.0 means local
-        # note that DISPLAY=localhost:0.0 can mean SSH X forwarding
-        case "${DISPLAY:-}" in :*)
-            cd
-            didcd=true
-            ;;
-        esac
-    fi
+    case "$(ps -o comm= -p $(ps -o ppid= -p $$))" in gnome-terminal*|terminator)
+        cd;;
+    esac
 fi
 
 # source local overrides file (work vs home, etc.)
