@@ -1787,10 +1787,10 @@ exec zsh -i'
     export GREP_COLOR=4
 
     # default programs
-    is_command vi && EDITOR=vi
-    is_command vim && EDITOR=vim
-    is_command more && PAGER=more
-    is_command less && PAGER=less
+    is_command vi && export EDITOR=vi
+    is_command vim && export EDITOR=vim
+    is_command more && export PAGER=more
+    is_command less && export PAGER=less
 
     # colors for ls
     case "$TERM" in linux|putty|vt220)
