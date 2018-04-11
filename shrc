@@ -294,6 +294,21 @@ p
 '
 }
 
+bak() {
+    local file
+    for file in "$@"; do
+        mv -i "$file" "${file}.bak"
+    done
+}
+
+unbak() {
+    local file
+    for file in "$@"; do
+        test -e "$file" && mv -i "$file" "${file%.bak}"
+        test -e "${file}.bak" && mv -i "${file}.bak" "$file"
+    done
+}
+
 # ring the terminal's bell
 bell() {
     printf "\a"
