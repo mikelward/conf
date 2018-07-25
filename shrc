@@ -795,7 +795,7 @@ if is_interactive; then
     alias cg='rg '"$code_includes"
     alias ct='ctags -R'
     alias cx='chmod +x'
-    alias d='maketasks; makeensime; code -n .'
+    alias d='maketasks; makesettings; makeensime; code -n .'
     daemon() {
         pkill "$1"
         (setsid "$1"&)
