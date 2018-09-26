@@ -30,6 +30,10 @@ hg_changes() {
    hg diff "$@"
 }
 
+hg_commit() {
+    hg commit "$@"
+}
+
 hg_diffs() {
     hg diff "$@"
 }

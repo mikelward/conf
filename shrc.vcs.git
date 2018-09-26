@@ -35,6 +35,10 @@ git_changes() {
     git diff --patience "$@"
 }
 
+git_commit() {
+    git commit "$@"
+}
+
 git_diffs() {
     git diff --patience "$@"
 }
