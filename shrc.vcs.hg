@@ -4,6 +4,10 @@ hg_detect() {
 }
 vcs_detect[hg]=hg_detect
 
+hg_add() {
+    hg add "$@"
+}
+
 # print the name of the currently active mercurial branch
 hg_branch() {
     hg branch 2>/dev/null
@@ -22,9 +26,17 @@ hg_diffs() {
     hg diff "$@"
 }
 
+hg_fix() {
+    hg fix "$@"
+}
+
 # show changesets that would be fetched
 hg_incoming() {
     hg incoming "$@"
+}
+
+hg_lint() {
+    hg lint "$@"
 }
 
 # show changesets that would be pushed
@@ -37,13 +49,11 @@ hg_pending() {
 }
 
 hg_prereview() {
-    echo "hg prereview not supported" >&2
-    false
+    hg prereview "$@"
 }
 
 hg_presubmit() {
-    echo "hg presubmit not supported" >&2
-    false
+    hg presubmit "$@"
 }
 
 hg_projectroot() {

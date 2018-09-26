@@ -2,8 +2,11 @@
 git_detect() {
     quiet git branch --color=never && echo git
 }
-
 vcs_detect[git]=git_detect
+
+git_add() {
+    git add "$@"
+}
 
 # print the name of the currently active git branch
 git_branch() {
@@ -28,9 +31,17 @@ git_diffs() {
     git diff --patience "$@"
 }
 
+git_fix() {
+    git fix "$@"
+}
+
 # print commits that would be pulled
 git_incoming() {
     git log --oneline HEAD..origin/HEAD
+}
+
+git_lint() {
+    git lint "$@"
 }
 
 # print commits that would be pushed
@@ -64,7 +75,7 @@ git_hook() {
 	if test -x "$script"; then
 	    "$script" "$@"
 	else
-		echo "No $script hook"
+		echo "No $script hook" >&2
 	fi
 }
 
