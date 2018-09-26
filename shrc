@@ -795,11 +795,15 @@ if is_interactive; then
     alias cg='rg '"$code_includes"
     alias ct='ctags -R'
     alias cx='chmod +x'
+<<<<<<< HEAD
     alias d='maketasks; makesettings; makeensime; code -n .'
     daemon() {
         pkill "$1"
         (setsid "$1"&)
     }
+=======
+    alias d='makesettings; maketasks; makeensime; code -n .'
+>>>>>>> Make d alias also run makesettings.
     alias diga='dig +noall +answer +search'
     alias digs='dig +short +search'
     download() { cd "$HOME/Downloads"; wget "$@"; }
