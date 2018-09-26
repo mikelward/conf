@@ -8,6 +8,10 @@ hg_add() {
     hg add "$@"
 }
 
+hg_amend() {
+    hg amend --edit "$@"
+}
+
 # print the name of the currently active mercurial branch
 hg_branch() {
     hg branch 2>/dev/null
@@ -16,6 +20,10 @@ hg_branch() {
 # print the name of all mercurial branches
 hg_branches() {
     hg branches
+}
+
+hg_change() {
+    hg amend --edit "$@"
 }
 
 hg_changes() {
@@ -62,6 +70,10 @@ hg_projectroot() {
 
 hg_pull() {
     hg fetch
+}
+
+hg_push() {
+    hg push "$@"
 }
 
 hg_review() {

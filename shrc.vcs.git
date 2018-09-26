@@ -8,6 +8,10 @@ git_add() {
     git add "$@"
 }
 
+git_amend() {
+    git amend "$@"
+}
+
 # print the name of the currently active git branch
 git_branch() {
     git branch 2>/dev/null | while read star branch; do
@@ -21,6 +25,10 @@ git_branch() {
 # print the name of all (local by default) git branches
 git_branches() {
     git branch "$@"
+}
+
+git_change() {
+    git amend "$@"
 }
 
 git_changes() {
@@ -66,7 +74,11 @@ git_projectroot() {
 }
 
 git_pull() {
-    git pull
+    git pull "$@"
+}
+
+git_push() {
+    git push "$@"
 }
 
 git_hook() {
