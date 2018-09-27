@@ -56,6 +56,11 @@ if exists("+colorcolumn")
   set colorcolumn=+1
 endif
 
+" Highlight the current line
+if exists("+cursorline")
+  set cursorline
+endif
+
 if &term == "putty"
     set background=dark	" PuTTY has a black background by default
 endif
@@ -234,7 +239,7 @@ if has("eval")
 endif
 
 " SEARCH OPTIONS
-set nohlsearch	" disable highlighting of matches
+set hlsearch	" disable highlighting of matches
 set noignorecase	" case is important in search terms
 set tags+=./tags;/	" search up the tree for tags files
 

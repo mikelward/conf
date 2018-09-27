@@ -1,6 +1,5 @@
 " Vim color file
 " Maintainer:	Mikel Ward <mikel@mikelward.com>
-" Last Change:	2008 Jan 16
 
 " Remove all existing highlighting and set the defaults.
 highlight clear
@@ -40,6 +39,7 @@ if &background == "light"
         highlight clear ColorColumn
         highlight link ColorColumn Error
     endif
+    highlight CursorLine term=underline cterm=NONE ctermbg=LightGrey guibg=Grey90
 else
     highlight String term=underline cterm=NONE ctermfg=Magenta guifg=Magenta
     highlight Comment term=bold cterm=NONE ctermfg=Cyan guifg=Cyan
@@ -51,5 +51,6 @@ else
         highlight clear ColorColumn
         highlight link ColorColumn Error
     endif
+    highlight CursorLine term=underline cterm=NONE ctermbg=LightGrey guibg=Grey90
 endif
 
