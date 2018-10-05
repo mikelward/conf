@@ -1811,6 +1811,7 @@ exec zsh -i'
     is_command vim && export EDITOR=vim
     is_command more && export PAGER=more
     is_command less && export PAGER=less
+    is_command meld && test -n "$DISPLAY" && export DIFF=meld
 
     # colors for ls
     case "$TERM" in linux|putty|vt220)
