@@ -56,11 +56,6 @@ if exists("+colorcolumn")
   set colorcolumn=+1
 endif
 
-" Highlight the current line
-if exists("+cursorline")
-  set cursorline
-endif
-
 if &term == "putty"
     set background=dark	" PuTTY has a black background by default
 endif
@@ -232,6 +227,14 @@ if has("autocmd")
     au BufRead,BufNewFile */uemacs*/*.{c,h} setlocal sw=8 ts=8 noexpandtab
     au BufRead,BufNewFile */unreal*/*.{c,cpp,h} setlocal shiftwidth=4 tabstop=4 noexpandtab
     au BufRead,BufNewFile */zsh*/*.[ch] setlocal sw=4 ts=8 noexpandtab
+
+    " Highlight the current line in the current buffer
+    " TODO: Disable cursorline in leaving buffer on :split
+    if exists("+cursorline")
+        au BufEnter * setlocal cursorline
+        au BufLeave * setlocal nocursorline
+        "set cursorline
+    endif
 endif
 
 if has("eval")
