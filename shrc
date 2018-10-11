@@ -475,6 +475,11 @@ names() {
     nmcli dev list 2>/dev/null | sed -ne '/domain_name_servers/{s/[^ ]*: *//;p}'
 }
 
+# list non-empty files, prefixed by timestamp in case sorting is needed
+nonempty() {
+    find . -size +0 "$@" -printf '%T@ %f\n'
+}
+
 # print the full path to an executable, ignoring aliases and functions
 # like whence -p/type -P, but should work in all shells
 path()
