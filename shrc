@@ -1637,6 +1637,7 @@ exec zsh -i'
         }
         _bind_vi '^a' beginning-of-line
         _bind_vi '^e' end-of-line
+        _bind_vi '^k' kill-line
         _bind_vi '^n' down-line-or-history
         _bind_vi '^p' up-line-or-history
         _bind_vi '^r' history-incremental-search-backward
@@ -1644,6 +1645,7 @@ exec zsh -i'
         _bind_vi '^u' kill-whole-line
         _bind_vi '^w' backward-kill-word
         _bind_vi '^y' yank
+        _bind_vi '^_' insert-last-word
         _bind_vi '\eb' vi-backward-blank-word
         _bind_vi '\eB' vi-backward-word
         _bind_vi '\ef' vi-forward-blank-word
@@ -1759,12 +1761,14 @@ exec zsh -i'
         # add Emacs bindings to Vi editing mode
         _bind_vi '"\C-a": beginning-of-line'
         _bind_vi '"\C-e": end-of-line'
+        _bind_vi '"\C-k": kill-line'
         _bind_vi '"\C-n": next-history'
         _bind_vi '"\C-p": previous-history'
         _bind_vi '"\C-r": reverse-search-history'
         _bind_vi '"\C-s": forward-search-history'
         _bind_vi '"\C-w": backward-kill-word'
         _bind_vi '"\C-y": yank'
+        _bind_vi '"\C-_": insert-last-argument'
         _bind_vi '"\eb": vi-bWord'
         _bind_vi '"\eB": vi-bword'
         _bind_vi '"\ef": vi-fWord'
@@ -1828,7 +1832,7 @@ exec zsh -i'
 
     # command line editing
     test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
-    set -o emacs
+    set -o vi
 
     # workaround for GNOME Terminal which does a cd on startup :-(
     case "$(ps -o comm= -p $(ps -o ppid= -p $$))" in gnome-terminal*|terminator)
