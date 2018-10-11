@@ -8,6 +8,11 @@ git_add() {
     git add "$@"
 }
 
+git_allknown() (
+    cd $(git rootdir)
+    git ls-files -od
+)
+
 git_amend() {
     git amend "$@"
 }

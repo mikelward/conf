@@ -18,9 +18,9 @@ vcs() {
 
 # create version control functions to do the right thing based on vcs "$PWD"
 # TODO: fork merge, etc.
-for command in add amend branch branches change changes commit diffs fix \
-    incoming lint outgoing pending prereview presubmit projectroot pull push \
-    review rootdir status submit; do
+for command in add allknown amend branch branches change changes commit diffs \
+    fix incoming lint outgoing pending prereview presubmit projectroot pull \
+    push review rootdir stageall status submit; do
     # remove any alias created in .shrc
     case "$(type "$command" 2>/dev/null)" in *alias*)
         unalias "$command"
@@ -35,8 +35,21 @@ for command in add amend branch branches change changes commit diffs fix \
     }'
 done
 
+check() {
+    save && prereview
+}
+
 project() {
     basename "$(projectroot)"
+}
+
+save() {
+    allknown && fix
+    # TODO: also snapshot/stage all
+}
+
+submit() {
+    check && pull && presubmit && push
 }
 
 for f in "$HOME"/.shrc.vcs.*; do
