@@ -1657,6 +1657,7 @@ exec zsh -i'
         _bind_vi '\ef' vi-forward-blank-word
         _bind_vi '\eF' vi-forward-word
         _bind_vi '\ey' yank-pop
+        _bind_vi '\e^?' backward-kill-word
 
         # try to differentiate between Esc vi command and Alt+something
         KEYTIMEOUT=1
@@ -1749,7 +1750,7 @@ exec zsh -i'
         _bind_emacs '"\ef": vi-fWord'
         _bind_emacs '"\ed": shell-kill-word'
         _bind_emacs '"\eD": shell-kill-word'
-        _bind_all '"\e\C-?": unix-word-rubout'
+        _bind_emacs '"\e\C-?": unix-word-rubout'
 
         # add motion commands that treat alpha<->non-alpha as the word boundary
         _bind_emacs '"\eB": vi-bword'
@@ -1780,6 +1781,7 @@ exec zsh -i'
         _bind_vi '"\ef": vi-fWord'
         _bind_vi '"\eF": vi-fword'
         _bind_vi '"\ey": yank-pop'
+        _bind_vi '"\e\C-?": unix-word-rubout'
 
         # Make Esc toggle between command and insert mode
         bind -m vi-command '"\e": vi-insertion-mode'
