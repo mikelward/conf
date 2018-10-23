@@ -398,6 +398,19 @@ each0() {
   done
 }
 
+# see what changes a command would make to a file
+# e.g. trydiff mdformat <file>
+trydiff() {
+    diff "$2" <("$1" "$2")
+}
+
+# apply the changes that trydiff would have made
+# e.g. applydiff mdformat <file>
+applydiff() {
+    "$1" "$2" >"$2".new
+    mv "$2".new "$2"
+}
+
 # print the name of a source file's corresponding test file
 find_test_file() {
     local file
