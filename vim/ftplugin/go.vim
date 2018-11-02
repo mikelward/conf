@@ -16,4 +16,9 @@ setlocal commentstring=//\ %s
 
 let b:undo_ftplugin = "setl fo< com< cms<"
 
+map <buffer> <silent> ]] :call search("^}$")<CR>
+map <buffer> <silent> [[ :call search("^func", 'b')<CR>
+map <buffer> <silent> ][ :call search("^func")<CR>
+map <buffer> <silent> [] :call search("^}$", 'b')<CR>
+
 " vim:ts=4:sw=4:et
