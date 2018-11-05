@@ -401,7 +401,11 @@ each0() {
 # see what changes a command would make to a file
 # e.g. trydiff mdformat <file>
 trydiff() {
-    diff "$2" <("$1" "$2")
+    local _temp
+    _temp="$2".trydiff.$$
+    "$1" "$2" >"$_temp"
+    diff "$2" "$_temp"
+    rm "$_temp"
 }
 
 # apply the changes that trydiff would have made
@@ -982,7 +986,7 @@ if is_interactive; then
         alias search='aptitude search -F "%c %p %30t %d"'
         alias show='aptitude show'
         alias install='root aptitude install'
-        alias installed=$'dpkg-query --show --showformat=\'${binary:Package;-36} ${Version;-32} ${Status;-10}\\n\''
+        alias installed="dpkg-query --show --showformat='\${binary:Package;-36} \${Version;-32} \${Status;-10}\n'"
         alias uninstall='root aptitude remove'
         alias reinstall='root aptitude reinstall'
         alias upgrade='root aptitude safe-upgrade'
@@ -994,7 +998,7 @@ if is_interactive; then
         alias search='apt-cache search --names-only'
         alias show='apt-cache show'
         alias install='root apt-get install'
-        alias installed=$'dpkg-query --show --showformat=\'${binary:Package;-36} ${Version;-32} ${Status;-10}\\n\''
+        alias installed="dpkg-query --show --showformat='\${binary:Package;-36} \${Version;-32} \${Status;-10}\n'"
         alias uninstall='root apt-get remove'
         alias reinstall='root apt-get install --reinstall'
         alias upgrade='root apt-get upgrade'
