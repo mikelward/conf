@@ -36,6 +36,10 @@ git_change() {
     git amend "$@"
 }
 
+git_changed() {
+    git diff --name-only "$@"
+}
+
 git_changes() {
     git diff --patience "$@"
 }

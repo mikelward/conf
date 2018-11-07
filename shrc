@@ -942,30 +942,6 @@ if is_interactive; then
     quiet grep -q --color=auto "" /etc/hosts && alias grep='grep --color=auto'
     export CLICOLOR=true
 
-    # allow running git subcommands without typing the "git" prefix
-    # TODO: Write a script that supports multiple version control systems,
-    # and make it an alias for that instead?
-    for command in ad add addall added addremove adds am amend an ap apply \
-        blame br checkout changed cherry-pick ci cl clone co \
-        commit commitall describe da di dir \
-        fetch ff format-patch gc gr graph hi hist history \
-        lo log logs ls-files ls-tree \
-        merge merge-base pick pu pull push \
-        rebase remote remove reset restore rewind rollback \
-        show-branch st staged stash state switch \
-        tag toplevel track unadd unchange unchangeall undo undoall untrack
-    do
-        alias $command="git $command"
-    done
-    # same for my aliases in ~/.gitconfig
-    # for command in $(git config -l |
-    #     sed -ne '/^alias\./{s/^alias\.\([^ =]*\)=.*/\1/;p}')
-    # do
-    #     alias $command="git $command"
-    # done
-    # can't override it using git aliases, so do it here :-/
-    alias stage="git add --update"
-
     alias ginfo=$(path info)
     # aliases to abstract away differences between package managers
     if is_command yum; then

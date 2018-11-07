@@ -26,6 +26,10 @@ hg_change() {
     hg amend --edit "$@"
 }
 
+hg_changed() {
+    hg status --no-status --pager=no "$@"
+}
+
 hg_changes() {
    hg diff "$@"
 }

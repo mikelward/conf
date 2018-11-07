@@ -18,7 +18,8 @@ vcs() {
 
 # create version control functions to do the right thing based on vcs "$PWD"
 # TODO: fork merge, etc.
-for command in add allknown amend branch branches change changes commit diffs \
+for command in add allknown amend branch branches \
+    change changed changes commit diffs \
     fix incoming lint outgoing pending prereview presubmit projectroot pull \
     push review rootdir stageall status submit; do
     # remove any alias created in .shrc
