@@ -969,6 +969,18 @@ if is_interactive; then
         alias versions='aptitude versions'
         alias changelog='aptitude changelog'
         alias files='apt-file search'
+    elif is_command apt; then
+        alias update='root apt update'
+        alias search='apt search --names-only'
+        alias show='apt show'
+        alias install='root apt install'
+        alias installed="dpkg-query --show --showformat='\${binary:Package;-36} \${Version;-32} \${Status;-10}\n'"
+        alias uninstall='root apt remove'
+        alias reinstall='root apt install --reinstall'
+        alias upgrade='root apt upgrade'
+        alias versions='apt-cache policy'
+        alias changelog='apt-get changelog'
+        alias files='apt-file search'
     elif is_command apt-get; then
         alias update='root apt-get update'
         alias search='apt-cache search --names-only'
