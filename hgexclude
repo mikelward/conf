@@ -1,0 +1,7 @@
+syntax: glob
+
+*.swp
+*.o
+*.log
+.vscode
+target

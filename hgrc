@@ -2,6 +2,7 @@
 pager = less -FRX
 
 [ui]
+ignore = ~/.hgexclude
 merge = meld
 
 %include .hgrc.local
