@@ -5,7 +5,7 @@ git_detect() {
 vcs_detect[git]=git_detect
 
 git_add() {
-    git add "$@"
+    git add --intent-to-add "$@"
 }
 
 git_allknown() (
@@ -41,15 +41,15 @@ git_changed() {
 }
 
 git_changes() {
-    git diff --patience "$@"
+    git diff "$@"
 }
 
 git_commit() {
-    git commit "$@"
+    git commit --all "$@"
 }
 
 git_diffs() {
-    git diff --patience "$@"
+    git diff "$@"
 }
 
 git_fix() {
@@ -68,10 +68,6 @@ git_lint() {
 # print commits that would be pushed
 git_outgoing() {
     git log --oneline origin/HEAD..HEAD
-}
-
-git_pending() {
-    git status "$@"
 }
 
 git_prereview() {
@@ -114,5 +110,5 @@ git_rootdir() {
 }
 
 git_status() {
-    git status "$@"
+    git status --short "$@"
 }

@@ -1,1 +1,4 @@
+[pager]
+pager = less -FRX
+
 %include .hgrc.local
