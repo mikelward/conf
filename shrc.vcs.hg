@@ -22,10 +22,6 @@ hg_branches() {
     hg branches
 }
 
-hg_change() {
-    hg amend --edit "$@"
-}
-
 hg_changed() {
     hg status --no-status "$@"
 }

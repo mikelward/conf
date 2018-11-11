@@ -32,10 +32,6 @@ git_branches() {
     git branch "$@"
 }
 
-git_change() {
-    git amend "$@"
-}
-
 git_changed() {
     git diff --name-only "$@"
 }

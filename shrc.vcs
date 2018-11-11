@@ -18,10 +18,19 @@ vcs() {
 
 # create version control functions to do the right thing based on vcs "$PWD"
 # TODO: fork merge, etc.
+alias ad=add
+alias ak=allknown
+alias am=amend
+alias ch=check
+alias di=diffs
+alias re=review
+alias ro=rootdir
+alias sa=save
+alias st=status
 for command in add allknown amend branch branches \
-    change changed changes commit diffs \
-    fix incoming lint outgoing pending prereview presubmit projectroot pull \
-    push review rootdir stageall status submit; do
+    changed changes commit diffs \
+    fix incoming lint outgoing pending precommit prepush projectroot pull \
+    review rootdir status; do
     # remove any alias created in .shrc
     case "$(type "$command" 2>/dev/null)" in *alias*)
         unalias "$command"
@@ -46,10 +55,10 @@ project() {
 
 save() {
     allknown && fix
-    # TODO: also snapshot/stage all
 }
 
 submit() {
+    # TODO: set up hooks to ensure push runs prepush/presubmit
     check && pull && presubmit && push
 }
 
