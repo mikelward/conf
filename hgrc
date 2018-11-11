@@ -1,4 +1,7 @@
 [pager]
 pager = less -FRX
 
+[ui]
+merge = meld
+
 %include .hgrc.local
