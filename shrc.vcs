@@ -1,20 +1,47 @@
 # Version control additions to .shrc.
 
-# Functions to run to determine the current version control system, registered
-# by each VCS, e.g. vcs_detect[git]=git_detect in ~/.shrc.vcs.git.
-# vcs_detect functions should echo the name of the detected vcs (e.g. "git")
-# or silently return false.
-declare -A vcs_detect
+# Cache of version control system used by a given directory.
+declare -A vcs
+declare -A rootdir
 
 # print the name of the version control system in use in $PWD
-# TODO: cache the result
+# TODO: implement in terms of rootdir
 vcs() {
-    local detect
-    for detect in "${vcs_detect[@]}"; do
-        "$detect" && return
-    done
-    false
+    local _vcs _rootdir
+    if test -f .vcs_cache; then
+        read _vcs _rootdir <.vcs_cache
+    else
+        read _vcs _rootdir <<<$(
+            while test "$PWD" != "/"; do
+                test -e ".hg" && echo "hg $PWD" && break
+                test -e ".git" && echo "git $PWD" && break
+                test -e ".citc" && echo "g4 $PWD" && break
+                test -e ".p4config" && echo "g4 $PWD" && break
+                cd ..
+            done
+        )
+        echo "$_vcs $_rootdir" >.vcs_cache
+    fi
+    if test -z "$_vcs" || test -z "$_rootdir"; then
+        return 1
+    fi
+    echo "$_vcs"
+    test -n "$_vcs"
 }
+
+cv() {
+    find . -type f -name .vcs_cache -delete
+}
+
+rootdir() {
+    if ! test -f .vcs_cache; then
+        vcs
+    fi
+    read _vcs _rootdir <.vcs_cache
+    echo "$_rootdir"
+    test -n "$_rootdir"
+}
+
 
 # create version control functions to do the right thing based on vcs "$PWD"
 # TODO: fork merge, etc.
@@ -23,14 +50,15 @@ alias ak=allknown
 alias am=amend
 alias ch=check
 alias di=diffs
+alias projectroot=rootdir
 alias re=review
 alias ro=rootdir
 alias sa=save
 alias st=status
 for command in add allknown amend branch branches \
     changed changes commit diffs \
-    fix incoming lint outgoing pending precommit prepush projectroot pull \
-    push review rootdir status; do
+    fix incoming lint outgoing pending precommit prepush pull \
+    push review status; do
     # remove any alias created in .shrc
     case "$(type "$command" 2>/dev/null)" in *alias*)
         unalias "$command"
