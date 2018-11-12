@@ -8,11 +8,6 @@ git_add() {
     git add --intent-to-add "$@"
 }
 
-git_allknown() (
-    cd $(git rootdir)
-    git ls-files -od
-)
-
 git_amend() {
     git amend "$@"
 }
@@ -108,3 +103,8 @@ git_rootdir() {
 git_status() {
     git status --short "$@"
 }
+
+git_unknown() (
+    cd $(git rootdir)
+    git ls-files -od
+)

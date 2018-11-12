@@ -88,3 +88,7 @@ hg_rootdir() {
 hg_status() {
     hg status "$@"
 }
+
+hg_unknown() {
+   hg status --unknown --deleted
+}

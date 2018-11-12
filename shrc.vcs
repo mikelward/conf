@@ -7,6 +7,9 @@ declare -A rootdir
 # print the name of the version control system in use in $PWD
 # TODO: implement in terms of rootdir
 vcs() {
+    # If it's not writable, assume we don't care about vcs here.
+    test -w "$PWD" || return 1
+
     local _vcs _rootdir
     if test -f .vcs_cache; then
         read _vcs _rootdir <.vcs_cache
@@ -35,13 +38,18 @@ cv() {
 
 rootdir() {
     if ! test -f .vcs_cache; then
-        vcs
+        vcs || return 1
     fi
     read _vcs _rootdir <.vcs_cache
     echo "$_rootdir"
     test -n "$_rootdir"
 }
 
+allknown() {
+    local unknown="$(unknown)"
+    echo "$unknown"
+    test -z "$unknown"
+}
 
 # create version control functions to do the right thing based on vcs "$PWD"
 # TODO: fork merge, etc.
@@ -55,10 +63,10 @@ alias re=review
 alias ro=rootdir
 alias sa=save
 alias st=status
-for command in add allknown amend branch branches \
+for command in add amend branch branches \
     changed changes commit diffs \
     fix incoming lint outgoing pending precommit prepush pull \
-    push review status; do
+    push review status unknown; do
     # remove any alias created in .shrc
     case "$(type "$command" 2>/dev/null)" in *alias*)
         unalias "$command"
