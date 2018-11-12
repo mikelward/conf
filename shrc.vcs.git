@@ -31,6 +31,10 @@ git_changed() {
     git diff --name-only "$@"
 }
 
+git_changelog() {
+    git log --oneline "$@"
+}
+
 git_changes() {
     git diff "$@"
 }

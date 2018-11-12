@@ -1,6 +1,9 @@
 [pager]
 pager = less -FRX
 
+[templates]
+oneline = "{label('log.changeset', node|short)} {label('log.date', date|shortdate)} {desc|firstline}\n"
+
 [ui]
 ignore = ~/.hgexclude
 merge = meld

@@ -26,6 +26,10 @@ hg_changed() {
     hg status --no-status "$@"
 }
 
+hg_changelog() {
+    hg log --template=oneline "$@"
+}
+
 hg_changes() {
    hg diff "$@"
 }

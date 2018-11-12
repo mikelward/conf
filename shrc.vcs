@@ -57,6 +57,7 @@ alias ad=add
 alias ak=allknown
 alias am=amend
 alias ch=check
+alias cl=changelog
 alias di=diffs
 alias projectroot=rootdir
 alias re=review
@@ -64,7 +65,7 @@ alias ro=rootdir
 alias sa=save
 alias st=status
 for command in add amend branch branches \
-    changed changes commit diffs \
+    changed changelog changes commit diffs \
     fix incoming lint outgoing pending precommit prepush pull \
     push review status unknown; do
     # remove any alias created in .shrc
