@@ -955,7 +955,6 @@ if is_interactive; then
         alias reinstall='root yum reinstall'
         alias upgrade='root yum upgrade'
         alias versions='yum list'
-        alias changelog='repoquery --changelog'
         alias files='repoquery --file'
     elif is_command aptitude; then
         alias update='root aptitude -q -q update'
@@ -967,7 +966,6 @@ if is_interactive; then
         alias reinstall='root aptitude reinstall'
         alias upgrade='root aptitude safe-upgrade'
         alias versions='aptitude versions'
-        alias changelog='aptitude changelog'
         alias files='apt-file search'
     elif is_command apt-get; then
         alias update='root apt-get update'
@@ -979,7 +977,6 @@ if is_interactive; then
         alias reinstall='root apt-get install --reinstall'
         alias upgrade='root apt-get upgrade'
         alias versions='apt-cache policy'
-        alias changelog='apt-get changelog'
         alias files='apt-file search'
     else
         error "No supported package manager found"
