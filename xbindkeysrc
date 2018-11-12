@@ -47,7 +47,7 @@
 "remote-desktop"
     Mod4 + r
 
-"studio"
+"secureshell"
 	Mod4 + s
 
 # t = terminal
