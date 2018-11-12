@@ -48,7 +48,7 @@ hg_fix() {
 
 # show changesets that would be fetched
 hg_incoming() {
-    hg incoming "$@"
+    hg incoming --template=oneline "$@"
 }
 
 hg_lint() {
@@ -57,7 +57,7 @@ hg_lint() {
 
 # show changesets that would be pushed
 hg_outgoing() {
-    hg outgoing "$@"
+    hg outgoing --template=oneline "$@"
 }
 
 hg_prereview() {
