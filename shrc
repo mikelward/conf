@@ -1605,6 +1605,8 @@ exec zsh -i'
             fi
         }
         _terminfo_bind kdch1 delete-char
+        _terminfo_bind kDC5 delete-word
+        _terminfo_bind cub1 backward-delete-word
         _terminfo_bind khome beginning-of-line
         _terminfo_bind kend end-of-line
 
@@ -1741,6 +1743,8 @@ exec zsh -i'
         _bind_emacs '"\ed": shell-kill-word'
         _bind_emacs '"\eD": shell-kill-word'
         _bind_emacs '"\e\C-?": unix-word-rubout'
+        _bind_emacs '"\e[3;5~": kill-word'
+        _bind_emacs '"\C-h": backward-kill-word'
 
         # add motion commands that treat alpha<->non-alpha as the word boundary
         _bind_emacs '"\eB": vi-bword'
