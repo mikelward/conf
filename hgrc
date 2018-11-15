@@ -2,7 +2,10 @@
 pager = less -FRX
 
 [templates]
-oneline = "{label('log.changeset', shortest(node, 7))} {label('log.date', date|shortdate)} {desc|firstline}\n"
+shortnode = "{label('log.changeset', shortest(node, 7))}"
+shortdate = "{label('log.date', date|shortdate)}"
+shortdesc = "{desc|firstline}"
+oneline = "{shortnode} {shortdate} {shortdesc}\n"
 
 [ui]
 ignore = ~/.hgexclude
