@@ -817,7 +817,10 @@ if is_interactive; then
     alias cg='rg '"$code_includes"
     alias ct='ctags -R'
     alias cx='chmod +x'
-    alias d='maketasks; makesettings; makeensime; makelocal; code -n .'
+    alias d='makemakefile; maketasks; makesettings; makeensime; makelocal; codelocal'
+    codelocal() {
+        code --new-window .
+    }
     daemon() {
         pkill "$1"
         (setsid "$1"&)
@@ -1815,7 +1818,7 @@ exec zsh -i'
     # default programs
     is_command vi && export EDITOR=vi
     is_command vim && export EDITOR=vim
-    is_command code && test -n "$DISPLAY" && export EDITOR=code
+    is_command codeedit && export EDITOR=codeedit
     is_command more && export PAGER=more
     is_command less && export PAGER=less
     is_command meld && test -n "$DISPLAY" && export DIFF=meld
