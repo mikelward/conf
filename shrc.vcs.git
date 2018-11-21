@@ -108,7 +108,16 @@ git_status() {
     git status --short "$@"
 }
 
+git_submit() {
+    git push "$@"
+}
+
 git_unknown() (
     cd $(git rootdir)
     git ls-files -od
 )
+
+# send the current change for Gerrit review
+git_upload() {
+    git push origin HEAD:refs/for/master/$(git_branch)${1+%r=$1}
+}

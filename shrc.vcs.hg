@@ -89,10 +89,18 @@ hg_rootdir() {
     hg root
 }
 
+hg_submit() {
+    hg submit
+}
+
 hg_status() {
     hg status "$@"
 }
 
 hg_unknown() {
    hg status --unknown --deleted
+}
+
+hg_upload() {
+    hg push "$@"
 }
