@@ -11,6 +11,9 @@
 "gnome-calculator"
 	Mod4 + c
 
+"code"
+	Mod4 + d
+
 "browser2"
 	Mod4 + f
 
