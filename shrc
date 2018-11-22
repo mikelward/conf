@@ -1839,11 +1839,6 @@ exec zsh -i'
     # command line editing
     test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
     set -o emacs
-
-    # workaround for GNOME Terminal which does a cd on startup :-(
-    case "$(ps -o comm= -p $(ps -o ppid= -p $$))" in gnome-terminal*|terminator)
-        cd;;
-    esac
 fi
 
 # source local overrides file (work vs home, etc.)
