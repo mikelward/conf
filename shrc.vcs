@@ -66,7 +66,7 @@ alias sa=save
 alias st=status
 for command in add amend branch branches \
     changed changelog changes commit diffs \
-    fix incoming lint outgoing pending precommit prepush pull \
+    fix incoming lint outgoing pending precommit presubmit pull \
     push review status submit unknown upload; do
     # remove any alias created in .shrc
     case "$(type "$command" 2>/dev/null)" in *alias*)
@@ -83,7 +83,7 @@ for command in add amend branch branches \
 done
 
 check() {
-    save && prereview
+    save && precommit
 }
 
 project() {

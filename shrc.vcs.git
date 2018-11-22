@@ -65,6 +65,10 @@ git_outgoing() {
     git log --oneline origin/HEAD..HEAD
 }
 
+git_precommit() {
+    git_hook pre-commit
+}
+
 git_prereview() {
     git_hook pre-commit
 }
