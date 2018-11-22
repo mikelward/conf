@@ -1096,7 +1096,7 @@ if is_interactive; then
 
     # return true if it's already obvious which host I'm on
     show_hostname_in_title() {
-        ! on_my_machine || { connected_via_ssh && ! inside_tmux; }
+        ! inside_tmux
     }
 
     connected_via_ssh() {
