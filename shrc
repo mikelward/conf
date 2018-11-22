@@ -1040,8 +1040,7 @@ if is_interactive; then
             printf '%s\n' "$last_error"
             set_color 'normal'
         fi
-        printf '%s %s\n' "$(host_info)" "$(auth_info)"
-        dir_info
+        printf '%s %s\n' "$(dir_info)" "$(auth_info)"
         job_info
         set_title "$(title)"
         set_prompt
@@ -1174,32 +1173,7 @@ if is_interactive; then
     # print directory stack listing in "+<number> <directory>" format
     # intended to be used in the preprompt
     dir_info() {
-        if is_zsh; then
-            i=0
-            for _dir in "$PWD" "${dirstack[@]}"; do
-                blue "+$i $(_dir_info "$_dir")"
-                echo
-                i=$((i+1))
-            done
-        elif is_bash; then
-            i=0
-            for _dir in "${DIRSTACK[@]}"; do
-                case "$_dir" in
-                "~")
-                    _dir="$HOME"
-                    ;;
-                "~"/*)
-                    _dir="$HOME/${_dir#\~/}"
-                    ;;
-                esac
-                blue "+$i $(_dir_info "$_dir")"
-                echo
-                i=$((i+1))
-            done
-        else
-            blue "$PWD"
-            echo
-        fi
+            blue "$(_dir_info "$PWD")"
     }
     _dir_info() {
         # if the directory is under version control, print
