@@ -57,6 +57,7 @@ alias ad=add
 alias ak=allknown
 alias am=amend
 alias ch=check
+alias change=recommit
 alias cl=changelog
 alias di=diffs
 alias projectroot=rootdir
@@ -67,7 +68,7 @@ alias st=status
 for command in add amend branch branches \
     changed changelog changes commit diffs \
     fix incoming lint outgoing pending precommit presubmit pull \
-    push review status submit unknown upload; do
+    push recommit review status submit unknown upload uploadchain; do
     # remove any alias created in .shrc
     case "$(type "$command" 2>/dev/null)" in *alias*)
         unalias "$command"

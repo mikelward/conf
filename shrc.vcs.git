@@ -9,7 +9,7 @@ git_add() {
 }
 
 git_amend() {
-    git amend "$@"
+    git amend --no-edit "$@"
 }
 
 # print the name of the currently active git branch
@@ -99,6 +99,10 @@ git_hook() {
 	fi
 }
 
+git_recommit() {
+    git amend "$@"
+}
+
 # send the current change for Gerrit review
 git_review() {
     git push origin HEAD:refs/for/master/$(git_branch)${1+%r=$1}
@@ -123,5 +127,10 @@ git_unknown() (
 
 # send the current change for Gerrit review
 git_upload() {
+    git push origin HEAD:refs/for/master/$(git_branch)${1+%r=$1}
+}
+
+# send the current change for Gerrit review
+git_uploadchain() {
     git push origin HEAD:refs/for/master/$(git_branch)${1+%r=$1}
 }

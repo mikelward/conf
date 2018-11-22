@@ -9,7 +9,7 @@ hg_add() {
 }
 
 hg_amend() {
-    hg amend --edit "$@"
+    hg amend "$@"
 }
 
 # print the name of the currently active mercurial branch
@@ -80,6 +80,10 @@ hg_push() {
     hg push "$@"
 }
 
+hg_recommit() {
+    hg commit --amend "$@"
+}
+
 hg_review() {
     echo "hg review not supported" >&2
     false
@@ -103,4 +107,8 @@ hg_unknown() {
 
 hg_upload() {
     hg push "$@"
+}
+
+hg_uploadchain() {
+    hg uploadchain "$@"
 }
