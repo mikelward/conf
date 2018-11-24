@@ -1189,12 +1189,12 @@ if is_interactive; then
                 printf ' '
                 blue "$projectsubdir"
             fi
-            local branch
-            branch="$(branch)"
-            if test -n "$branch"; then
-                printf ' '
-                green "$branch"
-            fi
+            # local branch
+            # branch="$(branch)"
+            # if test -n "$branch"; then
+            #     printf ' '
+            #     green "$branch"
+            # fi
         else
             tilde_directory
         fi
