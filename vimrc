@@ -81,7 +81,6 @@ set smarttab	" backspace deletes one indentation level
 set shiftround	" manual shift aligns on columns
 
 set backspace=2	" backspaces can go over lines
-set esckeys	" allow arrow keys in insert mode
 set noerrorbells visualbell	" flash screen instead of ringing bell
 set showbreak=+	" specially mark continued lines with a plus
 
