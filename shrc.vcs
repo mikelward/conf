@@ -87,6 +87,13 @@ check() {
     save && precommit
 }
 
+clone() {
+    case "$1" in
+      *.git) git clone "$@";;
+      */hg*) hg clone "$@";;
+    esac
+}
+
 project() {
     basename "$(projectroot)"
 }
