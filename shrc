@@ -889,6 +889,7 @@ if is_interactive; then
     alias mt='make test'
     alias now='date +"%Y-%m-%dT%H:%M:%S"'
     alias nowns='date +"%Y-%m-%dT%H:%M:%S.%N"'
+    alias nv='nvim'
     # function rather than an alias so it looks better in the xterm title.
     p() { "${PAGER:-more}" "$@"; }
     alias pgrep,='pgrep -d , -f'
