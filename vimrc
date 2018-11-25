@@ -134,10 +134,13 @@ function! TogglePaste()
   endif
 endfunction
 
+map <Leader>b :make<CR>
 map <Leader>c :TComment<CR>
+map <Leader>n :cnext<CR>
+map <Leader>p :cprevious<CR>
+"map <Leader>t :TagbarToggle<CR>
+map <Leader>t :make test<CR>
 map <Leader>w :call ToggleWhitespace()<CR>
-map <Leader>p :call TogglePaste()<CR>
-map <Leader>t :TagbarToggle<CR>
 nmap <silent> <A-Up> :wincmd k<CR>
 nmap <silent> <A-Down> :wincmd j<CR>
 nmap <silent> <A-Left> :wincmd h<CR>
@@ -148,9 +151,6 @@ nmap <silent> <A-Right> :wincmd l<CR>
 nnoremap <leader>1 yypVr=
 nnoremap <leader>2 yypVr-
 nnoremap <leader>3 yypVr~
-
-" swap commented line and uncommented line, e.g. in ~/.xbindkeysrc
-nnoremap <leader>s 0xddpki#<Esc>
 
 if version >= 600
     " per-file type rules
@@ -205,8 +205,6 @@ if has("autocmd")
         call append(line("$"), l:modeline)
     endfun
 
-    nnoremap <leader>m :call AppendModeline()<CR>
-
     " per-project rules
     au BufRead,BufNewFile */apt*/*.{c,cc,h} setlocal sw=4 ts=8 noexpandtab
     au BufRead,BufNewFile */bash*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
@@ -226,6 +224,9 @@ if has("autocmd")
     au BufRead,BufNewFile */uemacs*/*.{c,h} setlocal sw=8 ts=8 noexpandtab
     au BufRead,BufNewFile */unreal*/*.{c,cpp,h} setlocal shiftwidth=4 tabstop=4 noexpandtab
     au BufRead,BufNewFile */zsh*/*.[ch] setlocal sw=4 ts=8 noexpandtab
+
+    autocmd QuickFixCmdPost [^l]* nested cwindow
+    autocmd QuickFixCmdPost    l* nested lwindow
 
     " Highlight the current line in the current buffer
     " TODO: Disable cursorline in leaving buffer on :split
