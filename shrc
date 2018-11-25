@@ -1793,7 +1793,7 @@ exec zsh -i'
     # default programs
     is_command vi && export EDITOR=vi
     is_command vim && export EDITOR=vim
-    is_command codeedit && export EDITOR=codeedit
+    is_command editline && export EDITOR=editline
     is_command more && export PAGER=more
     is_command less && export PAGER=less
     is_command meld && test -n "$DISPLAY" && export DIFF=meld
