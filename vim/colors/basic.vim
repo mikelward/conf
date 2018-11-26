@@ -40,6 +40,7 @@ if &background == "light"
         highlight link ColorColumn Error
     endif
     highlight CursorLine term=underline cterm=NONE ctermbg=LightGrey guibg=Grey90
+    highlight Visual term=reverse cterm=bold ctermfg=7 ctermbg=4
 else
     highlight String term=underline cterm=NONE ctermfg=Magenta guifg=Magenta
     highlight Comment term=bold cterm=NONE ctermfg=Cyan guifg=Cyan
@@ -52,5 +53,7 @@ else
         highlight link ColorColumn Error
     endif
     highlight CursorLine term=underline cterm=NONE ctermbg=LightGrey guibg=Grey90
+    " TODO: check on dark background
+    highlight Visual term=reverse cterm=bold ctermfg=7 ctermbg=4
 endif
 
