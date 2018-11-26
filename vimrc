@@ -146,12 +146,6 @@ nmap <silent> <A-Down> :wincmd j<CR>
 nmap <silent> <A-Left> :wincmd h<CR>
 nmap <silent> <A-Right> :wincmd l<CR>
 
-" MARKDOWN SHORTCUTS
-" http://stevelosh.com/blog/2010/09/coming-home-to-vim/
-nnoremap <leader>1 yypVr=
-nnoremap <leader>2 yypVr-
-nnoremap <leader>3 yypVr~
-
 if version >= 600
     " per-file type rules
     filetype on	" enable per-user file type customizations
