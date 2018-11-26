@@ -1,9 +1,4 @@
 # register git VCS
-git_detect() {
-    quiet git branch --color=never && echo git
-}
-vcs_detect[git]=git_detect
-
 git_add() {
     git add --intent-to-add "$@"
 }

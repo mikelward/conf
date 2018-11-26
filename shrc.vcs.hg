@@ -1,9 +1,4 @@
 # register hg VCS
-hg_detect() {
-    quiet hg branch && echo hg
-}
-vcs_detect[hg]=hg_detect
-
 hg_add() {
     hg add "$@"
 }
