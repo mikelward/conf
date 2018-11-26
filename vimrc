@@ -182,7 +182,7 @@ if has("autocmd")
         let b:lastline = line('$')
         call setpos('.', [0, b:lastline, 0, 0])
     endfun
-    au BufNewFile * call ReadTemplate()
+    autocmd BufNewFile * call ReadTemplate()
     fun! ReadTemplate()
         let b:filename = bufname('%')
         let b:basename = substitute(b:filename, '\(.*\)\.\(.*\)', '\1', '')
@@ -206,24 +206,24 @@ if has("autocmd")
     endfun
 
     " per-project rules
-    au BufRead,BufNewFile */apt*/*.{c,cc,h} setlocal sw=4 ts=8 noexpandtab
-    au BufRead,BufNewFile */bash*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
-    au BufRead,BufNewFile */coreutils*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
-    au BufRead,BufNewFile */ersatz*/*.{c,h} setlocal sw=2 ts=8 noexpandtab
-    au BufRead,BufNewFile */glibc*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
-    au BufRead,BufNewFile */gnome-terminal*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
-    au BufRead,BufNewFile */inspircd/*.{c,cpp,h} setlocal shiftwidth=4 tabstop=4 noexpandtab
-    au BufRead,BufNewFile */isc-dhcp/*.{c,h} setlocal shiftwidth=8 tabstop=8 noexpandtab
-    au BufRead,BufNewFile */nagios*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
-    au BufRead,BufNewFile */openbsd*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
-    au BufRead,BufNewFile */postfix*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
-    au BufRead,BufNewFile */procmail*/*.{c,h} setlocal sw=3 ts=8 noexpandtab
-    au BufRead,BufNewFile */putty*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
-    au BufRead,BufNewFile */sudo*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
-    au BufRead,BufNewFile */terminal*/*.{c,h} setlocal sw=4 ts=8 expandtab
-    au BufRead,BufNewFile */uemacs*/*.{c,h} setlocal sw=8 ts=8 noexpandtab
-    au BufRead,BufNewFile */unreal*/*.{c,cpp,h} setlocal shiftwidth=4 tabstop=4 noexpandtab
-    au BufRead,BufNewFile */zsh*/*.[ch] setlocal sw=4 ts=8 noexpandtab
+    autocmd BufRead,BufNewFile */apt*/*.{c,cc,h} setlocal sw=4 ts=8 noexpandtab
+    autocmd BufRead,BufNewFile */bash*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
+    autocmd BufRead,BufNewFile */coreutils*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
+    autocmd BufRead,BufNewFile */ersatz*/*.{c,h} setlocal sw=2 ts=8 noexpandtab
+    autocmd BufRead,BufNewFile */glibc*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
+    autocmd BufRead,BufNewFile */gnome-terminal*/*.{c,h} setlocal sw=2 ts=8 expandtab cinoptions=>4,n-2,{2,^-2,:2,=2,g0,h2,p5,t0,+2,(0,u0,w1,m1
+    autocmd BufRead,BufNewFile */inspircd/*.{c,cpp,h} setlocal shiftwidth=4 tabstop=4 noexpandtab
+    autocmd BufRead,BufNewFile */isc-dhcp/*.{c,h} setlocal shiftwidth=8 tabstop=8 noexpandtab
+    autocmd BufRead,BufNewFile */nagios*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
+    autocmd BufRead,BufNewFile */openbsd*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
+    autocmd BufRead,BufNewFile */postfix*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
+    autocmd BufRead,BufNewFile */procmail*/*.{c,h} setlocal sw=3 ts=8 noexpandtab
+    autocmd BufRead,BufNewFile */putty*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
+    autocmd BufRead,BufNewFile */sudo*/*.{c,h} setlocal sw=4 ts=8 noexpandtab
+    autocmd BufRead,BufNewFile */terminal*/*.{c,h} setlocal sw=4 ts=8 expandtab
+    autocmd BufRead,BufNewFile */uemacs*/*.{c,h} setlocal sw=8 ts=8 noexpandtab
+    autocmd BufRead,BufNewFile */unreal*/*.{c,cpp,h} setlocal shiftwidth=4 tabstop=4 noexpandtab
+    autocmd BufRead,BufNewFile */zsh*/*.[ch] setlocal sw=4 ts=8 noexpandtab
 
     autocmd QuickFixCmdPost [^l]* nested cwindow
     autocmd QuickFixCmdPost    l* nested lwindow
@@ -231,8 +231,8 @@ if has("autocmd")
     " Highlight the current line in the current buffer
     " TODO: Disable cursorline in leaving buffer on :split
     if exists("+cursorline")
-        au BufEnter * setlocal cursorline
-        au BufLeave * setlocal nocursorline
+        autocmd BufEnter * setlocal cursorline
+        autocmd BufLeave * setlocal nocursorline
         "set cursorline
     endif
 endif
