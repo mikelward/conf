@@ -84,6 +84,9 @@ set backspace=2	" backspaces can go over lines
 set noerrorbells visualbell	" flash screen instead of ringing bell
 set showbreak=+	" specially mark continued lines with a plus
 
+set virtualedit=onemore	" allow cursor to be positioned at end of line
+                                 " best with autocmd InsertLeave
+
 " run goimports when saving a .go file
 let g:gofmt_command = "goimports"
 
@@ -154,6 +157,10 @@ if version >= 600
 endif
 
 if has("autocmd")
+    " make insert mode return to where insertion started
+    " best when paired with virtualedit
+    autocmd InsertLeave * :normal `^
+
     " teach Vim about .go files
     autocmd BufRead,BufNewFile *.go setlocal filetype=go
 
