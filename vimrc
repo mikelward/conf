@@ -108,6 +108,9 @@ endif
 if has("mouse")
     set mouse=a
 endif
+if has("signcolumn")
+    set signcolumn=yes	" always show the sign/mark gutter
+endif
 
 " allow # character at current indentation level (must appear on own line)
 inoremap # X<BS>#

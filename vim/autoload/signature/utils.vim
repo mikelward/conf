@@ -166,7 +166,7 @@ function! signature#utils#SetupHighlightGroups()                                
   let l:prefix = (has('gui_running') || (has('termguicolors') && &termguicolors) ? 'gui' : 'cterm')
   let l:sign_col_color = synIDattr(synIDtrans(hlID('SignColumn')), 'bg', l:prefix)
 
-  call CheckAndSetHL('SignatureMarkText',   l:prefix, 'fg', 'Red')
+  call CheckAndSetHL('SignatureMarkText',   l:prefix, 'fg', 'Yellow')
   call CheckAndSetHL('SignatureMarkText',   l:prefix, 'bg', l:sign_col_color)
   call CheckAndSetHL('SignatureMarkerText', l:prefix, 'fg', 'Green')
   call CheckAndSetHL('SignatureMarkerText', l:prefix, 'bg', l:sign_col_color)
