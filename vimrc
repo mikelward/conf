@@ -244,6 +244,7 @@ endif
 
 " SEARCH OPTIONS
 set hlsearch	" disable highlighting of matches
+set incsearch	" jump to partial match as you type
 set noignorecase	" case is important in search terms
 set tags+=./tags;/	" search up the tree for tags files
 
