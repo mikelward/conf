@@ -1219,6 +1219,15 @@ if is_interactive; then
         fi
     }
 
+    project_or_pwd() {
+        local projectname="$(projectname)"
+        if test -n "$projectname"; then
+            printf '%s' "$projectname"
+        else
+            printf '%s' "$(basename "$PWD")"
+        fi
+    }
+
     # print the name of the current branch
     branch() {
         :
@@ -1392,7 +1401,7 @@ exec zsh -i'
             short_hostname
             printf ' '
         fi
-        project_or_command_or_pwd
+        project_or_pwd
     }
 
     # set all the prompt strings
