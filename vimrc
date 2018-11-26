@@ -105,6 +105,9 @@ let g:tagbar_type_go = {
 if has("x11")
     set clipboard=unnamed	" yank to X selection buffer
 endif
+if has("mouse")
+    set mouse=a
+endif
 
 " allow # character at current indentation level (must appear on own line)
 inoremap # X<BS>#
