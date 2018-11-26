@@ -140,6 +140,7 @@ function! TogglePaste()
   endif
 endfunction
 
+" KEYBOARD BINDINGS
 map <Leader>b :make<CR>
 map <Leader>c :TComment<CR>
 map <Leader>n :cnext<CR>
@@ -147,10 +148,14 @@ map <Leader>p :cprevious<CR>
 "map <Leader>t :TagbarToggle<CR>
 map <Leader>t :make test<CR>
 map <Leader>w :call ToggleWhitespace()<CR>
-nmap <silent> <A-Up> :wincmd k<CR>
-nmap <silent> <A-Down> :wincmd j<CR>
-nmap <silent> <A-Left> :wincmd h<CR>
-nmap <silent> <A-Right> :wincmd l<CR>
+map <silent> <A-Up> :wincmd k<CR>
+map <silent> <A-Down> :wincmd j<CR>
+map <silent> <A-Left> :wincmd h<CR>
+map <silent> <A-Right> :wincmd l<CR>
+map <silent> <M-Up> :wincmd k<CR>
+map <silent> <M-Down> :wincmd j<CR>
+map <silent> <M-Left> :wincmd h<CR>
+map <silent> <M-Right> :wincmd l<CR>
 
 if version >= 600
     " per-file type rules
