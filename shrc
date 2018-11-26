@@ -756,10 +756,8 @@ if is_interactive; then
         titlefinish=''
         ;;
     screen*)
-        # status line
-        #titlestart='^[_'
-        #titlefinish='^[\'
         # window title
+        # screen/tmux are responsible for setting the terminal title
         titlestart='k'
         titlefinish='\'
         ;;
