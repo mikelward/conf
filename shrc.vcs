@@ -68,7 +68,7 @@ alias st=status
 for command in add amend branch branches \
     changed changelog changes commit diffs \
     fix incoming lint outgoing pending precommit presubmit pull \
-    push recommit review status submit unknown upload uploadchain; do
+    push recommit revert review status submit unknown upload uploadchain; do
     # remove any alias created in .shrc
     case "$(type "$command" 2>/dev/null)" in *alias*)
         unalias "$command"

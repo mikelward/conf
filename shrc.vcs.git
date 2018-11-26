@@ -98,6 +98,10 @@ git_recommit() {
     git amend "$@"
 }
 
+git_revert() {
+    git checkout -- "$@"
+}
+
 # send the current change for Gerrit review
 git_review() {
     git push origin HEAD:refs/for/master/$(git_branch)${1+%r=$1}

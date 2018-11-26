@@ -79,6 +79,10 @@ hg_recommit() {
     hg commit --amend "$@"
 }
 
+hg_revert() {
+    hg revert "$@"
+}
+
 hg_review() {
     echo "hg review not supported" >&2
     false
