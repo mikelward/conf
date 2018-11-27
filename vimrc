@@ -144,13 +144,17 @@ function! TogglePaste()
 endfunction
 
 " KEYBOARD BINDINGS
+let mapleader = ","
 map <Leader>b :make<CR>
-map <Leader>c :TComment<CR>
+map <Leader>c :bdelete<CR>
 map <Leader>n :cnext<CR>
 map <Leader>p :cprevious<CR>
 "map <Leader>t :TagbarToggle<CR>
+map <Leader>s :split<CR>
 map <Leader>t :make test<CR>
+map <Leader>v :vsplit<CR>
 map <Leader>w :call ToggleWhitespace()<CR>
+map <Leader>/ :TComment<CR>
 map <silent> <A-Up> :wincmd k<CR>
 map <silent> <A-Down> :wincmd j<CR>
 map <silent> <A-Left> :wincmd h<CR>
