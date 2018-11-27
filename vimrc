@@ -155,6 +155,8 @@ map <Leader>s :split<CR>
 map <Leader>t :make test<CR>
 map <Leader>v :vsplit<CR>
 map <Leader>w :call ToggleWhitespace()<CR>
+map <Leader>. :tag<CR>
+map <Leader>, :pop<CR>
 map <Leader>/ :TComment<CR>
 map <silent> <A-Up> :wincmd k<CR>
 map <silent> <A-Down> :wincmd j<CR>
