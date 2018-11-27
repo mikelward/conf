@@ -105,6 +105,7 @@ hg_unknown() {
 }
 
 hg_upload() {
+    test $# -eq 0 && set -- -r .
     hg push "$@"
 }
 
