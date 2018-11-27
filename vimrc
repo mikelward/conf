@@ -52,7 +52,7 @@ if has("syntax")
 endif
 
 " Highlight the character at &textwidth (default 80) + 1 columns
-if exists("+colorcolumn")
+if exists("&colorcolumn")
   set colorcolumn=+1
 endif
 
@@ -108,7 +108,7 @@ endif
 if has("mouse")
     set mouse=a
 endif
-if has("signcolumn")
+if exists("&signcolumn")
     set signcolumn=yes	" always show the sign/mark gutter
 endif
 
@@ -246,7 +246,7 @@ if has("autocmd")
 
     " Highlight the current line in the current buffer
     " TODO: Disable cursorline in leaving buffer on :split
-    if exists("+cursorline")
+    if exists("&cursorline")
         autocmd BufEnter * setlocal cursorline
         autocmd BufLeave * setlocal nocursorline
         "set cursorline
