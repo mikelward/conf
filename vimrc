@@ -38,7 +38,7 @@ set noicon	" don't change terminal's title
 set notitle	" don't change terminal's title
 set laststatus=2	" always show status line for each window
 set showmode	" always show command or insert mode
-set shortmess=I	" no intro or swap file found messages
+set shortmess+=FIOt	" no file details or intro messages
 	" after opening a file already being edited
 set winminheight=0	" make Ctrl+W+_ fully minimize other buffers
 	" (show only their status bars)
