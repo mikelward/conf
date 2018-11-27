@@ -106,7 +106,7 @@ if has("x11")
     set clipboard=unnamed	" yank to X selection buffer
 endif
 if has("mouse")
-    set mouse=a
+    set mouse=                   " regain use of right mouse button
 endif
 if exists("&signcolumn")
     set signcolumn=yes	" always show the sign/mark gutter
