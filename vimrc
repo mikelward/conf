@@ -177,6 +177,12 @@ if has("autocmd")
     " best when paired with virtualedit
     autocmd InsertLeave * :normal `^
 
+    if has("windows")
+        " use tabpages by default
+        autocmd BufAdd,BufNewFile,BufRead * nested tab ball
+        set showtabline=2
+    endif
+
     " teach Vim about .go files
     autocmd BufRead,BufNewFile *.go setlocal filetype=go
 
