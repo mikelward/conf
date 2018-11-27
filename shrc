@@ -911,6 +911,7 @@ if is_interactive; then
         find . \( -type d -path '*/\.*' -prune \) -o "$@"
     }
     alias rg='g -IR --exclude-dir=".*"'
+    alias q='_exit'
     alias s='ssh'
     alias sbtnew='sbt new sbt/scala-seed.g8'
     alias spell='aspell -a'
