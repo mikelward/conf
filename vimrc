@@ -72,6 +72,7 @@ set backupext=~	" backup files end in ~
 
 " EDITING OPTIONS
 set autoindent	" indentation level automatically controlled
+set autowrite                    " allow jumping to tags etc. even if buffer is modified
 set cinoptions=:0,g0	" labels are not indented (in C/C++ files)
 set cinoptions+=(0	" hanging indent to align function parameters
 set completeopt=menu,menuone	" ^X^O shows a menu
