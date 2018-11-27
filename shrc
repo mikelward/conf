@@ -809,8 +809,6 @@ if is_interactive; then
     alias bindkeys='daemon xbindkeys'
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.go,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}"
     code_includes="$(eval echo --include=$code_patterns)"
-    dir_patterns="{.git,.hg,.svn,.pc}"
-    dir_excludes="$(eval echo --exclude-dir=$dir_patterns)"
     alias c='less -FX'
     alias cdf='cdfile'
     alias cg='rg '"$code_includes"
@@ -908,7 +906,11 @@ if is_interactive; then
     alias py3='python3'
     alias r='fc -e - --'
     alias rerc="source '$HOME/.shrc'"
-    alias rg='g -IR '"$dir_excludes"
+    rf() {
+        test $# -eq 0 && set -- -print
+        find . \( -type d -path '*/\.*' -prune \) -o "$@"
+    }
+    alias rg='g -IR --exclude-dir=".*"'
     alias s='ssh'
     alias sbtnew='sbt new sbt/scala-seed.g8'
     alias spell='aspell -a'
