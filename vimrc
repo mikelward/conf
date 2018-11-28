@@ -147,14 +147,19 @@ endfunction
 " KEYBOARD BINDINGS
 let mapleader = ","
 map <Leader>b :make<CR>
+map <C-b> :make<CR>
 map <Leader>c :bdelete<CR>
 map <Leader>n :cnext<CR>
+map <C-n> :tabnew<CR>
 map <Leader>p :cprevious<CR>
 "map <Leader>t :TagbarToggle<CR>
 map <Leader>s :split<CR>
+map <C-s> :write<CR>
 map <Leader>t :make test<CR>
+map <C-t> :make test<CR>
 map <Leader>v :vsplit<CR>
 map <Leader>w :call ToggleWhitespace()<CR>
+map <C-w> :bdelete<CR>
 map <Leader>. :tag<CR>
 map <Leader>, :pop<CR>
 map <Leader>/ :TComment<CR>
