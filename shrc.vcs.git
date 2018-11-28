@@ -35,7 +35,8 @@ git_changes() {
 }
 
 git_commit() {
-    git commit --all "$@"
+    test $# -eq 0 && set -- --all
+    git commit "$@"
 }
 
 git_diffs() {
