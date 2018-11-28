@@ -102,11 +102,6 @@ save() {
     allknown && fix
 }
 
-submit() {
-    # TODO: set up hooks to ensure push runs prepush/presubmit
-    check && pull && presubmit && push
-}
-
 for f in "$HOME"/.shrc.vcs.*; do
     if ! test -f "$f"; then
         echo "$f is not readable"
