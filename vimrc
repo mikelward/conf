@@ -186,7 +186,7 @@ if has("autocmd")
 
     if has("windows")
         " use tabpages by default
-        autocmd BufAdd,BufNewFile,BufRead * nested tab ball
+        autocmd BufAdd * nested tab ball
         set showtabline=2
     endif
 
