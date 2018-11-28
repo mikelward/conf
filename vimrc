@@ -148,7 +148,6 @@ endfunction
 let mapleader = ","
 map <Leader>b :make<CR>
 map <C-b> :make<CR>
-map <Leader>c :bdelete<CR>
 map <Leader>n :cnext<CR>
 map <C-n> :tabnew<CR>
 map <Leader>p :cprevious<CR>
@@ -159,7 +158,7 @@ map <Leader>t :make test<CR>
 map <C-t> :make test<CR>
 map <Leader>v :vsplit<CR>
 map <Leader>w :call ToggleWhitespace()<CR>
-map <C-w> :bdelete<CR>
+map <C-w> :quit<CR>
 map <Leader>. :tag<CR>
 map <Leader>, :pop<CR>
 map <Leader>/ :TComment<CR>
@@ -186,7 +185,7 @@ if has("autocmd")
 
     if has("windows")
         " use tabpages by default
-        autocmd BufAdd * nested tab ball
+        "autocmd BufAdd * nested tab ball
         set showtabline=2
     endif
 
