@@ -189,10 +189,8 @@ if has("autocmd")
         set showtabline=2
     endif
 
-    " teach Vim about .go files
+    " teach Vim about some more file types
     autocmd BufRead,BufNewFile *.go setlocal filetype=go
-
-    " teach Vim about .log files
     autocmd BufRead,BufNewFile *.log setlocal filetype=log
 
     " per file-type rules
@@ -201,6 +199,7 @@ if has("autocmd")
     autocmd FileType go autocmd BufWritePre <buffer> Fmt
     autocmd FileType markdown setlocal textwidth=80
     autocmd FileType svn setlocal viminfo=
+    autocmd FileType text setlocal textwidth=80
 
     " make :make jump to C assertion errors
     autocmd FileType c set errorformat^=%*[^:]:\ %f:%l:\ %m
