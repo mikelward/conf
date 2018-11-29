@@ -881,9 +881,10 @@ if is_interactive; then
     }
     alias lssg='lssockpgrep'
     alias j='jobs'
-    alias m='make'
+    m() { make -f .Makefile; }
+    ml() { m lint; }
     # shadows magtape command, but who uses that?
-    alias mt='make test'
+    mt() { m test; }
     alias now='date +"%Y-%m-%dT%H:%M:%S"'
     alias nowns='date +"%Y-%m-%dT%H:%M:%S.%N"'
     alias nv='nvim'
@@ -934,9 +935,6 @@ if is_interactive; then
     xa() { while command fg; do :; done; _exit; }
     alias xevkey='xev -event keyboard'
     alias xr='DISPLAY=:0.0 xrandr'
-    alias I='make install'
-    alias M='make'
-    alias T='make test'
 
     # expand aliases after nohup, etc.
     for wrapper in nohup strace sudo; do
