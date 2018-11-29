@@ -11,4 +11,7 @@ oneline = "{shortnode} {shortdate} {shortdesc}\n"
 ignore = ~/.hgexclude
 merge = meld
 
+[hooks]
+precommit = precommit
+
 %include .hgrc.local
