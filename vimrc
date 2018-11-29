@@ -199,8 +199,10 @@ if has("autocmd")
     autocmd FileType fstab setlocal listchars+=tab:>\  " intentional trailing space
     autocmd FileType go setlocal shiftwidth=8 tabstop=8 textwidth=0 noexpandtab colorcolumn=0
     autocmd FileType go autocmd BufWritePre <buffer> Fmt
+    autocmd FileType gitcommit setlocal viminfo= textwidth=80
+    autocmd FileType hgcommit setlocal viminfo= textwidth=80
     autocmd FileType markdown setlocal textwidth=80
-    autocmd FileType svn setlocal viminfo=
+    autocmd FileType svn setlocal viminfo= textwidth=80
     autocmd FileType text setlocal textwidth=80
 
     " make :make jump to C assertion errors
