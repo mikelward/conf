@@ -924,6 +924,9 @@ if is_interactive; then
     alias ts='t -f /var/log/syslog'
     view() { vim -R -c ":set mouse=" "$@"; }
     alias v='view'
+    if is_command nvim; then
+        vim() { nvim "$@"; }
+    fi
     alias vl='view /var/log/syslog'
     alias wcp='with_agent scp'
     alias wsh='with_agent ssh'
