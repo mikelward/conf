@@ -78,7 +78,7 @@ git_projectroot() {
 }
 
 git_pull() {
-    git pull "$@"
+    git pull --rebase "$@"
 }
 
 git_push() {

@@ -68,7 +68,7 @@ hg_projectroot() {
 }
 
 hg_pull() {
-    hg fetch
+    hg pull --update --rebase "$@"
 }
 
 hg_push() {
