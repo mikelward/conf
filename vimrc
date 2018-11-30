@@ -171,6 +171,8 @@ map <silent> <M-Down> :wincmd j<CR>
 map <silent> <M-Left> :wincmd h<CR>
 map <silent> <M-Right> :wincmd l<CR>
 
+nmap <BS> X	" make backspace work in normal mode
+
 if version >= 600
     " per-file type rules
     filetype on	" enable per-user file type customizations
