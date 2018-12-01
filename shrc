@@ -855,10 +855,16 @@ if is_interactive; then
     alias kssh='ssh -o PreferredAuthentications=publickey'
     if is_command l; then
         alias l='l -Kv'
+        alias ll='l -p -T -B -h --time-style=relative'
+        alias lt='l -Tt'
     elif quiet ls --color=auto -v -d /; then
         alias l='ls --color=auto -v'
+        alias ll='l -l'
+        alias lt='ll -t'
     else
         alias l='ls'
+        alias ll='l -l'
+        alias lt='ll -t'
     fi
     alias l1='l -1'
     alias la='l -a'
@@ -866,12 +872,6 @@ if is_interactive; then
     alias lc='l -C'
     # lg = line grep
     alias lg='g -F'
-    alias ll='l -l'
-    if quiet l -T; then
-        alias lt='l -Tt'
-    else
-        alias lt='ll -t'
-    fi
     lssock() {
         lsof -a -n -P -i "$@"
     }
