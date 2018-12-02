@@ -87,6 +87,7 @@ set showbreak=+	" specially mark continued lines with a plus
 
 set virtualedit=onemore	" allow cursor to be positioned at end of line
                                  " best with autocmd InsertLeave
+set statusline=%f%=%y\ %10(%4l,%c%V%)\ %6P  " put the filetype in the statusline
 
 " run goimports when saving a .go file
 let g:gofmt_command = "goimports"
