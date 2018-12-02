@@ -912,7 +912,7 @@ if is_interactive; then
         find . \( -type d -path '*/\.*' -prune \) -o "$@"
     }
     alias rg='g -IR --exclude-dir=".*"'
-    alias q='_exit'
+    alias q='xa'
     alias s='ssh'
     alias sbtnew='sbt new sbt/scala-seed.g8'
     alias spell='aspell -a'
@@ -931,7 +931,7 @@ if is_interactive; then
     alias vl='view /var/log/syslog'
     alias wcp='with_agent scp'
     alias wsh='with_agent ssh'
-    alias x='_exit'
+    alias x='xa'
     xa() { while command fg; do :; done; _exit; }
     alias xevkey='xev -event keyboard'
     alias xr='DISPLAY=:0.0 xrandr'
