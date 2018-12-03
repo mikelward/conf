@@ -56,7 +56,6 @@ allknown() {
 alias ad=add
 alias ak=allknown
 alias am=amend
-alias ch=check
 alias change=recommit
 alias cl=changelog
 alias di=diffs
@@ -82,10 +81,6 @@ for command in add amend branch branches \
     fi
     }'
 done
-
-check() {
-    save && precommit
-}
 
 clone() {
     case "$1" in
