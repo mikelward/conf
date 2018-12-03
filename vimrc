@@ -197,6 +197,7 @@ if has("autocmd")
     " teach Vim about some more file types
     autocmd BufRead,BufNewFile *.go setlocal filetype=go
     autocmd BufRead,BufNewFile *.log setlocal filetype=log
+    autocmd BufRead,BufNewFile *.ts setlocal filetype=javascript
 
     " per file-type rules
     autocmd FileType fstab setlocal listchars+=tab:>\  " intentional trailing space
