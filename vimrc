@@ -88,7 +88,7 @@ set showbreak=+	" specially mark continued lines with a plus
 set virtualedit=onemore	" allow cursor to be positioned at end of line
                                  " best with autocmd InsertLeave
 if has("statusline")
-    set statusline=%f%=%y\ %10(%4l,%c%V%)\ %6P  " put the filetype in the statusline
+    set statusline=%f%=%{(&ft!=''?&ft:'unknown')}\ %10(%4l,%c%V%)\ %6P  " put the filetype in the statusline
 endif
 
 " run goimports when saving a .go file
