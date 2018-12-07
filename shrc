@@ -917,7 +917,7 @@ if is_interactive; then
     alias sbtnew='sbt new sbt/scala-seed.g8'
     alias spell='aspell -a'
     alias sr='ssh -l root'
-    alias symlink='ln -s'
+    alias symlink='ln -sr'
     alias t='tail'
     alias tf='t -f'
     alias tl='t -f /var/log/syslog'
