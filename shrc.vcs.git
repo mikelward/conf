@@ -43,6 +43,11 @@ git_commit() {
     git commit "$@"
 }
 
+git_commitforce() {
+    test $# -eq 0 && set -- --all
+    git --no-verify commit "$@"
+}
+
 git_diffs() {
     git diff "$@"
 }
@@ -122,6 +127,10 @@ git_status() {
 
 git_submit() {
     git push "$@"
+}
+
+git_submitforce() {
+    git push --no-verify "$@"
 }
 
 git_unknown() (

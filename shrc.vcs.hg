@@ -37,6 +37,10 @@ hg_commit() {
     hg commit "$@"
 }
 
+hg_commitforce() {
+    hg --config hooks.precommit= -config hooks.pre-commit= commit "$@"
+}
+
 hg_diffs() {
     hg diff "$@"
 }
@@ -98,6 +102,10 @@ hg_rootdir() {
 
 hg_submit() {
     hg submit
+}
+
+hg_submitforce() {
+    hg --config hooks.preoutgoing= --config hooks.pre-push= submit
 }
 
 hg_status() {
