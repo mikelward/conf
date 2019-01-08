@@ -56,6 +56,8 @@ allknown() {
 alias ad=add
 alias ak=allknown
 alias am=amend
+alias an=annotate
+alias ann=annotate
 alias change=recommit
 alias cl=changelog
 alias di=diffs
@@ -64,7 +66,7 @@ alias re=review
 alias ro=rootdir
 alias sa=save
 alias st=status
-for command in add amend branch branches \
+for command in add amend annotate branch branches \
     changed changelog changes commit diffs \
     fix incoming lint outgoing pending precommit presubmit pull \
     push recommit revert review status submit unknown upload uploadchain; do

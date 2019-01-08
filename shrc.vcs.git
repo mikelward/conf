@@ -7,6 +7,10 @@ git_amend() {
     git amend --no-edit "$@"
 }
 
+git_annotate() {
+    git blame "$@"
+}
+
 # print the name of the currently active git branch
 git_branch() {
     git branch 2>/dev/null | while read star branch; do
