@@ -1,0 +1,11 @@
+build:
+	ng build
+
+lint:
+	ng lint
+
+run:
+	ng serve
+
+test:
+	ng lint
