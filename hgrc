@@ -12,6 +12,6 @@ ignore = ~/.hgexclude
 merge = meld
 
 [hooks]
-precommit = precommit
+#precommit = precommit
 
 %include .hgrc.local
