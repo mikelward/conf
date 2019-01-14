@@ -8,4 +8,4 @@ run:
 	ng serve
 
 test:
-	ng lint
+	ng test --watch=false
