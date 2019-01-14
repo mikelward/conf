@@ -881,7 +881,7 @@ if is_interactive; then
     }
     alias lssg='lssockpgrep'
     alias j='jobs'
-    m() { make -f .Makefile; }
+    m() { make -f .Makefile "$@"; }
     ml() { m lint; }
     # shadows magtape command, but who uses that?
     mt() { m test; }
