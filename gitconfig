@@ -109,7 +109,7 @@
    rebase = true
 
 [push]
-    default = upstream
+    default = current
 
 [init]
     templatedir = ~/.gittemplates
