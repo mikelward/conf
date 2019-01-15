@@ -1,27 +1,24 @@
 {
     "version": "2.0.0",
     "command": "ng",
+    "presentation": {
+        "panel": "dedicated"
+    },
     "tasks": [
         {
-            "label": "build",
-            "type": "shell",
-            "command": "ng build"
-        },
-        {
-            "label": "run",
-            "type": "shell",
-            "command": "ng serve"
-        },
-        {
             "label": "lint",
-            "type": "shell",
-            "command": "ng lint"
+        },
+        {
+            "label": "build",
         },
         {
             "label": "test",
-            "type": "shell",
-            "command": "ng test"
+            "args": [""--watch=false"]
+        },
+        {
+            "label": "run",
+            "command": "ng",
+            "args": ["serve"]
         }
     ]
 }
-
