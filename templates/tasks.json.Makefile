@@ -1,15 +1,17 @@
 {
-    "version": "0.1.0",
+    "version": "2.0.0",
     "command": "make",
-    "isShellCommand": true,
+	    "presentation": {
+        "panel": "dedicated",
+        "clear": true
+    },
     "tasks": [
         {
-            "taskName": "build",
-            "suppressTaskName": true,
-            "args": []
+            "label": "build",
+			"command": "make",
         },
         {
-            "taskName": "test"
+            "label": "test"
         }
     ]
 }
