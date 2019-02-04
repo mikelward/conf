@@ -936,6 +936,18 @@ if is_interactive; then
     alias xevkey='xev -event keyboard'
     alias xr='DISPLAY=:0.0 xrandr'
 
+    set_up_ssh_aliases() {
+        local _ssh_machines="$HOME/.ssh/machines"
+        test -f "$_ssh_machines" || return
+
+        while IFS=$'\n' read -r _fqdn; do
+            local _short="${_fqdn%%.*}"
+            eval "$_short=$_fqdn"
+            eval "$_short"'() { ssh "$@" '"$_fqdn"'; }'
+        done <"$_ssh_machines"
+    }
+    set_up_ssh_aliases
+
     # expand aliases after nohup, etc.
     for wrapper in nohup strace sudo; do
         alias $wrapper="$wrapper "
