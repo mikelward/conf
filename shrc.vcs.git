@@ -4,6 +4,7 @@ git_add() {
 }
 
 git_amend() {
+    test $# -eq 0 && set -- --all
     git amend --no-edit "$@"
 }
 
