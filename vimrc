@@ -56,12 +56,7 @@ if exists("&colorcolumn")
   set colorcolumn=+1
 endif
 
-if &term == "putty"
-    set background=dark	" PuTTY has a black background by default
-endif
-if &term == "cygwin"
-    set background=light	" My Cygwin has a white background
-endif
+set background=light
 
 if version >= 600
     colorscheme basic	" Use my own basic syntax highlighting
