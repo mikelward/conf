@@ -1070,7 +1070,7 @@ if is_interactive; then
 
     # get the user's attention
     flash_terminal() {
-        case $TERM in xterm)
+        case $TERM in xterm|xterm-*)
             bell
             ;;
         esac
