@@ -60,6 +60,9 @@
 "code"
 	Mod4 + v
 
+"browser3"
+	Mod4 + y
+
 # mute
 "vol mute"
 	Mod4 + KP_Delete
