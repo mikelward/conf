@@ -8,10 +8,18 @@
     "tasks": [
         {
             "label": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
 			"command": "make",
         },
         {
-            "label": "test"
+            "label": "test",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
         }
     ]
 }
