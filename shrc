@@ -923,6 +923,7 @@ if is_interactive; then
     alias tl='t -f /var/log/syslog'
     alias today='date +"%Y-%m-%d"'
     alias ts='t -f /var/log/syslog'
+    alias userctl='systemctl --user'
     view() { vim -R -c ":set mouse=" "$@"; }
     alias v='view'
     if is_command nvim; then
