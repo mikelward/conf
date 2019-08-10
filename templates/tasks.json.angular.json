@@ -8,18 +8,29 @@
     "tasks": [
         {
             "label": "lint",
+            "args": [
+                "lint"
+            ]
         },
         {
             "label": "build",
+            "args": [
+                "build"
+            ]
         },
         {
             "label": "test",
-            "args": [""--watch=false"]
+            "args": [
+                "test",
+                "--watch=false"
+            ]
         },
         {
             "label": "run",
             "command": "ng",
-            "args": ["serve"]
+            "args": [
+                "serve"
+            ]
         }
     ]
 }

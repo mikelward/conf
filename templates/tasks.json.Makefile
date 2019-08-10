@@ -12,14 +12,17 @@
                 "kind": "build",
                 "isDefault": true
             },
-			"command": "make",
+			"args": []
         },
         {
             "label": "test",
             "group": {
                 "kind": "test",
                 "isDefault": true
-            }
+            },
+            "args": [
+                "test",
+            ]
         }
     ]
 }
