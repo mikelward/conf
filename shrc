@@ -1029,6 +1029,11 @@ if is_interactive; then
         for i in $(seq 0 9); do
             alias -- +$i='pushpop '$i
         done
+
+        dollar() {
+            "$@"
+        }
+        alias '$'='dollar'
         ;;
     *)
         # ksh and dash lack %, %1, etc.
