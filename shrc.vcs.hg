@@ -96,6 +96,10 @@ hg_review() {
     false
 }
 
+hg_reword() {
+    hg reword "$@"
+}
+
 hg_rootdir() {
     hg root
 }

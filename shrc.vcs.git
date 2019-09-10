@@ -118,6 +118,10 @@ git_review() {
     git push origin HEAD:refs/for/master/$(git_branch)${1+%r=$1}
 }
 
+git_reword() {
+    git commit --amend --only --allow-empty
+}
+
 git_rootdir() {
     git rootdir
 }
