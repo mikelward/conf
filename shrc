@@ -1194,6 +1194,10 @@ if is_interactive; then
                 grep -v '(pwd now:'
     }
 
+    status_chars() {
+        :
+    }
+
     # print directory stack listing in "+<number> <directory>" format
     # intended to be used in the preprompt
     dir_info() {
@@ -1212,6 +1216,11 @@ if is_interactive; then
             if test -n "$projectsubdir"; then
                 printf ' '
                 blue "$projectsubdir"
+            fi
+            statuschars="$(status_chars)"
+            if test -n "$statuschars"; then
+                printf ' '
+                yellow "$statuschars"
             fi
             # local branch
             # branch="$(branch)"
@@ -1273,6 +1282,13 @@ if is_interactive; then
     green() {
         if $color; then
             printf '%s%s%s' "$green" "$*" "$normal"
+        else
+            printf '%s' "$*"
+        fi
+    }
+    yellow() {
+        if $color; then
+            printf '%s%s%s' "$yellow" "$*" "$normal"
         else
             printf '%s' "$*"
         fi
