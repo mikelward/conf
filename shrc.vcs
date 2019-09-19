@@ -101,7 +101,7 @@ save() {
 }
 
 status_chars() {
-    status | awk '{ print $1 }' | sort | uniq | tr '\n' ' '
+    status | awk '!/^[[:space:]]{2}/ { print $1 }' | sort | uniq | tr '\n' ' '
 }
 
 for f in "$HOME"/.shrc.vcs.*; do
