@@ -675,6 +675,13 @@ what() {
     fi
 }
 
+# run a command under set -x
+wx() {
+    set -x
+    "$@"
+    set +x
+}
+
 ##################################
 # ENVIRONMENT SETUP FOR ALL SHELLS
 # Set $PATH early in case other stuff here needs it.
