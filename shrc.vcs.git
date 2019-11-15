@@ -40,13 +40,25 @@ git_changes() {
 }
 
 git_commit() {
-    test $# -eq 0 && set -- --all
-    git commit "$@"
+    declare -a args
+    for arg; do
+        case "$arg" in -*)
+            args+=("$arg")
+            shift
+            ;;
+        *)
+            break
+            ;;
+        esac
+    done
+    # no files given, commit them all
+    test $# -eq 0 && args+=("--all")
+    git commit "${args[@]}" "$@"
 }
 
 git_commitforce() {
     test $# -eq 0 && set -- --all
-    git --no-verify commit "$@"
+    git commit --no-verify "$@"
 }
 
 git_diffs() {
