@@ -685,6 +685,7 @@ export GOPATH
 
 add_path "$HOME/android-sdk-linux/platform-tools"
 add_path "$HOME/Android/Sdk/platform-tools"
+add_path "$HOME/.cargo/bin"
 add_path "$HOME/.local/bin"
 add_path "$HOME/bin" start
 add_path "$GOPATH/bin" start
