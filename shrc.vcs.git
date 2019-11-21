@@ -41,13 +41,16 @@ git_changes() {
 
 git_commit() {
     # no files given, commit them all
-    test $# -eq 0 && set -- --all
-    git commit "$@"
+    all=--all
+    for arg; do
+      # -- marker means there were some files given, only commit those
+      [ "$arg" = "--" ] && all=
+    done
+    git commit $all "$@"
 }
 
 git_commitforce() {
-    test $# -eq 0 && set -- --all
-    git commit --no-verify "$@"
+    git_commit --no-verify "$@"
 }
 
 git_diffs() {
