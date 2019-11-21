@@ -1,0 +1,11 @@
+build:
+	cargo build
+
+clean:
+	cargo clean
+
+lint:
+	cargo check
+
+test:
+	cargo test

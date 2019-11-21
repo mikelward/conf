@@ -3,4 +3,4 @@
 root=$(git rev-parse --show-toplevel)
 cd "$root"
 
-make test
+make -f .Makefile test
