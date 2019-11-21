@@ -40,20 +40,9 @@ git_changes() {
 }
 
 git_commit() {
-    declare -a args
-    for arg; do
-        case "$arg" in -*)
-            args+=("$arg")
-            shift
-            ;;
-        *)
-            break
-            ;;
-        esac
-    done
     # no files given, commit them all
-    test $# -eq 0 && args+=("--all")
-    git commit "${args[@]}" "$@"
+    test $# -eq 0 && set -- --all
+    git commit "$@"
 }
 
 git_commitforce() {
