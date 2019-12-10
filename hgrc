@@ -1,3 +1,9 @@
+[extensions]
+hgext.extdiff =
+
+[extdiff]
+cmd.vdiff = meld
+
 [pager]
 pager = less -FRX
 
