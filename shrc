@@ -860,6 +860,7 @@ if is_interactive; then
     alias hmsns='date +"%H:%M:%S.%N"'
     alias hosts='getent hosts'
     alias ipy='ipython'
+    alias killcode='pkill -f /usr/share/code/code'
     alias kssh='ssh -o PreferredAuthentications=publickey'
     if is_command l; then
         alias l='l -Kv -e'
