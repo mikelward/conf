@@ -63,7 +63,7 @@ git_fix() {
 
 # print commits that would be pulled
 git_incoming() {
-    git log --oneline HEAD..origin/HEAD
+    git log --oneline HEAD..@{upstream}
 }
 
 git_lint() {
@@ -72,7 +72,7 @@ git_lint() {
 
 # print commits that would be pushed
 git_outgoing() {
-    git log --oneline origin/HEAD..HEAD
+    git log --oneline @{push}..HEAD
 }
 
 git_precommit() {
