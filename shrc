@@ -863,15 +863,15 @@ if is_interactive; then
     alias killcode='pkill -f /usr/share/code/code'
     alias kssh='ssh -o PreferredAuthentications=publickey'
     if is_command l; then
-        alias l='l -Kv -e'
+        alias l='l -Kv -e -x'
         alias ll='l -pTB -h --time-style=relative'
         alias lt='l -Tt'
     elif quiet ls --color=auto -v -d /; then
-        alias l='ls --color=auto -v -b'
+        alias l='ls --color=auto -v -b -x'
         alias ll='l -l'
         alias lt='ll -t'
     else
-        alias l='ls -v -b'
+        alias l='ls -v -b -x'
         alias ll='l -l'
         alias lt='ll -t'
     fi
