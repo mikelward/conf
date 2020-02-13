@@ -1,0 +1,9 @@
+.PHONY: build test
+
+build:
+	@echo "Making all in $${PWD}"
+	bazel build ...:all
+
+test:
+	@echo "Making test in $${PWD}"
+	bazel test ...:all

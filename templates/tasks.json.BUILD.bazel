@@ -1,0 +1,74 @@
+{
+    "version": "2.0.0",
+    "command": "bazel",
+    "type": "shell",
+    "args": [],
+    "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+    },
+    "tasks": [
+        {
+            "label": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true,
+            },
+            "args": [
+                "build", "...:all",
+            ],
+        },
+        {
+            "label": "test",
+            "group": {
+                "kind": "test",
+                "isDefault": true,
+            },
+            "args": [
+                "test", "...:all",
+            ],
+            "problemMatcher": [
+                {
+                    "owner": "go",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceRoot}",
+                    ],
+                    "pattern": {
+                        "regexp": "^@BUILDDIR@/([^:]*):(\\d+):(\\d+): (.*)",
+                        "file": 1,
+                        "line": 2,
+                        "column": 3,
+                        "message": 4,
+                    },
+                },
+                {
+                    "owner": "go",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceRoot}",
+                    ],
+                    "pattern": {
+                        "regexp": "\\s*@BUILDDIR@/([^:]*):(\\d+): (.*)",
+                        "file": 1,
+                        "line": 2,
+                        "message": 3,
+                    },
+                },
+                {
+                    "owner": "python",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceRoot}",
+                    ],
+                    "pattern": {
+                        "regexp": "\\s*File \".*/@BUILDDIR@/([^\"]*)\", line (\\d+), in (.*)",
+                        "file": 1,
+                        "line": 2,
+                        "message": 3,
+                    },
+                },
+            ],
+        },
+    ],
+}
