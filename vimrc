@@ -108,7 +108,7 @@ if has("mouse")
     set mouse=                   " regain use of right mouse button
 endif
 if exists("&signcolumn")
-    set signcolumn=yes	" always show the sign/mark gutter
+    set signcolumn=no	" don't show the sign/mark gutter
 endif
 
 " allow # character at current indentation level (must appear on own line)
