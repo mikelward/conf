@@ -4,8 +4,6 @@ xsetroot -bg black -cursor_name left_ptr
 
 wingo-cmd 'AddWorkspace "main"'
 
-wingo-cmd 'Shell "hexchat"'
-
 wingo-cmd 'RemoveWorkspace "Workspace 1"'
 wingo-cmd 'RemoveWorkspace "Workspace 2"'
 wingo-cmd 'RemoveWorkspace "Workspace 3"'
