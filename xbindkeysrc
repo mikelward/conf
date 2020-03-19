@@ -84,26 +84,26 @@
 	Mod4 + Insert
 
 # volume down
-"vol down"
-	Mod4 + Down
+#"vol down"
+#	Mod4 + Down
 
 "vol down"
     XF86AudioLowerVolume
 
 # volume up
-"vol up"
-	Mod4 + Up
+#"vol up"
+#	Mod4 + Up
 
 "vol up"
     XF86AudioRaiseVolume
 
 # next song
-"media next"
-	Mod4 + Right
+#"media next"
+#	Mod4 + Right
 
 # previous song
-"media prev"
-	Mod4 + Left
+#"media prev"
+#	Mod4 + Left
 
 # screen shot (print screen)
 #"gnome-screenshot"
