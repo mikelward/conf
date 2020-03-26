@@ -33,8 +33,8 @@
     diffs = diff
     dir = rev-parse --git-dir
     ff = pull --ff-only
-    gr = log --graph --pretty=oneline --decorate --abbrev-commit
-    graph = log --graph --pretty=oneline --decorate --abbrev-commit
+    gr = log --graph --pretty=format:'%C(auto)%h %C(auto)%al %as%C(auto)%d\n%C(auto,bold)%s'
+    graph = log --graph --pretty=format:'%C(auto)%h %C(auto)%al %as%C(auto)%d\n%C(auto,bold)%s'
     hi = log --pretty=oneline --abbrev-commit
     hist = log --pretty=oneline --abbrev-commit
     # XXX use fc -l in bash?

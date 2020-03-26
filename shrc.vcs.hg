@@ -49,6 +49,10 @@ hg_fix() {
     hg fix "$@"
 }
 
+hg_graph() {
+    hg graph "$@"
+}
+
 # show changesets that would be fetched
 hg_incoming() {
     hg incoming --template=oneline "$@"

@@ -61,6 +61,7 @@ alias ann=annotate
 alias change=recommit
 alias cl=changelog
 alias di=diffs
+alias gr=graph
 alias projectroot=rootdir
 alias re=review
 alias ro=rootdir
@@ -68,7 +69,7 @@ alias sa=save
 alias st=status
 for command in add amend annotate branch branches \
     changed changelog changes commit commitforce diffs \
-    fix incoming lint outgoing pending precommit presubmit pull \
+    fix graph incoming lint outgoing pending precommit presubmit pull \
     push recommit revert review reword status submit submitforce \
     unknown upload uploadchain; do
     # remove any alias created in .shrc

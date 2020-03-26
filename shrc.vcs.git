@@ -61,6 +61,10 @@ git_fix() {
     git fix "$@"
 }
 
+git_graph() {
+    git graph "$@"
+}
+
 # print commits that would be pulled
 git_incoming() {
     git log --oneline HEAD..@{upstream}

@@ -11,11 +11,15 @@ pager = less -FRX
 shortnode = "{label('log.changeset', shortest(node, 7))}"
 shortdate = "{label('log.date', date|shortdate)}"
 shortdesc = "{desc|firstline}"
-oneline = "{shortnode} {shortdate} {shortdesc}\n"
+oneline = "{shortnode} {shortdesc}\n"
+twoline = "{shortnode} {user} {rev} {shortdate} {tags}\n{shortdesc}\n"
 
 [ui]
 ignore = ~/.hgexclude
 merge = meld
+
+[alias]
+graph = log --graph --template=twoline
 
 [hooks]
 #precommit = precommit
