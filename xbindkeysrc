@@ -63,6 +63,9 @@
 "browser3"
 	Mod4 + y
 
+"workstation"
+    Mod4 + w
+
 # mute
 "vol mute"
 	Mod4 + KP_Delete
