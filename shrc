@@ -1084,6 +1084,12 @@ if is_interactive; then
     auth_info() {
         :
     }
+    need_auth() {
+        test -n "$(auth_info)"
+    }
+    auth() {
+        :
+    }
 
     # get the user's attention
     flash_terminal() {
