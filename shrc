@@ -856,8 +856,6 @@ if is_interactive; then
         vim -O "$file" ${testfile:+"$testfile"}
     }
     alias f='command fg'
-    # fg = fgrep, NOTE: not fg = foreground, use 'f' or '%'
-    alias fg='g -F'
     alias g='grep -In'
     alias gdb='gdb -q '
     # Note that grep options must go after ~/.history.
