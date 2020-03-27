@@ -183,14 +183,24 @@ is_builtin() {
     esac
 }
 
-# return true if the argument is a command that can be invoked
+# return true if the argument is an alias
+is_alias() {
+    alias "$1" >/dev/null 2>&1
+}
+
+# return true if running the argument would run a command (and not an alias)
 is_command() {
     test -x "$(command -v "$1")"
 }
 
+# return true if the argument exists as a command, bypassing aliases
+have_command() {
+    type -p "$1" >/dev/null 2>&1
+}
+
 # return true if the argument is an alias, builtin, command, or function
 is_runnable() {
-    command -v "$1"
+    type "$1" >/dev/null 2>&1
 }
 
 # return true if the shell is interactive
@@ -728,7 +738,7 @@ if is_interactive; then
 
     # determine the graphics mode escape sequences
     color=false
-    if is_command tput; then
+    if is_runnable tput; then
         if quiet tput longname; then
             bold="$(tput bold)"
             underline="$(tput smul)"
@@ -771,7 +781,7 @@ if is_interactive; then
         titlefinish='\'
         ;;
     *)
-        if is_command tput; then
+        if is_runnable tput; then
             if quiet tput longname; then
                 titlestart="$(tput tsl)"
                 titlefinish="$(tput fsl)"
@@ -862,7 +872,7 @@ if is_interactive; then
     alias ipy='ipython'
     alias killcode='pkill -f /usr/share/code/code'
     alias kssh='ssh -o PreferredAuthentications=publickey'
-    if is_command l; then
+    if have_command l; then
         alias l='l -Kv -e -x'
         alias ll='l -pTB -h --time-style=relative'
         alias lt='l -Tt'
@@ -937,7 +947,7 @@ if is_interactive; then
     alias userjnl='userjournal'
     view() { vim -R -c ":set mouse=" "$@"; }
     alias v='view'
-    if is_command nvim; then
+    if have_command nvim; then
         vim() { nvim "$@"; }
     fi
     alias vl='view /var/log/syslog'
@@ -966,7 +976,7 @@ if is_interactive; then
     done
 
     # in case root isn't available, fall back to sudo
-    is_command root && alias root="root " || alias root="sudo "
+    have_command root && alias root="root " || alias root="sudo "
 
     # enable colors in commands that support it
     # (ls is done above)
@@ -975,7 +985,7 @@ if is_interactive; then
 
     alias ginfo=$(path info)
     # aliases to abstract away differences between package managers
-    if is_command yum; then
+    if have_command yum; then
         alias yum='root yum --cacheonly'
         alias update='root yum makecache'
         alias search='yum search'
@@ -987,7 +997,7 @@ if is_interactive; then
         alias upgrade='root yum upgrade'
         alias versions='yum list'
         alias files='repoquery --file'
-    elif is_command aptitude; then
+    elif have_command aptitude; then
         alias update='root aptitude -q -q update'
         alias search='aptitude search -F "%c %p %30t %d"'
         alias show='aptitude show'
@@ -998,7 +1008,7 @@ if is_interactive; then
         alias upgrade='root aptitude safe-upgrade'
         alias versions='aptitude versions'
         alias files='apt-file search'
-    elif is_command apt-get; then
+    elif have_command apt-get; then
         alias update='root apt-get update'
         alias search='apt-cache search --names-only'
         alias show='apt-cache show'
@@ -1854,12 +1864,12 @@ exec zsh -i'
     export GREP_COLOR=4
 
     # default programs
-    is_command vi && export EDITOR=vi
-    is_command vim && export EDITOR=vim
-    is_command editline && export EDITOR=editline
-    is_command more && export PAGER=more
-    is_command less && export PAGER=less
-    is_command meld && test -n "$DISPLAY" && export DIFF=meld
+    is_runnable vi && export EDITOR=vi
+    is_runnable vim && export EDITOR=vim
+    is_runnable editline && export EDITOR=editline
+    is_runnable more && export PAGER=more
+    is_runnable less && export PAGER=less
+    is_runnable meld && test -n "$DISPLAY" && export DIFF=meld
 
     # colors for ls
     case "$TERM" in linux|putty|vt220)
