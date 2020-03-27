@@ -17,6 +17,9 @@
 "code"
 	Mod4 + d
 
+"editor"
+    Mod4 + e
+
 "browser2"
 	Mod4 + f
 
