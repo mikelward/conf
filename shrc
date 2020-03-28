@@ -187,7 +187,7 @@ need_auth() {
 workstation() {
     # cache null result too.
     if test "${WORKSTATION-unset}" = "unset"; then
-        WORKSTATION="$(cat "$HOME"/.workstation)"
+        WORKSTATION="$(cat "$HOME"/.workstation 2>/dev/null)"
     fi
     echo "$WORKSTATION"
 }
