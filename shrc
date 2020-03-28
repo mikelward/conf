@@ -167,6 +167,21 @@ add_path() {
 # BASIC FUNCTIONS
 # Functions that are needed elsewhere in this file.
 
+# hook for authenticating (to ssh-agent, etc.)
+auth() {
+    :
+}
+
+# hook for printing which things I need to authenticate to (ssh-agent, etc.)
+auth_info() {
+    :
+}
+
+# returns whether I need to authenticate
+need_auth() {
+    test -n "$(auth_info)"
+}
+
 # print an error message
 error() {
     printf "$*\n" >&2
@@ -1086,17 +1101,6 @@ if is_interactive; then
         set_title "$(title)"
         set_prompt
         flash_terminal
-    }
-
-    # for overriding in .shrc.local
-    auth_info() {
-        :
-    }
-    need_auth() {
-        test -n "$(auth_info)"
-    }
-    auth() {
-        :
     }
 
     # get the user's attention
