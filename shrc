@@ -182,6 +182,25 @@ need_auth() {
     test -n "$(auth_info)"
 }
 
+# return true if this machine is my workstation
+workstation() {
+    # cache null result too.
+    if test "${WORKSTATION-unset}" = "unset"; then
+        WORKSTATION="$(cat "$HOME"/.workstation)"
+    fi
+    echo "$WORKSTATION"
+}
+
+# return true if this machine is my workstation
+on_my_workstation() {
+    case "$HOSTNAME" in
+        "$(workstation)") true;;
+        *laptop*)          false;;
+        $USERNAME-*)       true;;
+        *)                 false;;
+    esac
+}
+
 # print an error message
 error() {
     printf "$*\n" >&2
@@ -1156,31 +1175,6 @@ if is_interactive; then
 
     inside_tmux() {
         test -n "$TMUX"
-    }
-
-    # return true if this machine is my workstation
-    _on_my_workstation() {
-        if test -f "$HOME"/.workstation; then
-            true
-        else
-            case "$HOSTNAME" in
-            *laptop*)    false;;
-            $USERNAME-*) true;;
-            *)           false;;
-            esac
-        fi
-    }
-
-    # return true if this machine is my workstation (cached version)
-    on_my_workstation() {
-        if test -z "${WORKSTATION:-}"; then
-            if _on_my_workstation; then
-                WORKSTATION=true
-            else
-                WORKSTATION=false
-            fi
-        fi
-        "$WORKSTATION"
     }
 
     # return true if this machine is a production machine
