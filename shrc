@@ -168,6 +168,7 @@ add_path() {
 # Functions that are needed elsewhere in this file.
 
 # hook for authenticating (to ssh-agent, etc.)
+alias a=auth
 auth() {
     :
 }
