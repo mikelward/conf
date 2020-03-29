@@ -907,7 +907,7 @@ if is_interactive; then
     alias kssh='ssh -o PreferredAuthentications=publickey'
     if have_command l; then
         alias l='l -Kv -e -x'
-        alias ll='l -pTB -h --time-style=relative'
+        alias ll='l -pTBV -h --time-style=relative'
         alias lt='l -Tt'
     elif quiet ls --color=auto -v -d /; then
         alias l='ls --color=auto -v -b -x'
