@@ -1,0 +1,11 @@
+log() {
+  echo "$(date +"%F %T.%N") $*" >> "$HOME/xsession.log"
+}
+
+log ".xsessionrc"
+. "$HOME/.shrc"
+export GTK_OVERLAY_SCROLLING=0
+eval "$(ssh-agent)"
+screensaver init
+imwheel
+xbindkeys
