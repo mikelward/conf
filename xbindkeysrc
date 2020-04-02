@@ -26,15 +26,12 @@
 "browser1"
 	Mod4 + g
 
-# h = home folder
-#"thunar"
-"nautilus ~"
+"home"
 	Mod4 + h
 
 "irc"
 	Mod4 + i
 
-# l = lock screen
 "lock-screensaver"
 	Mod4 + l
 
