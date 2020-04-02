@@ -14,9 +14,6 @@
 "gnome-calculator"
 	Mod4 + c
 
-"code"
-	Mod4 + d
-
 "editor"
     Mod4 + e
 
@@ -42,10 +39,6 @@
 "notepad"
 	Mod4 + n
 
-# o = opera
-"opera"
-    Mod4 + o
-
 # p = play music
 "music"
 	Mod4 + p
@@ -53,15 +46,8 @@
 "remote-desktop"
     Mod4 + r
 
-"secureshell"
-	Mod4 + s
-
-# t = terminal
 "terminal"
 	Mod4 + t
-
-"code"
-	Mod4 + v
 
 "browser3"
 	Mod4 + y
@@ -115,12 +101,6 @@
 #"gnome-screenshot"
 "xfce4-screenshooter -f"
 	Print
-
-"snap left"
-    Mod4 + Shift + Left
-
-"snap right"
-    Mod4 + Shift + Right
 
 "moveto 1"
     Mod4 + Shift + 1
