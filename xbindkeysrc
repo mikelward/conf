@@ -97,10 +97,11 @@
 #"media prev"
 #	Mod4 + Left
 
-# screen shot (print screen)
-#"gnome-screenshot"
-"xfce4-screenshooter -f"
+"screenshot"
 	Print
+
+"screenshot -w"
+    Alt + Print
 
 "moveto 1"
     Mod4 + Shift + 1
