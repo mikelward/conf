@@ -1085,7 +1085,7 @@ if is_interactive; then
         dollar() {
             "$@"
         }
-        alias '$'='dollar'
+        quiet alias '$'='dollar' || true
         ;;
     *)
         # ksh and dash lack %, %1, etc.

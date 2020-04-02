@@ -14,6 +14,10 @@ shortdesc = "{desc|firstline}"
 oneline = "{shortnode} {shortdesc}\n"
 twoline = "{shortnode} {user} {rev} {shortdate} {tags}\n{shortdesc}\n"
 
+[color]
+changeset.draft = yellow
+changeset.public = none
+
 [ui]
 ignore = ~/.hgexclude
 merge = meld
