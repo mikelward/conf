@@ -32,8 +32,7 @@
 "lock-screensaver"
 	Mod4 + l
 
-# m = mail
-"gmail"
+"hangouts-meet"
 	Mod4 + m
 
 "notepad"
