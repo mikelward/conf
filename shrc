@@ -1109,6 +1109,11 @@ if is_interactive; then
         date "+%H:%M:%S"
     }
 
+    # hook for the shell to update the time every second, if available
+    update_time_in_prompt() {
+        :
+    }
+
     # commands to execute before the prompt is displayed
     preprompt() {
         local last_error="$(${shell}_last_error)"
@@ -1514,6 +1519,7 @@ exec zsh -i'
     precommand() {
         log_history "$*"
         current_command="$(expand_job "$*")"
+        update_time_in_prompt
         set_title "$(title)"
         set_color 'normal'
     }
