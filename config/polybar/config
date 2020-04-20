@@ -215,11 +215,11 @@ interval = 3.0
 
 format-connected = <ramp-signal> <label-connected>
 format-connected-underline = #9f78e1
-label-connected = %essid%
+label-connected = %{A1:nm-connection-editor:}%essid%%{A}
 
 format-disconnected = <label-disconnected>
 format-disconnected-underline = ${colors.secondary}
-label-disconnected = (wifi)
+label-disconnected = %{A1:nm-connection-editor:}(wifi)%{A}
 label-disconnected-foreground = ${colors.foreground-alt}
 
 ramp-signal-0 = 
@@ -237,11 +237,11 @@ interval = 3.0
 format-connected-underline = #55aa55
 format-connected-prefix = " "
 format-connected-prefix-foreground = ${colors.foreground-alt}
-label-connected = %local_ip%
+label-connected = %{A1:nm-connection-editor:}%local_ip%%{A}
 
 format-disconnected = <label-disconnected>
 format-disconnected-underline = ${colors.secondary}
-label-disconnected = (eth)
+label-disconnected = %{A1:nm-connection-editor:}(eth)%{A}
 label-disconnected-foreground = ${colors.foreground-alt}
 
 [module/date]
