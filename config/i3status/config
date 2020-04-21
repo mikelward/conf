@@ -31,6 +31,9 @@ ethernet _first_ {
 battery all {
         format = "%status %percentage"
         integer_battery_capacity = true
+        status_chr = "⚡"
+        status_bat = "🔋"
+        status_unk = "?"
 }
 
 volume master {
