@@ -1104,22 +1104,10 @@ if is_interactive; then
         set_title "$(title)"
     }
 
-    # print the date/time in the desired format for the prompt
-    print_prompt_time() {
-        date "+%H:%M:%S"
-    }
-
-    # hook for the shell to update the time every second, if available
-    update_time_in_prompt() {
-        :
-    }
-
     # commands to execute before the prompt is displayed
     preprompt() {
         local last_error="$(${shell}_last_error)"
         current_command=
-        prompt_time="$(print_prompt_time)"
-        update_time_in_prompt
 
         printf '\n'
         set_color 'normal'
@@ -1519,7 +1507,6 @@ exec zsh -i'
     precommand() {
         log_history "$*"
         current_command="$(expand_job "$*")"
-        update_time_in_prompt
         set_title "$(title)"
         set_color 'normal'
     }
@@ -1633,16 +1620,6 @@ exec zsh -i'
             basic_prompt
         }
         enable_prompt_hooks
-
-        TMOUT=1
-        TRAPALRM() {
-            update_time_in_prompt
-            zle reset-prompt
-        }
-
-        update_time_in_prompt() {
-            RPROMPT=$(echo -n "$prompt_time-$(print_prompt_time)")
-        }
 
         # use underscores in the function names so dash doesn't choke
         zle_keymap() {
