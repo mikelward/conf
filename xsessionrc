@@ -4,6 +4,8 @@ log() {
 
 log ".xsessionrc"
 . "$HOME/.shrc"
+xset +fp "$HOME"/.local/share/fonts
+xset fp rehash
 export GTK_OVERLAY_SCROLLING=0
 eval "$(ssh-agent)"
 screensaver init
