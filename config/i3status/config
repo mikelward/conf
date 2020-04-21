@@ -13,6 +13,8 @@ general {
 
 order += "wireless _first_"
 order += "ethernet _first_"
+order += "volume audio1"
+order += "volume audio2"
 order += "volume master"
 order += "battery all"
 order += "tztime local"
@@ -42,6 +44,16 @@ volume master {
         device = "default"
         mixer = "Master"
         mixer_idx = 0
+}
+
+volume audio1 {
+        format = "%devicename"
+        device = "pulse:1"
+}
+
+volume audio2 {
+        format = "%devicename"
+        device = "pulse:2"
 }
 
 tztime local {
