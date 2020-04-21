@@ -30,6 +30,7 @@ ethernet _first_ {
 
 battery all {
         format = "%status %percentage"
+        integer_battery_capacity = true
 }
 
 volume master {
