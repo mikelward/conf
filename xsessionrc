@@ -4,12 +4,12 @@ log() {
 
 log ".xsessionrc"
 . "$HOME/.shrc"
-xset +fp "$HOME"/.local/share/fonts
-xset fp rehash
+external_monitors_only
 export GTK_OVERLAY_SCROLLING=0
-eval "$(ssh-agent)"
 screensaver init
 left mice
-external_monitors_only
 imwheel
 xbindkeys
+eval "$(ssh-agent)"
+xsetroot -bg black
+xsetroot -cursor_name left_ptr
