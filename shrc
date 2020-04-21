@@ -881,6 +881,18 @@ if is_interactive; then
     # function rather than an alias so it looks better in the xterm title.
     e() { "${EDITOR:-vim}" "$@"; }
     alias eg='g -E'
+    ei3() (
+        cd "$HOME"/conf
+        e config/i3/config
+    )
+    erc() (
+        cd "$HOME"/conf
+        e shrc
+    )
+    ercl() (
+        cd "$HOME"
+        e shrc.local
+    )
     et() {
         local file
         local testfile
