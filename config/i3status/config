@@ -32,12 +32,19 @@ battery all {
 }
 
 tztime local {
-        format = "%H:%M:%S %Z"
+        format = "%H:%M:%S"
 }
 
-tztime UTC {
-        format = "%H:%M:%S %Z"
-        timezone = "UTC"
+tztime london {
+        format = "%H:%M %Z"
+        timezone = "Europe/London"
+        hide_if_equals_localtime = true
+}
+
+tztime sunnyvale {
+        format = "%H:%M %Z"
+        timezone = "America/Los_Angeles"
+        hide_if_equals_localtime = true
 }
 
 load {
