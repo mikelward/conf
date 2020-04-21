@@ -13,6 +13,7 @@ general {
 
 order += "wireless _first_"
 order += "ethernet _first_"
+order += "volume master"
 order += "battery all"
 order += "tztime local"
 
@@ -29,6 +30,14 @@ ethernet _first_ {
 
 battery all {
         format = "%status %percentage"
+}
+
+volume master {
+        format = "♪ %volume"
+        format_muted = "♪ muted"
+        device = "default"
+        mixer = "Master"
+        mixer_idx = 0
 }
 
 tztime local {
