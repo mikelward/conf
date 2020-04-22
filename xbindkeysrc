@@ -55,11 +55,11 @@
     Mod4 + w
 
 # mute
-"vol mute"
-	Mod4 + KP_Delete
+#"vol mute"
+#	Mod4 + KP_Delete
 
-"vol mute"
-	Mod4 + Delete
+#"vol mute"
+#	Mod4 + Delete
 
 "vol mute"
     XF86AudioMute
@@ -96,7 +96,7 @@
 #"media prev"
 #	Mod4 + Left
 
-"screenshot"
+"screenshot -f"
 	Print
 
 "screenshot -w"
