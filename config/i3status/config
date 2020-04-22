@@ -48,11 +48,13 @@ volume master {
 
 volume audio1 {
         format = "%devicename"
+        format_muted = "%devicename"
         device = "pulse:1"
 }
 
 volume audio2 {
         format = "%devicename"
+        format_muted = "%devicename"
         device = "pulse:2"
 }
 
