@@ -23,8 +23,8 @@
 "browser1"
 	Mod4 + g
 
-"home"
-	Mod4 + h
+#"home"
+#	Mod4 + h
 
 "irc"
 	Mod4 + i
