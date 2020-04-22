@@ -36,8 +36,7 @@ bindsym $mod+Return exec terminal
 bindsym $mod+BackSpace kill
 
 # start a program launcher
-#bindsym $mod+space exec dmenu_run
-bindsym $mod+space exec rofi -show run
+bindsym $mod+space exec dmenu_run -fn 'lucidasanstypewriter-12'
 
 # change focus
 bindsym $mod+Left focus left
