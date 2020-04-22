@@ -13,8 +13,7 @@ general {
 
 order += "wireless _first_"
 order += "ethernet _first_"
-order += "volume audio1"
-order += "volume audio2"
+order += "volume headphones"
 order += "volume master"
 order += "battery all"
 order += "tztime local"
@@ -46,16 +45,10 @@ volume master {
         mixer_idx = 0
 }
 
-volume audio1 {
-        format = "%devicename"
+volume headphones {
+        format = "🎧"
         format_muted = "%devicename"
-        device = "pulse:1"
-}
-
-volume audio2 {
-        format = "%devicename"
-        format_muted = "%devicename"
-        device = "pulse:2"
+        device = "pulse:bluez_sink.CC_98_8B_A8_30_01.headset_head_unit"
 }
 
 tztime local {
