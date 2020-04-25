@@ -52,6 +52,11 @@ zsh)
     # so we can display jobs in the prompt
     unsetopt POSIX_JOBS >/dev/null 2>&1
 
+    # make tab completion do what it says
+    # e.g. in conf/config, i3s<TAB> completes to i3status/, it should
+    # autocd to i3status/, not strip the slash and run i3status
+    unsetopt auto_remove_slash
+
     # set_prompt sets PS1 to a string likely including '$', don't expand it
     unsetopt PROMPT_SUBST
 
