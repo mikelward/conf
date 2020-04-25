@@ -1900,7 +1900,7 @@ exec zsh -i'
 
     # command line editing
     test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
-    set -o emacs
+    set -o vi
 fi
 
 # source local overrides file (work vs home, etc.)
