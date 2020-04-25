@@ -736,7 +736,7 @@ wx() {
 # ENVIRONMENT SETUP FOR ALL SHELLS
 # Set $PATH early in case other stuff here needs it.
 
-CDPATH=".:$HOME:$HOME/conf"
+CDPATH=".:$HOME:$HOME/conf:$HOME/conf/config"
 GOPATH="$HOME"
 export GOPATH
 
