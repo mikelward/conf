@@ -39,15 +39,27 @@ git_changes() {
     git diff "$@"
 }
 
-git_commit() {
-    # no files given, commit them all
-    all=--all
+git_commit() (
+    declare -a flags
     for arg; do
-      # -- marker means there were some files given, only commit those
-      [ "$arg" = "--" ] && all=
+        case "$arg" in
+        --)
+            flags+=("$arg")
+            break
+            ;;
+        -*)
+            flags+=("$arg")
+            ;;
+        *)
+            break
+            ;;
+        esac
+        shift
     done
-    git commit $all "$@"
-}
+    # no files given, commit them all
+    test $# -eq 0 && flags+=("--all")
+    git commit "${flags[@]}" "$@"
+)
 
 git_commitforce() {
     git_commit --no-verify "$@"
