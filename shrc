@@ -1693,6 +1693,9 @@ exec zsh -i'
         # Make Esc toggle between command and insert mode
         bindkey -M vicmd '\e' vi-insert
 
+        # make "cw" act like "cw" rather than "ce"
+        bindkey -a -s cw dwi
+
         # add Emacs bindings to Vi editing mode
         _bind_vi() {
             bindkey -M viins "$@"
