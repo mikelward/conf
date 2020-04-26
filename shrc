@@ -180,7 +180,7 @@ auth() {
 
 # hook for printing which things I need to authenticate to (ssh-agent, etc.)
 auth_info() {
-    :
+    ssh-add -L >/dev/null 2>&1 || echo "SSH"
 }
 
 # returns whether I need to authenticate
