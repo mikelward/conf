@@ -180,7 +180,9 @@ auth() {
 
 # hook for printing which things I need to authenticate to (ssh-agent, etc.)
 auth_info() {
-    is_ssh_valid || yellow ' SSH'
+    local problems=""
+    is_ssh_valid || problems="$problems SSH"
+    test -n "$problems" && yellow "${problems# }"
 }
 
 # returns whether an SSH key is loaded
@@ -1138,7 +1140,7 @@ if is_interactive; then
             printf '%s\n' "$last_error"
             set_color 'normal'
         fi
-        printf '%s%s\n' "$(dir_info)" "$(auth_info)"
+        printf '%s %s\n' "$(dir_info)" "$(auth_info)"
         job_info
         set_title "$(title)"
         set_prompt
