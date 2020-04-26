@@ -3,6 +3,7 @@ log() {
 }
 
 log ".xsessionrc"
+setxkbmap -model pc104 -layout us -variant dvorak
 . "$HOME/.shrc"
 external_monitors_only
 export GTK_OVERLAY_SCROLLING=0
