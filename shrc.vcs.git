@@ -130,7 +130,11 @@ git_recommit() {
 }
 
 git_revert() {
-    git checkout -- "$@"
+    if test $# -eq 0; then
+        git reset --hard HEAD
+    else
+        git checkout -- "$@"
+    fi
 }
 
 # send the current change for Gerrit review
