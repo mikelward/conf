@@ -10,6 +10,7 @@ screensaver init
 left mice
 imwheel
 xbindkeys
+(setsid nm-applet&)
 eval "$(ssh-agent)"
 xsetroot -bg black
 xsetroot -cursor_name left_ptr
