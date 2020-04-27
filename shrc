@@ -1726,24 +1726,30 @@ exec zsh -i'
         _bind_vi '\ey' yank-pop
         _bind_vi '\e^?' backward-kill-word
 
-        function zsh_sed_command() {
+        zsh_sed_command() {
             emulate -LR zsh
             local SEDARG=
             zle -R ":$SEDARG"
             local key
             while read -k key; do
-                if (( (#key) == (##\e) )); then
+                case "$key" in
+                $'\e')
+                    # Escape
                     return
-                fi
-                if (( (#key) == (##\n) || (#key) == (##\r) )); then
+                    ;;
+                $'\n'|$'\r')
+                    # Enter or Return
                     BUFFER="$(echo "$BUFFER" | sed -r -e "$SEDARG")"
                     return
-                fi
-                if (( (#key) == (##^?) || (#key) == (##^h) )); then
+                    ;;
+                $'\b'|$'\x7F')
+                    # Backspace or Delete
                     SEDARG="${SEDARG[1,-2]}"
-                else
+                    ;;
+                *)
                     SEDARG="$SEDARG$key"
-                fi
+                    ;;
+                esac
                 zle -R ":$SEDARG"
             done
             return 1
