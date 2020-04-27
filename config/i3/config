@@ -143,3 +143,5 @@ bar {
         #mode hide
         #modifier Mod4
 }
+
+exec --no-startup-id "$HOME/src/i3-alternating-layout/alternating_layouts.py"
