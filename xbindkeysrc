@@ -57,47 +57,17 @@
 "youtube-music"
     Mod4 + y
 
-# mute
-#"vol mute"
-#	Mod4 + KP_Delete
-
-#"vol mute"
-#	Mod4 + Delete
-
 "vol mute"
     XF86AudioMute
 
-# play/pause
-"media playpause"
-	Mod4 + KP_Insert
-
-"media playpause"
-    XF86AudioPlay
-
-"media playpause"
-	Mod4 + Insert
-
-# volume down
-#"vol down"
-#	Mod4 + Down
+"playpause"
+    Release+XF86AudioPlay
 
 "vol down"
     XF86AudioLowerVolume
 
-# volume up
-#"vol up"
-#	Mod4 + Up
-
 "vol up"
     XF86AudioRaiseVolume
-
-# next song
-#"media next"
-#	Mod4 + Right
-
-# previous song
-#"media prev"
-#	Mod4 + Left
 
 "screenshot -f"
 	Print
