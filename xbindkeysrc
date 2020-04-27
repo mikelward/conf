@@ -23,6 +23,9 @@
 "browser1"
 	Mod4 + g
 
+"browser3"
+	Mod4 + Shift + g
+
 #"home"
 #	Mod4 + h
 
@@ -48,11 +51,11 @@
 "terminal"
 	Mod4 + t
 
-"browser3"
-	Mod4 + y
-
 "terminal_on_workstation"
     Mod4 + w
+
+"youtube-music"
+    Mod4 + y
 
 # mute
 #"vol mute"
