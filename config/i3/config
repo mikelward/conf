@@ -117,7 +117,7 @@ bindsym $mod+Escape exec "$exit"
 bindsym $mod+Shift+q exec "$exit"
 
 mode "$exit" {
-        bindsym x i3 exit
+        bindsym x exit
         bindsym c mode "default"
         bindsym Escape mode "default"
 }
