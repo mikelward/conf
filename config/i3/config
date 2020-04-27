@@ -113,8 +113,8 @@ bindsym $mod+Shift+r restart
 #bindsym $mod+Shift+q exec "i3-nagbar -t warning -m 'Exit i3?' -b 'Yes, exit i3' 'i3-msg exit'"
 set $exit Exit i3? E[x]it [C]ancel
 bindsym $mod+Delete mode "$exit"
-bindsym $mod+Escape exec "$exit"
-bindsym $mod+Shift+q exec "$exit"
+bindsym $mod+Escape mode "$exit"
+bindsym $mod+Shift+q mode "$exit"
 
 mode "$exit" {
         bindsym x exit
