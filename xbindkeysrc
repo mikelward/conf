@@ -11,8 +11,14 @@
 "blueman-manager"
     Mod4 + b
 
+"google-calendar"
+    Mod4 + c
+
 "gnome-calculator"
-	Mod4 + c
+	Mod4 + Shift + c
+
+"gnome-calculator"
+	XF86Calculator
 
 "editor"
     Mod4 + e
