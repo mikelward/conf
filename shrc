@@ -1698,7 +1698,14 @@ exec zsh -i'
         bindkey -M emacs '\eF' vi-forward-word
 
         # Make Esc toggle between command and insert mode
-        bindkey -M vicmd '\e' vi-insert
+        #bindkey -M vicmd '\e' vi-insert
+        vi_cmd_mode_onemore() {
+            OLDCURSOR=$CURSOR
+            zle vi-cmd-mode
+            CURSOR=$OLDCURSOR
+        }
+        zle -N vi-cmd-mode-onemore vi_cmd_mode_onemore
+        bindkey -M viins '\e' vi-cmd-mode-onemore
 
         # make "cw" act like "cw" rather than "ce"
         bindkey -a -s cw dwi
