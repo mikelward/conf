@@ -8,7 +8,6 @@ setxkbmap -model pc104 -layout us -variant dvorak
 external_monitors_only
 export GTK_OVERLAY_SCROLLING=0
 screensaver init
-left mice
 imwheel
 xbindkeys
 (setsid nm-applet&)
