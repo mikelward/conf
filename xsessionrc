@@ -1,8 +1,4 @@
-log() {
-  echo "$(date +"%F %T.%N") $*" >> "$HOME/xsession.log"
-}
-
-log ".xsessionrc"
+echo "$(date +"%F %T.%N") xsessionrc"
 setxkbmap -model pc104 -layout us -variant dvorak
 . "$HOME/.shrc"
 external_monitors_only

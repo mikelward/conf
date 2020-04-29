@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "$(date +"%F %T.%N") .xsession" >> "$HOME/xsession.log"
+echo "$(date +"%F %T.%N") xsession"
 xfsettingsd
 type compton && compton --daemon
 exec i3 || exec xterm
