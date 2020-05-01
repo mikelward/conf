@@ -155,3 +155,5 @@ bar {
 }
 
 exec --no-startup-id "$HOME/src/i3-alternating-layout/alternating_layouts.py"
+exec --no-startup-id "$HOME/scripts/fetch-apod"
+exec --no-startup-id feh --bg-scale "$HOME/Pictures/apod.jpg"
