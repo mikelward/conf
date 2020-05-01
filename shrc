@@ -290,6 +290,12 @@ warn() {
 # GENERAL FUNCTIONS
 # Useful things that could be commands if distributing them wasn't impractical.
 
+# print the age of a file in seconds
+age() {
+    local mtime="$(stat -c '%Y' "$1")"
+    expr "$(date +%s)" - "$mtime"
+}
+
 # look up a hostname in DNS, output both A and AAAA records
 addr() {
     dig +noall +answer +search "$1" a "$1" aaaa | get_address_records
