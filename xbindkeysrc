@@ -80,15 +80,3 @@
 
 "screenshot -w"
     Alt + Print
-
-"moveto 1"
-    Mod4 + Shift + 1
-
-"moveto 2"
-    Mod4 + Shift + 2
-
-"moveto 3"
-    Mod4 + Shift + 3
-
-"moveto 4"
-    Mod4 + Shift + 4
