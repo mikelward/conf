@@ -8,8 +8,9 @@
 #
 # ksh and dash should also work, but will have a simpler prompt, etc.
 #
-# This file can't use arrays, arithmetic expansion, herestrings, or anything
-# that causes a parse error in sh or dash.
+# This file can't use arrays, the (( )) form of arithmetic expansion,
+# herestrings, or anything that causes a parse error in sh or dash.
+# Note that the $(( )) form of arithmetic expansion appears to be OK.
 #
 # Mikel Ward <mikel@mikelward.com>
 #
@@ -1150,23 +1151,19 @@ if is_interactive; then
         fi
         local duration=
         if test "$SECONDS" -gt 0; then
-            duration="$(awk -v "duration=$SECONDS" \
-            'BEGIN {
-                hours = int(duration/3600)
-                if (hours >= 1) {
-                    printf "%d hours ", hours
-                    duration -= hours*3600
-                }
-                minutes = int(duration/60)
-                if (hours >= 1 || minutes >= 1) {
-                    printf "%d minutes ", minutes
-                    duration -= minutes*60
-                }
-                seconds = duration
-                if (hours >= 1 || minutes >= 1 || seconds >= 1) {
-                    printf "%d seconds\n", seconds
-                }
-            }')"
+            local hours minutes seconds
+            seconds="$SECONDS"
+            hours=$(($seconds/3600))
+            seconds=$((seconds-$hours*3600))
+            minutes=$((seconds/60))
+            seconds=$((seconds-$minutes*60))
+            if test "$hours" -gt 0; then
+                duration="$hours hours $minutes minutes $seconds seconds"
+            elif test "$minutes" -gt 0; then
+                duration="$minutes minutes $seconds seconds"
+            elif test "$seconds" -gt 1; then
+                duration="$seconds seconds"
+            fi
         fi
         if test -n "$duration"; then
             if $printed; then
