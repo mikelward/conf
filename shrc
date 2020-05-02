@@ -1140,7 +1140,6 @@ if is_interactive; then
     # commands to execute before the prompt is displayed
     preprompt() {
         local last_error="$(${shell}_last_error)"
-        command_end_time="$(command_time)"
         current_command=
 
         set_color 'normal'
@@ -1150,10 +1149,9 @@ if is_interactive; then
             printed=true
         fi
         local duration=
-        if test -n "$command_start_time"; then
-            duration="$(awk -v "start=$command_start_time" -v end="$command_end_time" \
+        if test "$SECONDS" -gt 0; then
+            duration="$(awk -v "duration=$SECONDS" \
             'BEGIN {
-                duration = end - start
                 hours = int(duration/3600)
                 if (hours >= 1) {
                     printf "%d hours ", hours
@@ -1574,12 +1572,6 @@ exec zsh -i'
         esac
     }
 
-    # print the time in a precise format used for command_start_time,
-    # command_end_time, and preprompt
-    command_time() {
-        date +%s.%N
-    }
-
     # function to run just before running a command from the command line
     # see also preexec (zsh) and DEBUG (bash)
     # the first argument is the command line being run
@@ -1588,7 +1580,7 @@ exec zsh -i'
         current_command="$(expand_job "$*")"
         set_title "$(title)"
         set_color 'normal'
-        command_start_time=$(command_time)
+        SECONDS=0
     }
 
     # set the xterm title to the supplied string
