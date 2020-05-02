@@ -102,6 +102,8 @@ bindsym $mod+Shift+ampersand move container to workspace 7
 bindsym $mod+Shift+asterisk move container to workspace 8
 bindsym $mod+Shift+parenleft move container to workspace 9
 bindsym $mod+Shift+parenright move container to workspace 10
+bindsym $mod+Shift+Prior move container to workspace prev
+bindsym $mod+Shift+Next move container to workspace next
 
 # reload the configuration file
 bindsym $mod+Shift+c reload
