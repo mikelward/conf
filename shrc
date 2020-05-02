@@ -1151,9 +1151,20 @@ if is_interactive; then
             local command
             awk -v "start=$command_start_time" -v end="$command_end_time" \
             'BEGIN {
-                duration = end - start;
-                if (duration >= 1) {
-                    printf "%.1f seconds\n", duration
+                duration = end - start
+                hours = int(duration/3600)
+                if (hours >= 1) {
+                    printf "%d hours ", hours
+                    duration -= hours*3600
+                }
+                minutes = int(duration/60)
+                if (hours >= 1 || minutes >= 1) {
+                    printf "%d minutes ", minutes
+                    duration -= minutes*60
+                }
+                seconds = duration
+                if (hours >= 1 || minutes >= 1 || seconds >= 1) {
+                    printf "%d seconds\n", seconds
                 }
             }'
         fi
