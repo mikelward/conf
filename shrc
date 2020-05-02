@@ -246,7 +246,7 @@ is_command() {
 
 # return true if the argument exists as a command, bypassing aliases
 have_command() {
-    type -p "$1" >/dev/null 2>&1
+    path "$1" >/dev/null 2>&1
 }
 
 # return true if the argument is an alias, builtin, command, or function
