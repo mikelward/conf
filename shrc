@@ -1142,13 +1142,14 @@ if is_interactive; then
 
         printf '\n'
         set_color 'normal'
+        local printed=false
         if test -n "$last_error"; then
-            set_color 'red'
-            printf '%s\n' "$last_error"
-            set_color 'normal'
+            red "$last_error"
+            printed=true
         fi
+        local duration=
         if test -n "$command_start_time"; then
-            awk -v "start=$command_start_time" -v end="$command_end_time" \
+            duration="$(awk -v "start=$command_start_time" -v end="$command_end_time" \
             'BEGIN {
                 duration = end - start
                 hours = int(duration/3600)
@@ -1165,7 +1166,17 @@ if is_interactive; then
                 if (hours >= 1 || minutes >= 1 || seconds >= 1) {
                     printf "%d seconds\n", seconds
                 }
-            }'
+            }')"
+        fi
+        if test -n "$duration"; then
+            if $printed; then
+                printf ' '
+            fi
+            yellow "Took $duration"
+            printed=true
+        fi
+        if $printed; then
+            printf '\n'
         fi
         printf '%s %s %s\n' "$(host_info)" "$(dir_info)" "$(auth_info)"
         job_info
@@ -1355,6 +1366,14 @@ if is_interactive; then
     green() {
         if $color; then
             printf '%s%s%s' "$green" "$*" "$normal"
+        else
+            printf '%s' "$*"
+        fi
+    }
+    # shadows /bin/red, but I don't use it here
+    red() {
+        if $color; then
+            printf '%s%s%s' "$red" "$*" "$normal"
         else
             printf '%s' "$*"
         fi
