@@ -1137,7 +1137,7 @@ if is_interactive; then
     # commands to execute before the prompt is displayed
     preprompt() {
         local last_error="$(${shell}_last_error)"
-        local command_end_time="$(command_time)"
+        command_end_time="$(command_time)"
         current_command=
 
         printf '\n'
@@ -1148,7 +1148,6 @@ if is_interactive; then
             set_color 'normal'
         fi
         if test -n "$command_start_time"; then
-            local command
             awk -v "start=$command_start_time" -v end="$command_end_time" \
             'BEGIN {
                 duration = end - start
@@ -1553,6 +1552,8 @@ exec zsh -i'
         esac
     }
 
+    # print the time in a precise format used for command_start_time,
+    # command_end_time, and preprompt
     command_time() {
         date +%s.%N
     }
