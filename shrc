@@ -1116,10 +1116,7 @@ if is_interactive; then
             alias -- +$i='pushpop '$i
         done
 
-        dollar() {
-            "$@"
-        }
-        quiet alias '$'='dollar' || true
+        quiet alias '$'=' ' || true
         ;;
     *)
         # ksh and dash lack %, %1, etc.
