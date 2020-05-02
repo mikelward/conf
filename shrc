@@ -1143,7 +1143,6 @@ if is_interactive; then
         command_end_time="$(command_time)"
         current_command=
 
-        printf '\n'
         set_color 'normal'
         local printed=false
         if test -n "$last_error"; then
@@ -1181,6 +1180,7 @@ if is_interactive; then
         if $printed; then
             printf '\n'
         fi
+        printf '\n'
         printf '%s %s %s\n' "$(host_info)" "$(dir_info)" "$(auth_info)"
         job_info
         set_title "$(title)"
