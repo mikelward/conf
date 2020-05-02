@@ -8,6 +8,9 @@
 #
 # ksh and dash should also work, but will have a simpler prompt, etc.
 #
+# This file can't use arrays, arithmetic expansion, herestrings, or anything
+# that causes a parse error in sh or dash.
+#
 # Mikel Ward <mikel@mikelward.com>
 #
 
@@ -55,7 +58,7 @@ zsh)
     # make tab completion do what it says
     # e.g. in conf/config, i3s<TAB> completes to i3status/, it should
     # autocd to i3status/, not strip the slash and run i3status
-    unsetopt auto_remove_slash
+    unsetopt AUTO_REMOVE_SLASH
 
     # set_prompt sets PS1 to a string likely including '$', don't expand it
     unsetopt PROMPT_SUBST
