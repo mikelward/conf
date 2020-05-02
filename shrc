@@ -1043,7 +1043,7 @@ if is_interactive; then
     done
 
     # in case root isn't available, fall back to sudo
-    have_command root && alias root="root " || alias root="sudo "
+    have_command root && alias root='root ' || alias root='sudo '
 
     # enable colors in commands that support it
     # (ls is done above)
