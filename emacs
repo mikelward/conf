@@ -18,7 +18,7 @@
 (setq-default font-lock-maximum-decoration nil)
 
 ;; Disable menu bar in console mode (GNU Emacs only)
-(if (not window-system) (menu-bar-mode nil))
+(if (not window-system) (menu-bar-mode -1))
 
 ;; Position the scroll bar on the right-hand side
 (if (fboundp 'set-scroll-bar-mode) (set-scroll-bar-mode 'right))
