@@ -13,10 +13,8 @@
 ;; XXX: Why is this a function instead of a setting?
 (show-paren-mode t)
 
-;; Enable syntax highlighting if available
+;; Enable minimal syntax highlighting
 (if (fboundp 'global-font-lock-mode) (global-font-lock-mode t))
-
-;; Use minimal syntax highlighting
 (setq-default font-lock-maximum-decoration nil)
 
 ;; Disable menu bar in console mode (GNU Emacs only)
@@ -103,6 +101,13 @@
                                         (/= (line-beginning-position) (point)))
                                    (beginning-of-line)
                                  (beginning-of-line-text)))
+
+;; Set up Evil mode.
+(setq evil-move-cursor-back nil)
+(setq evil-move-beyond-eol t)
+(add-to-list 'load-path "~/.emacs.d/evil")
+(require 'evil)
+(evil-mode 1)
 
 ;; Load any local customisations
 (if (file-exists-p "~/.emacs.local") (load "~/.emacs.local"))
