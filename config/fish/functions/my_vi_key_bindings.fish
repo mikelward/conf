@@ -10,7 +10,7 @@ function my_vi_key_bindings --description "Mikel's vi-like key bindings for fish
 
     # Don't move backwards when switching from insert to normal (command) mode.
     # If we are paging, stay in insert mode.
-    bind -s -M insert \e "if commandline -P; commandline -f cancel; else; set fish_bind_mode default; commandline -f repaint; end"
+    bind -s -M insert \e "if commandline -P; commandline -f cancel; else; set fish_bind_mode default; commandline -f force-repaint; end"
 
     # Undo weird Vi EOL behavior.
     bind -s -M default x delete-char
