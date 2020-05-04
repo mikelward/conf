@@ -88,10 +88,7 @@ for command in add amend annotate branch branches \
     esac
     # create the function
     eval "$command"'() {
-    local vcs="$(vcs)"
-    if test -n "$vcs"; then
-        "${vcs}_'"$command"'" "$@"
-    fi
+        vcs '"$command"' "$@"
     }'
 done
 
