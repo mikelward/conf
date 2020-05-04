@@ -12,9 +12,7 @@ vcs() {
         test -z "$vcs" && return 1
         local command=$1
         shift
-        if test -n "$vcs"; then
-            "${vcs}_'"$command"'" "$@"
-        fi
+        "${vcs}_${command}" "$@"
         return
     fi
 
