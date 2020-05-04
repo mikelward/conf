@@ -7,6 +7,17 @@ declare -A rootdir
 # print the name of the version control system in use in $PWD
 # TODO: implement in terms of rootdir
 vcs() {
+    if test $# -gt 0; then
+        local vcs="$(vcs)"
+        test -z "$vcs" && return 1
+        local command=$1
+        shift
+        if test -n "$vcs"; then
+            "${vcs}_'"$command"'" "$@"
+        fi
+        return
+    fi
+
     # If it's not writable, assume we don't care about vcs here.
     test -w "$PWD" || return 1
 
