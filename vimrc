@@ -156,7 +156,7 @@ map <Leader>t :make test<CR>
 map <C-t> :make test<CR>
 map <Leader>v :vsplit<CR>
 map <Leader>w :call ToggleWhitespace()<CR>
-map <C-w> :quit<CR>
+"map <C-w> :quit<CR>
 map <Leader>. :tag<CR>
 map <Leader>, :pop<CR>
 map <Leader>/ :TComment<CR>
@@ -164,10 +164,18 @@ map <silent> <A-Up> :wincmd k<CR>
 map <silent> <A-Down> :wincmd j<CR>
 map <silent> <A-Left> :wincmd h<CR>
 map <silent> <A-Right> :wincmd l<CR>
+map <silent> <A-=> :wincmd =<CR>
+map <silent> <A-_> :wincmd _<CR>
+map <silent> <A--> :wincmd -<CR>
+map <silent> <A-+> :wincmd +<CR>
 map <silent> <M-Up> :wincmd k<CR>
 map <silent> <M-Down> :wincmd j<CR>
 map <silent> <M-Left> :wincmd h<CR>
 map <silent> <M-Right> :wincmd l<CR>
+map <silent> <M-=> :wincmd =<CR>
+map <silent> <M-_> :wincmd _<CR>
+map <silent> <M--> :wincmd -<CR>
+map <silent> <M-+> :wincmd +<CR>
 
 nmap <BS> X	" make backspace work in normal mode
 
