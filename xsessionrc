@@ -1,12 +1,18 @@
 echo "$(date +"%F %T.%N") xsessionrc"
 setxkbmap -model pc104 -layout us -variant dvorak
 . "$HOME/.shrc"
-external_monitors_only
+
+# Do things that modify the environment first. Other things might depend on it.
+# (Notably ssh-agent should come before xbindkeys.)
 export GTK_OVERLAY_SCROLLING=0
-screensaver init
-imwheel
-xbindkeys
-(setsid nm-applet&)
 eval "$(ssh-agent)"
+
+xbindkeys
+external_monitors_only
+screensaver init
+(setsid nm-applet&)
+imwheel
+
+# Do these last so there's a visual clue how long xsessionrc is taking.
 xsetroot -bg black
 xsetroot -cursor_name left_ptr
