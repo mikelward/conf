@@ -1740,8 +1740,6 @@ exec zsh -i'
         bindkey -M emacs '\ef' vi-forward-blank-word
         bindkey -M emacs '\eF' vi-forward-word
 
-        # Make Esc toggle between command and insert mode
-        #bindkey -M vicmd '\e' vi-insert
         vi_cmd_mode_onemore() {
             OLDCURSOR=$CURSOR
             zle vi-cmd-mode
@@ -1768,12 +1766,13 @@ exec zsh -i'
         _bind_vi '^u' kill-whole-line
         _bind_vi '^w' backward-kill-word
         _bind_vi '^y' yank
-        _bind_vi '^_' insert-last-word
         _bind_vi '\eb' vi-backward-blank-word
         _bind_vi '\eB' vi-backward-word
         _bind_vi '\ef' vi-forward-blank-word
         _bind_vi '\eF' vi-forward-word
         _bind_vi '\ey' yank-pop
+        bindkey -M viins '\e_' insert-last-word
+        bindkey -M vicmd '_' insert-last-word
         _bind_vi '\e^?' backward-kill-word
 
         zsh_sed_command() {
