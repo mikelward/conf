@@ -1138,8 +1138,22 @@ if is_interactive; then
 
     # commands to execute before the prompt is displayed
     preprompt() {
-        local last_error="$(${shell}_last_error)"
+        last_job_info
         current_command=
+        set_color 'normal'
+        printf '\n'
+        printf '%s %s %s\n' "$(host_info)" "$(dir_info)" "$(auth_info)"
+        job_info
+        set_title "$(title)"
+        set_prompt
+        flash_terminal
+    }
+
+    last_job_info() {
+        # Must be the very first thing.
+        local last_error="$(${shell}_last_error)"
+
+        test -z "$current_command" && return
 
         set_color 'normal'
         local printed=false
@@ -1173,12 +1187,6 @@ if is_interactive; then
         if $printed; then
             printf '\n'
         fi
-        printf '\n'
-        printf '%s %s %s\n' "$(host_info)" "$(dir_info)" "$(auth_info)"
-        job_info
-        set_title "$(title)"
-        set_prompt
-        flash_terminal
     }
 
     # get the user's attention
