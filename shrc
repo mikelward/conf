@@ -1549,6 +1549,7 @@ exec zsh -i'
 
     # output the string that should be used as the prompt
     ps1() {
+        keymap_character
         ps1_character
         printf ' '
     }
@@ -1557,20 +1558,31 @@ exec zsh -i'
     ps1_character() {
         if test $UID -eq 0; then
             printf '#'
-        elif test "${keymap:-}" = 'vicmd'; then
-            printf '>'
         else
             printf '$'
         fi
     }
 
+    # return whether the given shell option is on
+    getshopt() {
+        set -o | while read opt val; do
+            if test "$opt" = "$1"; then
+                test "$val" = "on"
+                return
+            fi
+        done
+        false
+    }
+
     # print a character indicating whether vi command mode is active
     keymap_character() {
-        case "${keymap:-}" in vicmd)
-            printf '%s' '>'
+        getshopt vi || return
+        case "${keymap:-}" in
+        vicmd)
+            printf 'NORMAL'
             ;;
-        *)
-            printf ' '
+        viins|main)
+            printf 'INSERT'
             ;;
         esac
     }
