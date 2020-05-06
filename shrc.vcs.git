@@ -4,8 +4,25 @@ git_add() {
 }
 
 git_amend() {
-    test $# -eq 0 && set -- --all
-    git amend --no-edit "$@"
+    declare -a flags
+    for arg; do
+        case "$arg" in
+        --)
+            flags+=("$arg")
+            break
+            ;;
+        -*)
+            flags+=("$arg")
+            ;;
+        *)
+            break
+            ;;
+        esac
+        shift
+    done
+    # no files given, commit them all
+    test $# -eq 0 && flags+=("--all")
+    git amend --no-edit "${flags[@]}" "$@"
 }
 
 git_annotate() {
