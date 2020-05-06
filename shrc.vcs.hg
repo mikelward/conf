@@ -30,7 +30,11 @@ hg_changelog() {
 }
 
 hg_changes() {
-   hg diff "$@"
+    hg diff "$@"
+}
+
+hg_checkout() {
+    hg checkout "$@"
 }
 
 hg_commit() {

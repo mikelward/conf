@@ -56,6 +56,10 @@ git_changes() {
     git diff "$@"
 }
 
+git_checkout() {
+    git checkout "$@"
+}
+
 git_commit() (
     declare -a flags
     for arg; do

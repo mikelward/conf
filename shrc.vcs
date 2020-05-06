@@ -68,7 +68,9 @@ alias am=amend
 alias an=annotate
 alias ann=annotate
 alias change=recommit
+alias ci=commit
 alias cl=changelog
+alias co=checkout
 alias di=diffs
 alias gr=graph
 alias projectroot=rootdir
@@ -77,7 +79,7 @@ alias ro=rootdir
 alias sa=save
 alias st=status
 for command in add amend annotate branch branches \
-    changed changelog changes commit commitforce diffs \
+    changed changelog changes checkout commit commitforce diffs \
     fix graph incoming lint outgoing pending precommit presubmit pull \
     push recommit revert review reword status submit submitforce \
     unknown upload uploadchain; do
