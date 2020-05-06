@@ -957,8 +957,6 @@ if is_interactive; then
     alias la='l -a'
     alias latest='recent -1'
     alias lc='l -C'
-    # lg = line grep
-    alias lg='g -F'
     lssock() {
         lsof -a -n -P -i "$@"
     }
