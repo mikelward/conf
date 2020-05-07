@@ -1763,6 +1763,7 @@ exec zsh -i'
             zle vi-cmd-mode
             CURSOR=$OLDCURSOR
         }
+        VIONEMORE=1
         zle -N vi-cmd-mode-onemore vi_cmd_mode_onemore
         bindkey -M viins '\e' vi-cmd-mode-onemore
 
