@@ -17,6 +17,9 @@
 "gnome-calculator"
 	Mod4 + Shift + c
 
+"xfce4-display-settings"
+    Mod4 + Shift + d
+
 "gnome-calculator"
 	XF86Calculator
 
@@ -43,6 +46,9 @@
 
 "google-meet"
 	Mod4 + m
+
+"monitor"
+    Mod4 + Shift + m
 
 "notepad"
 	Mod4 + n
