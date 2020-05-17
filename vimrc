@@ -1,5 +1,5 @@
 " Vim startup commands
-"
+
 if has("multi_byte")
     set encoding=utf-8	" have to do this to make the Unicode listchars work
 endif
@@ -105,7 +105,7 @@ if has("x11")
     set clipboard=unnamed	" yank to X selection buffer
 endif
 if has("mouse")
-    set mouse=                   " regain use of right mouse button
+    set mouse=a                  " enable visual mode selection
 endif
 if exists("&signcolumn")
     set signcolumn=no	" don't show the sign/mark gutter
@@ -176,6 +176,7 @@ map <silent> <M-=> :wincmd =<CR>
 map <silent> <M-_> :wincmd _<CR>
 map <silent> <M--> :wincmd -<CR>
 map <silent> <M-+> :wincmd +<CR>
+vmap  "+y
 
 nmap <BS> X	" make backspace work in normal mode
 
