@@ -3,6 +3,7 @@
 	"auto_indent": true,
 	"color_scheme": "Packages/User/Color Scheme - Plain Light/Plain Light.tmTheme",
 	"font_size": 10,
+	"font_face": "Ubuntu Mono Regular",
 	"ignored_packages":
 	[
 		"Vintage"

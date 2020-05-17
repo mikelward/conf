@@ -999,7 +999,7 @@ if is_interactive; then
     }
     alias rg='g -IR --exclude-dir=".*"'
     alias q='xa'
-    alias s='ssh'
+    alias s='subl'
     alias sbtnew='sbt new sbt/scala-seed.g8'
     alias spell='aspell -a'
     alias sr='ssh -l root'
