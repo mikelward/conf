@@ -180,6 +180,12 @@ vmap  "+y
 
 nmap <BS> X	" make backspace work in normal mode
 
+" make :put leave the cursor where it was
+noremap p gp
+noremap P gP
+noremap gp p
+noremap gP P
+
 if version >= 600
     " per-file type rules
     filetype on	" enable per-user file type customizations
