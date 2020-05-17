@@ -108,7 +108,7 @@ if has("mouse")
     set mouse=a                  " enable visual mode selection
 endif
 if exists("&signcolumn")
-    set signcolumn=yes	" don't show the sign/mark gutter
+    set signcolumn=yes	" show the sign/mark gutter
 endif
 
 " allow # character at current indentation level (must appear on own line)
