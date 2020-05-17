@@ -1,3 +1,4 @@
+#!/bin/bash
 # Version control additions to .shrc.
 
 # Cache of version control system used by a given directory.

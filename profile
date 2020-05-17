@@ -1,3 +1,4 @@
+#!/bin/sh
 #
 # Commands to run for any POSIX shell when the user logs in.
 #

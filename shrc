@@ -1,3 +1,4 @@
+#!/bin/sh
 #
 # Configuration for bash, zsh, ksh, dash, etc.
 #
@@ -2024,4 +2025,3 @@ true
 
 # Use tabs for indentation so we can edit this in nvi if necessary.
 # vi: set sw=4 ts=33:
-# vim: set ft=sh:
