@@ -36,7 +36,7 @@ bindsym $mod+Return exec terminal
 bindsym $mod+BackSpace kill
 
 # start a program launcher
-bindsym $mod+space exec dmenu_run -fn 'lucidasanstypewriter-12'
+bindsym $mod+space exec --no-startup-id dmenu_run -fn 'lucidasanstypewriter-12'
 
 # change focus
 bindsym $mod+Left focus left
