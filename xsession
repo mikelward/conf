@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 echo "$(date +"%F %T.%N") xsession"
 xfsettingsd
 type compton && compton --daemon
