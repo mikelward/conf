@@ -55,8 +55,13 @@ else
     highlight Visual term=reverse cterm=bold ctermfg=7 ctermbg=4
 endif
 
-    if exists("+colorcolumn")
-        highlight clear ColorColumn
-        highlight link ColorColumn Error
-    endif
+" Linux uses colors instead of underline, and they clash with the other colors
+if $TERM == "linux"
+    highlight clear CursorLine
+endif
+
+if exists("+colorcolumn")
+    highlight clear ColorColumn
+    highlight link ColorColumn Error
+endif
 highlight link SignColumn LineNr
