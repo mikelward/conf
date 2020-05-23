@@ -46,7 +46,7 @@ volume master {
 }
 
 tztime local {
-        format = "%b %-e %H:%M:%S"
+        format = "%a %b %-e %H:%M %Z"
 }
 
 tztime london {
