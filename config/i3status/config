@@ -15,6 +15,7 @@ order += "wireless _first_"
 order += "ethernet _first_"
 order += "volume master"
 order += "battery all"
+order += "tztime adelaide"
 order += "tztime london"
 order += "tztime sunnyvale"
 order += "tztime local"
@@ -49,6 +50,11 @@ volume master {
 
 tztime local {
         format = "%a %b %-e %H:%M %Z"
+}
+
+tztime utc {
+        format = "%H:%M %Z"
+        timezone = "UTC"
 }
 
 tztime adelaide {
