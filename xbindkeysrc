@@ -8,6 +8,9 @@
 #   Mod3 (CapsLock), Mod4, Mod5 (Scroll).
 #
 
+"terminal"
+    Mod4 + Return
+
 "blueman-manager"
     Mod4 + b
 
