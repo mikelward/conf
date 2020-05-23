@@ -49,7 +49,7 @@ volume master {
 }
 
 tztime local {
-        format = "%a %b %-e %H:%M %Z"
+        format = "%a %b %-e %H:%M"
 }
 
 tztime utc {
@@ -58,19 +58,19 @@ tztime utc {
 }
 
 tztime adelaide {
-        format = "%H:%M %Z"
+        format = "%a %H:%M ADL"
         timezone = "Australia/Adelaide"
         hide_if_equals_localtime = true
 }
 
 tztime london {
-        format = "%H:%M %Z"
+        format = "%a %H:%M LON"
         timezone = "Europe/London"
         hide_if_equals_localtime = true
 }
 
 tztime sunnyvale {
-        format = "%H:%M %Z"
+        format = "%a %H:%M SFO"
         timezone = "America/Los_Angeles"
         hide_if_equals_localtime = true
 }
