@@ -41,7 +41,7 @@ if &background == "light"
     highlight NonText term=bold cterm=NONE ctermfg=DarkYellow guifg=DarkYellow
     highlight SpecialKey term=bold cterm=NONE ctermfg=DarkYellow guifg=DarkYellow
     highlight CursorLine term=underline cterm=NONE ctermbg=White guibg=Grey90
-    highlight Visual term=reverse cterm=bold ctermfg=7 ctermbg=4
+    highlight Visual term=reverse cterm=reverse ctermfg=NONE ctermbg=NONE
 else
     highlight String term=underline cterm=NONE ctermfg=Magenta guifg=Magenta
     highlight Comment term=bold cterm=NONE ctermfg=Cyan guifg=Cyan
@@ -51,8 +51,7 @@ else
     highlight NonText term=bold cterm=NONE ctermfg=Yellow guifg=Yellow
     highlight SpecialKey term=bold cterm=NONE ctermfg=Yellow guifg=Yellow
     highlight CursorLine term=underline cterm=NONE ctermbg=LightGrey guibg=Grey90
-    " TODO: check on dark background
-    highlight Visual term=reverse cterm=bold ctermfg=7 ctermbg=4
+    highlight Visual term=reverse cterm=reverse ctermfg=NONE ctermbg=NONE
 endif
 
 " Linux uses colors instead of underline, and they clash with the other colors
