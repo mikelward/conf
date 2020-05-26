@@ -971,6 +971,7 @@ if is_interactive; then
     ml() { m lint; }
     # shadows magtape command, but who uses that?
     mt() { m test; }
+    alias n='date +"%Y%m%d%H%M%S"'
     alias now='date +"%Y-%m-%dT%H:%M:%S"'
     alias nowns='date +"%Y-%m-%dT%H:%M:%S.%N"'
     alias nv='nvim'
