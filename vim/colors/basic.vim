@@ -24,43 +24,39 @@ highlight clear String
 highlight clear Comment
 highlight clear Error
 highlight clear LineNr
+highlight clear CursorLine
+highlight clear CursorLineNr
 highlight clear SignColumn
 highlight clear NonText
 highlight clear SpecialKey
-highlight clear CursorLineNr
 highlight clear SignatureMarkText
+highlight clear SignatureMarkerText
 
 
 " Set up some simple non-intrusive colors
 if &background == "light"
-    highlight String term=underline cterm=NONE ctermfg=DarkGreen guifg=DarkGreen
-    highlight Comment term=bold cterm=NONE ctermfg=DarkBlue guifg=DarkBlue
-    highlight Error term=standout cterm=NONE ctermfg=DarkRed guifg=DarkRed
-    highlight LineNr term=reverse cterm=reverse ctermfg=White ctermbg=Black
-    highlight SignatureMarkText term=NONE cterm=NONE ctermfg=Black ctermbg=White
-    highlight NonText term=bold cterm=NONE ctermfg=DarkYellow guifg=DarkYellow
-    highlight SpecialKey term=bold cterm=NONE ctermfg=DarkYellow guifg=DarkYellow
-    highlight CursorLine term=underline cterm=NONE ctermbg=White guibg=Grey90
+    highlight String term=underline cterm=NONE ctermfg=DarkGreen
+    highlight Comment term=bold cterm=NONE ctermfg=DarkBlue
+    highlight Error term=standout cterm=NONE ctermfg=DarkRed
+    highlight NonText term=bold cterm=NONE ctermfg=DarkYellow
+    highlight LineNr term=reverse cterm=NONE ctermfg=Gray ctermbg=White
+    highlight CursorLineNr term=reverse cterm=reverse
     highlight Visual term=reverse cterm=reverse ctermfg=NONE ctermbg=NONE
 else
-    highlight String term=underline cterm=NONE ctermfg=Magenta guifg=Magenta
-    highlight Comment term=bold cterm=NONE ctermfg=Cyan guifg=Cyan
-    highlight Error term=standout cterm=NONE ctermbg=Red guifg=Red
-    highlight LineNr term=reverse cterm=reverse
-    highlight SignatureMarkText term=NONE cterm=NONE ctermfg=Black ctermbg=White
-    highlight NonText term=bold cterm=NONE ctermfg=Yellow guifg=Yellow
-    highlight SpecialKey term=bold cterm=NONE ctermfg=Yellow guifg=Yellow
-    highlight CursorLine term=underline cterm=NONE ctermbg=LightGrey guibg=Grey90
+    highlight String term=underline cterm=NONE ctermfg=LightGreen
+    highlight Comment term=bold cterm=NONE ctermfg=LightBlue
+    highlight Error term=standout cterm=NONE ctermbg=LightRed
+    highlight NonText term=bold cterm=NONE ctermfg=LightYellow
+    highlight LineNr term=NONE cterm=NONE ctermfg=Gray ctermbg=Black
+    highlight CursorLineNr term=reverse cterm=reverse
     highlight Visual term=reverse cterm=reverse ctermfg=NONE ctermbg=NONE
-endif
-
-" Linux uses colors instead of underline, and they clash with the other colors
-if $TERM == "linux"
-    highlight clear CursorLine
 endif
 
 if exists("+colorcolumn")
     highlight clear ColorColumn
     highlight link ColorColumn Error
 endif
+highlight link SpecialKey NonText
 highlight link SignColumn LineNr
+highlight link SignatureMarkText LineNr
+highlight link SignatureMarkerText LineNr
