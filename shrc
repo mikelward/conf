@@ -1061,20 +1061,10 @@ if is_interactive; then
         alias installed='rpm -qa'
         alias uninstall='root yum erase'
         alias reinstall='root yum reinstall'
+        alias autoremove='root yum autoremove'
         alias upgrade='root yum upgrade'
         alias versions='yum list'
         alias files='repoquery --file'
-    elif have_command aptitude; then
-        alias update='root aptitude -q -q update'
-        alias search='aptitude search -F "%c %p %30t %d"'
-        alias show='aptitude show'
-        alias install='root aptitude install'
-        alias installed="dpkg-query --show --showformat='\${binary:Package;-36} \${Version;-32} \${Status;-10}\n'"
-        alias uninstall='root aptitude remove'
-        alias reinstall='root aptitude reinstall'
-        alias upgrade='root aptitude safe-upgrade'
-        alias versions='aptitude versions'
-        alias files='apt-file search'
     elif have_command apt-get; then
         alias update='root apt-get update'
         alias search='apt-cache search --names-only'
@@ -1083,6 +1073,7 @@ if is_interactive; then
         alias installed="dpkg-query --show --showformat='\${binary:Package;-36} \${Version;-32} \${Status;-10}\n'"
         alias uninstall='root apt-get remove'
         alias reinstall='root apt-get install --reinstall'
+        alias autoremove='root apt-get autoremove'
         alias upgrade='root apt-get upgrade'
         alias versions='apt-cache policy'
         alias files='apt-file search'
