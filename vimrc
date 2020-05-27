@@ -175,26 +175,11 @@ function! TogglePaste()
   endif
 endfunction
 
-function! ToggleMark() abort
-    for l:mark in map(range(char2nr('a'), char2nr('z')), 'nr2char(v:val)')
-        let l:line = line("'" . l:mark)
-        if l:line == 0
-            execute 'mark' l:mark
-            return
-        endif
-        if l:line == line(".")
-            execute 'delmarks' l:mark
-            return
-        endif
-    endfor
-    echo "Sorry, all marks in use"
-endfunction
-noremap <silent><expr>  ToggleMark()
-
 " KEYBOARD BINDINGS
 let mapleader = ","
 map <Leader>b :make<CR>
 map <C-b> :make<CR>
+map <silent> <C-m> :call signature#mark#ToggleAtLine()<CR>
 map <Leader>n :cnext<CR>
 map <C-n> :tabnew<CR>
 map <Leader>p :cprevious<CR>
