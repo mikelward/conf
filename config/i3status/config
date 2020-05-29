@@ -65,19 +65,19 @@ tztime utc {
 }
 
 tztime adelaide {
-        format = "%a %H:%M ADL"
+        format = "%H:%M ADL"
         timezone = "Australia/Adelaide"
         hide_if_equals_localtime = true
 }
 
 tztime london {
-        format = "%a %H:%M LON"
+        format = "%H:%M LON"
         timezone = "Europe/London"
         hide_if_equals_localtime = true
 }
 
 tztime sunnyvale {
-        format = "%a %H:%M SFO"
+        format = "%H:%M SFO"
         timezone = "America/Los_Angeles"
         hide_if_equals_localtime = true
 }
