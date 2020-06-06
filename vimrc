@@ -135,7 +135,8 @@ let g:tagbar_type_go = {
 \}
 
 if has("x11")
-    set clipboard=unnamed	" yank to X selection buffer
+    set clipboard=unnamedplus	" yank to X clipboard
+    set clipboard^=autoselect
 endif
 if has("mouse")
     set mouse=a                  " enable visual mode selection
