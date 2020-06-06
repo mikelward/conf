@@ -533,8 +533,7 @@ join() {
 }
 
 # make a directory and cd to it
-mcd()
-{
+mcd() {
     if test -d "$1"; then
         printf "%s already exists\n" "$1"
     else
@@ -543,14 +542,12 @@ mcd()
 }
 
 # make a temporary directory and cd to it
-mtd()
-{
+mtd() {
     cd "$(mktemp -d)"
 }
 
 # get this machine's public IP address as seen by Google
-myip()
-{
+myip() {
     dig +short o-o.myaddr.l.google.com txt @ns1.google.com | tr -d '"'
 }
 
@@ -567,8 +564,7 @@ nonempty() {
 
 # print the full path to an executable, ignoring aliases and functions
 # like whence -p/type -P, but should work in all shells
-path()
-{
+path() {
     (
         IFS=:
         for d in $PATH; do
@@ -610,8 +606,7 @@ envgrep() {
 }
 
 # ps with useful default options
-psc()
-{
+psc() {
     # user,pid,ppid,pgid,start_time,pcpu,rss,comm are first, followed by any -o option
     # the user supplies, then args are last.
     ps -w -o user,pid,ppid,pgid,start_time,pcpu,rss,comm=EXE "$@" -o args=ARGS
@@ -619,8 +614,7 @@ psc()
 
 # pgrep with default ps options
 # psgrep [<ps options>] <pattern>
-psgrep()
-{
+psgrep() {
     # last arg is pgrep pattern, rest are args for ps
     local ps_args
     while test $# -gt 1; do
@@ -639,8 +633,7 @@ psgrep()
 }
 
 # like psgrep, but taking a process group number
-psgrepgroup()
-{
+psgrepgroup() {
     # last arg is pgid, rest are args for ps
     local ps_args
     while test $# -gt 1; do
@@ -665,8 +658,7 @@ realdir() {
 
 # show the most recently changed files
 # defaults to the showing the last 10, override with -<number>
-recent()
-{
+recent() {
     local lines
 
     lines=10
@@ -680,8 +672,7 @@ recent()
 
 # keep trying a command until it works
 # (e.g. retry ping -c 1 host)
-retry()
-{
+retry() {
     while true; do
         if "$@"; then
             bell
