@@ -1080,7 +1080,33 @@ if is_interactive
         :
     end
 
-    # TODO: fish vcs
+    # clone a version control system repo
+    function clone
+        switch $argv[1]
+        case '*.git'
+            git clone $argv
+        case '*'
+            hg clone $argv
+        end
+    end
+
+    alias am='amend'
+    alias ci='commit'
+    alias di='diffs'
+    alias gr='graph'
+    alias lg='graph'
+    # ma=mail
+    alias ma='review'
+    # fish reserves the word "status"
+    alias st='vcs status'
+    for command in \
+        add amend annotate branch branches \
+        changed changelog changes checkout commit commitforce diffs \
+        fix graph incoming lint outgoing pending precommit presubmit pull \
+        push recommit revert review reword submit submitforce \
+        unknown upload uploadchain
+        alias $command="vcs $command"
+    end
 
     # TODO: fish_last_error
 
