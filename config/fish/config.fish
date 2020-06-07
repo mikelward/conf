@@ -135,7 +135,7 @@ end
 
 ## log the running of a command to a file
 #function log_history
-#    printf '%s\n' "(date "+%Y%m%d %H%M%S %z") $TTY $*" >> $HISTORY_FILE
+#    printf '%s\n' (date "+%Y%m%d %H%M%S %z") $TTY $argv" >> $HISTORY_FILE
 #end
 
 # run a command with output silenced
@@ -285,7 +285,7 @@ end
 
 # print the name of the current project
 function projectname
-    basename "(projectroot)"
+    basename (projectroot | string collect)
 end
 
 # print the root directory of the current project
@@ -295,7 +295,7 @@ end
 
 # cd to the real directory that the specified file is in, resolving symlinks
 function cdfile
-    cd "(realdir $argv[1])"
+    cd (realdir $argv[1] | string collect)
 end
 
 function delline
@@ -383,7 +383,7 @@ end
 
 # make a temporary directory and cd to it
 function mtd
-    cd "(mktemp -d)"
+    cd (mktemp -d | string collect)
 end
 
 function names
@@ -412,7 +412,7 @@ end
 # e.g. pegrep SSH_AUTH_SOCK xfce4
 function pegrep
     for pid in (pgrep -f "^$argv[2]")
-        printf '%s %s\n' "(ps -o pid= -o args= -p $pid)" "(envgrep $argv[1] $pid)"
+        printf '%s %s\n' (ps -o pid= -o args= -p $pid | string collect) (envgrep $argv[1] $pid | string collect)
     end
 end
 function peg; pegrep; end
@@ -440,7 +440,7 @@ function psgrep
     set ps_args $argv[1..-2]
     set pattern $argv[-1]
 
-    set pids "(pgrep -d , -f $pattern)"
+    set pids (pgrep -d , -f $pattern | string collect)
     if test -n $pids
         psc -p $pids $ps_args
     else
@@ -450,7 +450,7 @@ end
 
 # print the absolute path of the directory containing the specified file
 function realdir
-    dirname "(readlink -f $argv[1])"
+    dirname (readlink -f $argv[1] | string collect)
 end
 
 # show the most recently changed files
@@ -563,23 +563,23 @@ if is_interactive
     set --global color false
     if is_runnable tput
         if quiet tput longname
-            set bold "(tput bold)"
-            set underline "(tput smul)"
-            set standout "(tput smso)"
-            set normal "(tput sgr0)"
-            set black "(tput setaf 0)"
-            set red "(tput setaf 1)"
-            set green "(tput setaf 2)"
-            set yellow "(tput setaf 3)"
-            set blue "(tput setaf 4)"
-            set magenta "(tput setaf 5)"
-            set cyan "(tput setaf 6)"
-            set white "(tput setaf 7)"
+            set bold (tput bold | string collect)
+            set underline (tput smul | string collect)
+            set standout (tput smso | string collect)
+            set normal (tput sgr0 | string collect)
+            set black (tput setaf 0 | string collect)
+            set red (tput setaf 1 | string collect)
+            set green (tput setaf 2 | string collect)
+            set yellow (tput setaf 3 | string collect)
+            set blue (tput setaf 4 | string collect)
+            set magenta (tput setaf 5 | string collect)
+            set cyan (tput setaf 6 | string collect)
+            set white (tput setaf 7 | string collect)
             set --global color true
 
-            set khome "(tput khome)"
-            set kend "(tput kend)"
-            set kdch1 "(tput kdch1)"
+            set khome (tput khome | string collect)
+            set kend (tput kend | string collect)
+            set kdch1 (tput kdch1 | string collect)
         end
     end
 
@@ -602,8 +602,8 @@ if is_interactive
     case '*'
         if is_runnable tput
             if quiet tput longname
-                set titlestart "(tput tsl)"
-                set titlefinish "(tput fsl)"
+                set titlestart (tput tsl | string collect)
+                set titlefinish (tput fsl | string collect)
             end
         else
             set titlestart ''
@@ -812,7 +812,7 @@ if is_interactive
 #        set PS1 '$ '
 #        set PS2 '_ '
 #        set PS3 '#? '
-#        set_title "(title)"
+#        set_title (title | string collect)
 #    end
 #
 #    # commands to execute before the prompt is displayed
@@ -823,14 +823,14 @@ if is_interactive
 #        printf '\n'
 #        printf '%s %s %s\n' "(host_info)" "(dir_info)" "(auth_info)"
 #        job_info
-#        set_title "(title)"
+#        set_title (title | string collect)
 #        set_prompt
 #        flash_terminal
 #    end
 #
 #    function last_job_info
 #        # Must be the very first thing.
-#        set last_error "(${shell}_last_error)"
+#        set last_error (${shell}_last_error | string collect)
 #
 #        test -z $current_command; and return
 #
@@ -948,7 +948,7 @@ if is_interactive
         if on_production_host
             my_set_color 'red'
         end
-        printf '%s' "(short_hostname)"
+        printf '%s' (short_hostname | string collect)
         my_set_color 'normal'
         printf '\n'
     end
@@ -1147,7 +1147,7 @@ exec zsh -i'
     # set all the prompt strings
     # done this way so that \[ (bash) and \{ (zsh) are handled consistently
     function set_prompt
-        set PS1 "(ps1)"
+        set PS1 (ps1 | string collect)
     end
 
     # output the string that should be used as the prompt
@@ -1172,7 +1172,7 @@ exec zsh -i'
 #    function precommand
 #        log_history "$argv"
 #        set current_command "(expand_job "$argv")"
-#        set_title "(title)"
+#        set_title (title | string collect)
 #        my_set_color 'normal'
 #        set SECONDS 0
 #    end
