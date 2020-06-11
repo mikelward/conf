@@ -1,6 +1,7 @@
 #!/bin/sh
 echo "$(date +"%F %T.%N") xsession"
 xfsettingsd
+xfce4-power-manager
 type compton && compton --daemon --mark-ovredir-focused
 type pasystray && (setsid pasystray&)
 exec i3 || exec xterm
