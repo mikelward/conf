@@ -75,6 +75,9 @@
 "terminal_on_workstation"
     Mod4 + w
 
+"workspaces"
+    Mod4 + Shift + w
+
 "youtube-music"
     Mod4 + y
 
