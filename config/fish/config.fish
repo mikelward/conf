@@ -256,7 +256,7 @@ function body
     set lines 1
     switch $argv[1]
     case -'*'
-        set lines (string trim --left --chars - $argv[1])
+        set lines (string trim --left --chars -- - $argv[1])
         set --erase argv[1]
     end
 
@@ -459,8 +459,8 @@ function recent
     set lines 10
     switch $argv[1]
     case -'*'
-        set lines (string trim --left --chars - $argv[1])
-        set --erase $argv[1]
+        set lines (string trim --left --chars -- - $argv[1])
+        set --erase argv[1]
     end
     ls -t -1 $argv | head -n $lines
 end
@@ -488,7 +488,7 @@ end
 function first_arg_last
     set command $argv[1]
     set arg $argv[2]
-    set --erase $argv[1..2]
+    set --erase argv[1..2]
     $command $argv $arg
 end
 
@@ -497,7 +497,7 @@ end
 function tz2tz
     set from $argv[1]
     set to $argv[2]
-    set --erase $argv[1..2]
+    set --erase argv[1..2]
     set TZ $to date -d 'TZ="'$from'"'" ""$argv"
 end
 
