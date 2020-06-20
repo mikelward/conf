@@ -41,6 +41,7 @@
     history = log --pretty=format:'%C(auto)%h%x09%C(auto)%cd%x09%C(auto,bold)%s%x09%C(auto)%d'
     lo = log
     logs = log
+    new = !git init && git symbolic-ref HEAD refs/heads/main
     pick = cherry-pick
     pu = push
     remove = rm --cached
