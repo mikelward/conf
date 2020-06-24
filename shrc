@@ -450,11 +450,12 @@ dev() {
     done
 }
 
-mounts() {
-    local -a nodevs=($(</proc/filesystems awk '$1 ~ /^nodev$/ { print $2 }'))
-    local IFS=,
-    findmnt -t nosquashfs,"${nodevs[*]}"
-}
+#mounts() {
+#    declare -a nodevs
+#    nodev=( $(</proc/filesystems awk '$1 ~ /^nodev$/ { print $2 }') )
+#    local IFS=,
+#    findmnt -t nosquashfs,"${nodevs[*]}"
+#}
 
 # run a command on each line of stdin
 each() {
