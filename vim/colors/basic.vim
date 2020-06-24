@@ -32,7 +32,6 @@ highlight clear SpecialKey
 highlight clear SignatureMarkText
 highlight clear SignatureMarkerText
 
-
 " Set up some simple non-intrusive colors
 if &background == "light"
     highlight String term=underline cterm=NONE ctermfg=DarkGreen
