@@ -86,10 +86,8 @@ endif
 
 " Highlight the character at &textwidth (default 80) + 1 columns
 if exists("&colorcolumn")
-  set colorcolumn=+1
+  " set colorcolumn=+1
 endif
-
-set background=light
 
 if version >= 600
     colorscheme basic	" Use my own basic syntax highlighting
