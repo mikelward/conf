@@ -1,6 +1,7 @@
 #!/bin/sh
 echo "$(date +"%F %T.%N") xsessionrc"
 setxkbmap -model pc104 -layout us -variant dvorak
+xmodmap "$HOME/.xmodmaprc"
 . "$HOME/.shrc"
 
 # Do things that modify the environment first. Other things might depend on it.
