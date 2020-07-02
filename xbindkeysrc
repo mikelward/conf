@@ -23,9 +23,6 @@
 "gnome-calculator"
 	Mod4 + Shift + c
 
-"xfce4-display-settings"
-    Mod4 + Shift + d
-
 "gnome-calculator"
 	XF86Calculator
 
@@ -53,7 +50,7 @@
 "google-meet"
 	Mod4 + m
 
-"monitor"
+"external_monitors_only"
     Mod4 + Shift + m
 
 "notepad"
@@ -62,6 +59,9 @@
 # p = play music
 "music"
 	Mod4 + p
+
+"xfce4-display-settings"
+    Mod4 + Shift + d
 
 "remote-desktop"
     Mod4 + r
