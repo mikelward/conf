@@ -807,6 +807,9 @@ if is_interactive
         alias %$i='fg %$i'
     end
 
+    function fish_greeting
+    end
+
 #    # set a basic prompt that doesn't rely on precommand and preprompt hooks
 #    function basic_prompt
 #        set PS1 '$ '
@@ -976,7 +979,7 @@ if is_interactive
         # otherwise just the directory with $HOME turned into ~
         cd $argv[1]
         set projectroot (projectroot)
-        if test -n $projectroot
+        if test -n "$projectroot"
             green (basename $projectroot)
             local projectsubdir
             set projectsubdir (trim_prefix (projectroot) $PWD)
