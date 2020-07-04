@@ -1,0 +1,12 @@
+Config { font = "xft:DejaVu Sans:pixelsize=12"
+       , bgColor = "black"
+       , fgColor = "grey"
+       , position = TopW L 100
+       , commands = [ Run Weather "EGPF" ["-t"," <tempF>F","-L","68","-H","75","--normal","green","--high","red","--low","lightblue"] 36000
+                    , Run Date "%a %b %_d %H:%M" "date" 10
+                    , Run StdinReader
+                    ]
+       , sepChar = "%"
+       , alignSep = "}{"
+       , template = "%StdinReader% }{ %EGPF% | <fc=#ee9a00>%date%</fc>"
+       }

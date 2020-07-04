@@ -4,6 +4,7 @@ xfsettingsd
 xfce4-power-manager
 type compton && compton --daemon --backend xrender --paint-on-overlay
 type pasystray && (setsid pasystray&)
-exec i3 || exec xterm
+exec xmonad || exec i3 || exec xterm
+#exec i3 || exec xterm
 #exec startxfce4 || exec mate-session || exec cinnamon-session || exec xterm
 #exec wingo
