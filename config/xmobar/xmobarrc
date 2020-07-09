@@ -1,7 +1,7 @@
 Config { font = "xft:DejaVu Sans:pixelsize=12"
        , bgColor = "black"
        , fgColor = "grey"
-       , position = TopW L 100
+       , position = TopW L 97
        , commands = [ Run Com "pa.py" [] "PulseAudio" 10
                     , Run Date "%a %b %-d %H:%M" "date" 10
                     , Run StdinReader
