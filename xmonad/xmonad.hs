@@ -12,7 +12,7 @@ myWorkspaces = ["1","2","3","4","5","6","7","8","9"] ++ (map snd myExtraWorkspac
 myExtraWorkspaces = [(xK_0, "0")] -- list of (key, name)
 
 main = do
-    xmproc <- spawnPipe "xmobar"
+    xmproc <- spawnPipe "~/.cabal/bin/xmobar"
     xmonad $ docks defaultConfig
         { manageHook = myManageHook <+> manageHook defaultConfig
         , layoutHook = avoidStruts  $  layoutHook defaultConfig

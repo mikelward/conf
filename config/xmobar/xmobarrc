@@ -4,9 +4,11 @@ Config { font = "xft:DejaVu Sans:pixelsize=12"
        , position = TopW L 100
        , commands = [ Run Com "pa.py" [] "PulseAudio" 10
                     , Run Date "%a %b %-d %H:%M" "date" 10
+                    , Run DateZone "%H:%M LON" "" "Europe/London" "londonTime" 10
+                    , Run DateZone "%H:%M ADL" "" "Australia/Adelaide" "adelaideTime" 10
                     , Run StdinReader
                     ]
        , sepChar = "%"
        , alignSep = "}{"
-       , template = "%StdinReader% } %PulseAudio% | <fc=#ee9a00>%date%</fc> {"
+       , template = "%StdinReader% } %PulseAudio% | <fc=#ee9a00>%date%</fc> %londonTime% %adelaideTime% {"
        }
