@@ -7,7 +7,11 @@ xmodmap "$HOME/.xmodmaprc"
 # Do things that modify the environment first. Other things might depend on it.
 # (Notably ssh-agent should come before xbindkeys.)
 export GTK_OVERLAY_SCROLLING=0
-eval "$(ssh-agent)"
+if test -z "$SSH_AGENT_PID" || ! test -S "$SSH_AUTH_SOCK"; then
+    # Might already be running, e.g. because /usr/sbin/lightdm-session and
+    # /etc/X11/Xsession both source some of the same scripts.
+    eval "$(ssh-agent)"
+fi
 
 xbindkeys
 external_monitors_only
