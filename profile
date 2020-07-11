@@ -13,7 +13,8 @@ if test -z "${ZSH_VERSION:-}"; then
 fi
 
 # set a script that will be sourced on exiting the shell
-test -f "$HOME"/.exitrc && trap '. "$HOME/.exitrc"' EXIT
+# XXX temporarily disabled due to https://github.com/kovidgoyal/kitty/issues/1867
+#test -f "$HOME"/.exitrc && trap '. "$HOME/.exitrc"' EXIT
 
 if test -t 0; then
 	# disable flow control so applications can use ^Q and ^S
