@@ -1,11 +1,13 @@
-#!/bin/sh
+#!/bin/bash
 echo "$(date +"%F %T.%N") xsession"
+
 xfsettingsd
 xfce4-power-manager
 type compton && compton --daemon --backend xrender --paint-on-overlay
 type pasystray && (setsid pasystray&)
-exec i3
-if type xmonad >/dev/null 2>&1; then
+type qtile && exec qtile
+type i3 && exec i3
+if type xmonad; then
   trayer --edge top --align right --expand true --width 3 --widthtype percent --tint 0x000000 --transparent true --height 19 --SetPartialStrut true &
   exec xmonad
 fi
