@@ -1261,7 +1261,7 @@ if is_interactive; then
     }
     _dir_info() {
         # if the directory is under version control, print
-        # <project name> <subdir under project root> <branch>,
+        # <project name> <subdir under project root> <branch> <status>,
         # otherwise just the directory with $HOME turned into ~
         cd "$1"
         local projectroot="$(projectroot)"
@@ -1273,7 +1273,11 @@ if is_interactive; then
                 printf ' '
                 blue "$projectsubdir"
             fi
-            statuschars="$(status_chars)"
+            local branch="$(vcs branch)"
+            if test -n "$branch"; then
+                printf ' %s' "$branch"
+            fi
+            local statuschars="$(status_chars)"
             if test -n "$statuschars"; then
                 printf ' '
                 yellow "$statuschars"
