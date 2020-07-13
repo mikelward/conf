@@ -83,7 +83,7 @@ for i in groups:
 layouts = [
     #layout.Stack(num_stacks=2),
     # 860 on larger screens
-    layout.Slice(width=400, name='sidebrowser', role='browser', fallback=layout.MonadTall()),
+    #layout.Slice(width=400, name='sidebrowser', role='browser', fallback=layout.MonadTall()),
     layout.Columns(),
     layout.Max(),
 ]
