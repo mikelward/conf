@@ -41,20 +41,21 @@ keys = [
 
     # Move windows up or down in current stack
     Key([mod, "shift"], "Down", lazy.layout.shuffle_down(),
-        desc="Move window down in current stack "),
+        desc="Move window down in current stack"),
     Key([mod, "shift"], "Up", lazy.layout.shuffle_up(),
-        desc="Move window up in current stack "),
+        desc="Move window up in current stack"),
+    Key([mod, "shift"], "Left", lazy.layout.shuffle_left(),
+        desc="Move window left in current stack"),
+    Key([mod, "shift"], "Right", lazy.layout.shuffle_right(),
+        desc="Move window right in current stack"),
 
     # Switch window focus to other pane(s) of stack
     Key([mod], "Tab", lazy.layout.next(),
         desc="Switch window focus to other pane(s) of stack"),
 
-    # Swap panes of split stack
-    Key([mod, "shift"], "Tab", lazy.layout.rotate(),
-        desc="Swap panes of split stack"),
-
     # Toggle between different layouts as defined below
     Key([mod], "Return", lazy.next_layout(), desc="Toggle between layouts"),
+
     Key([mod], "BackSpace", lazy.window.kill(), desc="Kill focused window"),
 
     Key([mod, "control"], "r", lazy.restart(), desc="Restart qtile"),
@@ -83,7 +84,7 @@ for i in groups:
 layouts = [
     #layout.Stack(num_stacks=2),
     # 860 on larger screens
-    #layout.Slice(width=400, name='sidebrowser', role='browser', fallback=layout.MonadTall()),
+    layout.Slice(width=400, name='sidebrowser', role='browser', fallback=layout.Max()),
     layout.Columns(),
     layout.Max(),
 ]
