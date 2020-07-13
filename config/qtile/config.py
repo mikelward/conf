@@ -88,7 +88,8 @@ for i in groups:
 layouts = [
     #layout.Stack(num_stacks=2),
     # 860 on larger screens
-    layout.Slice(width=400, name='sidebrowser', role='browser', fallback=layout.Max()),
+    layout.Slice(width=860, name='sidebrowser', role='browser', fallback=layout.MonadTall()),
+    layout.MonadTall(),
     layout.Columns(),
     layout.Max(),
 ]
@@ -149,6 +150,7 @@ floating_layout = layout.Floating(float_rules=[
     {'wmclass': 'ssh-askpass'},  # ssh-askpass
 ])
 auto_fullscreen = True
+cursor_warp = True
 focus_on_window_activation = "smart"
 
 # XXX: Gasp! We're lying here. In fact, nobody really uses or cares about this
