@@ -110,7 +110,7 @@ screens = [
                 widget.CurrentLayout(),
                 widget.Prompt(),
                 widget.Spacer(),
-                widget.WindowName(),
+                widget.WindowName(width=bar.CALCULATED),
                 widget.Spacer(),
                 widget.Clock(format='%b %-d %H:%M'),
                 widget.Systray(),
