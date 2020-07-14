@@ -64,6 +64,7 @@ keys = [
 
     Key([mod, "control"], "r", lazy.restart(), desc="Restart qtile"),
     Key([mod, "control"], "q", lazy.shutdown(), desc="Shutdown qtile"),
+    Key([mod, "control"], "x", lazy.shutdown(), desc="Shutdown qtile"),
     Key([mod], "space", lazy.spawncmd(),
         desc="Spawn a command using a prompt widget"),
 ]
@@ -87,7 +88,7 @@ for i in groups:
 
 layouts = [
     #layout.Stack(num_stacks=2),
-    # 860 on larger screens
+    # TODO(mikel): Handle Slice layout on smaller screens.
     layout.Slice(width=860, name='sidebrowser', role='browser', fallback=layout.MonadTall()),
     layout.MonadTall(),
     layout.Columns(),
