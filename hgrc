@@ -24,6 +24,7 @@ merge = meld
 
 [alias]
 graph = log --graph --template=twoline
+show = log --verbose --patch --rev
 
 [hooks]
 #precommit = precommit
