@@ -47,7 +47,7 @@
 "google-meet"
 	Mod4 + m
 
-"external_monitors_only"
+"monitors"
     Mod4 + Shift + m
 
 "notepad"
