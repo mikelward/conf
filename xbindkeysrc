@@ -8,8 +8,11 @@
 #   Mod3 (CapsLock), Mod4, Mod5 (Scroll).
 #
 
-"blueman-manager"
+"bluetooth-connect"
     Mod4 + b
+
+"pulseprofile.py"
+    Mod4 + Shift + b
 
 "google-calendar"
     Mod4 + c
