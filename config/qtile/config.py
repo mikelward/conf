@@ -31,6 +31,12 @@ from libqtile.config import Click, Drag, Group, Key, Screen
 from libqtile.lazy import lazy
 
 mod = "mod4"
+# TODO(mikel): calculate width
+quarter_width=860
+xephyr = False
+if xephyr:
+    quarter_width=480
+    mod = "mod1"
 
 keys = [
     # Switch between windows in current stack pane
@@ -89,7 +95,9 @@ for i in groups:
 layouts = [
     #layout.Stack(num_stacks=2),
     # TODO(mikel): Handle Slice layout on smaller screens.
-    layout.Slice(width=860, name='sidebrowser', role='browser', fallback=layout.MonadTall()),
+    layout.Slice(width=quarter_width, name='sidebrowser', role='browser', fallback=layout.MonadTall()),
+    layout.TreeTab(),
+    layout.Slice(width=quarter_width, name='slice+treetab', role='browser', fallback=layout.TreeTab()),
     layout.MonadTall(),
     layout.Columns(),
     layout.Max(),
