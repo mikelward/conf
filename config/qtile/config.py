@@ -24,6 +24,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import os
+
 from typing import List  # noqa: F401
 
 from libqtile import bar, layout, widget
@@ -33,8 +35,7 @@ from libqtile.lazy import lazy
 mod = "mod4"
 # TODO(mikel): calculate width
 quarter_width=860
-xephyr = False
-if xephyr:
+if os.environ.get("QTILE_XEPHYR"):
     quarter_width=480
     mod = "mod1"
 
@@ -86,18 +87,11 @@ for i in groups:
         # mod + shift + letter of group = switch to & move focused window to group
         Key([mod, "shift"], i.name, lazy.window.togroup(i.name, switch_group=True),
             desc="Switch to & move focused window to group {}".format(i.name)),
-        # Or, use below if you prefer not to switch to that group.
-        # # mod + shift + letter of group = move focused window to group
-        # Key([mod, "shift"], i.name, lazy.window.togroup(i.name),
-        #     desc="move focused window to group {}".format(i.name)),
     ])
 
 layouts = [
-    #layout.Stack(num_stacks=2),
     # TODO(mikel): Handle Slice layout on smaller screens.
     layout.Slice(width=quarter_width, name='sidebrowser', role='browser', fallback=layout.MonadTall()),
-    layout.TreeTab(),
-    layout.Slice(width=quarter_width, name='slice+treetab', role='browser', fallback=layout.TreeTab()),
     layout.MonadTall(),
     layout.Columns(),
     layout.Max(),
@@ -163,12 +157,5 @@ floating_layout = layout.Floating(float_rules=[
 auto_fullscreen = True
 focus_on_window_activation = "never"
 
-# XXX: Gasp! We're lying here. In fact, nobody really uses or cares about this
-# string besides java UI toolkits; you can see several discussions on the
-# mailing lists, GitHub issues, and other WM documentation that suggest setting
-# this string if your java app doesn't work correctly. We may as well just lie
-# and say that we're a working one by default.
-#
-# We choose LG3D to maximize irony: it is a 3D non-reparenting WM written in
-# java that happens to be on java's whitelist.
+# Pretend to be "LG3D" so that Java apps behave correctly.
 wmname = "LG3D"
