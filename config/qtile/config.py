@@ -35,11 +35,11 @@ from libqtile.lazy import lazy
 
 mod = "mod4"
 # TODO(mikel): calculate width
-quarter_width=860
+quarter_width = 860
 slice_role = "browser"
 slice_wmclass = None
 if os.environ.get("QTILE_XEPHYR"):
-    quarter_width=480
+    quarter_width = 480
     mod = "mod1"
     slice_role = None
     slice_wmclass = "xclock"
