@@ -36,9 +36,13 @@ from libqtile.lazy import lazy
 mod = "mod4"
 # TODO(mikel): calculate width
 quarter_width=860
+slice_role = "browser"
+slice_wmclass = None
 if os.environ.get("QTILE_XEPHYR"):
     quarter_width=480
     mod = "mod1"
+    slice_role = None
+    slice_wmclass = "xclock"
 
 keys = [
     # Switch between windows in current stack pane
@@ -63,7 +67,9 @@ keys = [
 
     # Switch window focus to other pane(s) of stack
     Key([mod], "Tab", lazy.layout.next(),
-        desc="Switch window focus to other pane(s) of stack"),
+        desc="Focus the next window"),
+    Key([mod, "shift"], "Tab", lazy.layout.previous(),
+        desc="Focus the previous window"),
 
     # Toggle between different layouts as defined below
     Key([mod], "Return", lazy.next_layout(), desc="Toggle between layouts"),
@@ -92,7 +98,7 @@ for i in groups:
 
 layouts = [
     # TODO(mikel): Handle Slice layout on smaller screens.
-    layout.Slice(width=quarter_width, name='sidebrowser', role='browser', fallback=layout.MonadTall()),
+    layout.Slice(width=quarter_width, name='sidebrowser', role=slice_role, wmclass=slice_wmclass, fallback=layout.MonadTall()),
     layout.MonadTall(),
     layout.Columns(),
     layout.Max(),
