@@ -29,13 +29,16 @@ import os
 
 from typing import List  # noqa: F401
 
-from libqtile import bar, layout, widget
+from libqtile import bar, hook, layout, widget
 from libqtile.config import Click, Drag, Group, Key, Screen
 from libqtile.lazy import lazy
+
+import mystack
 
 mod = "mod4"
 # TODO(mikel): calculate width
 quarter_width = 860
+num_columns = 3
 slice_role = "browser"
 slice_wmclass = None
 if os.environ.get("QTILE_XEPHYR"):
@@ -44,71 +47,80 @@ if os.environ.get("QTILE_XEPHYR"):
     slice_role = None
     slice_wmclass = "xclock"
 
+
 keys = [
     # Switch between windows in current stack pane
-    Key([mod], "Down", lazy.layout.down(),
-        desc="Move focus down in stack pane"),
-    Key([mod], "Up", lazy.layout.up(),
-        desc="Move focus up in stack pane"),
-    Key([mod], "Right", lazy.layout.right(),
-        desc="Move focus right in stack pane"),
-    Key([mod], "Left", lazy.layout.left(),
-        desc="Move focus left in stack pane"),
-
+    Key([mod], "Down", lazy.layout.down(), desc="Move focus down in stack pane"),
+    Key([mod], "Up", lazy.layout.up(), desc="Move focus up in stack pane"),
+    Key([mod], "Right", lazy.layout.right(), desc="Move focus right in stack pane"),
+    Key([mod], "Left", lazy.layout.left(), desc="Move focus left in stack pane"),
     # Move windows up or down in current stack
-    Key([mod, "shift"], "Down", lazy.layout.shuffle_down(),
-        desc="Move window down in current stack"),
-    Key([mod, "shift"], "Up", lazy.layout.shuffle_up(),
-        desc="Move window up in current stack"),
-    Key([mod, "shift"], "Right", lazy.layout.shuffle_right(),
-        desc="Move window right in current stack"),
-    Key([mod, "shift"], "Left", lazy.layout.shuffle_left(),
-        desc="Move window left in current stack"),
-
+    Key(
+        [mod, "shift"],
+        "Down",
+        lazy.layout.shuffle_down(),
+        desc="Move window down in current stack",
+    ),
+    Key(
+        [mod, "shift"],
+        "Up",
+        lazy.layout.shuffle_up(),
+        desc="Move window up in current stack",
+    ),
+    Key(
+        [mod, "shift"],
+        "Right",
+        lazy.layout.shuffle_right(),
+        desc="Move window right in current stack",
+    ),
+    Key(
+        [mod, "shift"],
+        "Left",
+        lazy.layout.shuffle_left(),
+        desc="Move window left in current stack",
+    ),
     # Switch window focus to other pane(s) of stack
-    Key([mod], "Tab", lazy.layout.next(),
-        desc="Focus the next window"),
-    Key([mod, "shift"], "Tab", lazy.layout.previous(),
-        desc="Focus the previous window"),
-
+    Key([mod], "Tab", lazy.layout.next(), desc="Focus the next window"),
+    Key(
+        [mod, "shift"], "Tab", lazy.layout.previous(), desc="Focus the previous window"
+    ),
     # Toggle between different layouts as defined below
     Key([mod], "Return", lazy.next_layout(), desc="Toggle between layouts"),
-
     Key([mod], "BackSpace", lazy.window.kill(), desc="Kill focused window"),
-
     Key([mod, "control"], "r", lazy.restart(), desc="Restart qtile"),
     Key([mod, "control"], "q", lazy.shutdown(), desc="Shutdown qtile"),
     Key([mod, "control"], "x", lazy.shutdown(), desc="Shutdown qtile"),
-    Key([mod], "space", lazy.spawncmd(),
-        desc="Spawn a command using a prompt widget"),
+    Key([mod], "space", lazy.spawncmd(), desc="Spawn a command using a prompt widget"),
 ]
 
 groups = [Group(i) for i in "1234567890"]
 
 for i in groups:
-    keys.extend([
-        # mod + letter of group = switch to group
-        Key([mod], i.name, lazy.group[i.name].toscreen(toggle=False),
-            desc="Switch to group {}".format(i.name)),
-
-        # mod + shift + letter of group = switch to & move focused window to group
-        Key([mod, "shift"], i.name, lazy.window.togroup(i.name, switch_group=True),
-            desc="Switch to & move focused window to group {}".format(i.name)),
-    ])
+    keys.extend(
+        [
+            # mod + letter of group = switch to group
+            Key(
+                [mod],
+                i.name,
+                lazy.group[i.name].toscreen(toggle=False),
+                desc="Switch to group {}".format(i.name),
+            ),
+            # mod + shift + letter of group = switch to & move focused window to group
+            Key(
+                [mod, "shift"],
+                i.name,
+                lazy.window.togroup(i.name, switch_group=True),
+                desc="Switch to & move focused window to group {}".format(i.name),
+            ),
+        ]
+    )
 
 layouts = [
-    # TODO(mikel): Handle Slice layout on smaller screens.
-    layout.Slice(width=quarter_width, name='sidebrowser', role=slice_role, wmclass=slice_wmclass, fallback=layout.MonadTall()),
-    layout.MonadTall(),
-    layout.Columns(),
+    mystack.MyStack(),
     layout.Max(),
 ]
 
-widget_defaults = dict(
-    font='sans',
-    fontsize=12,
-    padding=3,
-)
+widget_defaults = dict(font="sans", fontsize=12, padding=3,)
 extension_defaults = widget_defaults.copy()
 
 screens = [
@@ -119,9 +131,9 @@ screens = [
                 widget.CurrentLayout(),
                 widget.Prompt(),
                 widget.Spacer(),
-                widget.WindowName(width=bar.CALCULATED, show_state=False, for_current_screen=True),
+                widget.WindowName(width=bar.CALCULATED, show_state=False),
                 widget.Spacer(),
-                widget.Clock(format='%b %-d %H:%M'),
+                widget.Clock(format="%b %-d %H:%M"),
                 widget.Systray(),
             ],
             24,
@@ -131,11 +143,16 @@ screens = [
 
 # Drag floating layouts.
 mouse = [
-    Drag([mod], "Button1", lazy.window.set_position_floating(),
-         start=lazy.window.get_position()),
-    Drag([mod], "Button3", lazy.window.set_size_floating(),
-         start=lazy.window.get_size()),
-    Click([mod], "Button2", lazy.window.bring_to_front())
+    Drag(
+        [mod],
+        "Button1",
+        lazy.window.set_position_floating(),
+        start=lazy.window.get_position(),
+    ),
+    Drag(
+        [mod], "Button3", lazy.window.set_size_floating(), start=lazy.window.get_size()
+    ),
+    Click([mod], "Button2", lazy.window.bring_to_front()),
 ]
 
 dgroups_key_binder = None
@@ -144,25 +161,35 @@ main = None
 follow_mouse_focus = True
 bring_front_click = False
 cursor_warp = True
-floating_layout = layout.Floating(float_rules=[
-    # Run the utility of `xprop` to see the wm class and name of an X client.
-    {'wmclass': 'confirm'},
-    {'wmclass': 'dialog'},
-    {'wmclass': 'download'},
-    {'wmclass': 'error'},
-    {'wmclass': 'file_progress'},
-    {'wmclass': 'notification'},
-    {'wmclass': 'splash'},
-    {'wmclass': 'toolbar'},
-    {'wmclass': 'confirmreset'},  # gitk
-    {'wmclass': 'makebranch'},  # gitk
-    {'wmclass': 'maketag'},  # gitk
-    {'wname': 'branchdialog'},  # gitk
-    {'wname': 'pinentry'},  # GPG key password entry
-    {'wmclass': 'ssh-askpass'},  # ssh-askpass
-])
+floating_layout = layout.Floating(
+    float_rules=[
+        # Run the utility of `xprop` to see the wm class and name of an X client.
+        {"wmclass": "confirm"},
+        {"wmclass": "dialog"},
+        {"wmclass": "download"},
+        {"wmclass": "error"},
+        {"wmclass": "file_progress"},
+        {"wmclass": "notification"},
+        {"wmclass": "splash"},
+        {"wmclass": "toolbar"},
+        {"wmclass": "confirmreset"},  # gitk
+        {"wmclass": "makebranch"},  # gitk
+        {"wmclass": "maketag"},  # gitk
+        {"wname": "branchdialog"},  # gitk
+        {"wname": "pinentry"},  # GPG key password entry
+        {"wmclass": "ssh-askpass"},  # ssh-askpass
+    ]
+)
 auto_fullscreen = True
 focus_on_window_activation = "never"
 
 # Pretend to be "LG3D" so that Java apps behave correctly.
 wmname = "LG3D"
+
+# Restart to handle a monitor appearing or disappearing.
+# This should help with the systray not refreshing
+# https://github.com/qtile/qtile/issues/1840
+# but may also be needed simply to configure any new monitors.
+# @hook.subscribe.screen_change
+# def restart_on_randr(qtile, ev):
+#     qtile.cmd_restart()
