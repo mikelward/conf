@@ -17,11 +17,11 @@
 "google-calendar"
     Mod4 + c
 
+"google-chat"
+	Mod4 + Shift + c
+
 "code"
     Mod4 + d
-
-"gnome-calculator"
-	Mod4 + Shift + c
 
 "gnome-calculator"
 	XF86Calculator
