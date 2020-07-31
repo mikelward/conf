@@ -135,6 +135,7 @@ screens = [
                 widget.Spacer(),
                 widget.WindowName(width=bar.CALCULATED, show_state=False),
                 widget.Spacer(),
+                widget.Clipboard(max_width=60, timeout=None),
                 widget.Clock(format="%b %-d %H:%M"),
                 widget.Systray(),
             ],
