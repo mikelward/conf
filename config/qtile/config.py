@@ -50,34 +50,34 @@ if os.environ.get("QTILE_XEPHYR"):
 
 keys = [
     # Switch between windows in current stack pane
-    Key([mod], "Down", lazy.layout.down(), desc="Move focus down in stack pane"),
-    Key([mod], "Up", lazy.layout.up(), desc="Move focus up in stack pane"),
-    Key([mod], "Right", lazy.layout.right(), desc="Move focus right in stack pane"),
-    Key([mod], "Left", lazy.layout.left(), desc="Move focus left in stack pane"),
+    Key([mod], "Down", lazy.layout.down(), desc="Move focus down"),
+    Key([mod], "Up", lazy.layout.up(), desc="Move focus up"),
+    Key([mod], "Right", lazy.layout.right(), desc="Move focus right"),
+    Key([mod], "Left", lazy.layout.left(), desc="Move focus left"),
     # Move windows up or down in current stack
     Key(
         [mod, "shift"],
         "Down",
         lazy.layout.shuffle_down(),
-        desc="Move window down in current stack",
+        desc="Move window down",
     ),
     Key(
         [mod, "shift"],
         "Up",
         lazy.layout.shuffle_up(),
-        desc="Move window up in current stack",
+        desc="Move window up",
     ),
     Key(
         [mod, "shift"],
         "Right",
         lazy.layout.shuffle_right(),
-        desc="Move window right in current stack",
+        desc="Move window right",
     ),
     Key(
         [mod, "shift"],
         "Left",
         lazy.layout.shuffle_left(),
-        desc="Move window left in current stack",
+        desc="Move window left",
     ),
     # Switch window focus to other pane(s) of stack
     Key([mod], "Tab", lazy.layout.next(), desc="Focus the next window"),
