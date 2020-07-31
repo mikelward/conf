@@ -60,7 +60,7 @@ class MyStack(Layout):
         ("border_normal", "#000000", "Border colour for un-focused windows."),
         ("border_width", 1, "Border width."),
         ("name", "mystack", "Name of this layout."),
-        ("autosplit", False, "Auto split all new stacks."),
+        ("autosplit", True, "Auto split all new stacks."),
         ("fair", False, "Add new windows to the stacks in a round robin way."),
         ("margin", 0, "Margin of the layout"),
         ("widths", [1.0/4.0, 1.0/2.0, 1.0/4.0], "Widths of stacks."),
@@ -309,17 +309,25 @@ class MyStack(Layout):
         """Focus next stack"""
         return self.next_stack()
 
+    cmd_right = cmd_next
+
     def cmd_previous(self):
         """Focus previous stack"""
         return self.previous_stack()
+
+    cmd_left = cmd_previous
 
     def cmd_client_to_next(self):
         """Send the current client to the next stack"""
         return self.cmd_client_to_stack(self.current_stack_offset + 1)
 
+    cmd_shuffle_right = cmd_client_to_next
+
     def cmd_client_to_previous(self):
         """Send the current client to the previous stack"""
         return self.cmd_client_to_stack(self.current_stack_offset - 1)
+
+    cmd_shuffle_left = cmd_client_to_previous
 
     def cmd_client_to_stack(self, n):
         """
