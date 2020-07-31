@@ -118,6 +118,7 @@ for i in groups:
 layouts = [
     mystack.MyStack(name='3wide', widths=[1.0/4, 1.0/2, 1.0/4]),
     mystack.MyStack(name='3equal', widths=[1.0/3, 1.0/3, 1.0/3]),
+    mystack.MyStack(name='2equal', widths=[1.0/2, 1.0/2]),
     layout.Max(),
 ]
 
