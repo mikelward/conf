@@ -137,6 +137,7 @@ screens = [
                 widget.Spacer(),
                 widget.Clipboard(max_width=60, timeout=None),
                 widget.Clock(format="%b %-d %H:%M"),
+                widget.PulseVolume(),
                 widget.Systray(),
             ],
             24,
