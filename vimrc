@@ -133,7 +133,6 @@ let g:tagbar_type_go = {
 \}
 
 if has("x11")
-    set clipboard=unnamedplus	" yank to X clipboard
     set clipboard^=autoselect
 endif
 if has("mouse")
