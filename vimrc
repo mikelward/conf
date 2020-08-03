@@ -66,7 +66,7 @@ set list listchars=extends:»,precedes:«,tab:\ \ ,trail:-  " base rules used wh
 set list	" list is always enabled, see ToogleWhitespace()
 set nowrap	" don't wrap long lines (show extends character instead)
 set more	" use a pager for long listings
-set number	" show line numbers
+set nonumber	" don't show line numbers
 set noicon	" don't change terminal's title
 set notitle	" don't change terminal's title
 set laststatus=2	" always show status line for each window
@@ -136,10 +136,10 @@ if has("x11")
     set clipboard^=autoselect
 endif
 if has("mouse")
-    set mouse=a                  " enable visual mode selection
+    set mouse=                   " disable mouse support
 endif
 if exists("&signcolumn")
-    set signcolumn=yes	" show the sign/mark gutter
+    set signcolumn=no	" don't show the sign/mark gutter
 endif
 
 " allow # character at current indentation level (must appear on own line)
