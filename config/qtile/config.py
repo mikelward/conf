@@ -49,12 +49,13 @@ if os.environ.get("QTILE_XEPHYR"):
 
 
 keys = [
-    # Switch between windows in current stack pane
+    # Switch between windows
     Key([mod], "Down", lazy.layout.down(), desc="Move focus down"),
     Key([mod], "Up", lazy.layout.up(), desc="Move focus up"),
     Key([mod], "Right", lazy.layout.right(), desc="Move focus right"),
     Key([mod], "Left", lazy.layout.left(), desc="Move focus left"),
-    # Move windows up or down in current stack
+
+    # Move windows
     Key(
         [mod, "shift"],
         "Down",
@@ -79,17 +80,25 @@ keys = [
         lazy.layout.shuffle_left(),
         desc="Move window left",
     ),
-    # Switch window focus to other pane(s) of stack
+
+    # Switch window focus
     Key([mod], "Tab", lazy.layout.next(), desc="Focus the next window"),
     Key(
         [mod, "shift"], "Tab", lazy.layout.previous(), desc="Focus the previous window"
     ),
-    # Toggle between different layouts as defined below
+
+    # Toggle between different layouts
     Key([mod], "Return", lazy.next_layout(), desc="Toggle between layouts"),
+    Key([mod], "apostrophe", lazy.to_layout_index(0), desc="Switch to layout 0"),
+    Key([mod], "comma", lazy.to_layout_index(1), desc="Switch to layout 1"),
+    Key([mod], "period", lazy.to_layout_index(2), desc="Switch to layout 2"),
+
     Key([mod], "BackSpace", lazy.window.kill(), desc="Kill focused window"),
+
     Key([mod, "control"], "r", lazy.restart(), desc="Restart qtile"),
     Key([mod, "control"], "q", lazy.shutdown(), desc="Shutdown qtile"),
     Key([mod, "control"], "x", lazy.shutdown(), desc="Shutdown qtile"),
+
     Key([mod], "space", lazy.spawncmd(), desc="Spawn a command using a prompt widget"),
 ]
 
@@ -117,8 +126,7 @@ for i in groups:
 
 layouts = [
     mystack.MyStack(name='3wide', widths=[1.0/4, 1.0/2, 1.0/4]),
-    mystack.MyStack(name='3equal', widths=[1.0/3, 1.0/3, 1.0/3]),
-    mystack.MyStack(name='2equal', widths=[1.0/2, 1.0/2]),
+    mystack.MyStack(name='2wide', widths=[2.0/3, 1.0/3]),
     layout.Max(),
 ]
 
