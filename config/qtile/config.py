@@ -82,17 +82,22 @@ keys = [
     ),
 
     # Switch window focus
-    Key([mod], "Tab", lazy.layout.next(), desc="Focus the next window"),
+    Key(["mod1"], "Tab", lazy.layout.next(), desc="Focus the next window"),
     Key(
-        [mod, "shift"], "Tab", lazy.layout.previous(), desc="Focus the previous window"
+        ["mod1", "shift"], "Tab", lazy.layout.previous(), desc="Focus the previous window"
     ),
 
     # Toggle between different layouts
-    Key([mod], "Return", lazy.next_layout(), desc="Toggle between layouts"),
+
     Key([mod], "grave", lazy.to_layout_index(-1), desc="Switch to layout -1"),
     Key([mod], "apostrophe", lazy.to_layout_index(0), desc="Switch to layout 0"),
     Key([mod], "comma", lazy.to_layout_index(1), desc="Switch to layout 1"),
     Key([mod], "period", lazy.to_layout_index(2), desc="Switch to layout 2"),
+
+    Key([mod], "Return", lazy.to_layout_index(-1), desc="Switch to layout -1"),
+    Key([mod], "slash", lazy.to_layout_index(0), desc="Switch to layout 0"),
+    Key([mod], "equal", lazy.to_layout_index(1), desc="Switch to layout 1"),
+    Key([mod], "backslash", lazy.to_layout_index(2), desc="Switch to layout 2"),
 
     Key([mod], "BackSpace", lazy.window.kill(), desc="Kill focused window"),
 
