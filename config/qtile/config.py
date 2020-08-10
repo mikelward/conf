@@ -89,6 +89,7 @@ keys = [
 
     # Toggle between different layouts
     Key([mod], "Return", lazy.next_layout(), desc="Toggle between layouts"),
+    Key([mod], "grave", lazy.to_layout_index(-1), desc="Switch to layout -1"),
     Key([mod], "apostrophe", lazy.to_layout_index(0), desc="Switch to layout 0"),
     Key([mod], "comma", lazy.to_layout_index(1), desc="Switch to layout 1"),
     Key([mod], "period", lazy.to_layout_index(2), desc="Switch to layout 2"),
@@ -126,6 +127,7 @@ for i in groups:
 
 layouts = [
     mystack.MyStack(name='3wide', widths=[1.0/4, 1.0/2, 1.0/4]),
+    mystack.MyStack(name='3equal', widths=[1.0/3, 1.0/3, 1.0/3]),
     mystack.MyStack(name='2wide', widths=[2.0/3, 1.0/3]),
     layout.Max(),
 ]
