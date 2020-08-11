@@ -145,9 +145,10 @@ screens = [
         top=bar.Bar(
             [
                 widget.GroupBox(),
-                widget.CurrentLayout(),
                 widget.Prompt(),
                 widget.Spacer(),
+                widget.CurrentLayout(),
+                widget.Sep(),
                 widget.WindowName(width=bar.CALCULATED, show_state=False),
                 widget.Spacer(),
                 widget.Clipboard(max_width=30),
