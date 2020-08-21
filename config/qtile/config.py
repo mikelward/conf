@@ -50,10 +50,14 @@ if os.environ.get("QTILE_XEPHYR"):
 
 keys = [
     # Switch between windows
-    Key([mod], "Down", lazy.layout.down(), desc="Move focus down"),
-    Key([mod], "Up", lazy.layout.up(), desc="Move focus up"),
-    Key([mod], "Right", lazy.layout.right(), desc="Move focus right"),
-    Key([mod], "Left", lazy.layout.left(), desc="Move focus left"),
+    Key([mod, "mod1"], "Down", lazy.layout.down(), desc="Move focus down"),
+    Key([mod, "mod1"], "Up", lazy.layout.up(), desc="Move focus up"),
+    Key([mod, "mod1"], "Right", lazy.layout.right(), desc="Move focus right"),
+    Key([mod, "mod1"], "Left", lazy.layout.left(), desc="Move focus left"),
+
+    Key([mod], "Right", lazy.layout.swap_stack_right()),
+    Key([mod], "Left", lazy.layout.swap_stack_left()),
+
 
     # Move windows
     Key(
@@ -95,9 +99,7 @@ keys = [
     Key([mod], "period", lazy.to_layout_index(2), desc="Switch to layout 2"),
 
     Key([mod], "Return", lazy.to_layout_index(-1), desc="Switch to layout -1"),
-    Key([mod], "slash", lazy.to_layout_index(0), desc="Switch to layout 0"),
-    Key([mod], "equal", lazy.to_layout_index(1), desc="Switch to layout 1"),
-    Key([mod], "backslash", lazy.to_layout_index(2), desc="Switch to layout 2"),
+    Key([mod], "equal", lazy.to_layout_index(3), desc="Switch to layout 3"),
 
     Key([mod], "BackSpace", lazy.window.kill(), desc="Kill focused window"),
 
@@ -134,6 +136,7 @@ layouts = [
     mystack.MyStack(name='3wide', widths=[1.0/4, 1.0/2, 1.0/4]),
     mystack.MyStack(name='3equal', widths=[1.0/3, 1.0/3, 1.0/3]),
     mystack.MyStack(name='2wide', widths=[2.0/3, 1.0/3]),
+    mystack.MyStack(name='2equal', widths=[1.0/2, 1.0/2]),
     layout.Max(),
 ]
 
