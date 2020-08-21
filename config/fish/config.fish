@@ -821,7 +821,7 @@ if is_interactive
 #    # commands to execute before the prompt is displayed
 #    function preprompt
 #        last_job_info
-#        set current_command 
+#        set current_command
 #        my_set_color 'normal'
 #        printf '\n'
 #        printf '%s %s %s\n' "(host_info)" "(dir_info)" "(auth_info)"
@@ -843,7 +843,7 @@ if is_interactive
 #            red $last_error
 #            set printed true
 #        end
-#        set duration 
+#        set duration
 #        if test $SECONDS -gt 0
 #            local hours minutes seconds
 #            set seconds $SECONDS

@@ -355,6 +355,7 @@ class MyStack(Layout):
         self.stacks[offset-1], self.stacks[offset] = self.stacks[offset], self.stacks[offset-1]
         self.stacks[offset-1].width, self.stacks[offset].width = self.stacks[offset].width, self.stacks[offset-1].width
         self.next_stack()
+        self.group.layout_all()
 
     def cmd_swap_stack_right(self):
         """Move the current stack to the right, and move the stack to the right
@@ -368,6 +369,7 @@ class MyStack(Layout):
         self.stacks[offset+1], self.stacks[offset] = self.stacks[offset], self.stacks[offset+1]
         self.stacks[offset+1].width, self.stacks[offset].width = self.stacks[offset].width, self.stacks[offset+1].width
         self.previous_stack()
+        self.group.layout_all()
 
     def cmd_info(self):
         return self.info()
