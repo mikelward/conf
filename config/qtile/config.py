@@ -201,6 +201,7 @@ floating_layout = layout.Floating(
         {"wname": "branchdialog"},  # gitk
         {"wname": "pinentry"},  # GPG key password entry
         {"wmclass": "ssh-askpass"},  # ssh-askpass
+        {"wname": "meet.google.com is sharing your screen."},
     ]
 )
 auto_fullscreen = True
