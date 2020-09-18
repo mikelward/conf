@@ -202,6 +202,7 @@ floating_layout = layout.Floating(
         {"wname": "pinentry"},  # GPG key password entry
         {"wmclass": "ssh-askpass"},  # ssh-askpass
         {"wname": "meet.google.com is sharing your screen."},
+        {"wname": "meet.google.com is sharing a window."},
     ]
 )
 auto_fullscreen = True
