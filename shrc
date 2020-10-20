@@ -898,14 +898,28 @@ if is_interactive; then
     alias cg='rg '"$code_includes"
     alias ct='ctags -R'
     alias cx='chmod +x'
-    codeconfig() {
-        makemakefile; maketasks; makesettings; makeensime; makelocal
+    alias d='mycode'
+    mycode() {
+        makesettings
+        code .
     }
-    alias cc='codeconfig'
-    codelocal() {
-        code --new-window .
+    codedir() {
+        makemakefile
+        maketsconfig
+        maketasks
+        makelocal
+        m&
+        sleep 5
+        code --add .
+        local _dir
+        for _dir in "$(gendir)"; do
+            test -d "$_dir" || continue
+            code --add "$_dir"
+        done
     }
-    alias d='codeconfig; codelocal'
+    makelocal() {
+        :
+    }
     daemon() {
         pkill "$1"
         (setsid "$1"&)
