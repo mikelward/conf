@@ -219,9 +219,9 @@ class MyStack(Layout):
             return
 
         if client.has_focus:
-            px = self.group.qtile.color_pixel(self.border_focus)
+            px = self.border_focus
         else:
-            px = self.group.qtile.color_pixel(self.border_normal)
+            px = self.border_normal
 
         column_width = width
         xoffset = x
