@@ -29,6 +29,20 @@
             ],
             "problemMatcher": [
                 {
+                    "owner": "cpp",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceRoot}",
+                    ],
+                    "pattern": {
+                        "regexp": "^@BUILDDIR@/([^:]*):(\\d+):(\\d+): (.*)",
+                        "file": 1,
+                        "line": 2,
+                        "column": 3,
+                        "message": 4,
+                    },
+                },
+                {
                     "owner": "go",
                     "fileLocation": [
                         "relative",
