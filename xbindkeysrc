@@ -56,8 +56,7 @@
 "notepad"
 	Mod4 + n
 
-# p = play music
-"music"
+"pandora"
 	Mod4 + p
 
 "xfce4-display-settings"
