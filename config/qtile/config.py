@@ -49,16 +49,22 @@ if os.environ.get("QTILE_XEPHYR"):
 
 
 keys = [
+    # Switch between groups (a.k.a. workspaces)
+    Key([mod], "Tab", lazy.screen.toggle_group(), desc="Switch to the previous group"),
     # Switch between windows
     Key([mod, "mod1"], "Down", lazy.layout.down(), desc="Move focus down"),
     Key([mod, "mod1"], "Up", lazy.layout.up(), desc="Move focus up"),
     Key([mod, "mod1"], "Right", lazy.layout.right(), desc="Move focus right"),
     Key([mod, "mod1"], "Left", lazy.layout.left(), desc="Move focus left"),
-
     Key([mod], "Right", lazy.layout.swap_stack_right()),
     Key([mod], "Left", lazy.layout.swap_stack_left()),
-
-
+    Key(["mod1"], "Tab", lazy.layout.next(), desc="Focus the next window"),
+    Key(
+        ["mod1", "shift"],
+        "Tab",
+        lazy.layout.previous(),
+        desc="Focus the previous window",
+    ),
     # Move windows
     Key(
         [mod, "shift"],
@@ -84,29 +90,17 @@ keys = [
         lazy.layout.shuffle_left(),
         desc="Move window left",
     ),
-
-    # Switch window focus
-    Key(["mod1"], "Tab", lazy.layout.next(), desc="Focus the next window"),
-    Key(
-        ["mod1", "shift"], "Tab", lazy.layout.previous(), desc="Focus the previous window"
-    ),
-
     # Toggle between different layouts
-
     Key([mod], "grave", lazy.to_layout_index(-1), desc="Switch to layout -1"),
     Key([mod], "apostrophe", lazy.to_layout_index(0), desc="Switch to layout 0"),
     Key([mod], "comma", lazy.to_layout_index(1), desc="Switch to layout 1"),
     Key([mod], "period", lazy.to_layout_index(2), desc="Switch to layout 2"),
-
     Key([mod], "Return", lazy.to_layout_index(-1), desc="Switch to layout -1"),
     Key([mod], "equal", lazy.to_layout_index(3), desc="Switch to layout 3"),
-
     Key([mod], "BackSpace", lazy.window.kill(), desc="Kill focused window"),
-
     Key([mod, "control"], "r", lazy.restart(), desc="Restart qtile"),
     Key([mod, "control"], "q", lazy.shutdown(), desc="Shutdown qtile"),
     Key([mod, "control"], "x", lazy.shutdown(), desc="Shutdown qtile"),
-
     Key([mod], "space", lazy.spawncmd(), desc="Spawn a command using a prompt widget"),
 ]
 
@@ -119,7 +113,7 @@ for i in groups:
             Key(
                 [mod],
                 i.name,
-                lazy.group[i.name].toscreen(toggle=False),
+                lazy.group[i.name].toscreen(toggle=True),
                 desc="Switch to group {}".format(i.name),
             ),
             # mod + shift + letter of group = switch to & move focused window to group
@@ -133,14 +127,18 @@ for i in groups:
     )
 
 layouts = [
-    mystack.MyStack(name='3wide', widths=[1.0/4, 1.0/2, 1.0/4]),
-    mystack.MyStack(name='3equal', widths=[1.0/3, 1.0/3, 1.0/3]),
-    mystack.MyStack(name='2wide', widths=[2.0/3, 1.0/3]),
-    mystack.MyStack(name='2equal', widths=[1.0/2, 1.0/2]),
+    mystack.MyStack(name="3wide", widths=[1.0 / 4, 1.0 / 2, 1.0 / 4]),
+    mystack.MyStack(name="3equal", widths=[1.0 / 3, 1.0 / 3, 1.0 / 3]),
+    mystack.MyStack(name="2wide", widths=[2.0 / 3, 1.0 / 3]),
+    mystack.MyStack(name="2equal", widths=[1.0 / 2, 1.0 / 2]),
     layout.Max(),
 ]
 
-widget_defaults = dict(font="sans", fontsize=12, padding=3,)
+widget_defaults = dict(
+    font="sans",
+    fontsize=12,
+    padding=3,
+)
 extension_defaults = widget_defaults.copy()
 
 screens = [
