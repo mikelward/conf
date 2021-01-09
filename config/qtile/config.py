@@ -29,11 +29,18 @@ import os
 
 from typing import List  # noqa: F401
 
-from libqtile import bar, hook, layout, widget
+from libqtile import bar, hook, layout, qtile, widget
 from libqtile.config import Click, Drag, Group, Key, Screen
 from libqtile.lazy import lazy
+from libqtile.log_utils import logger
 
 import mystack
+
+screeninfo = None
+try:
+    import screeninfo
+except:
+    pass
 
 mod = "mod4"
 # TODO(mikel): calculate width
@@ -49,6 +56,9 @@ if os.environ.get("QTILE_XEPHYR"):
 
 
 keys = [
+    # Switch between screens (a.k.a. monitors)
+    Key([mod], "Page_Up", lazy.prev_screen(), desc="Move monitor focus to previous screen"),
+    Key([mod], "Page_Down", lazy.next_screen(), desc="Move monitor focus to next screen"),
     # Switch between groups (a.k.a. workspaces)
     Key([mod], "Tab", lazy.screen.toggle_group(), desc="Switch to the previous group"),
     # Switch between windows
@@ -141,26 +151,35 @@ widget_defaults = dict(
 )
 extension_defaults = widget_defaults.copy()
 
-screens = [
-    Screen(
-        top=bar.Bar(
-            [
-                widget.GroupBox(),
-                widget.Prompt(),
-                widget.Spacer(),
-                widget.CurrentLayout(),
-                widget.Sep(),
-                widget.WindowName(width=bar.CALCULATED, show_state=False),
-                widget.Spacer(),
-                widget.Clipboard(max_width=30),
-                widget.Clock(format="%b %-d %H:%M"),
-                widget.PulseVolume(),
-                widget.Systray(),
-            ],
-            24,
-        ),
-    ),
-]
+def screen(main=True):
+  return Screen(
+      top=bar.Bar(
+          widgets=list(filter(None, [
+              widget.GroupBox(),
+              widget.Prompt(),
+              widget.Spacer(),
+              widget.CurrentLayout(),
+              widget.Sep(),
+              widget.WindowName(width=bar.CALCULATED, show_state=False),
+              widget.Spacer(),
+              widget.Clipboard(max_width=30),
+              widget.Clock(format="%b %-d %H:%M"),
+              (widget.PulseVolume() if main else None),
+              (widget.Systray() if main else None),
+          ])),
+          size=24))
+
+screens = []
+if screeninfo:
+    monitors = screeninfo.get_monitors()
+    main = monitors[0]
+    if monitors[0].name.startswith('e') and len(monitors) > 1:
+        main = monitors[1]
+        for monitor in monitors:
+            screens.append(screen(main==monitor))
+else:
+    logger.info('screeninfo not available, only configuring a single screen')
+    screens.append(screen(True))
 
 # Drag floating layouts.
 mouse = [
@@ -210,9 +229,8 @@ focus_on_window_activation = "never"
 wmname = "LG3D"
 
 # Restart to handle a monitor appearing or disappearing.
-# This should help with the systray not refreshing
-# https://github.com/qtile/qtile/issues/1840
-# but may also be needed simply to configure any new monitors.
+# This seems to cause an infinite loop.
 # @hook.subscribe.screen_change
-# def restart_on_randr(qtile, ev):
+# def restart_on_randr(ev):
+#     logger.info('screen_change, restarting')
 #     qtile.cmd_restart()

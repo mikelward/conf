@@ -629,8 +629,8 @@ if is_interactive
     #alias '?'='path_or_empty'
     alias @='path_or_empty'
     alias bindkeys='daemon xbindkeys'
-    set code_patterns "{*.c,*.h,*.cc,*.coffee,*.go,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}"
-    set code_includes "(eval echo --include=$code_patterns)"
+    set code_patterns "*.c" "*.h" "*.cc" "*.cpp" "*.hh" "*.coffee" "*.go" "*.hs" "*.java" "*.js" "*.pl" "*.py" "*.sh" "*.rb" "*.swig" "*.ts"
+    set code_includes "--include="$code_patterns
     alias c='less -FX'
     alias cdf='cdfile'
     alias cg='rg "$code_includes"'
@@ -818,18 +818,22 @@ if is_interactive
 #        set_title (title | string collect)
 #    end
 #
-#    # commands to execute before the prompt is displayed
-#    function preprompt
-#        last_job_info
-#        set current_command
-#        my_set_color 'normal'
-#        printf '\n'
-#        printf '%s %s %s\n' "(host_info)" "(dir_info)" "(auth_info)"
-#        job_info
-#        set_title (title | string collect)
-#        set_prompt
-#        flash_terminal
-#    end
+   # commands to execute before the prompt is displayed
+   function preprompt
+       #last_job_info
+       set current_command
+       my_set_color 'normal'
+       printf '\n'
+       printf '%s %s %s\n' (host_info) (dir_info) (auth_info)
+       job_info
+       set_title (title | string collect)
+   end
+
+   function fish_prompt
+        preprompt
+        ps1
+        flash_terminal
+    end
 #
 #    function last_job_info
 #        # Must be the very first thing.
@@ -1181,18 +1185,13 @@ exec zsh -i'
 
     # output the string that should be used as the prompt
     function ps1
-        keymap_character
         ps1_character
         printf ' '
     end
 
     # print a character that should be the last part of the prompt
     function ps1_character
-        if test $UID -eq 0
-            printf '#'
-        else
-            printf '$'
-        end
+        printf '>'
     end
 
 #    # function to run just before running a command from the command line
@@ -1200,7 +1199,7 @@ exec zsh -i'
 #    # the first argument is the command line being run
 #    function precommand
 #        log_history "$argv"
-#        set current_command "(expand_job "$argv")"
+#        set current_command (expand_job "$argv")
 #        set_title (title | string collect)
 #        my_set_color 'normal'
 #        set SECONDS 0
