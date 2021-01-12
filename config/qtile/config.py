@@ -109,8 +109,8 @@ for i in groups:
         [
             # mod + letter of group = switch to group
             Key([mod], i.name, lazy.group[i.name].toscreen(toggle=True), desc="Switch to group {}".format(i.name)),
-            # mod + shift + letter of group = switch to & move focused window to group
-            Key([mod, "shift"], i.name, lazy.window.togroup(i.name, switch_group=True), desc="Switch to & move focused window to group {}".format(i.name)),
+            # mod + shift + letter of group = move focused window to group
+            Key([mod, "shift"], i.name, lazy.window.togroup(i.name, switch_group=False), desc="Move focused window to group {}".format(i.name)),
         ]
     )
 
