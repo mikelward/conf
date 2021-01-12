@@ -54,6 +54,17 @@ if os.environ.get("QTILE_XEPHYR"):
     slice_role = None
     slice_wmclass = "xclock"
 
+def window_to_previous_screen(qtile):
+    curr = qtile.screens.index(qtile.current_screen)
+    prev = (curr - 1) % len(qtile.screens)
+    group = qtile.screens[prev].group.name
+    qtile.current_window.togroup(group)
+
+def window_to_next_screen(qtile):
+    curr = qtile.screens.index(qtile.current_screen)
+    next = (curr + 1) % len(qtile.screens)
+    group = qtile.screens[next].group.name
+    qtile.current_window.togroup(group)
 
 keys = [
     # Switch between screens (a.k.a. monitors)
@@ -69,37 +80,14 @@ keys = [
     Key([mod], "Right", lazy.layout.swap_stack_right()),
     Key([mod], "Left", lazy.layout.swap_stack_left()),
     Key(["mod1"], "Tab", lazy.layout.next(), desc="Focus the next window"),
-    Key(
-        ["mod1", "shift"],
-        "Tab",
-        lazy.layout.previous(),
-        desc="Focus the previous window",
-    ),
+    Key(["mod1", "shift"], "Tab", lazy.layout.previous(), desc="Focus the previous window"),
     # Move windows
-    Key(
-        [mod, "shift"],
-        "Down",
-        lazy.layout.shuffle_down(),
-        desc="Move window down",
-    ),
-    Key(
-        [mod, "shift"],
-        "Up",
-        lazy.layout.shuffle_up(),
-        desc="Move window up",
-    ),
-    Key(
-        [mod, "shift"],
-        "Right",
-        lazy.layout.shuffle_right(),
-        desc="Move window right",
-    ),
-    Key(
-        [mod, "shift"],
-        "Left",
-        lazy.layout.shuffle_left(),
-        desc="Move window left",
-    ),
+    Key([mod, "shift"], "Page_Up", lazy.function(window_to_previous_screen), desc="Move window to previous screen"),
+    Key([mod, "shift"], "Page_Down", lazy.function(window_to_next_screen), desc="Move window to next screen"),
+    Key([mod, "shift"], "Down", lazy.layout.shuffle_down(), desc="Move window down"),
+    Key([mod, "shift"], "Up", lazy.layout.shuffle_up(), desc="Move window up"),
+    Key([mod, "shift"], "Right", lazy.layout.shuffle_right(), desc="Move window right"),
+    Key([mod, "shift"], "Left", lazy.layout.shuffle_left(), desc="Move window left"),
     # Toggle between different layouts
     Key([mod], "grave", lazy.to_layout_index(-1), desc="Switch to layout -1"),
     Key([mod], "apostrophe", lazy.to_layout_index(0), desc="Switch to layout 0"),
