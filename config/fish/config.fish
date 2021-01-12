@@ -671,6 +671,7 @@ if is_interactive
     alias hmsns='date +"%H:%M:%S.%N"'
     alias hosts='getent hosts'
     alias ipy='ipython'
+    alias ipy3='ipython3'
     alias killcode='pkill -f /usr/share/code/code'
     alias kssh='ssh -o PreferredAuthentications=publickey'
     if have_command l

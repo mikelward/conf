@@ -65,7 +65,7 @@
 "remote-desktop"
     Mod4 + r
 
-"secure-shell"
+"secureshell"
     Mod4 + s
 
 "terminal"
