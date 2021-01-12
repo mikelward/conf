@@ -150,11 +150,12 @@ def screen(main=True):
 screens = []
 if screeninfo:
     monitors = screeninfo.get_monitors()
+    logger.info('screeninfo detected %d monitors', len(monitors))
     main = monitors[0]
     if monitors[0].name.startswith('e') and len(monitors) > 1:
         main = monitors[1]
-        for monitor in monitors:
-            screens.append(screen(main==monitor))
+    for monitor in monitors:
+        screens.append(screen(main==monitor))
 else:
     logger.info('screeninfo not available, only configuring a single screen')
     screens.append(screen(True))
