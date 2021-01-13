@@ -158,7 +158,7 @@ def screen(main=True):
         if top.screen == top.qtile.current_screen:
             top.background = '#000000'
         else:
-            top.background = '#999999'
+            top.background = '#666666'
         top.draw()
     hook.subscribe.current_screen_change(update_bar_background)
 
