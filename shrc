@@ -997,6 +997,7 @@ if is_interactive; then
     alias r='fc -e - --'
     alias rerc="source '$HOME/.shrc'"
     alias rg='g -IR --exclude-dir=".*"'
+    rh() { gh "$@" | tail -n 20; }
     alias q='xa'
     alias s='subl'
     alias spell='aspell -a'

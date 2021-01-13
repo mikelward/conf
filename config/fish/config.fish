@@ -720,6 +720,9 @@ if is_interactive
     alias py3='python3'
     alias rerc='source $HOME/.config/fish/config.fish'
     alias rg='g -IR --exclude-dir=".*"'
+    function rh
+        gh $argv | tail -n 20
+    end
     alias q='xa'
     alias s='subl'
     alias spell='aspell -a'
