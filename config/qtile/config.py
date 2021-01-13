@@ -130,24 +130,40 @@ widget_defaults = dict(
 extension_defaults = widget_defaults.copy()
 
 def screen(main=True):
-  return Screen(
-      top=bar.Bar(
-          widgets=list(filter(None, [
-              widget.GroupBox(),
-              widget.Prompt(),
-              widget.Spacer(),
-              widget.CurrentScreen(),
-              widget.CurrentLayout(),
-              widget.CurrentScreen(),
-              widget.Sep(),
-              widget.WindowName(width=bar.CALCULATED, show_state=False),
-              widget.Spacer(),
-              widget.Clipboard(max_width=30),
-              widget.Clock(format="%b %-d %H:%M"),
-              (widget.PulseVolume() if main else None),
-              (widget.Systray() if main else None),
-          ])),
-          size=24))
+    top = bar.Bar(
+        widgets=list(
+            filter(
+                None,
+                [
+                    widget.GroupBox(),
+                    widget.Prompt(),
+                    widget.Spacer(),
+                    widget.CurrentScreen(),
+                    widget.CurrentLayout(),
+                    widget.CurrentScreen(),
+                    widget.Sep(),
+                    widget.WindowName(width=bar.CALCULATED, show_state=False),
+                    widget.Spacer(),
+                    widget.Clipboard(max_width=30),
+                    widget.Clock(format="%b %-d %H:%M"),
+                    (widget.PulseVolume() if main else None),
+                    (widget.Systray() if main else None),
+                ],
+            )
+        ),
+        size=24,
+    )
+
+    def update_bar_background():
+        if top.screen == top.qtile.current_screen:
+            top.background = '#000000'
+        else:
+            top.background = '#999999'
+        top.draw()
+    hook.subscribe.current_screen_change(update_bar_background)
+
+    return Screen(top=top)
+
 
 screens = []
 if screeninfo:
