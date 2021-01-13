@@ -124,8 +124,12 @@ hg_status() {
     hg status "$@"
 }
 
+hg_unamend() {
+    hg unamend "$@"
+}
+
 hg_unknown() {
-   hg status --unknown --deleted
+    hg status --unknown --deleted
 }
 
 hg_upload() {

@@ -85,7 +85,7 @@ for command in add amend annotate branch branches \
     changed changelog changes checkout commit commitforce diffs \
     fix graph incoming lint outgoing pending precommit presubmit pull \
     push recommit revert review reword status submit submitforce \
-    unknown upload uploadchain; do
+    unamend unknown upload uploadchain; do
     # remove any alias created in .shrc
     case "$(type "$command" 2>/dev/null)" in *alias*)
         unalias "$command"

@@ -183,6 +183,12 @@ git_submitforce() {
     git push --no-verify "$@"
 }
 
+git_unamend() {
+    # Note --mixed. We assume we want to revert the index, too, as if the index
+    # didn't exist, the same as other aliases here.
+    git reset --mixed HEAD@{1}
+}
+
 git_unknown() (
     cd $(git rootdir)
     git ls-files -od --exclude-standard
