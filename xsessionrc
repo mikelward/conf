@@ -17,6 +17,7 @@ xbindkeys
 autorandr --change
 screensaver init
 (setsid nm-applet&)
+(setsid blueman-applet&)
 imwheel
 
 # Do these last so there's a visual clue how long xsessionrc is taking.
