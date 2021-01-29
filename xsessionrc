@@ -14,7 +14,6 @@ if test -z "$SSH_AGENT_PID" || ! test -S "$SSH_AUTH_SOCK"; then
 fi
 
 xbindkeys
-autorandr --change
 screensaver init
 (setsid nm-applet&)
 (setsid blueman-applet&)
