@@ -696,6 +696,10 @@ tz2tz() {
     TZ="$to" date -d 'TZ="'"$from"'"'" $*"
 }
 
+# convert from Unix timestamp in micros to a human-readable datetime string
+udate() {
+    date -d @$(($1 / 1000000)) "$@"
+}
 
 # convert from UTC to local time
 utc2() {
