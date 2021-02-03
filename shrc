@@ -636,6 +636,7 @@ psgrep() {
         psc -p "$pids" $ps_args
     else
         error "No processes matching $pattern"
+        return 1
     fi
 }
 
