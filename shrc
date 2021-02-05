@@ -586,8 +586,8 @@ path() {
 
 # update config files
 pc() {
-    for d in ~/conf* ~/scripts*; do
-        cd "$d"
+    for d in "$HOME/conf" "$HOME/conf".* "$HOME/scripts" "$HOME/scripts".*; do
+        cd "$d" || continue
         pull || break
     done
 }
