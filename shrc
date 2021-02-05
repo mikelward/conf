@@ -584,6 +584,14 @@ path() {
     )
 }
 
+# update config files
+pc() {
+    for d in ~/conf* ~/scripts*; do
+        cd "$d"
+        pull || break
+    done
+}
+
 # list processes in the specified process group
 # pgroup <pgid> [<pgrep args>]
 pgroup() {
