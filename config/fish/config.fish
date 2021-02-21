@@ -77,7 +77,7 @@ end
 function auth_info
     set problems ()
     is_ssh_valid; or set --append problems 'SSH'
-    count $problems; and yellow $problems
+    count $problems >/dev/null; and yellow $problems
 end
 
 # returns whether an SSH key is loaded
@@ -285,12 +285,14 @@ end
 
 # print the name of the current project
 function projectname
-    basename (projectroot | string collect)
+    if set projectroot (projectroot | string collect)
+        echo "$projectroot"
+    end
 end
 
 # print the root directory of the current project
 function projectroot
-    :
+    return 1
 end
 
 # cd to the real directory that the specified file is in, resolving symlinks
