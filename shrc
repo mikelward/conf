@@ -595,6 +595,10 @@ pc() {
     for d in "$HOME/conf" "$HOME/conf".* "$HOME/scripts" "$HOME/scripts".*; do
         cd "$d" || continue
         pull || break
+        if test -f ".gitmodules"; then
+            git submodule init
+            git submodule update
+        fi
     done
 }
 
