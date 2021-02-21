@@ -1639,6 +1639,9 @@ exec zsh -i'
 
     case "$shell" in
     zsh)
+        emulate zsh -c 'source ~/.zsh-autosuggestions/zsh-autosuggestions.zsh'
+        ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='underline'
+
         # zsh enhancements
         setopt AUTO_CD
         setopt CORRECT

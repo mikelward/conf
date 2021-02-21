@@ -1,3 +1,6 @@
 [submodule "emacs.d/evil"]
 	path = emacs.d/evil
 	url = https://github.com/emacs-evil/evil.git
+[submodule "zsh-autosuggestions"]
+	path = zsh-autosuggestions
+	url = git@github.com:zsh-users/zsh-autosuggestions.git
