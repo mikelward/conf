@@ -51,11 +51,17 @@ zsh)
     setopt CSH_JUNKIE_HISTORY
     setopt INTERACTIVE_COMMENTS
     setopt KSH_TYPESET
-    HISTSIZE=500
     # so aliases can contain hyphen/minus/dash
     unsetopt POSIX_ALIASES >/dev/null 2>&1
     # so we can display jobs in the prompt
     unsetopt POSIX_JOBS >/dev/null 2>&1
+
+    # share history between shells
+    # particularly useful for zsh-autocomplete
+    setopt SHARE_HISTORY
+    HISTFILE=~/.zsh_history
+    HISTSIZE=5000
+    SAVEHIST=5000
 
     # make tab completion do what it says
     # e.g. in conf/config, i3s<TAB> completes to i3status/, it should
@@ -1639,6 +1645,7 @@ exec zsh -i'
 
     case "$shell" in
     zsh)
+        # load fish-style history autosuggestions
         emulate zsh -c 'source ~/.zsh-autosuggestions/zsh-autosuggestions.zsh'
         ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='underline'
 
@@ -1721,6 +1728,24 @@ exec zsh -i'
         _terminfo_bind knp zle-noop
         _terminfo_bind kpp zle-noop
 
+        # ignore history from other sessions when using Up/Down arrow keys
+        up_line_or_local_history() {
+            zle set-local-history 1
+            zle up-line-or-history
+            zle set-local-history 0
+        }
+        zle -N up-line-or-local-history up_line_or_local_history
+        down_line_or_local_history() {
+            zle set-local-history 1
+            zle down-line-or-history
+            zle set-local-history 0
+        }
+        zle -N down-line-or-local-history down_line_or_local_history
+        _terminfo_bind cuu1 up-line-or-local-history
+        _terminfo_bind kcuu1 up-line-or-local-history
+        _terminfo_bind cud1 down-line-or-local-history
+        _terminfo_bind kcud1 down-line-or-local-history
+
         # make Shift+Tab do menu complete backwards
         _terminfo_bind cbt reverse-menu-complete
 
@@ -1755,8 +1780,8 @@ exec zsh -i'
         _bind_vi '^a' beginning-of-line
         _bind_vi '^e' end-of-line
         _bind_vi '^k' kill-line
-        _bind_vi '^n' down-line-or-history
-        _bind_vi '^p' up-line-or-history
+        _bind_vi '^n' down-line-or-local-history
+        _bind_vi '^p' up-line-or-local-history
         _bind_vi '^r' history-incremental-search-backward
         _bind_vi '^s' history-incremental-search-forward
         _bind_vi '^u' kill-whole-line
