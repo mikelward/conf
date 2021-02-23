@@ -1662,6 +1662,10 @@ exec zsh -i'
         # fall back to case-insensitive completion if there's no exact match
         compctl -M '' 'm:{a-zA-Z}={A-Za-z}'
 
+        # load auto completions
+        autoload -Uz compinit
+        compinit
+
         # user input appears in bold
         declare -a zle_highlight
         zle_highlight[0]="default:bold"
