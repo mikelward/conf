@@ -65,6 +65,9 @@
 "remote-desktop"
     Mod4 + r
 
+"autorandr --cycle"
+    Mod4 + Shift + r
+
 "secureshell"
     Mod4 + s
 
