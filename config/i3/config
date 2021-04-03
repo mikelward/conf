@@ -130,7 +130,8 @@ mode "resize" {
         bindsym Escape mode "default"
 }
 
-bindsym $mod+bracketleft mode "resize"
+bindsym $mod+bracketleft resize shrink width 10 px or 10 ppt
+bindsym $mod+bracketright resize grow width 10 px or 10 ppt
 bindsym $mod+z mode "resize"
 
 default_border pixel 0
