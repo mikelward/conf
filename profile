@@ -5,10 +5,22 @@
 # zlogin and bash_profile should be symlinks to this file.
 # (zprofile should not exist, or should be empty.)
 #
+is_interactive() {
+    case "$-" in *i*)
+        true;;
+    *)
+        false;;
+    esac
+}
 
-# zsh will have already read .shrc via the .zshrc symlink,
-# so only source .shrc for other shells here
-if test -z "${ZSH_VERSION:-}"; then
+is_zsh() {
+    test -n "${ZSH_VERSION:-}"
+}
+
+# zsh will have already read .shrc via the .zshrc symlink if it's interactive,
+# source .shrc for other shells here
+is_interactive && echo is_interactive || echo not is_interactive
+if { ! is_zsh; } || { is_zsh && ! is_interactive; }; then
     test -f "$HOME"/.shrc && . "$HOME"/.shrc
 fi
 
@@ -17,8 +29,8 @@ fi
 #test -f "$HOME"/.exitrc && trap '. "$HOME/.exitrc"' EXIT
 
 if test -t 0; then
-	# disable flow control so applications can use ^Q and ^S
-	type stty >/dev/null 2>/dev/null && stty -ixon
+    # disable flow control so applications can use ^Q and ^S
+    type stty >/dev/null 2>/dev/null && stty -ixon
 fi
 
 # finish with a zero exit status so the first prompt is '$' rather than '?'
