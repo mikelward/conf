@@ -19,7 +19,6 @@ is_zsh() {
 
 # zsh will have already read .shrc via the .zshrc symlink if it's interactive,
 # source .shrc for other shells here
-is_interactive && echo is_interactive || echo not is_interactive
 if { ! is_zsh; } || { is_zsh && ! is_interactive; }; then
     test -f "$HOME"/.shrc && . "$HOME"/.shrc
 fi
