@@ -6,8 +6,8 @@ echo "$(date +"%F %T.%N") xsession"
 type compton && compton --daemon --backend xrender --paint-on-overlay
 type pasystray && (setsid pasystray&)
 type autorandr && autorandr --change
-type i3 && exec i3
 type qtile && exec qtile start --log-level=INFO
+type i3 && exec i3
 #if type xmonad; then
 #  trayer --edge top --align right --expand true --width 3 --widthtype percent --tint 0x000000 --transparent true --height 19 --SetPartialStrut true &
 #  exec xmonad
