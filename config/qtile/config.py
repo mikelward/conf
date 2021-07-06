@@ -34,6 +34,7 @@ from libqtile.config import Click, Drag, Group, Key, Screen
 from libqtile.lazy import lazy
 from libqtile.log_utils import logger
 
+import mydynamic
 import mystack
 
 screeninfo = None
@@ -115,10 +116,10 @@ for i in groups:
     )
 
 layouts = [
-    mystack.MyStack(name="3wide", widths=[1.0 / 4, 1.0 / 2, 1.0 / 4]),
-    mystack.MyStack(name="3equal", widths=[1.0 / 3, 1.0 / 3, 1.0 / 3]),
-    mystack.MyStack(name="2wide", widths=[2.0 / 3, 1.0 / 3]),
-    mystack.MyStack(name="2equal", widths=[1.0 / 2, 1.0 / 2]),
+    mydynamic.MyDynamic(name="3wide", fractions=[1.0 / 4, 1.0 / 2, 1.0 / 4]),
+    mydynamic.MyDynamic(name="3equal", fractions=[1.0 / 3, 1.0 / 3, 1.0 / 3]),
+    mydynamic.MyDynamic(name="2wide", fractions=[2.0 / 3, 1.0 / 3]),
+    mydynamic.MyDynamic(name="2equal", fractions=[1.0 / 2, 1.0 / 2]),
     layout.Max(),
 ]
 
