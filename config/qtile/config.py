@@ -44,6 +44,7 @@ except:
     pass
 
 mod = "mod4"
+alt = "mod1"
 # TODO(mikel): calculate width
 quarter_width = 860
 num_columns = 3
@@ -51,7 +52,7 @@ slice_role = "browser"
 slice_wmclass = None
 if os.environ.get("QTILE_XEPHYR"):
     quarter_width = 480
-    mod = "mod1"
+    mod = alt
     slice_role = None
     slice_wmclass = "xclock"
 
@@ -74,14 +75,14 @@ keys = [
     # Switch between groups (a.k.a. workspaces)
     Key([mod], "Tab", lazy.screen.toggle_group(), desc="Switch to the previous group"),
     # Switch between windows
-    Key([mod, "mod1"], "Down", lazy.layout.down(), desc="Move focus down"),
-    Key([mod, "mod1"], "Up", lazy.layout.up(), desc="Move focus up"),
-    Key([mod, "mod1"], "Right", lazy.layout.right(), desc="Move focus right"),
-    Key([mod, "mod1"], "Left", lazy.layout.left(), desc="Move focus left"),
+    Key([mod, alt], "Down", lazy.layout.down(), desc="Move focus down"),
+    Key([mod, alt], "Up", lazy.layout.up(), desc="Move focus up"),
+    Key([mod, alt], "Right", lazy.layout.right(), desc="Move focus right"),
+    Key([mod, alt], "Left", lazy.layout.left(), desc="Move focus left"),
     Key([mod], "Right", lazy.layout.swap_stack_right()),
     Key([mod], "Left", lazy.layout.swap_stack_left()),
-    Key(["mod1"], "Tab", lazy.layout.next(), desc="Focus the next window"),
-    Key(["mod1", "shift"], "Tab", lazy.layout.previous(), desc="Focus the previous window"),
+    Key([alt], "Tab", lazy.layout.next(), desc="Focus the next window"),
+    Key([alt, "shift"], "Tab", lazy.layout.previous(), desc="Focus the previous window"),
     # Move windows
     Key([mod, "shift"], "Page_Up", lazy.function(window_to_previous_screen), desc="Move window to previous screen"),
     Key([mod, "shift"], "Page_Down", lazy.function(window_to_next_screen), desc="Move window to next screen"),
