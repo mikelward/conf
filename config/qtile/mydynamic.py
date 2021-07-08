@@ -102,6 +102,7 @@ class MyDynamic(_SimpleLayoutBase):
                 logger.info("Left: Placing %s in column %d", window, column)
                 self._place(window, x, y, w, height)
             except IndexError:
+                logger.info("Left: No window for column %d", column)
                 # More columns than windows.
                 # Still need to increment `x` and `column`.
                 pass
@@ -118,6 +119,7 @@ class MyDynamic(_SimpleLayoutBase):
                 logger.info("Center: Placing %s in column %d", window, column)
                 self._place(window, x, y, w, height)
             except IndexError:
+                logger.info("Center: No window for column %d", column)
                 # More columns than windows.
                 # Still need to increment `x` and `column`.
                 pass
@@ -133,6 +135,8 @@ class MyDynamic(_SimpleLayoutBase):
                 logger.info("Right: Placing %s in column %d", window, column)
                 self._place(window, x, y, w, h)
                 y += h
+        else:
+            logger.info("Right: No windows for column %d", column)
 
     def _place(self, window, x, y, w, h):
         border = (self.border_focus if window.has_focus else self.border_normal)
