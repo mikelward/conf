@@ -89,6 +89,7 @@ class MyDynamic(_SimpleLayoutBase):
             pass
 
         right_windows = windows
+        right_windows.reverse()
 
         column = 0
 
