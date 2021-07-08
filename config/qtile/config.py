@@ -116,10 +116,9 @@ for i in groups:
     )
 
 layouts = [
-    mydynamic.MyDynamic(name="3wide", fractions=[1.0 / 4, 1.0 / 2, 1.0 / 4]),
-    mydynamic.MyDynamic(name="3equal", fractions=[1.0 / 3, 1.0 / 3, 1.0 / 3]),
-    mydynamic.MyDynamic(name="2wide", fractions=[2.0 / 3, 1.0 / 3]),
-    mydynamic.MyDynamic(name="2equal", fractions=[1.0 / 2, 1.0 / 2]),
+    mystack.MyStack(name="mystack", fractions=[1.0 / 4, 1.0 / 2, 1.0 / 4]),
+    mydynamic.MyDynamic(name="21:9", left_fractions=[1.0 / 4], center_fractions=[1.0 / 2], right_fraction=[1.0 / 4]),
+    mydynamic.MyDynamic(name="16:9", left_fractions=[], center_fractions=[2.0 / 3], right_fraction=[1.0 / 3]),
     layout.Max(),
 ]
 
@@ -139,6 +138,8 @@ def screen(main=True):
                     widget.GroupBox(),
                     widget.Prompt(),
                     widget.Spacer(),
+                    widget.CurrentLayout(),
+                    widget.Sep(),
                     widget.WindowName(width=bar.CALCULATED, show_state=False),
                     widget.Spacer(),
                     widget.Clipboard(max_width=30),
@@ -210,7 +211,7 @@ floating_layout = layout.Floating(
     ]
 )
 auto_fullscreen = True
-focus_on_window_activation = "never"
+focus_on_window_activation = "smart"
 
 # Pretend to be "LG3D" so that Java apps behave correctly.
 wmname = "LG3D"

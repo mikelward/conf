@@ -19,367 +19,115 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from libqtile.layout.base import Layout, _ClientList
+import traceback
 
-class _MyWinStack(_ClientList):
+from libqtile.layout.base import _SimpleLayoutBase
+from libqtile.log_utils import logger
 
-    # shortcuts for current client and index used in Columns layout
-    cw = _ClientList.current_client
+class MyDynamic(_SimpleLayoutBase):
+    """A layout composed of stacks of stacks.
 
-    def __init__(self, autosplit, fraction):
-        _ClientList.__init__(self)
-        self.split = autosplit
-        self.fraction = fraction
+    The list of windows is maintained as a single stack. They are distributed
+    across:
 
-    def toggle_split(self):
-        self.split = False if self.split else True
-
-    def __str__(self):
-        return "_MyWinStack: %s, %s" % (
-            self.cw, str([client.name for client in self.clients])
-        )
-
-    def info(self):
-        info = _ClientList.info(self)
-        info['split'] = self.split
-        return info
-
-
-class MyDynamic(Layout):
-    """A layout composed of stacks of windows
-
-    The stack layout divides the screen_rect horizontally into a set of stacks.
-    Commands allow you to switch between stacks, to next and previous windows
-    within a stack, and to split a stack to show all windows in the stack, or
-    unsplit it to show only the current window.
-
-    Unlike the columns layout the number of stacks is fixed.
+    a) optional left columns (oldest windows, one per column)
+    b) optional center columns (newest windows, one per column)
+    d) the right column (all remaining windows, in a vertical stack)
     """
     defaults = [
+        ("name", "mydynamic", "Name of this layout."),
         ("border_focus", "#0000ff", "Border colour for the focused window."),
         ("border_normal", "#000000", "Border colour for un-focused windows."),
         ("border_width", 1, "Border width."),
-        ("name", "mydynamic", "Name of this layout."),
-        ("autosplit", True, "Auto split all new stacks."),
-        ("fair", False, "Add new windows to the stacks in a round robin way."),
-        ("margin", 0, "Margin of the layout"),
-        ("fractions", [1.0/4.0, 1.0/2.0, 1.0/4.0], "Widths of stacks."),
+        ("left_fractions", [1.0/4.0], "Width of left column(s)."),
+        ("center_fractions", [1.0/2.0], "Width of center column(s)."),
+        ("right_fraction", [1.0/4.0], "Width of right column."),
     ]
 
     def __init__(self, **config):
-        Layout.__init__(self, **config)
+        _SimpleLayoutBase.__init__(self, **config)
         self.add_defaults(MyDynamic.defaults)
-        self.stacks = [_MyWinStack(autosplit=self.autosplit, fraction=f)
-                       for f in self.fractions]
 
-    @property
-    def current_stack(self):
-        return self.stacks[self.current_stack_offset]
+    def add(self, window):
+        logger.info("Appending %s", window)
+        # Newest clients always go at the end.
+        self.clients.append(window)
 
-    @property
-    def current_stack_offset(self):
-        for i, s in enumerate(self.stacks):
-            if self.group.current_window in s:
-                return i
-        return 0
+    def remove(self, window):
+        logger.info("Removing %s", window)
+        self.clients.remove(window)
 
-    @property
-    def clients(self):
-        client_list = []
-        for stack in self.stacks:
-            client_list.extend(stack.clients)
-        return client_list
+    def layout(self, windows, screen_rect):
+        logger.info("Layout")
+        logger.info("windows=%s", windows)
+        logger.info("self.clients=%s", self.clients)
+        # XXX why is windows different from self.clients? focus order?
+        windows = self.clients[:]
 
-    def clone(self, group):
-        c = Layout.clone(self, group)
-        # These are mutable
-        c.stacks = [_MyWinStack(autosplit=self.autosplit, fraction=s.fraction) for s in self.stacks]
-        return c
-
-    def _find_next(self, lst, offset):
-        for i in lst[offset + 1:]:
-            if i:
-                return i
-        else:
-            for i in lst[:offset]:
-                if i:
-                    return i
-
-    def delete_current_stack(self):
-        if len(self.stacks) > 1:
-            off = self.current_stack_offset or 0
-            s = self.stacks[off]
-            self.stacks.remove(s)
-            off = min(off, len(self.stacks) - 1)
-            self.stacks[off].join(s, 1)
-            if self.stacks[off]:
-                self.group.focus(
-                    self.stacks[off].cw,
-                    False
-                )
-
-    def next_stack(self):
-        n = self._find_next(
-            self.stacks,
-            self.current_stack_offset
-        )
-        if n:
-            self.group.focus(n.cw, True)
-
-    def previous_stack(self):
-        n = self._find_next(
-            list(reversed(self.stacks)),
-            len(self.stacks) - self.current_stack_offset - 1
-        )
-        if n:
-            self.group.focus(n.cw, True)
-
-    def focus(self, client):
-        for i in self.stacks:
-            if client in i:
-                i.focus(client)
-
-    def focus_first(self):
-        for i in self.stacks:
-            if i:
-                return i.focus_first()
-
-    def focus_last(self):
-        for i in reversed(self.stacks):
-            if i:
-                return i.focus_last()
-
-    def focus_next(self, client):
-        iterator = iter(self.stacks)
-        for i in iterator:
-            if client in i:
-                next = i.focus_next(client)
-                if next:
-                    return next
-                break
-        else:
+        if len(windows) == 0:
             return
 
-        for i in iterator:
-            if i:
-                return i.focus_first()
-
-    def focus_previous(self, client):
-        iterator = iter(reversed(self.stacks))
-        for i in iterator:
-            if client in i:
-                next = i.focus_previous(client)
-                if next:
-                    return next
-                break
-        else:
-            return
-
-        for i in iterator:
-            if i:
-                return i.focus_last()
-
-    def add(self, client):
-        # Add the first client to the middle stack, or the left stack if there
-        # are fewer than 3 stacks.
-        i = len(self.stacks) // 2
-        s = self.stacks[i]
-        if not s:
-            s.add(client)
-            return
-
-        for s in self.stacks:
-            if not s:
-                s.add(client)
-                return
-
-        if self.fair:
-            target = min(self.stacks, key=len)
-            target.add(client)
-            return
-
-        self.current_stack.add(client)
-
-    def remove(self, client):
-        current_offset = self.current_stack_offset
-        for i in self.stacks:
-            if client in i:
-                i.remove(client)
-                break
-        if self.stacks[current_offset].cw:
-            return self.stacks[current_offset].cw
-        else:
-            n = self._find_next(
-                list(reversed(self.stacks)),
-                len(self.stacks) - current_offset - 1
-            )
-            if n:
-                return n.cw
-
-    def configure(self, client, screen_rect):
+        widths = list(map(lambda fraction: int(fraction * screen_rect.width),
+            self.left_fractions + self.center_fractions + self.right_fraction))
         x = screen_rect.x
-        width = 0
-        for s in self.stacks:
-            width = int(0.5 + s.fraction * screen_rect.width)
-            if client in s:
-                break
-            x += width
-        else:
-            client.hide()
-            return
+        y = screen_rect.y
+        width = screen_rect.width
+        height = screen_rect.height
 
-        if client.has_focus:
-            px = self.border_focus
-        else:
-            px = self.border_normal
+        center_windows = []
+        try:
+            for _ in range(len(self.center_fractions)):
+                center_windows.append(windows.pop())
+        except IndexError:
+            pass
 
-        column_width = width
-        xoffset = x
-        window_width = column_width - 2 * self.border_width
+        left_windows = []
+        try:
+            for _ in range(len(self.left_fractions)):
+                left_windows.append(windows.pop(0))
+        except IndexError:
+            pass
 
-        if s.split:
-            column_height = int(screen_rect.height / len(s))
-            window_height = column_height - 2 * self.border_width
-            yoffset = screen_rect.y + s.index(client) * column_height
-            client.place(
-                xoffset,
-                yoffset,
-                window_width,
-                window_height,
-                self.border_width,
-                px,
-                margin=self.margin,
-            )
-            client.unhide()
-        else:
-            if client == s.cw:
-                client.place(
-                    xoffset,
-                    screen_rect.y,
-                    window_width,
-                    screen_rect.height - 2 * self.border_width,
-                    self.border_width,
-                    px,
-                    margin=self.margin,
-                )
-                client.unhide()
-            else:
-                client.hide()
+        right_windows = windows
 
-    def info(self):
-        d = Layout.info(self)
-        d["stacks"] = [i.info() for i in self.stacks]
-        d["current_stack"] = self.current_stack_offset
-        d["clients"] = [c.name for c in self.clients]
-        return d
+        column = 0
 
-    def cmd_toggle_split(self):
-        """Toggle vertical split on the current stack"""
-        self.current_stack.toggle_split()
-        self.group.layout_all()
+        # Put the oldest <num left columns> windows in the left columns, if any.
+        for window in left_windows:
+            w = widths[column]
+            logger.info("Left: Placing %s in column %d", window, column)
+            self._place(window, x, y, w, height)
 
-    def cmd_down(self):
-        """Switch to the next window in this stack"""
-        self.current_stack.current_index += 1
-        self.group.focus(self.current_stack.cw, False)
+            x += w
+            column += 1
 
-    def cmd_up(self):
-        """Switch to the previous window in this stack"""
-        self.current_stack.current_index -= 1
-        self.group.focus(self.current_stack.cw, False)
+        # Put the newest windows in the center columns, if any.
+        for window in center_windows:
+            w = widths[column]
+            logger.info("Center: Placing %s in column %d", window, column)
+            self._place(window, x, y, w, height)
 
-    def cmd_shuffle_up(self):
-        """Shuffle the order of this stack up"""
-        self.current_stack.shuffle_up()
-        self.group.layout_all()
+            x += w
+            column += 1
 
-    def cmd_shuffle_down(self):
-        """Shuffle the order of this stack down"""
-        self.current_stack.shuffle_down()
-        self.group.layout_all()
+        # Put any remaining windows in a stack in the right-most column.
+        if len(right_windows):
+            w = widths[column]
+            h = height // len(right_windows)
+            for window in right_windows:
+                logger.info("Right: Placing %s in column %d", window, column)
+                self._place(window, x, y, w, h)
+                y += h
 
-    def cmd_delete(self):
-        """Delete the current stack from the layout"""
-        self.delete_current_stack()
-
-    def cmd_add(self):
-        """Add another stack to the layout"""
-        newstack = _MyWinStack(autosplit=self.autosplit)
-        if self.autosplit:
-            newstack.split = True
-        self.stacks.append(newstack)
-        self.group.layout_all()
-
-    def cmd_rotate(self):
-        """Rotate order of the stacks"""
-        utils.shuffle_up(self.stacks)
-        self.group.layout_all()
+    def _place(self, window, x, y, w, h):
+        border = (self.border_focus if window.has_focus else self.border_normal)
+        return window.place(x, y, w, h, self.border_width, border)
 
     def cmd_next(self):
-        """Focus next stack"""
-        return self.next_stack()
-
-    cmd_right = cmd_next
+        pass
 
     def cmd_previous(self):
-        """Focus previous stack"""
-        return self.previous_stack()
+        pass
 
-    cmd_left = cmd_previous
-
-    def cmd_client_to_next(self):
-        """Send the current client to the next stack"""
-        return self.cmd_client_to_stack(self.current_stack_offset + 1)
-
-    cmd_shuffle_right = cmd_client_to_next
-
-    def cmd_client_to_previous(self):
-        """Send the current client to the previous stack"""
-        return self.cmd_client_to_stack(self.current_stack_offset - 1)
-
-    cmd_shuffle_left = cmd_client_to_previous
-
-    def cmd_client_to_stack(self, n):
-        """
-        Send the current client to stack n, where n is an integer offset.  If
-        is too large or less than 0, it is wrapped modulo the number of stacks.
-        """
-        if not self.current_stack:
-            return
-        next = n % len(self.stacks)
-        win = self.current_stack.cw
-        self.current_stack.remove(win)
-        self.stacks[next].add(win)
-        self.stacks[next].focus(win)
-        self.group.layout_all()
-
-    def cmd_swap_stack_left(self):
-        """Move the current stack to the left, and move the stack to the left
-        of the current stack to where the current stack was."""
-        offset = self.current_stack_offset
-
-        # Can't move any further left.
-        if offset == 0:
-            return
-
-        self.stacks[offset-1], self.stacks[offset] = self.stacks[offset], self.stacks[offset-1]
-        self.stacks[offset-1].width, self.stacks[offset].width = self.stacks[offset].width, self.stacks[offset-1].width
-        self.next_stack()
-        self.group.layout_all()
-
-    def cmd_swap_stack_right(self):
-        """Move the current stack to the right, and move the stack to the right
-        of the current stack to where the current stack was."""
-        offset = self.current_stack_offset
-
-        # Can't move any further right.
-        if offset == len(self.stacks)-1:
-            return
-
-        self.stacks[offset+1], self.stacks[offset] = self.stacks[offset], self.stacks[offset+1]
-        self.stacks[offset+1].width, self.stacks[offset].width = self.stacks[offset].width, self.stacks[offset+1].width
-        self.previous_stack()
-        self.group.layout_all()
-
-    def cmd_info(self):
-        return self.info()
+    def configure(self, window, screen_rect):
+        pass
