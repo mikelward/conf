@@ -94,19 +94,33 @@ class MyDynamic(_SimpleLayoutBase):
         column = 0
 
         # Put the oldest <num left columns> windows in the left columns, if any.
-        for window in left_windows:
+        for i, _ in enumerate(self.left_fractions):
             w = widths[column]
-            logger.info("Left: Placing %s in column %d", window, column)
-            self._place(window, x, y, w, height)
+
+            try:
+                window = left_windows[i]
+                logger.info("Left: Placing %s in column %d", window, column)
+                self._place(window, x, y, w, height)
+            except IndexError:
+                # More columns than windows.
+                # Still need to increment `x` and `column`.
+                pass
 
             x += w
             column += 1
 
         # Put the newest windows in the center columns, if any.
-        for window in center_windows:
+        for i, _ in enumerate(self.center_fractions):
             w = widths[column]
-            logger.info("Center: Placing %s in column %d", window, column)
-            self._place(window, x, y, w, height)
+
+            try:
+                window = center_windows[i]
+                logger.info("Center: Placing %s in column %d", window, column)
+                self._place(window, x, y, w, height)
+            except IndexError:
+                # More columns than windows.
+                # Still need to increment `x` and `column`.
+                pass
 
             x += w
             column += 1
