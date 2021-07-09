@@ -117,7 +117,8 @@ for i in groups:
     )
 
 layouts = [
-    mystack.MyStack(name="mystack", fractions=[1.0 / 4, 1.0 / 2, 1.0 / 4]),
+    mystack.MyStack(name="3center", widths=[1.0 / 4, 1.0 / 2, 1.0 / 4]),
+    mystack.MyStack(name="2equal", widths=[1.0 / 2, 1.0 / 2]),
     mydynamic.MyDynamic(name="21:9", left_fractions=[1.0 / 4], center_fractions=[1.0 / 2], right_fraction=[1.0 / 4]),
     mydynamic.MyDynamic(name="16:9", left_fractions=[], center_fractions=[2.0 / 3], right_fraction=[1.0 / 3]),
     layout.Max(),
