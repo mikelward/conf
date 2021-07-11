@@ -29,7 +29,7 @@ wireless _first_ {
 }
 
 ethernet _first_ {
-        format_up = "ethernet"
+        format_up = "up"
         format_down = "-"
 }
 
@@ -40,7 +40,7 @@ disk "/" {
 }
 
 battery all {
-        format = "battery %percentage"
+        format = "Battery %percentage"
         format_down = ""
         integer_battery_capacity = true
 }
@@ -54,7 +54,7 @@ volume master {
 }
 
 volume bluetooth {
-        format = "headset %volume"
+        format = "Headset %volume"
         format_muted = "%devicename muted"
         device = "pulse:bluez_sink.CC_98_8B_A8_30_01.a2dp_sink"
 }
