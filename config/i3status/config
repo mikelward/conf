@@ -40,9 +40,12 @@ disk "/" {
 }
 
 battery all {
-        format = "Battery %percentage"
+        format = "%status %percentage"
         format_down = ""
         integer_battery_capacity = true
+        status_chr = "⚡"
+        status_bat = "🔋"
+        status_unk = "?"
 }
 
 volume master {
@@ -54,7 +57,7 @@ volume master {
 }
 
 volume bluetooth {
-        format = "Headset %volume"
+        format = "🎧 %volume"
         format_muted = "%devicename muted"
         device = "pulse:bluez_sink.CC_98_8B_A8_30_01.a2dp_sink"
 }
