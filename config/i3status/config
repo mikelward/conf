@@ -16,7 +16,7 @@ order += "volume bluetooth"
 #order += "disk /"
 order += "battery all"
 order += "wireless _first_"
-order += "ethernet _first_"
+#order += "ethernet _first_"
 #order += "tztime adelaide"
 #order += "tztime london"
 #order += "tztime sunnyvale"
@@ -43,9 +43,9 @@ battery all {
         format = "%status %percentage"
         format_down = ""
         integer_battery_capacity = true
-        status_chr = "⚡"
-        status_bat = "🔋"
-        status_unk = "?"
+        status_chr = "charging"
+        status_bat = "battery"
+        status_unk = "unknown"
 }
 
 volume master {
@@ -57,7 +57,7 @@ volume master {
 }
 
 volume bluetooth {
-        format = "🎧 %volume"
+        format = "%devicename %volume"
         format_muted = "%devicename muted"
         device = "pulse:bluez_sink.CC_98_8B_A8_30_01.a2dp_sink"
 }
