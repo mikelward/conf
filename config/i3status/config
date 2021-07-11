@@ -29,8 +29,8 @@ wireless _first_ {
 }
 
 ethernet _first_ {
-        format_up = "Wired"
-        format_down = "down"
+        format_up = "%ip"
+        format_down = "-"
 }
 
 disk "/" {
