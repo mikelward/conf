@@ -26,7 +26,7 @@ order += "tztime local"
 
 wireless _first_ {
         format_up = "%essid"
-        format_down = "-"
+        format_down = ""
         format_quality = "%d%%"
 }
 
