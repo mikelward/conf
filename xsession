@@ -6,7 +6,10 @@ echo "$(date +"%F %T.%N") xsession"
 type compton && compton --daemon --backend xrender --paint-on-overlay
 type pasystray && (setsid pasystray&)
 type autorandr && autorandr --change
-type dwm && exec dwm
+if type dwm; then
+    type slstatus && (setsid slstatus&)
+    exec dwm
+fi
 type qtile && exec qtile start --log-level=INFO
 type i3 && exec i3
 #if type xmonad; then
