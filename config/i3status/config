@@ -45,7 +45,8 @@ battery all {
         integer_battery_capacity = true
         status_chr = "charging"
         status_bat = "battery"
-        status_unk = "unknown"
+        # status is unknown when charging using my USB-C hub
+        status_unk = "charging"
 }
 
 volume master {
