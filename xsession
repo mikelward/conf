@@ -9,7 +9,7 @@ type autorandr && autorandr --change
 if type dwm; then
     if type i3statusdwm; then
         (setsid i3statusdwm&)
-    else if type slstatus; then
+    elif type slstatus; then
         (setsid slstatus&)
     fi
     exec dwm
