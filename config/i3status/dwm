@@ -1,0 +1,96 @@
+# i3status configuration file.
+# see "man i3status" for documentation.
+
+# It is important that this file is edited as UTF-8.
+# The following line should contain a sharp s:
+# ß
+# If the above line is not correctly displayed, fix your editor first!
+
+general {
+        colors = true
+        interval = 1
+        output_format = none
+        separator = " "
+}
+
+order += "volume bluetooth"
+order += "volume master"
+#order += "disk /"
+order += "battery all"
+order += "wireless _first_"
+order += "ethernet _first_"
+#order += "tztime adelaide"
+#order += "tztime london"
+#order += "tztime sunnyvale"
+order += "tztime local"
+
+wireless _first_ {
+        format_up = "%essid"
+        format_down = "-"
+        format_quality = "%d%%"
+}
+
+ethernet _first_ {
+        format_up = "Wired"
+        format_down = "down"
+}
+
+disk "/" {
+        format = ""
+        low_threshold = 20
+        format_below_threshold = "%free free"
+}
+
+battery all {
+        format = "%status %percentage"
+        format_down = ""
+        integer_battery_capacity = true
+        status_chr = "⚡"
+        status_bat = "🔋"
+        status_unk = "?"
+}
+
+volume master {
+        format = "%devicename %volume"
+        format_muted = "%devicename muted"
+        device = "default"
+        mixer = "Master"
+        mixer_idx = 0
+}
+
+volume bluetooth {
+        format = "Headphones %volume"
+        format_muted = "%devicename muted"
+        device = "pulse:bluez_sink.CC_98_8B_A8_30_01.a2dp_sink"
+}
+
+tztime local {
+        format = "%m/%d %H:%M"
+}
+
+tztime utc {
+        format = "%H:%M %Z"
+        timezone = "UTC"
+}
+
+tztime adelaide {
+        format = "%H:%M ADL"
+        timezone = "Australia/Adelaide"
+        hide_if_equals_localtime = true
+}
+
+tztime london {
+        format = "%H:%M LON"
+        timezone = "Europe/London"
+        hide_if_equals_localtime = true
+}
+
+tztime sunnyvale {
+        format = "%H:%M SFO"
+        timezone = "America/Los_Angeles"
+        hide_if_equals_localtime = true
+}
+
+load {
+        format = "%1min"
+}
