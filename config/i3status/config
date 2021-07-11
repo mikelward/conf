@@ -12,7 +12,7 @@ general {
 }
 
 order += "volume bluetooth"
-order += "volume master"
+#order += "volume master"
 #order += "disk /"
 order += "battery all"
 order += "wireless _first_"
@@ -29,7 +29,7 @@ wireless _first_ {
 }
 
 ethernet _first_ {
-        format_up = "%ip"
+        format_up = "up"
         format_down = "-"
 }
 
@@ -49,21 +49,21 @@ battery all {
 }
 
 volume master {
-        format = "%devicename %volume"
-        format_muted = "%devicename muted"
+        format = "%volume"
+        format_muted = "-"
         device = "default"
         mixer = "Master"
         mixer_idx = 0
 }
 
 volume bluetooth {
-        format = "Headphones %volume"
+        format = "🎧 %volume"
         format_muted = "%devicename muted"
         device = "pulse:bluez_sink.CC_98_8B_A8_30_01.a2dp_sink"
 }
 
 tztime local {
-        format = "%m/%d %H:%M"
+        format = "%H:%M"
 }
 
 tztime utc {
