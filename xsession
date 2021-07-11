@@ -7,7 +7,11 @@ type compton && compton --daemon --backend xrender --paint-on-overlay
 type pasystray && (setsid pasystray&)
 type autorandr && autorandr --change
 if type dwm; then
-    type slstatus && (setsid slstatus&)
+    if type i3statusdwm; then
+        (setsid i3statusdwm&)
+    else if type slstatus; then
+        (setsid slstatus&)
+    fi
     exec dwm
 fi
 type qtile && exec qtile start --log-level=INFO
