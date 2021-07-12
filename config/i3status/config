@@ -65,7 +65,7 @@ volume bluetooth {
 }
 
 tztime local {
-        format = "%H:%M"
+        format = "%m/%d %H:%M"
 }
 
 tztime utc {
