@@ -23,14 +23,14 @@ order += "ethernet _first_"
 order += "tztime local"
 
 wireless _first_ {
-        format_up = ""
+        format_up = "%essid"
         format_down = ""
         format_quality = "%d%%"
 }
 
 ethernet _first_ {
-        format_up = ""
-        format_down = "-"
+        format_up = "wired"
+        format_down = ""
 }
 
 disk "/" {
@@ -43,24 +43,24 @@ battery all {
         format = "%status"
         format_down = ""
         integer_battery_capacity = true
-        status_chr = ""
-        status_bat = "🔋"
+        status_chr = "charging"
+        status_bat = "battery"
         # status is unknown when charging using my USB-C hub
-        status_unk = ""
-        status_full = ""
+        status_unk = "changing"
+        status_full = "charged"
 }
 
 volume master {
-        format = "🔈%volume"
-        format_muted = "🔇"
+        format = "volume %volume"
+        format_muted = "muted"
         device = "default"
         mixer = "Master"
         mixer_idx = 0
 }
 
 volume bluetooth {
-        format = "%volume"
-        format_muted = "%devicename muted"
+        format = "headset %volume"
+        format_muted = "headset muted"
         device = "pulse:bluez_sink.CC_98_8B_A8_30_01.a2dp_sink"
 }
 
