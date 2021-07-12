@@ -12,7 +12,7 @@ general {
 }
 
 order += "volume bluetooth"
-#order += "volume master"
+order += "volume master"
 #order += "disk /"
 order += "battery all"
 order += "wireless _first_"
