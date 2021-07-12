@@ -43,11 +43,11 @@ battery all {
         format = "%status"
         format_down = ""
         integer_battery_capacity = true
-        status_chr = "🔌"
+        status_chr = ""
         status_bat = "🔋"
         # status is unknown when charging using my USB-C hub
-        status_unk = "🔌"
-        status_full = "🔌"
+        status_unk = ""
+        status_full = ""
 }
 
 volume master {
