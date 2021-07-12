@@ -47,6 +47,7 @@ battery all {
         status_bat = "🔋"
         # status is unknown when charging using my USB-C hub
         status_unk = "🔌"
+        status_full = "charged"
 }
 
 volume master {
