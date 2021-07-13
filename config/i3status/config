@@ -29,7 +29,7 @@ wireless _first_ {
 }
 
 ethernet _first_ {
-        format_up = ""
+        format_up = "🖧 "
         format_down = ""
 }
 
