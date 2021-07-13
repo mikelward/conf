@@ -23,7 +23,7 @@ order += "ethernet _first_"
 order += "tztime local"
 
 wireless _first_ {
-        format_up = "%essid"
+        format_up = "%essid"
         format_down = ""
         format_quality = "%d%%"
 }
@@ -40,14 +40,15 @@ disk "/" {
 }
 
 battery all {
-        format = "%status"
+        format = "%status%percentage"
         format_down = ""
         integer_battery_capacity = true
+        last_full_capacity = true
         status_chr = ""
         status_bat = ""
         # status is unknown when charging using my USB-C hub
-        status_unk = "changing"
-        status_full = "charged"
+        status_unk = ""
+        status_full = ""
 }
 
 volume master {
