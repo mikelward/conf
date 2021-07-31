@@ -1220,7 +1220,6 @@ if is_interactive; then
             printed=true
         fi
         if $printed; then
-            bar $((COLUMNS - $(column)))
             printf '\n'
         fi
     }
