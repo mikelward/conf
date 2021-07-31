@@ -1172,7 +1172,7 @@ if is_interactive; then
         exec < /dev/tty
         oldstty=$(stty -g)
         stty raw -echo min 0
-        echo -en "\033[6n" > /dev/tty
+        printf '\e[6n' > /dev/tty
         IFS=';' read -r -d R row col
         stty $oldstty
         local row=$((${row:2} - 1))
