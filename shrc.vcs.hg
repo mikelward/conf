@@ -53,6 +53,10 @@ hg_fix() {
     hg fix "$@"
 }
 
+hg_graft() {
+    hg graft "$@"
+}
+
 hg_graph() {
     hg graph "$@"
 }
@@ -69,6 +73,10 @@ hg_lint() {
 # show changesets that would be pushed
 hg_outgoing() {
     hg outgoing --template=oneline "$@"
+}
+
+hg_pick() {
+    hg graft "$@"
 }
 
 hg_prereview() {

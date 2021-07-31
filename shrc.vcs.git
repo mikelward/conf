@@ -94,6 +94,10 @@ git_fix() {
     git fix "$@"
 }
 
+git_graft() {
+    git cherry-pick "$@"
+}
+
 git_graph() {
     git graph "$@"
 }
@@ -110,6 +114,10 @@ git_lint() {
 # print commits that would be pushed
 git_outgoing() {
     git log --oneline @{push}..HEAD
+}
+
+git_pick() {
+    git cherry-pick "$@"
 }
 
 git_precommit() {
