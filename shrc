@@ -1152,7 +1152,8 @@ if is_interactive; then
         set_color 'normal'
         printf '\n'
         printf '%s %s%s ' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")"
-        bar $((COLUMNS - $(column)))
+        column=$(column)
+        test -n "$column" && bar $((COLUMNS - $(column)))
         printf '\n'
         job_info
         set_title "$(title)"
