@@ -1150,9 +1150,10 @@ if is_interactive; then
         last_job_info
         current_command=
         set_color 'normal'
-        printf '\n[%s %s %s ' "$(host_info)" "$(dir_info)" "$(auth_info)"
+        printf '\n'
+        printf '%s %s %s' "$(host_info)" "$(dir_info)" "$(auth_info)"
         bar $((COLUMNS - $(column) - 1))
-        printf ']\n'
+        printf '\n'
         job_info
         set_title "$(title)"
         set_prompt
@@ -1188,7 +1189,6 @@ if is_interactive; then
         set_color 'normal'
         local printed=false
         if test -n "$last_error"; then
-            printf '['
             red "$last_error"
             printed=true
         fi
@@ -1211,15 +1211,12 @@ if is_interactive; then
         if test -n "$duration"; then
             if $printed; then
                 printf ' '
-            else
-                printf '['
             fi
             yellow "Took $duration"
             printed=true
         fi
         if $printed; then
-            bar $((COLUMNS - $(column) - 1))
-            printf ']\n'
+            printf '\n'
         fi
     }
 
