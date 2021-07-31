@@ -1152,7 +1152,7 @@ if is_interactive; then
         set_color 'normal'
         printf '\n'
         printf '%s %s %s' "$(host_info)" "$(dir_info)" "$(auth_info)"
-        bar $((COLUMNS - $(column) - 1))
+        bar $((COLUMNS - $(column)))
         printf '\n'
         job_info
         set_title "$(title)"
@@ -1212,10 +1212,11 @@ if is_interactive; then
             if $printed; then
                 printf ' '
             fi
-            yellow "Took $duration"
+            yellow "took $duration"
             printed=true
         fi
         if $printed; then
+            bar $((COLUMNS - $(column)))
             printf '\n'
         fi
     }
@@ -1449,9 +1450,9 @@ if is_interactive; then
         laststatus=$?
         case $laststatus in
         0)   ;;
-        130) echo "Interrupted";;
+        130) echo "interrupted";;
         148) ;;  # suspended
-        *)   echo "Exit status $laststatus";;
+        *)   echo "status $laststatus";;
         esac
     }
 
@@ -1460,7 +1461,7 @@ if is_interactive; then
         laststatus=$?
         case $laststatus in
         0)   ;;
-        *)   echo "Exit status $laststatus";;
+        *)   echo "status $laststatus";;
         esac
     }
     alias ksh_last_error=sh_last_error
@@ -1471,9 +1472,9 @@ if is_interactive; then
         case $laststatus in
         0)   ;;
         20)  ;;  # suspended (zsh < 5.0.7)
-        130) echo "Interrupted";;
+        130) echo "interrupted";;
         148) ;;  # suspended (zsh >= 5.0.7)
-        *)   echo "Exit status $laststatus";;
+        *)   echo "status $laststatus";;
         esac
     }
 
