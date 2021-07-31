@@ -1146,17 +1146,38 @@ if is_interactive; then
     }
 
     # commands to execute before the prompt is displayed
-    preprompt() {
+    preprompt() (
         last_job_info
         current_command=
         set_color 'normal'
-        printf '\n'
-        printf '%s %s %s\n' "$(host_info)" "$(dir_info)" "$(auth_info)"
+        printf '\n[%s %s %s ' "$(host_info)" "$(dir_info)" "$(auth_info)"
+        bar $((COLUMNS - $(column) - 1))
+        printf ']\n'
         job_info
         set_title "$(title)"
         set_prompt
         flash_terminal
-    }
+    )
+
+    bar() (
+        i=0
+        while test $i -lt $1; do
+            printf '―'
+            i=$((i+1))
+        done
+    )
+
+    column() (
+        exec < /dev/tty
+        oldstty=$(stty -g)
+        stty raw -echo min 0
+        echo -en "\033[6n" > /dev/tty
+        IFS=';' read -r -d R row col
+        stty $oldstty
+        local row=$((${row:2} - 1))
+        local col=$((${col} - 1))
+        echo $col
+    )
 
     last_job_info() {
         # Must be the very first thing.
@@ -1167,6 +1188,7 @@ if is_interactive; then
         set_color 'normal'
         local printed=false
         if test -n "$last_error"; then
+            printf '['
             red "$last_error"
             printed=true
         fi
@@ -1189,12 +1211,15 @@ if is_interactive; then
         if test -n "$duration"; then
             if $printed; then
                 printf ' '
+            else
+                printf '['
             fi
             yellow "Took $duration"
             printed=true
         fi
         if $printed; then
-            printf '\n'
+            bar $((COLUMNS - $(column) - 1))
+            printf ']\n'
         fi
     }
 
