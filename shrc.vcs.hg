@@ -11,6 +11,10 @@ hg_annotate() {
     hg annotate "$@"
 }
 
+hg_blame() {
+    hg blame "$@"
+}
+
 # print the name of the currently active mercurial branch
 hg_branch() {
     hg branch 2>/dev/null

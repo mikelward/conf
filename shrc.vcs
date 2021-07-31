@@ -68,6 +68,7 @@ alias ak=allknown
 alias am=amend
 alias an=annotate
 alias ann=annotate
+alias bl=blame
 alias change=recommit
 alias ci=commit
 alias cl=changelog
@@ -81,7 +82,8 @@ alias re=review
 alias ro=rootdir
 alias sa=save
 alias st=status
-for command in add amend annotate branch branches \
+for command in add amend annotate \
+    blame branch branches \
     changed changelog changes checkout commit commitforce diffs \
     fix graft graph incoming lint outgoing \
     pending pick precommit presubmit pull push \
