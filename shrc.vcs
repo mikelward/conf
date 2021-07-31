@@ -112,9 +112,9 @@ save() {
     allknown && fix
 }
 
-status_chars() {
-    status | awk '!/^[[:space:]]{2}/ { print $1 }' | sort | uniq | tr '\n' ' '
-}
+status_chars() (
+    status | awk '!/^[[:space:]]{2}/ { print $1 }' | sort | uniq | tr '\n' ' ' | sed -e 's/ *$//'
+)
 
 for f in "$HOME"/.shrc.vcs.*; do
     if ! test -f "$f"; then

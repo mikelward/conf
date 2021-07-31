@@ -1151,7 +1151,7 @@ if is_interactive; then
         current_command=
         set_color 'normal'
         printf '\n'
-        printf '%s %s %s' "$(host_info)" "$(dir_info)" "$(auth_info)"
+        printf '%s %s%s ' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")"
         bar $((COLUMNS - $(column)))
         printf '\n'
         job_info
@@ -1159,6 +1159,10 @@ if is_interactive; then
         set_prompt
         flash_terminal
     )
+
+    maybe_space() {
+        test -n "$*" && printf ' %s' "$*"
+    }
 
     bar() (
         i=0
