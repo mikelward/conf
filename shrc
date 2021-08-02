@@ -965,6 +965,9 @@ if is_interactive; then
     alias gl='cd /var/log'
     alias h='head'
     alias headers='curl -L -i -sS -o/dev/null -D-'
+    if have_command chg; then
+        alias hg='chg'
+    fi
     alias hms='date +"%H:%M:%S"'
     alias hmsns='date +"%H:%M:%S.%N"'
     alias hosts='getent hosts'
