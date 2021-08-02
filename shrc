@@ -1151,10 +1151,8 @@ if is_interactive; then
         current_command=
         set_color 'normal'
         printf '\n'
-        printf '%s %s%s ' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")"
-        column=$(column)
-        test -n "$column" && bar $((COLUMNS - $(column)))
-        printf '\n'
+        bar $((COLUMNS))
+        printf '\r%s %s%s \n' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")"
         job_info
         set_title "$(title)"
         set_prompt
@@ -1171,18 +1169,6 @@ if is_interactive; then
             printf '―'
             i=$((i+1))
         done
-    )
-
-    column() (
-        exec < /dev/tty
-        oldstty=$(stty -g)
-        stty raw -echo min 0
-        printf '\e[6n' > /dev/tty
-        IFS=';' read -r -d R row col
-        stty $oldstty
-        local row=$((${row:2} - 1))
-        local col=$((${col} - 1))
-        echo $col
     )
 
     last_job_info() {
