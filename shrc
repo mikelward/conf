@@ -1146,9 +1146,10 @@ if is_interactive; then
     }
 
     # commands to execute before the prompt is displayed
-    preprompt() (
+    preprompt() {
         last_job_info
         current_command=
+        SECONDS=0
         set_color 'normal'
         printf '\n'
         bar $((COLUMNS))
@@ -1157,7 +1158,7 @@ if is_interactive; then
         set_title "$(title)"
         set_prompt
         flash_terminal
-    )
+    }
 
     maybe_space() {
         test -n "$*" && printf ' %s' "$*"
