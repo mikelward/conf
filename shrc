@@ -1677,8 +1677,11 @@ exec zsh -i'
 
         # complete both commands and files for the first word, to support autocd
         compctl -C -cf
-        # fall back to case-insensitive completion if there's no exact match
-        compctl -M '' 'm:{a-zA-Z}={A-Za-z}'
+        # fall back to case-insensitive completion then fuzzy completion
+        zstyle ':completion:*' matcher-list '' \
+            'm:{a-z\-}={A-Z\_}' \
+            'r:[^[:alpha:]]||[[:alpha:]]=** r:|=* m:{a-z\-}={A-Z\_}' \
+            'r:|?=** m:{a-z\-}={A-Z\_}'
 
         # load auto completions
         autoload -Uz compinit
