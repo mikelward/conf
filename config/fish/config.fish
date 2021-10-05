@@ -337,7 +337,7 @@ function trydiff
     set base (string join '.' $dots[1..-2])
     set ext $dots[-1]
 
-    test -n $dir; and set dir $dir/
+    test -n "$dir"; and set dir $dir/
     set testfile $dir$base'_test'$ext
     test -e $testfile; and printf '%s' $testfile
 end
@@ -443,7 +443,7 @@ function psgrep
     set pattern $argv[-1]
 
     set pids (pgrep -d , -f $pattern | string collect)
-    if test -n $pids
+    if test -n "$pids"
         psc -p $pids $ps_args
     else
         error "No processes matching $pattern"
@@ -824,62 +824,77 @@ if is_interactive
 #        set_title (title | string collect)
 #    end
 #
-   # commands to execute before the prompt is displayed
-   function preprompt
-       #last_job_info
-       set current_command
-       my_set_color 'normal'
-       printf '\n'
-       printf '%s %s %s\n' (host_info) (dir_info) (auth_info)
-       job_info
-       set_title (title | string collect)
-   end
+    function preexec --on-event fish_preexec
+        #log_history "$argv"
+        set --global last_job_status 0
+        set --global current_command $argv
+        #set_title (title | string collect)
+        my_set_color 'normal'
+        #set SECONDS 0
+    end
 
-   function fish_prompt
-        preprompt
+    function postexec --on-event fish_postexec
+        set --global last_job_status $status
+        last_job_info
+        set current_command
+    end
+
+    function fish_prompt
+        my_set_color 'normal'
+        printf '\n'
+        printf '%s %s %s\n' (host_info) (dir_info) (auth_info)
+        job_info
+        set_title (title | string collect)
         ps1
         flash_terminal
     end
-#
-#    function last_job_info
-#        # Must be the very first thing.
-#        set last_error (${shell}_last_error | string collect)
-#
-#        test -z $current_command; and return
-#
-#        my_set_color 'normal'
-#        set printed false
-#        if test -n $last_error
-#            red $last_error
-#            set printed true
-#        end
-#        set duration
-#        if test $SECONDS -gt 0
-#            local hours minutes seconds
-#            set seconds $SECONDS
-#            set hours (math $seconds/3600)
-#            set seconds (math $seconds-$hours*3600)
-#            set minutes (math $seconds/60)
-#            set seconds (math $seconds-$minutes*60)
-#            if test $hours -gt 0
-#                set duration "$hours hours $minutes minutes $seconds seconds"
-#            else if test $minutes -gt 0
-#                set duration "$minutes minutes $seconds seconds"
-#            else if test $seconds -gt 1
-#                set duration "$seconds seconds"
-#            end
-#        end
-#        if test -n $duration
-#            if $printed
-#                printf ' '
-#            end
-#            yellow "Took $duration"
-#            set printed true
-#        end
-#        if $printed
-#            printf '\n'
-#        end
-#    end
+
+    function last_job_info
+        # Must be the very first thing.
+        set last_error (fish_last_error)
+
+        test -z $current_command; and return
+
+        my_set_color 'normal'
+        set printed false
+        if test -n "$last_error"
+            red $last_error
+            set printed true
+        end
+        set duration (format_duration $CMD_DURATION)
+        if test -n "$duration"
+            if $printed
+                printf ' '
+            end
+            yellow "Took $duration"
+            set printed true
+        end
+        if $printed
+            printf '\n'
+        end
+    end
+
+    function format_duration
+        set millis $argv
+        set seconds (math --scale=0 $millis/1000)
+        set hours (math --scale=0 $seconds/3600)
+        set seconds (math --scale=0 $seconds-$hours\*3600)
+        set minutes (math --scale=0 $seconds/60)
+        set seconds (math --scale=0 $seconds-$minutes\*60)
+        if test $hours -gt 0
+            echo "$hours hours $minutes minutes $seconds seconds"
+        else if test $minutes -gt 0
+            echo "$minutes minutes $seconds seconds"
+        else if test $seconds -gt 0
+            echo "$seconds seconds"
+        end
+    end
+
+    function fish_last_error
+        if test $last_job_status -ne 0
+            echo "Exit status $last_job_status"
+        end
+    end
 
     # get the user's attention
     function flash_terminal
@@ -929,11 +944,11 @@ if is_interactive
     end
 
     function connected_via_ssh
-        test -n $SSH_CONNECTION
+        test -n "$SSH_CONNECTION"
     end
 
     function inside_tmux
-        test -n $TMUX
+        test -n "$TMUX"
     end
 
     # return true if this machine is a production machine
@@ -993,18 +1008,18 @@ if is_interactive
             green (basename $projectroot)
             local projectsubdir
             set projectsubdir (trim_prefix (projectroot) $PWD)
-            if test -n $projectsubdir
+            if test -n "$projectsubdir"
                 printf ' '
                 blue $projectsubdir
             end
             set statuschars (status_chars)
-            if test -n $statuschars
+            if test -n "$statuschars"
                 printf ' '
                 yellow $statuschars
             end
             # local branch
             # set branch (branch)
-            # if test -n $branch
+            # if test -n "$branch"
             #     printf ' '
             #     green $branch
             # end
@@ -1015,7 +1030,7 @@ if is_interactive
 
     function short_pwd
         set projectname (projectname)
-        if test -n $projectname
+        if test -n "$projectname"
             printf '%s' $projectname
         else
             printf '%s' (basename $PWD)
@@ -1024,9 +1039,9 @@ if is_interactive
 
     function project_or_command_or_pwd
         set projectname (projectname)
-        if test -n $projectname
+        if test -n "$projectname"
             printf '%s' $projectname
-        else if test -n $current_command
+        else if test -n "$current_command"
             set command (string split ' ' $current_command)
             printf '%s' $command[1]
         else
@@ -1036,7 +1051,7 @@ if is_interactive
 
     function project_or_pwd
         set projectname (projectname)
-        if test -n $projectname
+        if test -n "$projectname"
             printf '%s' $projectname
         else
             printf '%s' (basename $PWD)
@@ -1121,8 +1136,6 @@ if is_interactive
         alias $command="vcs $command"
     end
 
-    # TODO: fish_last_error
-
     # get a short version of the hostname for use in the prompt or window title
     function short_hostname
         string replace --regex '^'$USERNAME'-' '' (string match --regex '^[^.]*' $HOSTNAME)
@@ -1200,20 +1213,9 @@ exec zsh -i'
         printf '>'
     end
 
-#    # function to run just before running a command from the command line
-#    # see also preexec (zsh) and DEBUG (bash)
-#    # the first argument is the command line being run
-#    function precommand
-#        log_history "$argv"
-#        set current_command (expand_job "$argv")
-#        set_title (title | string collect)
-#        my_set_color 'normal'
-#        set SECONDS 0
-#    end
-
     # set the xterm title to the supplied string
     function set_title
-        if test -n $titlestart
+        if test -n "$titlestart"
             printf "%s%s%s" $titlestart "$argv" $titlefinish
         end
     end
@@ -1263,7 +1265,7 @@ exec zsh -i'
     is_runnable editline; and set --export EDITOR editline
     is_runnable more; and set --export PAGER more
     is_runnable less; and set --export PAGER less
-    is_runnable meld; and test -n $DISPLAY; and set --export DIFF meld
+    is_runnable meld; and test -n "$DISPLAY"; and set --export DIFF meld
 
     # colors for ls
     switch $TERM
