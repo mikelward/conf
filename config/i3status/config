@@ -18,8 +18,9 @@ order += "battery all"
 order += "wireless _first_"
 order += "ethernet _first_"
 #order += "tztime adelaide"
-#order += "tztime london"
-#order += "tztime sunnyvale"
+#order += "tztime date"
+order += "tztime london"
+order += "tztime sunnyvale"
 order += "tztime local"
 
 wireless _first_ {
@@ -65,31 +66,30 @@ volume bluetooth {
         device = "pulse:bluez_sink.CC_98_8B_A8_30_01.a2dp_sink"
 }
 
-tztime local {
-        format = "%m/%d %H:%M"
-}
-
-tztime utc {
-        format = "%H:%M %Z"
-        timezone = "UTC"
+tztime date {
+        format = "%Y-%m-%d"
 }
 
 tztime adelaide {
-        format = "%H:%M ADL"
+        format = "%H:%M %Z"
         timezone = "Australia/Adelaide"
         hide_if_equals_localtime = true
 }
 
 tztime london {
-        format = "%H:%M LON"
+        format = "%H:%M %Z"
         timezone = "Europe/London"
         hide_if_equals_localtime = true
 }
 
 tztime sunnyvale {
-        format = "%H:%M SFO"
+        format = "%H:%M %Z"
         timezone = "America/Los_Angeles"
         hide_if_equals_localtime = true
+}
+
+tztime local {
+        format = "%H:%M %Z %Y-%m-%d"
 }
 
 load {
