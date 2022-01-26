@@ -89,7 +89,7 @@ tztime sunnyvale {
 }
 
 tztime local {
-        format = "%H:%M %Z %Y-%m-%d"
+        format = "%H:%M %Z"
 }
 
 load {
