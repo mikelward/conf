@@ -566,8 +566,9 @@ myip() {
 
 # print the list of nameservers
 names() {
-    grep '^nameserver' /etc/resolv.conf
+    sed -ne '/^nameserver/{s/^nameserver[[:space:]]*//;p}' /etc/resolv.conf
     nmcli dev list 2>/dev/null | sed -ne '/domain_name_servers/{s/[^ ]*: *//;p}'
+    nmcli dev show 2>/dev/null | sed -ne '/^IP..DNS/{s/[^ ]*: *//;p}'
 }
 
 # list non-empty files, prefixed by timestamp in case sorting is needed
