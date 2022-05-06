@@ -120,3 +120,5 @@
 
 [include]
     path = ~/.gitconfig.local
+[http]
+	cookiefile = /usr/local/google/home/mbw/.gitcookies

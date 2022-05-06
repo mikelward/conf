@@ -77,11 +77,17 @@ alias di=diffs
 alias gr=graph
 alias lg=graph
 alias ma=review
+alias pr=presubmit
 alias projectroot=rootdir
 alias re=review
 alias ro=rootdir
 alias sa=save
 alias st=status
+alias up=upload
+upp() {
+  upload
+  presubmit
+}
 for command in add amend annotate \
     blame branch branches \
     changed changelog changes checkout commit commitforce diffs \
