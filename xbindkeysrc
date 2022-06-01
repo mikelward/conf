@@ -65,7 +65,7 @@
 "remote-desktop"
     Mod4 + r
 
-"autorandr --cycle"
+"autorandr --cycle --ignore-lid"
     Mod4 + Shift + r
 
 "secureshell"
