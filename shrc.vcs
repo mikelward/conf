@@ -51,7 +51,14 @@ rootdir() {
         vcs || return 1
     fi
     read _vcs _rootdir <.vcs_cache
-    echo "$_rootdir"
+    if test $# -gt 0; then
+      local _arg
+      for _arg; do
+        echo "$_rootdir/$_arg"
+      done
+    else
+      echo "$_rootdir"
+    fi
     test -n "$_rootdir"
 }
 
