@@ -1327,7 +1327,7 @@ if is_interactive; then
         if test -n "$projectroot"; then
             green "$(basename "$projectroot")"
             local projectsubdir
-            projectsubdir="$(trim_prefix "$(projectroot)" "$PWD")"
+            projectsubdir="$(trim_prefix "$projectroot" "$PWD")"
             if test -n "$projectsubdir"; then
                 printf ' '
                 blue "$projectsubdir"
