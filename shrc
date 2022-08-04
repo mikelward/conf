@@ -559,6 +559,12 @@ mtd() {
     cd "$(mktemp -d)"
 }
 
+# unpack a zipfile to a directory and cd to the extracted directory
+ucd() {
+    aunpack "$1"
+    cd "${1%.*}"
+}
+
 # get this machine's public IP address as seen by Google
 myip() {
     dig +short o-o.myaddr.l.google.com txt @ns1.google.com | tr -d '"'
