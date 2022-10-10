@@ -561,8 +561,13 @@ mtd() {
 
 # unpack a zipfile to a directory and cd to the extracted directory
 ucd() {
-    aunpack "$1"
-    cd "${1%.*}"
+    local _temp
+    _temp="$(mktemp -p "$PWD")"
+    aunpack --save-outdir="$_temp" "$1"
+    local _outdir="$(cat "$_temp")"
+    test -d "$_outdir" || return 1
+    cd "$_outdir"
+    rm "$_temp"
 }
 
 # get this machine's public IP address as seen by Google
