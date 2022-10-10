@@ -56,9 +56,6 @@
 "notepad"
 	Mod4 + n
 
-"pandora"
-	Mod4 + p
-
 "xfce4-display-settings"
     Mod4 + Shift + d
 
