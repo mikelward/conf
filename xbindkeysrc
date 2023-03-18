@@ -92,8 +92,5 @@
 "vol up"
     XF86AudioRaiseVolume
 
-"screenshot -f"
+"screenshot"
 	Print
-
-"screenshot -w"
-    Alt + Print
