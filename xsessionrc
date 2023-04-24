@@ -17,7 +17,7 @@ xbindkeys
 screensaver init
 (setsid nm-applet&)
 (setsid blueman-applet&)
-imwheel
+#imwheel
 
 # Do these last so there's a visual clue how long xsessionrc is taking.
 xsetroot -bg black
