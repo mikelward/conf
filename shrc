@@ -1046,7 +1046,6 @@ if is_interactive; then
     alias tf='t -f'
     alias tl='t -f /var/log/syslog'
     alias today='date +"%Y-%m-%d"'
-    alias ts='t -f /var/log/syslog'
     alias userctl='systemctl --user'
     alias userjournal='journalctl --user'
     alias userjnl='userjournal'
