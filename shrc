@@ -813,7 +813,8 @@ is_runnable meld && test -n "$DISPLAY" && export DIFF=meld
 # program defaults
 export BLOCKSIZE=1024
 export CLICOLOR=true
-export GREP_COLOR=4
+export GREP_COLOR=4   # BSD grep and older GNU grep - underline matches
+export GREP_COLORS='mt=4'  # GNU grep - underline matches
 
 # colors for ls
 case "$TERM" in linux|putty|vt220)
