@@ -11,26 +11,24 @@ general {
         interval = 1
 }
 
-order += "volume bluetooth"
-order += "volume master"
 #order += "disk /"
-order += "battery all"
-order += "wireless _first_"
-order += "ethernet _first_"
 #order += "tztime adelaide"
-#order += "tztime date"
+order += "tztime datetime"
 order += "tztime london"
 order += "tztime sunnyvale"
-order += "tztime local"
+order += "wireless _first_"
+order += "ethernet _first_"
+order += "volume master"
+order += "battery all"
 
 wireless _first_ {
-        format_up = " "
+        format_up = " %essid"
         format_down = ""
         format_quality = "%d%%"
 }
 
 ethernet _first_ {
-        format_up = "  "
+        format_up = "  %ip"
         format_down = ""
 }
 
@@ -60,38 +58,25 @@ volume master {
         mixer_idx = 0
 }
 
-volume bluetooth {
-        format = "🎧%volume"
-        format_muted = "%devicename muted"
-        device = "pulse:bluez_output.14_3F_A6_E9_7A_19.headset-head-unit"
-}
-
-tztime date {
-        format = "%Y-%m-%d"
+tztime datetime {
+        format = "%a %b %d %H:%M"
 }
 
 tztime adelaide {
-        format = "%H:%M %Z"
+        format = "(%H:%M %Z)"
         timezone = "Australia/Adelaide"
         hide_if_equals_localtime = true
 }
 
 tztime london {
-        format = "%H:%M %Z"
+        format = "(%H:%M %Z)"
         timezone = "Europe/London"
         hide_if_equals_localtime = true
 }
 
 tztime sunnyvale {
-        format = "%H:%M %Z"
+        format = "(%H:%M %Z)"
         timezone = "America/Los_Angeles"
         hide_if_equals_localtime = true
 }
 
-tztime local {
-        format = "%H:%M %Z"
-}
-
-load {
-        format = "%1min"
-}
