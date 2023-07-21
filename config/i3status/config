@@ -22,13 +22,13 @@ order += "volume master"
 order += "battery all"
 
 wireless _first_ {
-        format_up = " %essid"
+        format_up = " "
         format_down = ""
         format_quality = "%d%%"
 }
 
 ethernet _first_ {
-        format_up = "  %ip"
+        format_up = "  "
         format_down = ""
 }
 
