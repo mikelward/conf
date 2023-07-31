@@ -764,6 +764,10 @@ wx() {
     set +x
 }
 
+alias jc='journalctl --no-hostname'
+alias sc='systemctl'
+alias uc='systemctl --user'
+
 ##################################
 # ENVIRONMENT SETUP FOR ALL SHELLS
 # Set $PATH early in case other stuff here needs it.

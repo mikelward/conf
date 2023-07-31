@@ -1,5 +1,6 @@
 [user]
-    name = Mikel Ward
+	name = Mikel Ward
+	email = mikel@mikelward.com
 
 [core]
     excludesfile = ~/.gitexclude
