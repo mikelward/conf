@@ -383,6 +383,13 @@ unbak() {
     done
 }
 
+excd() {
+    local dir
+    dir="${1%.*}"
+    aunpack --extract-to="$dir" "$1"
+    cd "$dir"
+}
+
 # ring the terminal's bell
 bell() {
     printf "\a"
