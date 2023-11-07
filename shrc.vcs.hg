@@ -53,6 +53,10 @@ hg_diffs() {
     hg diff "$@"
 }
 
+hg_evolve() {
+    hg evolve "$@"
+}
+
 hg_fix() {
     hg fix "$@"
 }

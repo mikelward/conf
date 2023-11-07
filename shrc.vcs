@@ -81,6 +81,7 @@ alias ci=commit
 alias cl=changelog
 alias co=checkout
 alias di=diffs
+alias ev=evolve
 alias gr=graph
 alias lg=graph
 alias ma=review
@@ -98,7 +99,7 @@ upp() {
 for command in add amend annotate \
     blame branch branches \
     changed changelog changes checkout commit commitforce diffs \
-    fix graft graph incoming lint outgoing \
+    evolve fix graft graph incoming lint outgoing \
     pending pick precommit presubmit pull push \
     recommit revert review reword \
     status submit submitforce \
