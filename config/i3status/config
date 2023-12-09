@@ -16,8 +16,8 @@ general {
 order += "tztime datetime"
 order += "tztime london"
 order += "tztime sunnyvale"
-order += "wireless _first_"
-order += "ethernet _first_"
+#order += "wireless _first_"
+#order += "ethernet _first_"
 order += "volume master"
 order += "battery all"
 
