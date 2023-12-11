@@ -35,7 +35,7 @@ volume master {
 }
 
 tztime datetime {
-        format = "%a %b %d %H:%M"
+        format = "%m/%d %H:%M"
 }
 
 tztime adelaide {
