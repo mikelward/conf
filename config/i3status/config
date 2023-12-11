@@ -35,23 +35,23 @@ volume master {
 }
 
 tztime datetime {
-        format = "%m/%d %H:%M"
+        format = "%m/%d %H:%M %Z"
 }
 
 tztime adelaide {
-        format = "(%H:%M %Z)"
+        format = "%H:%M %Z"
         timezone = "Australia/Adelaide"
         hide_if_equals_localtime = true
 }
 
 tztime london {
-        format = "(%H:%M %Z)"
+        format = "%H:%M %Z"
         timezone = "Europe/London"
         hide_if_equals_localtime = true
 }
 
 tztime sunnyvale {
-        format = "(%H:%M %Z)"
+        format = "%H:%M %Z"
         timezone = "America/Los_Angeles"
         hide_if_equals_localtime = true
 }
