@@ -11,51 +11,27 @@ general {
         interval = 1
 }
 
-#order += "disk /"
-#order += "tztime adelaide"
 order += "tztime datetime"
 order += "tztime london"
 order += "tztime sunnyvale"
-#order += "wireless _first_"
-#order += "ethernet _first_"
 order += "volume master"
 order += "battery all"
 
-wireless _first_ {
-        format_up = " "
-        format_down = ""
-        format_quality = "%d%%"
-}
-
-ethernet _first_ {
-        format_up = "  "
-        format_down = ""
-}
-
-disk "/" {
-        format = ""
-        low_threshold = 20
-        format_below_threshold = "%free free"
-}
-
 battery all {
-        format = "%status%percentage"
+        format = "%status %percentage"
         format_down = ""
         integer_battery_capacity = true
         last_full_capacity = true
-        status_chr = ""
-        status_bat = ""
-        # status is unknown when charging using my USB-C hub
-        status_unk = ""
-        status_full = ""
+        status_chr = "Charging"
+        status_bat = "Battery"
+        status_unk = "Unknown"
+        status_full = "Full"
 }
 
 volume master {
-        format = "🔉%volume"
-        format_muted = "🔇"
-        device = "default"
-        mixer = "Master"
-        mixer_idx = 0
+        format = "%devicename %volume"
+        format_muted = "%devicename -"
+        device = "pulse"
 }
 
 tztime datetime {
