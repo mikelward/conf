@@ -26,7 +26,11 @@ hg_branches() {
 }
 
 hg_changed() {
-    hg status --no-status "$@"
+    if test $# -eq 0; then
+        hg status --no-status
+    else
+        hg log "$@" --template "{file_mods}{file_adds}\n"
+    fi
 }
 
 hg_changelog() {
