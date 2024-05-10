@@ -186,7 +186,7 @@ add_path() {
 # hook for authenticating (to ssh-agent, etc.)
 alias a=auth
 auth() {
-    :
+    ssh-add
 }
 
 # hook for printing which things I need to authenticate to (ssh-agent, etc.)
@@ -194,6 +194,19 @@ auth_info() {
     local problems=""
     is_ssh_valid || problems="$problems SSH"
     test -n "$problems" && yellow "${problems# }"
+}
+
+# ask the user whether to do something, return true if they say yes or Enter
+confirm() {
+    printf "$*? [Y/n]"
+    read REPLY
+    case "$REPLY" in
+        [Yy]|'')
+            true;;
+        *)
+            false
+            ;;
+    esac
 }
 
 # returns whether an SSH key is loaded
@@ -1289,6 +1302,16 @@ if is_interactive; then
         test -n "${SSH_CONNECTION:-}"
     }
 
+    # return true if this session is on a remote machine
+    connected_remotely() {
+        connected_via_ssh
+    }
+
+    # return true if this session is attached to shpool
+    in_shpool_session() {
+        test -n "$SHPOOL_SESSION_NAME"
+    }
+
     inside_tmux() {
         test -n "$TMUX"
     }
@@ -1318,6 +1341,7 @@ if is_interactive; then
         if on_production_host; then
             set_color 'red'
         fi
+
         printf '%s' "$(short_hostname)"
         set_color 'normal'
         printf '\n'
@@ -2037,6 +2061,17 @@ fi
 
 # source local overrides file (work vs home, etc.)
 test -f "${ZDOTDIR:-$HOME}/.shrc.local" && . "${ZDOTDIR:-$HOME}/.shrc.local"
+
+if is_interactive && connected_remotely && ! in_shpool_session; then
+    if confirm "Start shpool"; then
+        autoshpool
+    fi
+    if need_auth; then
+        if confirm "Auth"; then
+            auth
+        fi
+    fi
+fi
 
 # finish with a zero exit status so the first prompt is '$' rather than '?'
 true
