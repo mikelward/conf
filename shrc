@@ -209,6 +209,24 @@ confirm() {
     esac
 }
 
+connected_via_ssh() {
+    test -n "${SSH_CONNECTION:-}"
+}
+
+# return true if this session is on a remote machine
+connected_remotely() {
+    connected_via_ssh
+}
+
+# return true if this session is attached to shpool
+in_shpool_session() {
+    test -n "$SHPOOL_SESSION_NAME"
+}
+
+inside_tmux() {
+    test -n "$TMUX"
+}
+
 # returns whether an SSH key is loaded
 is_ssh_valid() {
     ssh-add -L >/dev/null 2>&1
@@ -859,6 +877,10 @@ esac
 
 if is_interactive; then
 
+    if connected_remotely && ! in_shpool_session && have_command shpool; then
+        exec autoshpool
+    fi
+
     log_history "New session as $USERNAME: $0 $*"
 
     # regain use of Ctrl+S and Ctrl+Q
@@ -1296,24 +1318,6 @@ if is_interactive; then
     # return true if it's already obvious which host I'm on
     show_hostname_in_title() {
         ! inside_tmux
-    }
-
-    connected_via_ssh() {
-        test -n "${SSH_CONNECTION:-}"
-    }
-
-    # return true if this session is on a remote machine
-    connected_remotely() {
-        connected_via_ssh
-    }
-
-    # return true if this session is attached to shpool
-    in_shpool_session() {
-        test -n "$SHPOOL_SESSION_NAME"
-    }
-
-    inside_tmux() {
-        test -n "$TMUX"
     }
 
     # return true if this machine is a production machine
@@ -2062,14 +2066,10 @@ fi
 # source local overrides file (work vs home, etc.)
 test -f "${ZDOTDIR:-$HOME}/.shrc.local" && . "${ZDOTDIR:-$HOME}/.shrc.local"
 
-if is_interactive && connected_remotely && ! in_shpool_session; then
-    if confirm "Start shpool"; then
-        autoshpool
-    fi
+# TODO: move to .profile?
+if is_interactive; then
     if need_auth; then
-        if confirm "Auth"; then
-            auth
-        fi
+        auth
     fi
 fi
 
