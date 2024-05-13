@@ -878,7 +878,11 @@ esac
 if is_interactive; then
 
     if connected_remotely && ! in_shpool_session && have_command shpool; then
-        exec autoshpool
+        # autoshpool will start a new session.
+        # Automatically clean up at the end.
+        # Do this instead of running exec autoshpool so autoshpool failing
+        # doesn't prevent me from logging in.
+        autoshpool # && exit
     fi
 
     log_history "New session as $USERNAME: $0 $*"
@@ -1481,14 +1485,14 @@ if is_interactive; then
         :
     }
 
-    trim_prefix() {
-        expr substr "$2" $(expr length "$1" + 2) 9999
-    }
-
     # load all the version control functions (git_*, hg_*, etc.)
     if test -f "$HOME/.shrc.vcs"; then
         source "$HOME/.shrc.vcs"
     fi
+
+    trim_prefix() {
+        expr substr "$2" $(expr length "$1" + 2) 9999
+    }
 
     # print a message describing the last error, or empty if no error
     bash_last_error() {
