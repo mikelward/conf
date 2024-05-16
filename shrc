@@ -16,6 +16,8 @@
 # Mikel Ward <mikel@mikelward.com>
 #
 
+clear() { }
+
 ###############
 # COMPATIBILITY
 # Try to make all shells behave similarly while reading this file
@@ -883,6 +885,7 @@ if is_interactive; then
         # Do this instead of running exec autoshpool so autoshpool failing
         # doesn't prevent me from logging in.
         autoshpool # && exit
+        :
     fi
 
     log_history "New session as $USERNAME: $0 $*"
@@ -978,6 +981,7 @@ if is_interactive; then
 
     #alias '?'='path_or_empty'
     alias @='path_or_empty'
+    alias asp='autoshpool'
     alias bindkeys='daemon xbindkeys'
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.go,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}"
     code_includes="$(eval echo --include=$code_patterns)"
