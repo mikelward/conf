@@ -16,8 +16,6 @@
 # Mikel Ward <mikel@mikelward.com>
 #
 
-clear() { }
-
 ###############
 # COMPATIBILITY
 # Try to make all shells behave similarly while reading this file
