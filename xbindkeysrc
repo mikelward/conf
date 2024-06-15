@@ -38,8 +38,8 @@
 "browser3"
 	Mod4 + Shift + g
 
-#"home"
-#	Mod4 + h
+"home"
+	Mod4 + h
 
 "irc"
 	Mod4 + i
