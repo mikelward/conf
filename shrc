@@ -877,6 +877,13 @@ esac
 
 if is_interactive; then
 
+    if in_shpool_session; then
+        # Prevent shpool from clearing the screen during startup.
+        # This ensures we can see any motd, errors, etc.
+        clear() {
+            unset -f clear
+        }
+    fi
     if connected_remotely && ! in_shpool_session && have_command shpool; then
         # autoshpool will start a new session.
         # Automatically clean up at the end.
