@@ -73,6 +73,10 @@ hg_graph() {
     hg graph "$@"
 }
 
+hg_histedit() {
+    hg histedit
+}
+
 # show changesets that would be fetched
 hg_incoming() {
     hg incoming --template=oneline "$@"

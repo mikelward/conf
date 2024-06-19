@@ -99,7 +99,7 @@ upp() {
 for command in add amend annotate \
     blame branch branches \
     changed changelog changes checkout commit commitforce diffs \
-    evolve fix graft graph incoming lint outgoing \
+    evolve fix graft graph histedit incoming lint outgoing \
     pending pick precommit presubmit pull push \
     recommit revert review reword \
     status submit submitforce \

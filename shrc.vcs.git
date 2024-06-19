@@ -106,6 +106,10 @@ git_graph() {
     git graph "$@"
 }
 
+git_histedit() {
+    git rebase --interactive
+}
+
 # print commits that would be pulled
 git_incoming() {
     git log --oneline HEAD..@{upstream}
