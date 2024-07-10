@@ -1412,7 +1412,7 @@ if is_interactive; then
             projectsubdir="$(trim_prefix "$projectroot" "$PWD")"
             if test -n "$projectsubdir"; then
                 printf ' '
-                blue "${projectsubdir:1}"
+                blue "${projectsubdir#/}"
             fi
             local branch="$(vcs branch)"
             if test -n "$branch"; then
