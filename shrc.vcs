@@ -62,6 +62,26 @@ rootdir() {
     test -n "$_rootdir"
 }
 
+subdir() {
+    local _subdir="$(trim_prefix "$(rootdir)" "${1:-$PWD}")"
+    echo "${_subdir#/}"
+}
+
+# hook to define any implied prefix, e.g. //depot that could be missing from
+# either side, relative_path will strip this from both sides
+implied_prefix() {
+  :
+}
+
+relative_path() {
+    local _target="$1"
+    local _relative_to="${2:-$(subdir)}"
+    _target=$(trim_prefix "$(implied_prefix)" "$_target")
+    _relative_to=$(trim_prefix "$(implied_prefix)" "$_relative_to")
+    target_relative_to "$_target" "$_relative_to"
+}
+alias rp=relative_path
+
 allknown() {
     local unknown="$(unknown)"
     echo "$unknown"
