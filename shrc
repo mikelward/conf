@@ -1412,7 +1412,7 @@ if is_interactive; then
             projectsubdir="$(trim_prefix "$projectroot" "$PWD")"
             if test -n "$projectsubdir"; then
                 printf ' '
-                blue "$projectsubdir"
+                blue "${projectsubdir:1}"
             fi
             local branch="$(vcs branch)"
             if test -n "$branch"; then
@@ -1519,7 +1519,9 @@ if is_interactive; then
     fi
 
     trim_prefix() {
-        expr substr "$2" $(expr length "$1" + 2) 9999
+        local _prefix="$1"
+        local _target="$2"
+        echo "${_target#$_prefix}"
     }
 
     # print a message describing the last error, or empty if no error
