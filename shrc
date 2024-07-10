@@ -640,6 +640,26 @@ path() {
     )
 }
 
+# strip any common directory prefix "$2" from "$1"
+# if $2 is empty, use $PWD
+# TODO: handle edge cases, e.g. emit ../ if it the common parts aren't at the start
+target_relative_to() {
+  local _target="$1"
+  local _relative_to="${2:-$PWD}"
+  local IFS=/
+  local -a _target_bits=( $_target )
+  local -a _relative_to_bits=( $_relative_to )
+  local _i=0
+  local _bit=
+  while test $_i -lt ${#_relative_to_bits}; do
+    if test "${_relative_to_bits[$_i]}" = "${_target_bits[$_i]}"; then
+      _i=$((_i + 1))
+      continue
+    fi
+    echo "${_target_bits[*]:$_i}" && break
+  done
+}
+
 # update config files
 pc() {
     for d in "$HOME/conf" "$HOME/conf".* "$HOME/scripts" "$HOME/scripts".*; do
