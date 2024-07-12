@@ -776,6 +776,38 @@ first_arg_last() {
     "$command" "$@" "$arg"
 }
 
+# convert command arg1 [options] arg... to command [options] arg1 arg...
+# this is useful for creating functions and aliases where you only need to
+# type the second part (subcommand or object) and the command is implied,
+# e.g. "somehost" runs "ssh somehost" or "commit" runs "git commit"
+# (the latter is less useful, but it's the first example I could think of)
+#
+# e.g. alias somehost='shift_options ssh somehost' rewrites
+# somehost -v hostname --fqdn =>
+# ssh -v somehost hostname --fqdn
+#
+# requires that all options start with a hyphen/minus and not contain spaces
+# options in either -fsomefile or --file=somefile format will work, but
+# --file somefile will not
+#
+# options after -- are not shifted
+# e.g. shift_options git checkout -- -b => git checkout -b
+#                 => git checkout -b
+shift_options() {
+    local _command="$1"
+    local _target="$2"
+    shift 2
+    local -a _options=()
+    while test -n "$1"; do
+        case "$1" in
+            -|--) break;;
+            -*) _options+=("$1"); shift;;
+            *)  break;;
+        esac
+    done
+    "$_command" "${_options[@]}" "$_target" "$@"
+}
+
 # convert a time from one timezone to another
 # tz2tz <from timezone> <to timezone> <date spec>
 tz2tz() {
@@ -1146,7 +1178,7 @@ if is_interactive; then
         while IFS=$'\n' read -r _fqdn; do
             local _short="${_fqdn%%.*}"
             eval "$_short=$_fqdn"
-            eval "$_short"'() { ssh "$@" '"$_fqdn"'; }'
+            eval "$_short"'() { shift_options ssh '"$_fqdn"' "$@"; }'
         done <"$_ssh_machines"
     }
     set_up_ssh_aliases
