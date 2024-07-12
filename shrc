@@ -816,7 +816,7 @@ what() {
 }
 
 # run a command under set -x
-wx() {
+setx() {
     set -x
     "$@"
     set +x
