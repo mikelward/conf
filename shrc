@@ -739,7 +739,7 @@ recent() {
     local lines
 
     lines=10
-    case "$1" in -*)
+    case "$1" in -[0-9]*)
         lines=${1#-}
         shift
         ;;
