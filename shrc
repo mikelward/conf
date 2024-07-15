@@ -1290,13 +1290,13 @@ if is_interactive; then
         test -n "$*" && printf ' %s' "$*"
     }
 
-    bar() (
-        i=0
-        while test $i -lt $1; do
+    bar() {
+        local _i=0
+        while test $_i -lt $1; do
             printf '―'
-            i=$((i+1))
+            _i=$((_i+1))
         done
-    )
+    }
 
     last_job_info() {
         # Must be the very first thing.
