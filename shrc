@@ -1196,7 +1196,7 @@ if is_interactive; then
         while IFS=$'\n' read -r _fqdn; do
             local _short="${_fqdn%%.*}"
             eval "$_short=$_fqdn"
-            eval "$_short"'() { shift_options ssh '"$_fqdn"' "$@"; }'
+            eval "$_short"'() { shift_options ssh -t '"$_fqdn"' "$@"; }'
         done <"$_ssh_machines"
     }
     set_up_ssh_aliases
