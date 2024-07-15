@@ -45,8 +45,8 @@ if is_sh || is_dash; then
     # complex stuff below.
     # This provides a failsafe in case something is broken.
     echo basic mode >&2
-    PS1="
-$(basename "$PWD")$ "
+    PS1='
+$(basename "$PWD")$ '
     return
 fi
 
