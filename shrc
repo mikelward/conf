@@ -2152,7 +2152,7 @@ fi
 test -f "${ZDOTDIR:-$HOME}/.shrc.local" && . "${ZDOTDIR:-$HOME}/.shrc.local"
 
 # TODO: move to .profile?
-if is_interactive; then
+if is_interactive && ! in_shpool_session; then
     if need_auth; then
         auth
     fi
