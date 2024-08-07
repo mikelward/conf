@@ -1820,8 +1820,9 @@ exec zsh -i'
             'r:|?=** m:{a-z\-}={A-Z\_}'
 
         # load auto completions
-        autoload -Uz compinit
+        autoload -Uz compinit bashcompinit
         compinit
+        bashcompinit
 
         # user input appears in bold
         declare -a zle_highlight
@@ -2134,6 +2135,12 @@ exec zsh -i'
         # under /etc/bash_completion.d do.  silence the output to ignore the
         # ones that don't.
         for f in /etc/bash_completion.d/*; do
+            # 000_bash_completion_compat.bash requires functions from
+            # /etc/bash_completion, trying to use it will break completion
+            # for `cd`
+            case "$f" in */000_bash_completion_compat.bash)
+                continue;;
+            esac
             source "$f" >/dev/null 2>&1
         done
         ;;
