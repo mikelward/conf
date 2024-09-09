@@ -29,7 +29,7 @@ hg_changed() {
     if test $# -eq 0; then
         hg status --no-status
     else
-        hg log "$@" --template "{file_mods}{file_adds}\n"
+        hg log "$@" --template "{files}\n"
     fi
 }
 
