@@ -3,8 +3,8 @@ echo "$(date +"%F %T.%N") xsession"
 
 (setsid xfsettingsd&)
 (setsid xfce4-power-manager&)
-if type picon; then
-  picon --daemon --backend xrender
+if type picom; then
+  picom --daemon --backend xrender
 elif type compton; then
   compton --daemon --backend xrender --paint-on-overlay
 fi
