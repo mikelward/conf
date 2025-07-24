@@ -959,8 +959,7 @@ if is_interactive; then
         # Automatically clean up at the end.
         # Do this instead of running exec autoshpool so autoshpool failing
         # doesn't prevent me from logging in.
-        # autoshpool && exit
-        :
+        autoshpool && exit
     fi
 
     log_history "New session as $USERNAME: $0 $*"
@@ -1430,6 +1429,15 @@ if is_interactive; then
         fi
 
         printf '%s' "$(short_hostname)"
+        set_color 'normal'
+        if in_shpool_session; then
+            printf ' ['
+            green "$SHPOOL_SESSION_NAME"
+            printf ']'
+        else
+            printf ' '
+            yellow 'shpool'
+        fi
         set_color 'normal'
         printf '\n'
     }
