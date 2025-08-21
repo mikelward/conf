@@ -8,6 +8,14 @@ jj_add() {
     jj file track "$@"
 }
 
+jj_annotate() {
+    jj file annotate "$@"
+}
+
+jj_blame() {
+    jj file blame "$@"
+}
+
 jj_branch() {
   # there is no current bookmark in jj
 }
