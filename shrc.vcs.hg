@@ -119,6 +119,10 @@ hg_push() {
     hg push "$@"
 }
 
+hg_rebase() {
+    hg rebase "$@"
+}
+
 hg_recommit() {
     hg commit --amend "$@"
 }

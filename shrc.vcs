@@ -124,7 +124,7 @@ for command in add amend annotate \
     changed changelog changes checkout commit commitforce diffedit diffs \
     evolve fix graft graph histedit incoming lint outgoing \
     pending pick precommit presubmit pull push \
-    recommit restore revert review reword \
+    rebase recommit restore revert review reword \
     split squash status submit submitforce track \
     unamend undo unknown untrack upload uploadchain; do
     # remove any alias created in .shrc

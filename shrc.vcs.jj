@@ -1,3 +1,5 @@
+# vim: set ft=sh:
+
 jj_absorb() {
     jj absorb "$@"
 }
