@@ -26,6 +26,7 @@ vcs() {
     else
         read _vcs _rootdir <<<$(
             while test "$PWD" != "/"; do
+                test -e ".jj" && echo "jj $PWD" && break
                 test -e ".hg" && echo "hg $PWD" && break
                 test -e ".git" && echo "git $PWD" && break
                 test -e ".citc" && echo "g4 $PWD" && break
@@ -108,9 +109,11 @@ alias ma=review
 alias pr=presubmit
 alias projectroot=rootdir
 alias re=review
+alias rw=reword
 alias ro=rootdir
 alias sa=save
 alias st=status
+alias un=undo
 alias up=upload
 upp() {
   upload
@@ -118,12 +121,12 @@ upp() {
 }
 for command in add amend annotate \
     blame branch branches \
-    changed changelog changes checkout commit commitforce diffs \
+    changed changelog changes checkout commit commitforce diffedit diffs \
     evolve fix graft graph histedit incoming lint outgoing \
     pending pick precommit presubmit pull push \
-    recommit revert review reword \
-    status submit submitforce \
-    unamend unknown upload uploadchain; do
+    recommit restore revert review reword \
+    split squash status submit submitforce track \
+    unamend undo unknown untrack upload uploadchain; do
     # remove any alias created in .shrc
     case "$(type "$command" 2>/dev/null)" in *alias*)
         unalias "$command"
@@ -151,7 +154,9 @@ save() {
 }
 
 status_chars() (
-    status | awk '!/^[[:space:]]{2}/ { print $1 }' | sort | uniq | tr '\n' ' ' | sed -e 's/ *$//'
+    status |
+      awk '$1 ~ /^([[:upper:]?!]([[:upper:]?!])*)$/ { print $1 }' |
+      sort | uniq | tr '\n' ' ' | sed -e 's/ *$//'
 )
 
 for f in "$HOME"/.shrc.vcs.*; do

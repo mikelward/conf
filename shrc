@@ -1138,6 +1138,8 @@ if is_interactive; then
     }
     alias lss='lssock'
     alias j='jobs'
+    alias jd='jjd'
+    alias mjd='jjd -f'
     m() { make -f .Makefile "$@"; }
     ml() { m lint; }
     # shadows magtape command, but who uses that?

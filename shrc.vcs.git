@@ -166,6 +166,10 @@ git_recommit() {
     git amend "$@"
 }
 
+git_restore() {
+   git checkout -- "$@"
+}
+
 git_revert() {
     if test $# -eq 0; then
         git reset --hard HEAD
@@ -199,6 +203,10 @@ git_submitforce() {
     git push --no-verify "$@"
 }
 
+git_track() {
+    git add --intent-to-add "$@"
+}
+
 git_unamend() {
     # Note --mixed. We assume we want to revert the index, too, as if the index
     # didn't exist, the same as other aliases here.
@@ -209,6 +217,10 @@ git_unknown() (
     cd $(git rootdir)
     git ls-files -od --exclude-standard
 )
+
+git_untrack() {
+    git rm --cached "$@"
+}
 
 # send the current change for Gerrit review
 git_upload() {

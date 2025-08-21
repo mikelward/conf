@@ -1,0 +1,128 @@
+jj_absorb() {
+    jj absorb "$@"
+}
+
+jj_add() {
+    jj file track "$@"
+}
+
+jj_branch() {
+  # there is no current bookmark in jj
+}
+
+# print the name of all bookmarks
+jj_branches() {
+    jj bookmark list
+}
+
+jj_change() {
+    jj describe "$@"
+}
+
+jj_describe() {
+    jj describe "$@"
+}
+
+jj_changed() {
+    jj log --template=file_list "$@"
+}
+
+jj_changelog() {
+    jj log --template=builtin_log_oneline "$@"
+}
+
+jj_changes() {
+    jj diff "$@"
+}
+
+jj_commit() (
+    jj commit "$@"
+)
+
+jj_diffedit() {
+    jj diffedit "$@"
+}
+
+jj_diffs() {
+    jj diff "$@"
+}
+
+jj_fix() {
+    jj fix "$@"
+}
+
+jj_graph() {
+    jj log "$@"
+}
+
+jj_presubmit() {
+    jj piper presubmit "$@"
+}
+
+jj_projectroot() {
+    jj workspace root
+}
+
+jj_pull() {
+    jj sync "$@#"
+}
+
+jj_push() {
+    jj upload "$@"
+}
+
+jj_rebase() {
+    jj rebase "$@"
+}
+
+jj_resolve() {
+    jj resolve "$@"
+}
+
+jj_restore() {
+    jj restore "$@"
+}
+
+jj_revert() {
+    jj revert "$@"
+}
+
+jj_reword() {
+    jj describe -m "$@"
+}
+
+jj_rootdir() {
+    jj workspace root
+}
+
+jj_split() {
+    jj split "$@"
+}
+
+jj_squash() {
+    jj squash "$@"
+}
+
+jj_status() {
+    jj status "$@"
+}
+
+jj_submit() {
+    jj submit "$@"
+}
+
+jj_track() {
+    jj file track "$@"
+}
+
+jj_undo() {
+    jj undo "$@"
+}
+
+jj_untrack() {
+    jj untrack "$@"
+}
+
+jj_upload() {
+    jj upload "$@"
+}

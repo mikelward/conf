@@ -25,6 +25,10 @@ hg_branches() {
     hg branches
 }
 
+hg_change() {
+   hg reword "$@"
+}
+
 hg_changed() {
     if test $# -eq 0; then
         hg status --no-status
@@ -119,6 +123,10 @@ hg_recommit() {
     hg commit --amend "$@"
 }
 
+hg_restore() {
+    hg revert "$@"
+}
+
 hg_revert() {
     hg revert "$@"
 }
@@ -136,6 +144,14 @@ hg_rootdir() {
     hg root
 }
 
+hg_split() {
+    hg split "$@"
+}
+
+hg_squash() {
+    hg fold "$@"
+}
+
 hg_submit() {
     hg submit
 }
@@ -150,6 +166,10 @@ hg_status() {
 
 hg_unamend() {
     hg unamend "$@"
+}
+
+hg_undo() {
+    hg undo "$@"
 }
 
 hg_unknown() {
