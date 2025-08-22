@@ -18,6 +18,7 @@ jj_blame() {
 
 jj_branch() {
   # there is no current bookmark in jj
+  :
 }
 
 # print the name of all bookmarks
