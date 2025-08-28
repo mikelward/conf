@@ -953,6 +953,13 @@ if is_interactive; then
         clear() {
             unset -f clear
         }
+        if test -n "$SHPOOL_INITIAL_PWD"; then
+            cd "$SHPOOL_INITIAL_PWD"
+            SHPOOL_INITIAL_PWD=
+        fi
+    else
+        export SHPOOL_INITIAL_PWD="$PWD"
+        # This will be overridden by autoshpool.
     fi
     if connected_remotely && ! in_shpool_session && have_command shpool; then
         # autoshpool will start a new session.

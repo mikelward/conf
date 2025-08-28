@@ -1,1 +1,2 @@
 prompt_prefix = ""
+forward_env = ["PWD", "SHPOOL_INITIAL_PWD"]
