@@ -22,10 +22,10 @@ battery all {
         format_down = ""
         integer_battery_capacity = true
         last_full_capacity = true
-        status_chr = "Charging"
-        status_bat = "Battery"
-        status_unk = "Unknown"
-        status_full = "Full"
+        status_chr = "⚡"
+        status_bat = "🔋"
+        status_unk = "🪫"
+        status_full = "🔋"
 }
 
 volume master {
