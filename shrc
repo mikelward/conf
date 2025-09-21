@@ -884,6 +884,7 @@ CDPATH=".:$HOME:$HOME/conf:$HOME/conf/config"
 GOPATH="$HOME"
 export GOPATH
 
+add_path /usr/local/bin
 add_path "$HOME/android-sdk-linux/platform-tools"
 add_path "$HOME/Android/Sdk/platform-tools"
 add_path "$HOME/depot_tools"
