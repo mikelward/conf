@@ -116,7 +116,7 @@ esac
 
 # standardize on bash-like variables that everyone assumes are preset
 : ${USERNAME:=$(id -un)}
-: ${HOSTNAME:=$(hostname --fqdn)}
+: ${HOSTNAME:=$(hostname -f)}
 : ${UID:=$(id -u)}
 : ${TTY:=$(tty)}
 
