@@ -902,6 +902,9 @@ for dir in /opt/*/bin; do
 done
 add_path /sbin end
 add_path /usr/sbin end
+if have_command brew; then
+    eval $(brew shellenv)
+fi
 
 # set HISTORY_FILE for log_history
 HISTORY_FILE=$HOME/.history
