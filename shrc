@@ -238,11 +238,11 @@ connected_remotely() {
 
 # return true if this session is attached to shpool
 in_shpool_session() {
-    test -n "$SHPOOL_SESSION_NAME"
+    test -n "${SHPOOL_SESSION_NAME:-}"
 }
 
 inside_tmux() {
-    test -n "$TMUX"
+    test -n "${TMUX:-}"
 }
 
 # returns whether an SSH key is loaded
