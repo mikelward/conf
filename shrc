@@ -1067,6 +1067,7 @@ if is_interactive; then
     #alias '?'='path_or_empty'
     alias @='path_or_empty'
     alias asp='autoshpool'
+    alias attach='shpool attach'
     alias bindkeys='daemon xbindkeys'
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.go,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}"
     code_includes="$(eval echo --include=$code_patterns)"
@@ -1101,6 +1102,7 @@ if is_interactive; then
         pkill "$1"
         (setsid "$1"&)
     }
+    alias detach='shpool detach'
     alias diga='dig +noall +answer +search'
     alias digs='dig +short +search'
     download() { cd "$HOME/Downloads"; wget "$@"; }
