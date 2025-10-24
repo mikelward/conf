@@ -1537,6 +1537,14 @@ if is_interactive; then
         fi
     }
 
+    session_name() {
+        if test -n "${SHPOOL_SESSION_NAME:-}"; then
+            printf '%s ' "$SHPOOL_SESSION_NAME"
+        elif test -n "${TMUX:-}"; then
+            printf '%s ' "$(tmux display-message -p '#S')"
+        fi
+    }
+
     # print the name of the current branch
     branch() {
         :
@@ -1692,6 +1700,7 @@ exec zsh -i'
             short_hostname
             printf ' '
         fi
+        session_name
         project_or_pwd
     }
 
