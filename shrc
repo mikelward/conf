@@ -886,6 +886,7 @@ export GOPATH
 
 add_path /usr/local/bin
 add_path "$HOME/android-sdk-linux/platform-tools"
+add_path "$HOME/android-studio/bin"
 add_path "$HOME/Android/Sdk/platform-tools"
 add_path "$HOME/depot_tools"
 add_path "$HOME/google-cloud-sdk/bin"
