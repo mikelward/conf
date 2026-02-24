@@ -23,7 +23,7 @@ vcs() {
     local _vcs _rootdir
     if test -f .vcs_cache; then
         read _vcs _rootdir <.vcs_cache
-    else
+    elif test -w .; then
         read _vcs _rootdir <<<$(
             while test "$PWD" != "/"; do
                 test -e ".jj" && echo "jj $PWD" && break
@@ -34,7 +34,9 @@ vcs() {
                 cd ..
             done
         )
-        echo "$_vcs $_rootdir" >.vcs_cache
+        # This can fail if the filesystem is read-only.
+        # Ignore errors.
+        { echo "$_vcs $_rootdir" >.vcs_cache ; } 2>/dev/null
     fi
     if test -z "$_vcs" || test -z "$_rootdir"; then
         return 1
