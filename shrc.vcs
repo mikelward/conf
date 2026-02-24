@@ -111,7 +111,6 @@ alias ma=review
 alias pr=presubmit
 alias projectroot=rootdir
 alias re=review
-alias rw=reword
 alias ro=rootdir
 alias sa=save
 alias st=status
