@@ -1,0 +1,12 @@
+# espanso configuration file
+
+# For a list of all the available options, visit the official docs at: https://espanso.org/docs/
+
+enable: true
+
+search_shortcut: "ALT+SPACE"
+
+keyboard_layout:
+  layout: "us"
+  variant: "dvorak"
+  options: "lv3:menu_switch,compose:caps"
