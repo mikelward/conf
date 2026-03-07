@@ -182,16 +182,16 @@ add_path() {
     delete_path "$_dir" "$_newpath"
     case "$_where" in
     start)
-      prepend_path "$_dir" "$_newpath"
+      prepend_path "$_dir" "$_newpath" || true
       ;;
     end)
-      append_path "$_dir" "$_newpath"
+      append_path "$_dir" "$_newpath" || true
       ;;
     esac
     ;;
   *)
     if ! inpath "$_dir"; then
-      append_path "$_dir"
+      append_path "$_dir" || true
     fi
     ;;
   esac
