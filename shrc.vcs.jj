@@ -83,7 +83,7 @@ jj_projectroot() {
 }
 
 jj_pull() {
-    jj sync "$@#"
+    jj sync "$@"
 }
 
 jj_push() {
