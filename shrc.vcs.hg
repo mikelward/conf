@@ -66,7 +66,12 @@ hg_evolve() {
 }
 
 hg_fastforward() {
-    hg sync --tool=internal:fail || hg rebase --abort
+    if hg sync --tool=internal:fail; then
+        true
+    else
+        hg rebase --abort
+        false
+    fi
 }
 
 hg_fix() {
@@ -96,7 +101,7 @@ hg_lint() {
 
 # show changesets that would be pushed
 hg_outgoing() {
-    hg outgoing --template=oneline "$@"
+    hg --quiet outgoing --template=oneline "$@"
 }
 
 hg_pick() {
