@@ -35,7 +35,7 @@ jj_describe() {
 }
 
 jj_changed() {
-    jj log --template=file_list "$@"
+    jj diff --summary "$@"
 }
 
 jj_changelog() {
@@ -58,12 +58,20 @@ jj_diffs() {
     jj diff "$@"
 }
 
+jj_fastforward() {
+    jj piper pull
+}
+
 jj_fix() {
     jj fix "$@"
 }
 
 jj_graph() {
     jj log "$@"
+}
+
+jj_outgoing() {
+  jj --no-pager log --no-graph -r 'mutable() ~ empty()' --template 'builtin_log_oneline' "$@"
 }
 
 jj_presubmit() {

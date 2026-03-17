@@ -65,6 +65,10 @@ hg_evolve() {
     hg evolve "$@"
 }
 
+hg_fastforward() {
+    hg sync --none
+}
+
 hg_fix() {
     hg fix "$@"
 }

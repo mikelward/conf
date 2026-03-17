@@ -105,6 +105,7 @@ alias cl=changelog
 alias co=checkout
 alias di=diffs
 alias ev=evolve
+alias ff=fastforward
 alias gr=graph
 alias lg=graph
 alias ma=review
@@ -123,7 +124,7 @@ upp() {
 for command in add amend annotate \
     blame branch branches \
     changed changelog changes checkout commit commitforce diffedit diffs \
-    evolve fix graft graph histedit incoming lint outgoing \
+    evolve fastforward fix graft graph histedit incoming lint outgoing \
     pending pick precommit presubmit pull push \
     rebase recommit restore revert review reword \
     split squash status submit submitforce track \

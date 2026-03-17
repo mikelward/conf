@@ -94,6 +94,10 @@ git_diffs() {
     git diff "$@"
 }
 
+git_fastforward() {
+    git pull --ff-only
+}
+
 git_fix() {
     git fix "$@"
 }
