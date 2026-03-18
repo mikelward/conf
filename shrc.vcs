@@ -8,41 +8,44 @@ declare -A rootdir
 # print the name of the version control system in use in $PWD
 # TODO: implement in terms of rootdir
 vcs() {
-    if test $# -gt 0; then
-        local vcs="$(vcs)"
-        test -z "$vcs" && return 1
-        local command=$1
-        shift
-        "${vcs}_${command}" "$@"
-        return
-    fi
+    (
+        IFS=' '
+        if test $# -gt 0; then
+            local vcs="$(vcs)"
+            test -z "$vcs" && return 1
+            local command=$1
+            shift
+            "${vcs}_${command}" "$@"
+            return
+        fi
 
-    # If it's not writable, assume we don't care about vcs here.
-    test -w "$PWD" || return 1
+        # If it's not writable, assume we don't care about vcs here.
+        test -w "$PWD" || return 1
 
-    local _vcs _rootdir
-    if test -f .vcs_cache; then
-        read _vcs _rootdir <.vcs_cache
-    elif test -w .; then
-        read _vcs _rootdir <<<$(
-            while test "$PWD" != "/"; do
-                test -e ".jj" && echo "jj $PWD" && break
-                test -e ".hg" && echo "hg $PWD" && break
-                test -e ".git" && echo "git $PWD" && break
-                test -e ".citc" && echo "g4 $PWD" && break
-                test -e ".p4config" && echo "g4 $PWD" && break
-                cd ..
-            done
-        )
-        # This can fail if the filesystem is read-only.
-        # Ignore errors.
-        { echo "$_vcs $_rootdir" >.vcs_cache ; } 2>/dev/null
-    fi
-    if test -z "$_vcs" || test -z "$_rootdir"; then
-        return 1
-    fi
-    echo "$_vcs"
-    test -n "$_vcs"
+        local _vcs _rootdir
+        if test -f .vcs_cache; then
+            read _vcs _rootdir <.vcs_cache
+        elif test -w .; then
+            read _vcs _rootdir <<<$(
+                while test "$PWD" != "/"; do
+                    test -e ".jj" && echo "jj $PWD" && break
+                    test -e ".hg" && echo "hg $PWD" && break
+                    test -e ".git" && echo "git $PWD" && break
+                    test -e ".citc" && echo "g4 $PWD" && break
+                    test -e ".p4config" && echo "g4 $PWD" && break
+                    cd ..
+                done
+            )
+            # This can fail if the filesystem is read-only.
+            # Ignore errors.
+            { echo "$_vcs $_rootdir" >.vcs_cache ; } 2>/dev/null
+        fi
+        if test -z "$_vcs" || test -z "$_rootdir"; then
+            return 1
+        fi
+        echo "$_vcs"
+        test -n "$_vcs"
+    )
 }
 
 cv() {
@@ -50,19 +53,21 @@ cv() {
 }
 
 rootdir() {
-    if ! test -f .vcs_cache; then
-        vcs || return 1
-    fi
-    read _vcs _rootdir <.vcs_cache
-    if test $# -gt 0; then
-      local _arg
-      for _arg; do
-        echo "$_rootdir/$_arg"
-      done
-    else
-      echo "$_rootdir"
-    fi
-    test -n "$_rootdir"
+    (
+        if ! test -f .vcs_cache; then
+            vcs >/dev/null 2>&1 || return 1
+        fi
+        read _vcs _rootdir <.vcs_cache
+        if test $# -gt 0; then
+          local _arg
+          for _arg; do
+            echo "$_rootdir/$_arg"
+          done
+        else
+          echo "$_rootdir"
+        fi
+        test -n "$_rootdir"
+    )
 }
 
 subdir() {
@@ -107,6 +112,7 @@ alias di=diffs
 alias ev=evolve
 alias ff=fastforward
 alias gr=graph
+alias ig=ignore
 alias lg=graph
 alias ma=review
 alias pr=presubmit
@@ -124,7 +130,7 @@ upp() {
 for command in add amend annotate \
     blame branch branches \
     changed changelog changes checkout commit commitforce diffedit diffs \
-    evolve fastforward fix graft graph histedit incoming lint outgoing \
+    evolve fastforward fix graft graph histedit ignore incoming lint outgoing \
     pending pick precommit presubmit pull push \
     rebase recommit restore revert review reword \
     split squash status submit submitforce track \
