@@ -90,6 +90,14 @@ hg_histedit() {
     hg histedit
 }
 
+hg_ignore() {
+    (
+        cd "$(hg root)"
+        IFS=$'\n'
+        echo "$*" >> .hgignore
+    )
+}
+
 # show changesets that would be fetched
 hg_incoming() {
     hg incoming --template=oneline "$@"

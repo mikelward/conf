@@ -114,6 +114,14 @@ git_histedit() {
     git rebase --interactive
 }
 
+git_ignore() {
+    (
+        cd "$(git root)"
+        IFS=$'\n'
+        echo "$*" >> .gitignore
+    )
+}
+
 # print commits that would be pulled
 git_incoming() {
     git log --oneline HEAD..@{upstream}

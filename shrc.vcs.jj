@@ -8,6 +8,10 @@ jj_add() {
     jj file track "$@"
 }
 
+jj_amend() {
+    jj squash "$@"
+}
+
 jj_annotate() {
     jj file annotate "$@"
 }
@@ -68,6 +72,14 @@ jj_fix() {
 
 jj_graph() {
     jj log "$@"
+}
+
+jj_ignore() {
+    (
+        cd "$(jj workspace root)"
+        IFS=$'\n'
+        echo "$*" >> .gitignore
+    )
 }
 
 jj_outgoing() {
