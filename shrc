@@ -1583,11 +1583,6 @@ if is_interactive; then
         :
     }
 
-    # load all the version control functions (git_*, hg_*, etc.)
-    if test -f "$HOME/.shrc.vcs"; then
-        source "$HOME/.shrc.vcs"
-    fi
-
     trim_prefix() {
         local _prefix="$1"
         local _target="$2"
@@ -2173,6 +2168,11 @@ exec zsh -i'
 
     # command line editing
     set -o emacs
+fi
+
+# load all the version control functions (git_*, hg_*, etc.)
+if test -f "$HOME/.shrc.vcs"; then
+    source "$HOME/.shrc.vcs"
 fi
 
 # source local overrides file (work vs home, etc.)
