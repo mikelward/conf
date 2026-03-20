@@ -236,6 +236,11 @@ connected_remotely() {
     connected_via_ssh
 }
 
+# return true if this is inside a VCS workspace/source root
+inside_project() {
+    test -n "$(projectroot)"
+}
+
 # return true if this session is attached to shpool
 in_shpool_session() {
     test -n "${SHPOOL_SESSION_NAME:-}"
@@ -926,12 +931,16 @@ case "$TERM" in linux|putty|vt220)
     ;;
 esac
 
+# load all the version control functions (git_*, hg_*, etc.)
+if test -f "$HOME/.shrc.vcs"; then
+    source "$HOME/.shrc.vcs"
+fi
+
 #########################
 # INTERACTIVE SHELL SETUP
 # Set up the prompt, title, key bindings, etc.
 
 if is_interactive; then
-
     if in_shpool_session; then
         # Prevent shpool from clearing the screen during startup.
         # This ensures we can see any motd, errors, etc.
@@ -943,15 +952,17 @@ if is_interactive; then
             SHPOOL_INITIAL_PWD=
         fi
     else
-        export SHPOOL_INITIAL_PWD="$PWD"
         # This will be overridden by autoshpool.
+        export SHPOOL_INITIAL_PWD="$PWD"
     fi
-    if connected_remotely && ! in_shpool_session && have_command shpool; then
-        # autoshpool will start a new session.
-        # Automatically clean up at the end.
-        # Do this instead of running exec autoshpool so autoshpool failing
-        # doesn't prevent me from logging in.
-        autoshpool && exit
+    if ! in_shpool_session && have_command shpool; then
+        if connected_remotely || inside_project; then
+            # autoshpool will start a new session.
+            # Automatically clean up at the end.
+            # Do this instead of running exec autoshpool so autoshpool failing
+            # doesn't prevent me from logging in.
+            autoshpool && exit
+        fi
     fi
 
     log_history "New session as $USERNAME: $0 $*"
@@ -2168,11 +2179,6 @@ exec zsh -i'
 
     # command line editing
     set -o emacs
-fi
-
-# load all the version control functions (git_*, hg_*, etc.)
-if test -f "$HOME/.shrc.vcs"; then
-    source "$HOME/.shrc.vcs"
 fi
 
 # source local overrides file (work vs home, etc.)
