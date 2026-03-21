@@ -499,6 +499,11 @@ projectroot() {
     :
 }
 
+# hook to print chars like "M" = modified if there's any uncommitted changes
+status_chars() {
+    :
+}
+
 # cd to the real directory that the specified file is in, resolving symlinks
 cdfile() {
     cd "$(realdir "$1")"
@@ -930,6 +935,12 @@ case "$TERM" in linux|putty|vt220)
     export LS_COLORS='no=00:fi=00:di=00;34:ln=00;35:so=00;00:bd=00;00:cd=00;00:or=00;31:pi=00;00:ex=00;32'
     ;;
 esac
+
+
+# stub to make vcs commands no-ops if .shrc.vcs isn't available
+vcs() {
+    :
+}
 
 # load all the version control functions (git_*, hg_*, etc.)
 if test -f "$HOME/.shrc.vcs"; then
@@ -1464,11 +1475,6 @@ if is_interactive; then
                 grep -v '(pwd now:'
     }
 
-    status_chars() {
-        vcs status |
-            awk '{chars[$1]=1;} END { for (char in chars) { printf "%s", char; } }'
-    }
-
     # print directory stack listing in "+<number> <directory>" format
     # intended to be used in the preprompt
     dir_info() {
@@ -1545,16 +1551,6 @@ if is_interactive; then
         fi
     }
 
-    # print the name of the current branch
-    branch() {
-        :
-    }
-
-    # print the name of all branches
-    branches() {
-        :
-    }
-
     blue() {
         if $color; then
             printf '%s%s%s' "$blue" "$*" "$normal"
@@ -1583,16 +1579,6 @@ if is_interactive; then
         else
             printf '%s' "$*"
         fi
-    }
-
-    # print what remote commits would get pulled
-    incoming() {
-        :
-    }
-
-    # print what local commits would get pushed
-    outgoing() {
-        :
     }
 
     trim_prefix() {
