@@ -1465,7 +1465,8 @@ if is_interactive; then
     }
 
     status_chars() {
-        :
+        vcs status |
+            awk '{chars[$1]=1;} END { for (char in chars) { printf "%s", char; } }'
     }
 
     # print directory stack listing in "+<number> <directory>" format
