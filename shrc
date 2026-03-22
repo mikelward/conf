@@ -397,7 +397,7 @@ with_hostnames() {
 ips() {
     ip -o a sh up primary scope global | while read num iface afam addr rest; do
       case "$afam" in inet*)
-          echo $iface $addr;;
+          echo "$iface" "$addr";;
       esac
     done
 }
