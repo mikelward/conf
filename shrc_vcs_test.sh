@@ -518,6 +518,58 @@ result=$(cd "$_git_local" && git log -1 --format=%s)
 assert_equal "git_reword changes message" "edited by test" "$result"
 
 ###############
+# Test git branch, revert, undo
+
+# git_branch returns the current branch name
+result=$(cd "$_git_local" && git_branch)
+_default_branch=$(cd "$_git_local" && git rev-parse --abbrev-ref HEAD)
+assert_equal "git_branch returns current branch" "$_default_branch" "$result"
+
+# git_branch works after switching branches
+(cd "$_git_local" && git checkout -b test-branch >/dev/null 2>&1)
+result=$(cd "$_git_local" && git_branch)
+assert_equal "git_branch after switch" "test-branch" "$result"
+(cd "$_git_local" && git checkout "$_default_branch" >/dev/null 2>&1)
+
+# git_revert with no args resets all changes
+(
+    cd "$_git_local"
+    echo "dirty" > revertfile.txt
+    git add revertfile.txt
+)
+(cd "$_git_local" && git_revert >/dev/null 2>&1)
+result=$(cd "$_git_local" && git status --short)
+assert_equal "git_revert no args resets all" "" "$result"
+
+# git_revert with file args reverts only that file
+(
+    cd "$_git_local"
+    echo "keep" > keepfile.txt
+    echo "revert-me" > revertme.txt
+    git add keepfile.txt revertme.txt
+    git commit -m "add two files" >/dev/null 2>&1
+    echo "modified-keep" > keepfile.txt
+    echo "modified-revert" > revertme.txt
+)
+(cd "$_git_local" && git_revert revertme.txt >/dev/null 2>&1)
+result=$(cd "$_git_local" && cat revertme.txt)
+assert_equal "git_revert with file reverts that file" "revert-me" "$result"
+result=$(cd "$_git_local" && cat keepfile.txt)
+assert_equal "git_revert with file keeps other changes" "modified-keep" "$result"
+# clean up
+(cd "$_git_local" && git checkout -- keepfile.txt >/dev/null 2>&1)
+
+# git_undo unwraps the last commit, leaving files in working dir
+_before_undo=$(cd "$_git_local" && git rev-parse HEAD~)
+(cd "$_git_local" && git_undo >/dev/null 2>&1)
+_after_undo=$(cd "$_git_local" && git rev-parse HEAD)
+assert_equal "git_undo moves HEAD back" "$_before_undo" "$_after_undo"
+assert_true "git_undo leaves files in working dir" \
+    test -f "$_git_local/keepfile.txt"
+# re-commit so later tests have a clean state
+(cd "$_git_local" && git add -A && git commit -m "re-commit after undo" >/dev/null 2>&1)
+
+###############
 # Test hg commit, amend, recommit, reword
 
 if command -v hg >/dev/null 2>&1; then
@@ -546,6 +598,39 @@ assert_equal "hg_recommit changes message" "hg recommit msg" "$result"
 (cd "$_hg_local" && hg_recommit -m "hg recommit msg" -u "test <test@test.com>" >/dev/null 2>&1)
 assert_true "hg_recommit includes new file" \
     bash -c "cd '$_hg_local' && hg log -r . --template '{file_adds}' | grep -q amendfile.txt"
+
+###############
+# Test hg branch, revert, undo
+
+# hg_branch returns the current branch
+result=$(cd "$_hg_local" && hg_branch)
+assert_equal "hg_branch returns current branch" "default" "$result"
+
+# hg_revert restores a modified file
+(
+    cd "$_hg_local"
+    echo "clean-content" > hg_revertfile.txt
+    hg add hg_revertfile.txt
+    hg commit -m "add revertfile" -u "test <test@test.com>"
+    echo "dirty-content" > hg_revertfile.txt
+)
+(cd "$_hg_local" && hg_revert hg_revertfile.txt >/dev/null 2>&1)
+result=$(cd "$_hg_local" && cat hg_revertfile.txt)
+assert_equal "hg_revert restores file" "clean-content" "$result"
+
+# hg_revert only reverts the named file
+(
+    cd "$_hg_local"
+    echo "dirty-a" > hg_revertfile.txt
+    echo "dirty-b" > commitfile.txt
+)
+(cd "$_hg_local" && hg_revert hg_revertfile.txt >/dev/null 2>&1)
+result=$(cd "$_hg_local" && cat hg_revertfile.txt)
+assert_equal "hg_revert reverts named file" "clean-content" "$result"
+result=$(cd "$_hg_local" && cat commitfile.txt)
+assert_equal "hg_revert keeps other changes" "dirty-b" "$result"
+# clean up
+(cd "$_hg_local" && hg revert --all >/dev/null 2>&1)
 
 fi
 
@@ -581,6 +666,30 @@ assert_true "jj_recommit changes description" grep -q 'jj recommit msg' <<< "$re
 (cd "$_jj_repo" && jj_reword "jj reword msg" >/dev/null 2>&1)
 result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
 assert_true "jj_reword with args" grep -q 'jj reword msg' <<< "$result"
+
+###############
+# Test jj branch, revert, undo
+
+# jj_branch is a no-op (no current bookmark concept)
+result=$(cd "$_jj_repo" && jj_branch)
+assert_equal "jj_branch returns empty" "" "$result"
+
+# jj_revert creates a commit that reverses changes
+(
+    cd "$_jj_repo"
+    echo "original-jj" > jj_revertfile.txt
+    jj commit -m "add revertfile" >/dev/null 2>&1
+    echo "modified-jj" > jj_revertfile.txt
+    jj commit -m "modify revertfile" >/dev/null 2>&1
+)
+(cd "$_jj_repo" && jj_revert -r @- --destination @ >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj log --no-graph -r 'children(@)' -T 'description')
+assert_true "jj_revert creates revert commit" grep -q 'Revert' <<< "$result"
+
+# jj_undo reverses the last operation
+(cd "$_jj_repo" && jj_undo >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj log --no-graph -r 'all()' -T 'description')
+assert_false "jj_undo removes revert commit" grep -q 'Revert' <<< "$result"
 
 fi
 
