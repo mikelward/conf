@@ -432,8 +432,13 @@ bak() {
 unbak() {
     local file
     for file in "$@"; do
-        test -e "$file" && mv -i "$file" "${file%.bak}"
-        test -e "${file}.bak" && mv -i "${file}.bak" "$file"
+        case "$file" in *.bak)
+            test -e "$file" && mv -i "$file" "${file%.bak}"
+            ;;
+        *)
+            test -e "${file}.bak" && mv -i "${file}.bak" "$file"
+            ;;
+        esac
     done
 }
 
