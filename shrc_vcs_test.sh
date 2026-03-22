@@ -2,6 +2,7 @@
 #
 # Tests for shrc.vcs functions.
 # Tests VCS detection, subdir, relative_path, status_chars, and clone dispatch.
+# Requires bash or zsh (uses here-strings).
 #
 
 failures=0
@@ -268,14 +269,15 @@ git init --bare "$_git_remote" >/dev/null 2>&1
 
 git clone "$_git_remote" "$_git_local" >/dev/null 2>&1
 
-# Disable commit signing in test repos (may be enforced by global config)
+# Disable commit signing and pre-commit hooks
 git -C "$_git_local" config commit.gpgsign false
+chmod -x "$_git_local/.git/hooks/pre-commit" 2>/dev/null || true
 
 # Create an initial commit on the local clone and push it
 (
     cd "$_git_local"
     git commit --allow-empty -m "initial commit" >/dev/null 2>&1
-    git push -u origin master >/dev/null 2>&1
+    git push -u origin HEAD >/dev/null 2>&1
 )
 
 # Test git_outgoing with no unpushed commits
@@ -293,7 +295,7 @@ assert_equal "git_outgoing no unpushed commits" "" "$result"
 # Test git_outgoing shows the unpushed commit
 result=$(cd "$_git_local" && git_outgoing 2>&1)
 assert_true "git_outgoing shows unpushed commit" test -n "$result"
-assert_true "git_outgoing contains commit message" bash -c "echo '$result' | grep -q 'local commit'"
+assert_true "git_outgoing contains commit message" grep -q 'local commit' <<< "$result"
 
 # Test git_incoming with no new remote commits
 result=$(cd "$_git_local" && git fetch 2>&1 && git_incoming 2>&1)
@@ -307,6 +309,7 @@ _git_local2="$_testdir/git_local2"
 )
 git clone "$_git_remote" "$_git_local2" >/dev/null 2>&1
 git -C "$_git_local2" config commit.gpgsign false
+chmod -x "$_git_local2/.git/hooks/pre-commit" 2>/dev/null || true
 (
     cd "$_git_local2"
     echo "remote content" > remotefile.txt
@@ -318,7 +321,7 @@ git -C "$_git_local2" config commit.gpgsign false
 # Test git_incoming shows the new remote commit
 result=$(cd "$_git_local" && git fetch 2>&1 && git_incoming 2>&1)
 assert_true "git_incoming shows new remote commit" test -n "$result"
-assert_true "git_incoming contains commit message" bash -c "echo '$result' | grep -q 'remote commit'"
+assert_true "git_incoming contains commit message" grep -q 'remote commit' <<< "$result"
 
 # Test git_pending shows unpushed commits
 (
@@ -329,7 +332,7 @@ assert_true "git_incoming contains commit message" bash -c "echo '$result' | gre
 )
 result=$(cd "$_git_local" && git_pending 2>&1)
 assert_true "git_pending shows pending commit" test -n "$result"
-assert_true "git_pending contains commit message" bash -c "echo '$result' | grep -q 'pending commit'"
+assert_true "git_pending contains commit message" grep -q 'pending commit' <<< "$result"
 
 ###############
 # Test hg outgoing and incoming with real repos
@@ -428,17 +431,17 @@ assert_equal "jj_outgoing empty repo" "" "$result"
 # Test jj_outgoing shows the commit
 result=$(cd "$_jj_repo" && jj_outgoing 2>&1)
 assert_true "jj_outgoing shows mutable commit" test -n "$result"
-assert_true "jj_outgoing contains commit message" bash -c "echo '$result' | grep -q 'jj test commit'"
+assert_true "jj_outgoing contains commit message" grep -q 'jj test commit' <<< "$result"
 
 # Test jj_incoming shows operation log
 result=$(cd "$_jj_repo" && jj_incoming 2>&1)
 assert_true "jj_incoming shows op log" test -n "$result"
-assert_true "jj_incoming contains commit operation" bash -c "echo '$result' | grep -q 'commit'"
+assert_true "jj_incoming contains commit operation" grep -q 'commit' <<< "$result"
 
 # Test jj_pending shows mutable commits
 result=$(cd "$_jj_repo" && jj_pending 2>&1)
 assert_true "jj_pending shows pending commits" test -n "$result"
-assert_true "jj_pending contains commit message" bash -c "echo '$result' | grep -q 'jj test commit'"
+assert_true "jj_pending contains commit message" grep -q 'jj test commit' <<< "$result"
 
 # Create a second commit and verify both show up
 (
@@ -448,8 +451,8 @@ assert_true "jj_pending contains commit message" bash -c "echo '$result' | grep 
 )
 
 result=$(cd "$_jj_repo" && jj_outgoing 2>&1)
-assert_true "jj_outgoing shows first commit" bash -c "echo '$result' | grep -q 'jj test commit'"
-assert_true "jj_outgoing shows second commit" bash -c "echo '$result' | grep -q 'jj second commit'"
+assert_true "jj_outgoing shows first commit" grep -q 'jj test commit' <<< "$result"
+assert_true "jj_outgoing shows second commit" grep -q 'jj second commit' <<< "$result"
 
 else
 echo "SKIP: jj not installed, skipping jj integration tests"
