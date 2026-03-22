@@ -57,6 +57,10 @@ hg_commitforce() {
     hg --config hooks.precommit= --config hooks.pre-commit= commit "$@"
 }
 
+hg_diffedit() {
+    hg histedit "$@"
+}
+
 hg_diffs() {
     hg diff "$@"
 }
@@ -112,8 +116,16 @@ hg_outgoing() {
     hg --quiet outgoing --template=oneline "$@"
 }
 
+hg_pending() {
+    hg status
+}
+
 hg_pick() {
     hg graft "$@"
+}
+
+hg_precommit() {
+    hg precommit "$@"
 }
 
 hg_prereview() {
@@ -185,6 +197,10 @@ hg_status() {
     hg status "$@"
 }
 
+hg_track() {
+    hg add "$@"
+}
+
 hg_unamend() {
     hg unamend "$@"
 }
@@ -195,6 +211,10 @@ hg_undo() {
 
 hg_unknown() {
     hg status --unknown --deleted
+}
+
+hg_untrack() {
+    hg forget "$@"
 }
 
 hg_upload() {
