@@ -68,6 +68,13 @@ source "$(dirname "$0")/shrc.vcs"
 _testdir=$(mktemp -d)
 trap 'rm -rf "$_testdir"' EXIT
 
+# Prevent any test from opening an interactive editor
+export EDITOR="sh -c 'printf \"edited by test\n\" > \"\$1\"' --"
+export VISUAL="$EDITOR"
+export GIT_EDITOR="$EDITOR"
+export HGEDITOR="$EDITOR"
+export JJ_EDITOR="$EDITOR"
+
 ###############
 # Test vcs detection
 
@@ -309,6 +316,7 @@ _git_local2="$_testdir/git_local2"
 )
 git clone "$_git_remote" "$_git_local2" >/dev/null 2>&1
 git -C "$_git_local2" config commit.gpgsign false
+git -C "$_git_local2" config core.hooksPath /dev/null
 (
     cd "$_git_local2"
     echo "remote content" > remotefile.txt
@@ -455,6 +463,125 @@ assert_true "jj_outgoing shows second commit" grep -q 'jj second commit' <<< "$r
 
 else
 echo "SKIP: jj not installed, skipping jj integration tests"
+fi
+
+###############
+# Test git commit, amend, recommit, reword
+
+# git_commit with -m and no files should use --all
+(
+    cd "$_git_local"
+    echo "commit-test" > commitfile.txt
+    git add commitfile.txt
+)
+(cd "$_git_local" && git_commit -m "git commit test" >/dev/null 2>&1)
+result=$(cd "$_git_local" && git log -1 --format=%s)
+assert_equal "git_commit with -m" "git commit test" "$result"
+
+# git_commit with -m and specific files should not use --all
+(
+    cd "$_git_local"
+    echo "staged" > staged.txt
+    echo "unstaged" > unstaged.txt
+    git add staged.txt unstaged.txt
+    echo "modified-unstaged" > unstaged.txt
+)
+(cd "$_git_local" && git_commit -m "partial commit" -- staged.txt >/dev/null 2>&1)
+result=$(cd "$_git_local" && git diff --name-only)
+assert_true "git_commit with files leaves unstaged changes" grep -q 'unstaged.txt' <<< "$result"
+
+# git_commit with no args commits all (--all is added)
+(
+    cd "$_git_local"
+    echo "all-content" > allfile.txt
+    git add allfile.txt
+)
+(cd "$_git_local" && git_commit -m "commit all" >/dev/null 2>&1)
+result=$(cd "$_git_local" && git status --short)
+assert_equal "git_commit no files commits all" "" "$result"
+
+# git_amend updates the last commit without changing the message
+(
+    cd "$_git_local"
+    echo "amend-content" > amendfile.txt
+    git add amendfile.txt
+)
+(cd "$_git_local" && git_amend >/dev/null 2>&1)
+result=$(cd "$_git_local" && git log -1 --format=%s)
+assert_equal "git_amend preserves message" "commit all" "$result"
+assert_true "git_amend includes new file" \
+    bash -c "cd '$_git_local' && git show --stat HEAD | grep -q amendfile.txt"
+
+# git_reword changes the commit message (uses GIT_EDITOR set above)
+(cd "$_git_local" && git_reword >/dev/null 2>&1)
+result=$(cd "$_git_local" && git log -1 --format=%s)
+assert_equal "git_reword changes message" "edited by test" "$result"
+
+###############
+# Test hg commit, amend, recommit, reword
+
+if command -v hg >/dev/null 2>&1; then
+
+# hg_commit creates a new changeset
+(
+    cd "$_hg_local"
+    echo "commit-test" > commitfile.txt
+    hg add commitfile.txt
+)
+(cd "$_hg_local" && hg_commit -m "hg commit test" -u "test <test@test.com>" >/dev/null 2>&1)
+result=$(cd "$_hg_local" && hg log -r . --template '{desc}')
+assert_equal "hg_commit with -m" "hg commit test" "$result"
+
+# hg_recommit amends with new message
+(cd "$_hg_local" && hg_recommit -m "hg recommit msg" -u "test <test@test.com>" >/dev/null 2>&1)
+result=$(cd "$_hg_local" && hg log -r . --template '{desc}')
+assert_equal "hg_recommit changes message" "hg recommit msg" "$result"
+
+# hg_recommit can also add files (commit --amend)
+(
+    cd "$_hg_local"
+    echo "amend-content" > amendfile.txt
+    hg add amendfile.txt
+)
+(cd "$_hg_local" && hg_recommit -m "hg recommit msg" -u "test <test@test.com>" >/dev/null 2>&1)
+assert_true "hg_recommit includes new file" \
+    bash -c "cd '$_hg_local' && hg log -r . --template '{file_adds}' | grep -q amendfile.txt"
+
+fi
+
+###############
+# Test jj commit, amend, recommit, reword
+
+if command -v jj >/dev/null 2>&1; then
+
+# jj_commit creates a new commit
+(
+    cd "$_jj_repo"
+    echo "commit-test" > jj_commitfile.txt
+)
+(cd "$_jj_repo" && jj_commit -m "jj commit test" >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj log --no-graph -r @- -T 'description')
+assert_true "jj_commit with -m" grep -q 'jj commit test' <<< "$result"
+
+# jj_amend squashes working copy into parent
+(
+    cd "$_jj_repo"
+    echo "amend-content" > jj_amendfile.txt
+)
+(cd "$_jj_repo" && jj_amend >/dev/null 2>&1)
+assert_true "jj_amend squashes into parent" \
+    bash -c "cd '$_jj_repo' && jj file show jj_amendfile.txt -r @- 2>/dev/null | grep -q amend-content"
+
+# jj_recommit updates the description
+(cd "$_jj_repo" && jj_recommit -m "jj recommit msg" >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
+assert_true "jj_recommit changes description" grep -q 'jj recommit msg' <<< "$result"
+
+# jj_reword with args uses -m
+(cd "$_jj_repo" && jj_reword "jj reword msg" >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
+assert_true "jj_reword with args" grep -q 'jj reword msg' <<< "$result"
+
 fi
 
 ###############
