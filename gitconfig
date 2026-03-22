@@ -115,6 +115,7 @@
 
 [init]
     templatedir = ~/.gittemplates
+    defaultBranch = main
 
 [status]
     showUntrackedFiles = all
