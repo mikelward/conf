@@ -12,7 +12,7 @@ endif
 " read common startup commands for all Vi implementations
 if filereadable(expand("~/.exrc"))
     source ~/.exrc
-end
+endif
 
 " DEFAULT OPTIONS
 set nocompatible	" make Vim default to nicer options
