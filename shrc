@@ -1717,12 +1717,15 @@ exec zsh -i'
 
     # return whether the given shell option is on
     getshopt() {
-        set -o | while read opt val; do
-            if test "$opt" = "$1"; then
-                test "$val" = "on"
+        local _opt _val
+        while read _opt _val; do
+            if test "$_opt" = "$1"; then
+                test "$_val" = "on"
                 return
             fi
-        done
+        done <<EOF
+$(set -o)
+EOF
         false
     }
 
