@@ -432,8 +432,13 @@ bak() {
 unbak() {
     local file
     for file in "$@"; do
-        test -e "$file" && mv -i "$file" "${file%.bak}"
-        test -e "${file}.bak" && mv -i "${file}.bak" "$file"
+        case "$file" in *.bak)
+            test -e "$file" && mv -i "$file" "${file%.bak}"
+            ;;
+        *)
+            test -e "${file}.bak" && mv -i "${file}.bak" "$file"
+            ;;
+        esac
     done
 }
 
@@ -829,7 +834,9 @@ tz2tz() {
 
 # convert from Unix timestamp in micros to a human-readable datetime string
 udate() {
-    date -d @$(($1 / 1000000)) "$@"
+    local _ts=$1
+    shift
+    date -d @$(($_ts / 1000000)) "$@"
 }
 
 # convert from UTC to local time
