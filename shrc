@@ -1246,7 +1246,7 @@ if is_interactive; then
     # (ls is done above)
     quiet grep -q --color=auto "" /etc/hosts && alias grep='grep --color=auto'
 
-    alias ginfo=$(path info)
+    have_command info && alias ginfo=$(path info)
     # aliases to abstract away differences between package managers
     if have_command yum; then
         alias yum='root yum --cacheonly'
