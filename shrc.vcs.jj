@@ -119,7 +119,11 @@ jj_revert() {
 }
 
 jj_reword() {
-    jj describe -m "$@"
+    if test $# -eq 0; then
+        jj describe
+    else
+        jj describe -m "$@"
+    fi
 }
 
 jj_rootdir() {
