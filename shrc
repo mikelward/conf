@@ -1640,9 +1640,9 @@ if is_interactive; then
     # ssh to remote host using current shell's config
     mssh() {
         case $SHELL in
-        *bash) bssh $ssh_opts "$@";;
-        *zsh)  zssh $ssh_opts "$@";;
-        *)     ssh  $ssh_opts "$@";;
+        *bash) bssh "$@";;
+        *zsh)  zssh "$@";;
+        *)     ssh  "$@";;
         esac
     }
 
@@ -1658,7 +1658,7 @@ if is_interactive; then
         esac
         ssh $ssh_opts -t "$@" '
 export BASHRC=$(mktemp /tmp/bash.XXXXXXXX);
-scp $ssh_opts '"$HOSTNAME:${BASHRC:-.bashrc}"' "$BASHRC";
+scp '"$ssh_opts"' '"$HOSTNAME:${BASHRC:-.bashrc}"' "$BASHRC";
 exec bash --rcfile "$BASHRC" -i'
     }
 
@@ -1674,7 +1674,7 @@ exec bash --rcfile "$BASHRC" -i'
         esac
         ssh $ssh_opts -t "$@" '
 export ZDOTDIR=$(mktemp -d /tmp/zsh.XXXXXXXX);
-scp $ssh_opts '"$HOSTNAME:${ZDOTDIR:-$HOME}/.zshrc"' "$ZDOTDIR";
+scp '"$ssh_opts"' '"$HOSTNAME:${ZDOTDIR:-$HOME}/.zshrc"' "$ZDOTDIR";
 exec zsh -i'
     }
 
