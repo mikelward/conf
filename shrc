@@ -29,7 +29,7 @@ is_bash() {
 }
 
 is_dash() {
-    test "$0" = "dash"
+    case "$0" in */dash|dash) true;; *) false;; esac
 }
 
 is_ksh() {
@@ -37,7 +37,7 @@ is_ksh() {
 }
 
 is_sh() {
-    test "$0" = "sh"
+    case "$0" in */sh|sh) true;; *) false;; esac
 }
 
 if is_sh || is_dash; then
