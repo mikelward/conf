@@ -21,6 +21,7 @@ changeset.public = none
 [ui]
 ignore = ~/.hgexclude
 merge = meld
+username = Mikel Ward <mikel@mikelward.com>
 
 [alias]
 graph = log --graph --template=twoline
