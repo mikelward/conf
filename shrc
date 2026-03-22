@@ -382,7 +382,7 @@ get_ptr_records() {
 with_address_records() {
     local hostname
     while read -r hostname; do
-        echo "$hostname $(join " " $(addr $hostname))"
+        echo "$hostname $(join " " $(addr "$hostname"))"
     done
 }
 
