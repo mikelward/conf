@@ -309,7 +309,6 @@ _git_local2="$_testdir/git_local2"
 )
 git clone "$_git_remote" "$_git_local2" >/dev/null 2>&1
 git -C "$_git_local2" config commit.gpgsign false
-chmod -x "$_git_local2/.git/hooks/pre-commit" 2>/dev/null || true
 (
     cd "$_git_local2"
     echo "remote content" > remotefile.txt
@@ -457,6 +456,30 @@ assert_true "jj_outgoing shows second commit" grep -q 'jj second commit' <<< "$r
 else
 echo "SKIP: jj not installed, skipping jj integration tests"
 fi
+
+###############
+# Test cross-VCS consistency: every command in shrc.vcs dispatch loop
+# must have a corresponding function in each backend.
+
+_shrc_vcs="$(dirname "$0")/shrc.vcs"
+
+# Extract the command list from the dispatch loop in shrc.vcs
+_commands=$(
+    sed -n '/^for command in/,/; do$/p' "$_shrc_vcs" |
+    tr ' \\\n' '\n' |
+    sed 's/[;]//g' |
+    grep -v '^for$\|^command$\|^in$\|^do$\|^$'
+)
+
+for _backend in git hg jj; do
+    _backend_file="$(dirname "$0")/shrc.vcs.$_backend"
+    for _cmd in $_commands; do
+        assert_true "${_backend}_${_cmd} defined" \
+            grep -q "^${_backend}_${_cmd}()" "$_backend_file"
+    done
+done
+
+unset _shrc_vcs _commands _backend _backend_file _cmd
 
 echo
 if test "$failures" -eq 0; then

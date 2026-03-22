@@ -86,6 +86,11 @@ jj_graph() {
     jj log "$@"
 }
 
+jj_histedit() {
+    echo "no interactive histedit in jj; use: jj squash, jj split, jj edit" >&2
+    return 1
+}
+
 jj_ignore() {
     (
         cd "$(jj workspace root)"
