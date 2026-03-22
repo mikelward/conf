@@ -903,7 +903,7 @@ done
 add_path /sbin end
 add_path /usr/sbin end
 if have_command brew; then
-    eval $(brew shellenv)
+    eval "$(brew shellenv)"
 fi
 
 # set HISTORY_FILE for log_history
