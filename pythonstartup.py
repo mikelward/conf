@@ -4,6 +4,6 @@ try:
     import readline
     import rlcompleter
 except ImportError:
-    print >>sys.stderr, 'readline/rlcompleter module not available'
+    print('readline/rlcompleter module not available', file=sys.stderr)
 else:
     readline.parse_and_bind('tab: complete')
