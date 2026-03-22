@@ -77,6 +77,45 @@ implied_prefix() {
   :
 }
 
+target_relative_to() {
+    local _target="$1"
+    local _from="${2:-.}"
+
+    # normalize "." to empty
+    test "$_from" = "." && _from=""
+    test "$_target" = "." && _target=""
+
+    # strip common leading path components
+    while test -n "$_from"; do
+        local _ff="${_from%%/*}"
+        local _ft="${_target%%/*}"
+        test "$_ff" != "$_ft" && break
+        case "$_from" in
+            */*) _from="${_from#*/}" ;;
+            *)   _from="" ;;
+        esac
+        case "$_target" in
+            */*) _target="${_target#*/}" ;;
+            *)   _target="" ;;
+        esac
+    done
+
+    # prepend ../ for each remaining component in _from
+    local _result=""
+    while test -n "$_from"; do
+        _result="../${_result}"
+        case "$_from" in
+            */*) _from="${_from#*/}" ;;
+            *)   break ;;
+        esac
+    done
+
+    _result="${_result}${_target}"
+    _result="${_result%/}"
+    test -z "$_result" && _result="."
+    echo "$_result"
+}
+
 relative_path() {
     local _target="$1"
     local _relative_to="${2:-$(subdir)}"
