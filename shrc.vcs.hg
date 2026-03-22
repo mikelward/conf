@@ -54,7 +54,7 @@ hg_commit() {
 }
 
 hg_commitforce() {
-    hg --config hooks.precommit= -config hooks.pre-commit= commit "$@"
+    hg --config hooks.precommit= --config hooks.pre-commit= commit "$@"
 }
 
 hg_diffs() {
