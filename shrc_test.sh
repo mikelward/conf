@@ -118,6 +118,41 @@ PATH="/usr/local/bin:/usr/bin:/bin"
 add_path /usr/local/bin end
 assert_equal "add_path end moves existing to end" "/usr/bin:/bin:/usr/local/bin" "$PATH"
 
+# Test PATH functions with paths containing spaces
+_tmpdir=$(mktemp -d)
+mkdir -p "$_tmpdir/my programs/bin"
+mkdir -p "$_tmpdir/path (v2)/bin"
+mkdir -p "$_tmpdir/path\$HOME/bin"
+
+PATH="/usr/bin:/bin"
+prepend_path "$_tmpdir/my programs/bin"
+assert_equal "prepend_path with spaces" "$_tmpdir/my programs/bin:/usr/bin:/bin" "$PATH"
+
+append_path "$_tmpdir/path (v2)/bin"
+assert_equal "append_path with parens" "$_tmpdir/my programs/bin:/usr/bin:/bin:$_tmpdir/path (v2)/bin" "$PATH"
+
+inpath "$_tmpdir/my programs/bin"
+assert_equal "inpath with spaces" "0" "$?"
+
+inpath "$_tmpdir/path (v2)/bin"
+assert_equal "inpath with parens" "0" "$?"
+
+delete_path "$_tmpdir/my programs/bin"
+assert_equal "delete_path with spaces" "/usr/bin:/bin:$_tmpdir/path (v2)/bin" "$PATH"
+
+delete_path "$_tmpdir/path (v2)/bin"
+assert_equal "delete_path with parens" "/usr/bin:/bin" "$PATH"
+
+# Test add_path with special chars
+add_path "$_tmpdir/path (v2)/bin" start
+assert_equal "add_path start with parens" "$_tmpdir/path (v2)/bin:/usr/bin:/bin" "$PATH"
+
+PATH="/usr/bin:/bin"
+add_path "$_tmpdir/my programs/bin" end
+assert_equal "add_path end with spaces" "/usr/bin:/bin:$_tmpdir/my programs/bin" "$PATH"
+
+rm -rf "$_tmpdir"
+
 # Restore PATH for remaining tests
 PATH="/usr/bin:/bin"
 
@@ -201,6 +236,21 @@ assert_equal "find_test_file finds go test" "${_tmpdir}/bar_test.go" "$result"
 result=$(find_test_file "$_tmpdir/missing.py")
 assert_equal "find_test_file returns empty for missing" "" "$result"
 
+# Test find_test_file with nested directories
+mkdir -p "$_tmpdir/src/pkg/sub"
+touch "$_tmpdir/src/pkg/sub/handler.py"
+touch "$_tmpdir/src/pkg/sub/handler_test.py"
+
+result=$(find_test_file "$_tmpdir/src/pkg/sub/handler.py")
+assert_equal "find_test_file finds nested test" "$_tmpdir/src/pkg/sub/handler_test.py" "$result"
+
+# Test find_test_file with nested dir but no test file
+mkdir -p "$_tmpdir/src/deep/dir"
+touch "$_tmpdir/src/deep/dir/utils.go"
+
+result=$(find_test_file "$_tmpdir/src/deep/dir/utils.go")
+assert_equal "find_test_file empty for nested missing test" "" "$result"
+
 rm -rf "$_tmpdir"
 
 # Test path
@@ -239,6 +289,30 @@ result=$(cat "$_tmpfile")
 expected="line1
 line3"
 assert_equal "delline removes specified line" "$expected" "$result"
+rm -f "$_tmpfile"
+
+# Test delline on empty file
+_tmpfile=$(mktemp)
+printf '' > "$_tmpfile"
+delline 1 "$_tmpfile"
+result=$(cat "$_tmpfile")
+assert_equal "delline on empty file" "" "$result"
+rm -f "$_tmpfile"
+
+# Test delline on single-line file
+_tmpfile=$(mktemp)
+printf 'only line\n' > "$_tmpfile"
+delline 1 "$_tmpfile"
+result=$(cat "$_tmpfile")
+assert_equal "delline removes only line" "" "$result"
+rm -f "$_tmpfile"
+
+# Test delline on single-line file removing non-existent line
+_tmpfile=$(mktemp)
+printf 'only line\n' > "$_tmpfile"
+delline 5 "$_tmpfile"
+result=$(cat "$_tmpfile")
+assert_equal "delline no-op for out of range line" "only line" "$result"
 rm -f "$_tmpfile"
 
 ###############
