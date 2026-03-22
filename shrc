@@ -176,16 +176,15 @@ inpath() {
 add_path() {
   local _dir=$1
   local _where=$2
-  local _newpath=$PATH
 
   case "$_where" in start|end)
-    delete_path "$_dir" "$_newpath"
+    delete_path "$_dir"
     case "$_where" in
     start)
-      prepend_path "$_dir" "$_newpath" || true
+      prepend_path "$_dir" || true
       ;;
     end)
-      append_path "$_dir" "$_newpath" || true
+      append_path "$_dir" || true
       ;;
     esac
     ;;
