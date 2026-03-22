@@ -171,6 +171,46 @@ status() { :; }
 result=$(status_chars)
 assert_equal "status_chars returns empty for clean" "" "$result"
 
+# Single status code
+status() { printf 'M  file1.txt\n'; }
+result=$(status_chars)
+assert_equal "status_chars single modified file" "M" "$result"
+
+# Only untracked files
+status() { printf '?? file1.txt\n?? file2.txt\n'; }
+result=$(status_chars)
+assert_equal "status_chars only untracked" "??" "$result"
+
+# Two-character status codes (e.g. git staged+unstaged)
+status() { printf 'AM file1.txt\nMM file2.txt\n'; }
+result=$(status_chars)
+assert_equal "status_chars two-char codes" "AM MM" "$result"
+
+# Status codes with ! (e.g. hg missing)
+status() { printf '! file1.txt\nM file2.txt\n'; }
+result=$(status_chars)
+assert_equal "status_chars with ! status" "! M" "$result"
+
+# Ignored files (!!) should be recognized
+status() { printf '!! ignored.txt\n?? untracked.txt\n'; }
+result=$(status_chars)
+assert_equal "status_chars ignored and untracked" "!! ??" "$result"
+
+# Lines with lowercase or non-matching first fields are filtered out
+status() { printf 'M  file1.txt\nfoo bar.txt\n123 baz.txt\n'; }
+result=$(status_chars)
+assert_equal "status_chars filters non-matching lines" "M" "$result"
+
+# Duplicate codes are deduplicated
+status() { printf 'A  f1\nA  f2\nA  f3\n'; }
+result=$(status_chars)
+assert_equal "status_chars deduplicates" "A" "$result"
+
+# Many distinct codes are sorted
+status() { printf 'R  f1\nD  f2\nA  f3\nM  f4\n'; }
+result=$(status_chars)
+assert_equal "status_chars sorts codes" "A D M R" "$result"
+
 unset -f status
 
 ###############
