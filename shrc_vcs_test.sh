@@ -59,16 +59,7 @@ trim_prefix() {
     echo "${_target#$_prefix}"
 }
 
-# We need target_relative_to if it exists; stub it for now
-target_relative_to() {
-    local _target="$1"
-    local _relative_to="$2"
-    # Simple implementation: if target starts with relative_to, strip it
-    # For testing purposes, use python or a basic approach
-    python3 -c "import os.path; print(os.path.relpath('$_target', '$_relative_to'))" 2>/dev/null || echo "$_target"
-}
-
-# Source shrc.vcs
+# Source shrc.vcs (provides target_relative_to and other functions)
 # shellcheck source=shrc.vcs
 source "$(dirname "$0")/shrc.vcs"
 
@@ -198,6 +189,21 @@ allknown >/dev/null
 assert_equal "allknown returns true when no unknown files" "0" "$?"
 
 unset -f unknown
+
+###############
+# Test target_relative_to
+
+result=$(target_relative_to "src/foo.txt" "src")
+assert_equal "target_relative_to same parent" "foo.txt" "$result"
+
+result=$(target_relative_to "src/foo.txt" "lib")
+assert_equal "target_relative_to sibling dir" "../src/foo.txt" "$result"
+
+result=$(target_relative_to "foo.txt" ".")
+assert_equal "target_relative_to from dot" "foo.txt" "$result"
+
+result=$(target_relative_to "a/b/c" "a")
+assert_equal "target_relative_to nested" "b/c" "$result"
 
 ###############
 # Test project
