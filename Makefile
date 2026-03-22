@@ -5,3 +5,4 @@ test:
 	@fish -n config/fish/config.fish
 	@dash shrc_test.sh
 	@bash shrc_test.sh
+	@bash shrc_vcs_test.sh
