@@ -5,20 +5,25 @@ git_add() {
 
 git_amend() {
     declare -a flags
-    for arg; do
-        case "$arg" in
+    while test $# -gt 0; do
+        case "$1" in
         --)
-            flags+=("$arg")
+            flags+=("$1")
+            shift
             break
             ;;
+        -m|-C|-c|-F|-t)
+            flags+=("$1" "$2")
+            shift 2
+            ;;
         -*)
-            flags+=("$arg")
+            flags+=("$1")
+            shift
             ;;
         *)
             break
             ;;
         esac
-        shift
     done
     # no files given, commit them all
     test $# -eq 0 && flags+=("--all")
@@ -66,20 +71,25 @@ git_checkout() {
 
 git_commit() (
     declare -a flags
-    for arg; do
-        case "$arg" in
+    while test $# -gt 0; do
+        case "$1" in
         --)
-            flags+=("$arg")
+            flags+=("$1")
+            shift
             break
             ;;
+        -m|-C|-c|-F|-t)
+            flags+=("$1" "$2")
+            shift 2
+            ;;
         -*)
-            flags+=("$arg")
+            flags+=("$1")
+            shift
             ;;
         *)
             break
             ;;
         esac
-        shift
     done
     # no files given, commit them all
     test $# -eq 0 && flags+=("--all")
