@@ -1,10 +1,6 @@
 #!/bin/bash
 # Version control additions to .shrc.
 
-# Cache of version control system used by a given directory.
-declare -A vcs
-declare -A rootdir
-
 # print the name of the version control system in use in $PWD
 # TODO: implement in terms of rootdir
 vcs() {
@@ -26,7 +22,7 @@ vcs() {
         if test -f .vcs_cache; then
             read _vcs _rootdir <.vcs_cache
         elif test -w .; then
-            read _vcs _rootdir <<<$(
+            read _vcs _rootdir <<<"$(
                 while test "$PWD" != "/"; do
                     test -e ".jj" && echo "jj $PWD" && break
                     test -e ".hg" && echo "hg $PWD" && break
@@ -35,7 +31,7 @@ vcs() {
                     test -e ".p4config" && echo "g4 $PWD" && break
                     cd ..
                 done
-            )
+            )"
             # This can fail if the filesystem is read-only.
             # Ignore errors.
             { echo "$_vcs $_rootdir" >.vcs_cache ; } 2>/dev/null
