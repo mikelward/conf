@@ -710,7 +710,7 @@ envgrep() {
     pattern="$1"
     shift
     for pid in "$@"; do
-        grep -z "$pattern" /proc/$pid/environ
+        grep -z "$pattern" /proc/"$pid"/environ
     done
 }
 
