@@ -100,6 +100,10 @@ git_commitforce() {
     git_commit --no-verify "$@"
 }
 
+git_diffedit() {
+    git rebase --interactive "$@"
+}
+
 git_diffs() {
     git diff "$@"
 }
@@ -146,6 +150,10 @@ git_outgoing() {
     git log --oneline @{push}..HEAD
 }
 
+git_pending() {
+    git log --oneline @{upstream}..HEAD 2>/dev/null || git status --short
+}
+
 git_pick() {
     git cherry-pick "$@"
 }
@@ -184,6 +192,10 @@ git_hook() {
 	fi
 }
 
+git_rebase() {
+    git rebase "$@"
+}
+
 git_recommit() {
     git amend "$@"
 }
@@ -217,6 +229,14 @@ git_status() {
     git status --short --untracked-files=all "$@"
 }
 
+git_split() {
+    git rebase -i "$@"
+}
+
+git_squash() {
+    git merge --squash "$@"
+}
+
 git_submit() {
     git push "$@"
 }
@@ -227,6 +247,10 @@ git_submitforce() {
 
 git_track() {
     git add --intent-to-add "$@"
+}
+
+git_undo() {
+    git reset --mixed HEAD~
 }
 
 git_unamend() {

@@ -50,9 +50,17 @@ jj_changes() {
     jj diff "$@"
 }
 
+jj_checkout() {
+    jj edit "$@"
+}
+
 jj_commit() (
     jj commit "$@"
 )
+
+jj_commitforce() {
+    jj commit "$@"
+}
 
 jj_diffedit() {
     jj diffedit "$@"
@@ -70,6 +78,10 @@ jj_fix() {
     jj fix "$@"
 }
 
+jj_graft() {
+    jj duplicate "$@"
+}
+
 jj_graph() {
     jj log "$@"
 }
@@ -82,8 +94,28 @@ jj_ignore() {
     )
 }
 
+jj_incoming() {
+    jj op log "$@"
+}
+
+jj_lint() {
+    jj fix "$@"
+}
+
 jj_outgoing() {
   jj --no-pager log --no-graph -r 'mutable() ~ empty()' --template 'builtin_log_oneline' "$@"
+}
+
+jj_pending() {
+    jj log -r 'mutable() ~ empty()' "$@"
+}
+
+jj_pick() {
+    jj duplicate "$@"
+}
+
+jj_precommit() {
+    jj fix "$@"
 }
 
 jj_presubmit() {
@@ -104,6 +136,14 @@ jj_push() {
 
 jj_rebase() {
     jj rebase "$@"
+}
+
+jj_recommit() {
+    jj describe "$@"
+}
+
+jj_review() {
+    jj upload "$@"
 }
 
 jj_resolve() {
@@ -146,12 +186,24 @@ jj_submit() {
     jj submit "$@"
 }
 
+jj_submitforce() {
+    jj submit "$@"
+}
+
 jj_track() {
     jj file track "$@"
 }
 
+jj_unamend() {
+    jj undo "$@"
+}
+
 jj_undo() {
     jj undo "$@"
+}
+
+jj_unknown() {
+    jj file list --untracked "$@"
 }
 
 jj_untrack() {
@@ -159,5 +211,9 @@ jj_untrack() {
 }
 
 jj_upload() {
+    jj upload "$@"
+}
+
+jj_uploadchain() {
     jj upload "$@"
 }
