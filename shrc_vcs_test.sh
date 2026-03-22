@@ -254,6 +254,207 @@ result=$(project)
 assert_equal "project returns basename of projectroot" "myproject" "$result"
 unset -f projectroot
 
+###############
+# Test git outgoing and incoming with real repos
+
+# Source git VCS functions
+source "$(dirname "$0")/shrc.vcs.git"
+
+# Create a "remote" bare repo and a local clone
+_git_remote="$_testdir/git_remote.git"
+_git_local="$_testdir/git_local"
+
+git init --bare "$_git_remote" >/dev/null 2>&1
+
+git clone "$_git_remote" "$_git_local" >/dev/null 2>&1
+
+# Disable commit signing in test repos (may be enforced by global config)
+git -C "$_git_local" config commit.gpgsign false
+
+# Create an initial commit on the local clone and push it
+(
+    cd "$_git_local"
+    git commit --allow-empty -m "initial commit" >/dev/null 2>&1
+    git push -u origin master >/dev/null 2>&1
+)
+
+# Test git_outgoing with no unpushed commits
+result=$(cd "$_git_local" && git_outgoing 2>&1)
+assert_equal "git_outgoing no unpushed commits" "" "$result"
+
+# Create a local commit that hasn't been pushed
+(
+    cd "$_git_local"
+    echo "new content" > newfile.txt
+    git add newfile.txt
+    git commit -m "local commit" >/dev/null 2>&1
+)
+
+# Test git_outgoing shows the unpushed commit
+result=$(cd "$_git_local" && git_outgoing 2>&1)
+assert_true "git_outgoing shows unpushed commit" test -n "$result"
+assert_true "git_outgoing contains commit message" bash -c "echo '$result' | grep -q 'local commit'"
+
+# Test git_incoming with no new remote commits
+result=$(cd "$_git_local" && git fetch 2>&1 && git_incoming 2>&1)
+assert_equal "git_incoming no new commits" "" "$result"
+
+# Push the local commit, then create a new remote commit from a second clone
+_git_local2="$_testdir/git_local2"
+(
+    cd "$_git_local"
+    git push >/dev/null 2>&1
+)
+git clone "$_git_remote" "$_git_local2" >/dev/null 2>&1
+git -C "$_git_local2" config commit.gpgsign false
+(
+    cd "$_git_local2"
+    echo "remote content" > remotefile.txt
+    git add remotefile.txt
+    git commit -m "remote commit" >/dev/null 2>&1
+    git push >/dev/null 2>&1
+)
+
+# Test git_incoming shows the new remote commit
+result=$(cd "$_git_local" && git fetch 2>&1 && git_incoming 2>&1)
+assert_true "git_incoming shows new remote commit" test -n "$result"
+assert_true "git_incoming contains commit message" bash -c "echo '$result' | grep -q 'remote commit'"
+
+# Test git_pending shows unpushed commits
+(
+    cd "$_git_local"
+    echo "pending content" > pendingfile.txt
+    git add pendingfile.txt
+    git commit -m "pending commit" >/dev/null 2>&1
+)
+result=$(cd "$_git_local" && git_pending 2>&1)
+assert_true "git_pending shows pending commit" test -n "$result"
+assert_true "git_pending contains commit message" bash -c "echo '$result' | grep -q 'pending commit'"
+
+###############
+# Test hg outgoing and incoming with real repos
+
+# Source hg VCS functions
+source "$(dirname "$0")/shrc.vcs.hg"
+
+if command -v hg >/dev/null 2>&1; then
+
+# Create a "remote" hg repo and a local clone
+_hg_remote="$_testdir/hg_remote"
+_hg_local="$_testdir/hg_local"
+
+hg init "$_hg_remote"
+(
+    cd "$_hg_remote"
+    echo "initial" > file.txt
+    hg add file.txt
+    hg commit -m "initial commit" -u "test <test@test.com>"
+)
+hg clone "$_hg_remote" "$_hg_local" >/dev/null 2>&1
+
+# Test hg_outgoing with no unpushed commits (returns exit 1)
+result=$(cd "$_hg_local" && hg_outgoing 2>&1)
+rc=$?
+assert_equal "hg_outgoing no unpushed returns 1" "1" "$rc"
+
+# Create a local commit
+(
+    cd "$_hg_local"
+    echo "local content" > localfile.txt
+    hg add localfile.txt
+    hg commit -m "hg local commit" -u "test <test@test.com>"
+)
+
+# Test hg_outgoing shows the unpushed commit
+result=$(cd "$_hg_local" && hg_outgoing 2>&1)
+rc=$?
+assert_equal "hg_outgoing with unpushed returns 0" "0" "$rc"
+assert_true "hg_outgoing produces output" test -n "$result"
+
+# Test hg_incoming with no new remote commits (returns exit 1)
+result=$(cd "$_hg_local" && hg_incoming 2>&1)
+rc=$?
+assert_equal "hg_incoming no new returns 1" "1" "$rc"
+
+# Create a remote commit
+(
+    cd "$_hg_remote"
+    echo "remote content" > remotefile.txt
+    hg add remotefile.txt
+    hg commit -m "hg remote commit" -u "test <test@test.com>"
+)
+
+# Test hg_incoming shows the new remote commit
+result=$(cd "$_hg_local" && hg_incoming 2>&1)
+rc=$?
+assert_equal "hg_incoming with new returns 0" "0" "$rc"
+assert_true "hg_incoming produces output" test -n "$result"
+
+# Test hg_pending shows status
+(
+    cd "$_hg_local"
+    echo "modified" >> file.txt
+)
+result=$(cd "$_hg_local" && hg_pending 2>&1)
+assert_true "hg_pending shows modified files" test -n "$result"
+
+else
+echo "SKIP: hg not installed, skipping hg integration tests"
+fi
+
+###############
+# Test jj outgoing and incoming with real repos
+
+# Source jj VCS functions
+source "$(dirname "$0")/shrc.vcs.jj"
+
+if command -v jj >/dev/null 2>&1; then
+
+# Create a jj repo
+_jj_repo="$_testdir/jj_repo"
+jj git init "$_jj_repo" >/dev/null 2>&1
+
+# Test jj_outgoing with no commits (empty repo)
+result=$(cd "$_jj_repo" && jj_outgoing 2>&1)
+assert_equal "jj_outgoing empty repo" "" "$result"
+
+# Create a commit
+(
+    cd "$_jj_repo"
+    echo "jj content" > jjfile.txt
+    jj commit -m "jj test commit" >/dev/null 2>&1
+)
+
+# Test jj_outgoing shows the commit
+result=$(cd "$_jj_repo" && jj_outgoing 2>&1)
+assert_true "jj_outgoing shows mutable commit" test -n "$result"
+assert_true "jj_outgoing contains commit message" bash -c "echo '$result' | grep -q 'jj test commit'"
+
+# Test jj_incoming shows operation log
+result=$(cd "$_jj_repo" && jj_incoming 2>&1)
+assert_true "jj_incoming shows op log" test -n "$result"
+assert_true "jj_incoming contains commit operation" bash -c "echo '$result' | grep -q 'commit'"
+
+# Test jj_pending shows mutable commits
+result=$(cd "$_jj_repo" && jj_pending 2>&1)
+assert_true "jj_pending shows pending commits" test -n "$result"
+assert_true "jj_pending contains commit message" bash -c "echo '$result' | grep -q 'jj test commit'"
+
+# Create a second commit and verify both show up
+(
+    cd "$_jj_repo"
+    echo "more jj content" > jjfile2.txt
+    jj commit -m "jj second commit" >/dev/null 2>&1
+)
+
+result=$(cd "$_jj_repo" && jj_outgoing 2>&1)
+assert_true "jj_outgoing shows first commit" bash -c "echo '$result' | grep -q 'jj test commit'"
+assert_true "jj_outgoing shows second commit" bash -c "echo '$result' | grep -q 'jj second commit'"
+
+else
+echo "SKIP: jj not installed, skipping jj integration tests"
+fi
+
 echo
 if test "$failures" -eq 0; then
     echo "All tests passed."
