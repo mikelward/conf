@@ -101,7 +101,7 @@ git_commitforce() {
 }
 
 git_diffedit() {
-    git add --patch "$@"
+    git rebase --interactive "$@"
 }
 
 git_diffs() {
