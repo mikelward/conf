@@ -1781,7 +1781,8 @@ EOF
             arg="$(jobs "$arg" | sed -e 's/^\[[0-9][0-9]*\][-+ ]*[^ ]* *//')"
             ;;
         esac
-        printf '%s' "$arg" "$@"
+        printf '%s' "$arg"
+        test $# -gt 0 && printf ' %s' "$@"
     }
 
     # print the supplied string inside prompt escape sequences
