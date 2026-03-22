@@ -697,7 +697,7 @@ pgroup() {
 # e.g. pegrep SSH_AUTH_SOCK xfce4
 pegrep() {
     for pid in $(pgrep -f "^$2"); do
-        printf '%s %s\n' "$(ps -o pid= -o args= -p $pid)" "$(envgrep "$1" $pid)"
+        printf '%s %s\n' "$(ps -o pid= -o args= -p "$pid")" "$(envgrep "$1" "$pid")"
     done
 }
 alias peg=pegrep
