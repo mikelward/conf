@@ -514,7 +514,7 @@ cdfile() {
 }
 
 delline() {
-    sed -i -e ${1}d "$2"
+    sed -i -e "${1}d" "$2"
 }
 
 # print the block device associated with the given mount point (or file)
