@@ -269,9 +269,9 @@ git init --bare "$_git_remote" >/dev/null 2>&1
 
 git clone "$_git_remote" "$_git_local" >/dev/null 2>&1
 
-# Disable commit signing and pre-commit hooks
+# Disable commit signing and hooks in test repos
 git -C "$_git_local" config commit.gpgsign false
-chmod -x "$_git_local/.git/hooks/pre-commit" 2>/dev/null || true
+git -C "$_git_local" config core.hooksPath /dev/null
 
 # Create an initial commit on the local clone and push it
 (
