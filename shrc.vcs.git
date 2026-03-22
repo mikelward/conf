@@ -108,6 +108,11 @@ git_diffs() {
     git diff "$@"
 }
 
+git_evolve() {
+    echo "no automatic evolve in git; use: git rebase --onto <new> <old> <branch>" >&2
+    return 1
+}
+
 git_fastforward() {
     git pull --ff-only
 }
