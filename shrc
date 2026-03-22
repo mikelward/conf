@@ -1101,6 +1101,7 @@ if is_interactive; then
         sleep 5
         code --add .
         local _dir
+        # TODO: either only support one directory or handle spaces properly
         for _dir in "$(gendir)"; do
             test -d "$_dir" || continue
             code --add "$_dir"
