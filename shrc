@@ -579,7 +579,7 @@ find_test_file() {
     base=${file%.*}
     ext=${file#$base}
 
-    testfile=${dir:+$dir/}${base}_test$ext
+    testfile=${dir}${base}_test$ext
     [ -e "$testfile" ] && printf '%s' "$testfile"
 }
 
