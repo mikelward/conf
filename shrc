@@ -216,7 +216,7 @@ auth_info() {
 
 # ask the user whether to do something, return true if they say yes or Enter
 confirm() {
-    printf "$*? [Y/n]"
+    printf '%s? [Y/n] ' "$*"
     read REPLY
     case "$REPLY" in
         [Yy]|'')
@@ -281,7 +281,7 @@ on_my_workstation() {
 
 # print an error message
 error() {
-    printf "$*\n" >&2
+    printf '%s\n' "$*" >&2
 }
 
 # return true if the argument is a shell builtin that can be invoked
@@ -348,7 +348,7 @@ run() {
 
 # print an important message that's not quite an error
 warn() {
-    printf "$*\n" >&2
+    printf '%s\n' "$*" >&2
 }
 
 ###################
