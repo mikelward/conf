@@ -1067,7 +1067,7 @@ if is_interactive; then
 
     path_or_empty() {
         local pathname
-        pathname=$(command -v $1)
+        pathname=$(command -v "$1")
         if test -e "$pathname"; then
             echo "$pathname"
         else
