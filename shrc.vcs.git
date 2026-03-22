@@ -226,7 +226,7 @@ git_unamend() {
 }
 
 git_unknown() (
-    cd $(git rootdir)
+    cd "$(git rootdir)"
     git ls-files -od --exclude-standard
 )
 
