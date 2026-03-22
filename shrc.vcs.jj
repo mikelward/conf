@@ -138,6 +138,10 @@ jj_rebase() {
     jj rebase "$@"
 }
 
+jj_evolve() {
+    echo "jj automatically rebases descendants; nothing to do" >&2
+}
+
 jj_recommit() {
     jj describe "$@"
 }
