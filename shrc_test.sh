@@ -241,6 +241,298 @@ line3"
 assert_equal "delline removes specified line" "$expected" "$result"
 rm -f "$_tmpfile"
 
+###############
+# ASSERTION HELPERS
+
+assert_true() {
+    local label="$1"
+    shift
+    if "$@"; then
+        echo "PASS: $label"
+    else
+        echo "FAIL: $label"
+        echo "  expected command to succeed: $*"
+        failures=$((failures + 1))
+    fi
+}
+
+assert_false() {
+    local label="$1"
+    shift
+    if "$@"; then
+        echo "FAIL: $label"
+        echo "  expected command to fail: $*"
+        failures=$((failures + 1))
+    else
+        echo "PASS: $label"
+    fi
+}
+
+###############
+# Extract additional functions for testing.
+
+eval "$(sed -n '/^error()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^warn()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^quiet()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^run()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^is_builtin()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^is_alias()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^is_command()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^have_command()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^is_runnable()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^bak()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^unbak()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^realdir()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^isort()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^age()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^find_up()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^what()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^trydiff()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^applydiff()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^recent()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^connected_via_ssh()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^connected_remotely()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^inside_tmux()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^in_shpool_session()/,/^}/p' "$(dirname "$0")/shrc")"
+
+###############
+# COMMAND INSPECTION
+
+# Test is_builtin
+assert_true "is_builtin cd" is_builtin cd
+assert_false "is_builtin ls" is_builtin ls
+
+# Test is_command
+assert_true "is_command /bin/sh" is_command sh
+assert_false "is_command nonexistent_xyz" is_command nonexistent_xyz
+
+# Test have_command
+assert_true "have_command sh" have_command sh
+assert_false "have_command nonexistent_xyz" have_command nonexistent_xyz
+
+# Test is_runnable (functions, builtins, and commands all count)
+assert_true "is_runnable sh" is_runnable sh
+assert_true "is_runnable cd" is_runnable cd
+assert_true "is_runnable is_runnable (function)" is_runnable is_runnable
+assert_false "is_runnable nonexistent_xyz" is_runnable nonexistent_xyz
+
+# Test is_alias
+alias _test_alias_xyz='echo hi'
+assert_true "is_alias detects alias" is_alias _test_alias_xyz
+assert_false "is_alias not an alias" is_alias nonexistent_xyz
+unalias _test_alias_xyz
+
+###############
+# ERROR AND WARN
+
+# Test error (output goes to stderr)
+result=$(error "test error message" 2>&1)
+assert_equal "error prints to stderr" "test error message" "$result"
+
+# Test warn (output goes to stderr)
+result=$(warn "test warning" 2>&1)
+assert_equal "warn prints to stderr" "test warning" "$result"
+
+###############
+# QUIET
+
+# Test quiet suppresses stdout and stderr
+result=$(quiet echo "should not appear")
+assert_equal "quiet suppresses stdout" "" "$result"
+
+result=$(quiet sh -c 'echo err >&2')
+assert_equal "quiet suppresses stderr" "" "$result"
+
+# Test quiet preserves exit code
+quiet true
+assert_equal "quiet preserves success" "0" "$?"
+
+quiet false
+assert_equal "quiet preserves failure" "1" "$?"
+
+###############
+# RUN
+
+# Test run with SIMULATE=false (default)
+result=$(SIMULATE=false run echo "hello")
+# logger may not be available, so just check it runs
+assert_equal "run executes command" "hello" "$result"
+
+# Test run with SIMULATE=true
+result=$(SIMULATE=true run echo "hello")
+assert_equal "run simulates command" "Would run echo hello" "$result"
+
+###############
+# FILE OPERATIONS
+
+_tmpdir=$(mktemp -d)
+
+# Test bak
+touch "$_tmpdir/testfile"
+(cd "$_tmpdir" && bak testfile)
+assert_true "bak creates .bak file" test -f "$_tmpdir/testfile.bak"
+assert_false "bak removes original" test -f "$_tmpdir/testfile"
+
+# Test unbak with .bak argument
+(cd "$_tmpdir" && unbak testfile.bak)
+assert_true "unbak restores from .bak arg" test -f "$_tmpdir/testfile"
+assert_false "unbak removes .bak" test -f "$_tmpdir/testfile.bak"
+
+# Test unbak with original name argument
+(cd "$_tmpdir" && bak testfile)
+(cd "$_tmpdir" && unbak testfile)
+assert_true "unbak restores from original name" test -f "$_tmpdir/testfile"
+assert_false "unbak removes .bak (original name)" test -f "$_tmpdir/testfile.bak"
+
+# Test bak with multiple files
+touch "$_tmpdir/a" "$_tmpdir/b"
+(cd "$_tmpdir" && bak a b)
+assert_true "bak multiple files a" test -f "$_tmpdir/a.bak"
+assert_true "bak multiple files b" test -f "$_tmpdir/b.bak"
+
+rm -rf "$_tmpdir"
+
+# Test isort
+_tmpfile=$(mktemp)
+printf 'cherry\napple\nbanana\n' > "$_tmpfile"
+isort "$_tmpfile"
+result=$(cat "$_tmpfile")
+expected="apple
+banana
+cherry"
+assert_equal "isort sorts file in place" "$expected" "$result"
+rm -f "$_tmpfile"
+
+# Test realdir
+_tmpdir=$(mktemp -d)
+mkdir -p "$_tmpdir/subdir"
+touch "$_tmpdir/subdir/file"
+result=$(realdir "$_tmpdir/subdir/file")
+expected=$(readlink -f "$_tmpdir/subdir")
+assert_equal "realdir returns absolute directory" "$expected" "$result"
+rm -rf "$_tmpdir"
+
+###############
+# FIND_UP
+
+_tmpdir=$(mktemp -d)
+mkdir -p "$_tmpdir/a/b/c"
+touch "$_tmpdir/a/marker.txt"
+
+result=$(cd "$_tmpdir/a/b/c" && find_up marker.txt)
+assert_equal "find_up finds file in ancestor" "$_tmpdir/a/marker.txt" "$result"
+
+result=$(cd "$_tmpdir/a" && find_up marker.txt)
+assert_equal "find_up finds file in current dir" "$_tmpdir/a/marker.txt" "$result"
+
+(cd "$_tmpdir/a/b/c" && find_up nonexistent_file_xyz)
+assert_equal "find_up returns 1 for missing file" "1" "$?"
+
+rm -rf "$_tmpdir"
+
+###############
+# AGE
+
+_tmpfile=$(mktemp)
+sleep 1
+result=$(age "$_tmpfile")
+assert_true "age returns positive number" test "$result" -ge 1
+rm -f "$_tmpfile"
+
+###############
+# WHAT
+
+# Test what for a command
+result=$(what sh)
+assert_true "what finds sh" test -n "$result"
+
+# Test what for a function
+result=$(what is_runnable)
+assert_true "what shows function definition" test -n "$result"
+
+###############
+# TRYDIFF AND APPLYDIFF
+
+_tmpdir=$(mktemp -d)
+printf 'hello\nworld\n' > "$_tmpdir/input"
+# Create a transform script for testing
+cat > "$_tmpdir/upcase" << 'SCRIPT'
+#!/bin/sh
+tr a-z A-Z < "$1"
+SCRIPT
+chmod +x "$_tmpdir/upcase"
+trydiff_result=$(cd "$_tmpdir" && trydiff ./upcase input 2>&1)
+assert_true "trydiff produces output" test -n "$trydiff_result"
+# Original file should be unchanged
+result=$(cat "$_tmpdir/input")
+assert_equal "trydiff does not modify original" "hello
+world" "$result"
+
+# Test applydiff
+(cd "$_tmpdir" && applydiff ./upcase input)
+result=$(cat "$_tmpdir/input")
+assert_equal "applydiff modifies file" "HELLO
+WORLD" "$result"
+rm -rf "$_tmpdir"
+
+###############
+# RECENT
+
+_tmpdir=$(mktemp -d)
+touch "$_tmpdir/old"
+sleep 1
+touch "$_tmpdir/new"
+result=$(cd "$_tmpdir" && recent)
+first_line=$(echo "$result" | head -n 1)
+assert_equal "recent shows newest first" "new" "$first_line"
+
+result=$(cd "$_tmpdir" && recent -1)
+line_count=$(echo "$result" | wc -l)
+assert_equal "recent -1 shows one file" "1" "$line_count"
+rm -rf "$_tmpdir"
+
+###############
+# ENVIRONMENT DETECTION
+
+# Test connected_via_ssh
+SSH_CONNECTION="1.2.3.4 5678 5.6.7.8 22"
+assert_true "connected_via_ssh with SSH_CONNECTION" connected_via_ssh
+
+unset SSH_CONNECTION
+assert_false "connected_via_ssh without SSH_CONNECTION" connected_via_ssh
+
+# Test connected_remotely (delegates to connected_via_ssh)
+SSH_CONNECTION="1.2.3.4 5678 5.6.7.8 22"
+assert_true "connected_remotely with SSH_CONNECTION" connected_remotely
+unset SSH_CONNECTION
+assert_false "connected_remotely without SSH_CONNECTION" connected_remotely
+
+# Test inside_tmux
+TMUX="/tmp/tmux-1000/default,12345,0"
+assert_true "inside_tmux with TMUX set" inside_tmux
+unset TMUX
+assert_false "inside_tmux without TMUX" inside_tmux
+
+# Test in_shpool_session
+SHPOOL_SESSION_NAME="main"
+assert_true "in_shpool_session with SHPOOL_SESSION_NAME" in_shpool_session
+unset SHPOOL_SESSION_NAME
+assert_false "in_shpool_session without SHPOOL_SESSION_NAME" in_shpool_session
+
+###############
+# BASH-ONLY TESTS
+
+if test -n "${BASH_VERSION:-}" && test "$BASH_VERSION" != "fake"; then
+    # Test each0 (uses read -d '' which is bash-only)
+    eval "$(sed -n '/^each0()/,/^}/p' "$(dirname "$0")/shrc")"
+
+    result=$(printf 'a\0b\0c\0' | each0 echo "item:")
+    expected="item: a
+item: b
+item: c"
+    assert_equal "each0 runs command on null-delimited input" "$expected" "$result"
+fi
+
 echo
 if test "$failures" -eq 0; then
     echo "All tests passed."
