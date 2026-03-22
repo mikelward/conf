@@ -1489,37 +1489,39 @@ if is_interactive; then
             blue "$(_dir_info "$PWD")"
     }
     _dir_info() {
-        # if the directory is under version control, print
-        # <project name> <subdir under project root> <branch> <status>,
-        # otherwise just the directory with $HOME turned into ~
-        cd "$1"
-        local projectroot="$(projectroot)"
-        if test -n "$projectroot"; then
-            green "$(basename "$projectroot")"
-            local projectsubdir
-            projectsubdir="$(trim_prefix "$projectroot" "$PWD")"
-            if test -n "$projectsubdir"; then
-                printf ' '
-                blue "${projectsubdir#/}"
+        (
+            # if the directory is under version control, print
+            # <project name> <subdir under project root> <branch> <status>,
+            # otherwise just the directory with $HOME turned into ~
+            cd "$1"
+            local projectroot="$(projectroot)"
+            if test -n "$projectroot"; then
+                green "$(basename "$projectroot")"
+                local projectsubdir
+                projectsubdir="$(trim_prefix "$projectroot" "$PWD")"
+                if test -n "$projectsubdir"; then
+                    printf ' '
+                    blue "${projectsubdir#/}"
+                fi
+                local branch="$(vcs branch)"
+                if test -n "$branch"; then
+                    printf ' %s' "$branch"
+                fi
+                local statuschars="$(status_chars)"
+                if test -n "$statuschars"; then
+                    printf ' '
+                    yellow "$statuschars"
+                fi
+                # local branch
+                # branch="$(branch)"
+                # if test -n "$branch"; then
+                #     printf ' '
+                #     green "$branch"
+                # fi
+            else
+                tilde_directory
             fi
-            local branch="$(vcs branch)"
-            if test -n "$branch"; then
-                printf ' %s' "$branch"
-            fi
-            local statuschars="$(status_chars)"
-            if test -n "$statuschars"; then
-                printf ' '
-                yellow "$statuschars"
-            fi
-            # local branch
-            # branch="$(branch)"
-            # if test -n "$branch"; then
-            #     printf ' '
-            #     green "$branch"
-            # fi
-        else
-            tilde_directory
-        fi
+        )
     }
 
     short_pwd() {
