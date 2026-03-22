@@ -630,7 +630,28 @@ assert_equal "hg_revert reverts named file" "clean-content" "$result"
 result=$(cd "$_hg_local" && cat commitfile.txt)
 assert_equal "hg_revert keeps other changes" "dirty-b" "$result"
 # clean up
-(cd "$_hg_local" && hg revert --all >/dev/null 2>&1)
+(cd "$_hg_local" && hg revert --all >/dev/null 2>&1 && find . -name '*.orig' -delete)
+
+###############
+# Test hg status
+
+# hg_status shows modified files
+(cd "$_hg_local" && echo "dirty" > hg_statusfile.txt && hg add hg_statusfile.txt)
+result=$(cd "$_hg_local" && hg_status)
+assert_true "hg_status shows added file" grep -q 'hg_statusfile.txt' <<< "$result"
+assert_true "hg_status shows A prefix" grep -q '^A' <<< "$result"
+
+# hg_status clean repo
+(cd "$_hg_local" && hg commit -m "status test" -u "test <test@test.com>" >/dev/null 2>&1)
+result=$(cd "$_hg_local" && hg_status)
+assert_equal "hg_status clean repo" "" "$result"
+
+# hg_status shows unknown files
+(cd "$_hg_local" && echo "unknown" > hg_unknownfile.txt)
+result=$(cd "$_hg_local" && hg_status)
+assert_true "hg_status shows unknown file" grep -q 'hg_unknownfile.txt' <<< "$result"
+# clean up
+rm "$_hg_local/hg_unknownfile.txt"
 
 fi
 
@@ -691,7 +712,41 @@ assert_true "jj_revert creates revert commit" grep -q 'Revert' <<< "$result"
 result=$(cd "$_jj_repo" && jj log --no-graph -r 'all()' -T 'description')
 assert_false "jj_undo removes revert commit" grep -q 'Revert' <<< "$result"
 
+###############
+# Test jj status
+
+# jj_status shows modified files with short format
+(cd "$_jj_repo" && echo "new-jj" > jj_statusfile.txt)
+result=$(cd "$_jj_repo" && jj_status)
+assert_true "jj_status shows added file" grep -q 'jj_statusfile.txt' <<< "$result"
+assert_true "jj_status shows A prefix" grep -q '^A' <<< "$result"
+
+# jj_status after commit shows empty output
+(cd "$_jj_repo" && jj commit -m "status test" >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj_status)
+assert_equal "jj_status clean after commit" "" "$result"
+
 fi
+
+###############
+# Test git status
+
+# git_status shows staged files
+(cd "$_git_local" && echo "staged" > git_statusfile.txt && git add git_statusfile.txt)
+result=$(cd "$_git_local" && git_status)
+assert_true "git_status shows staged file" grep -q 'git_statusfile.txt' <<< "$result"
+assert_true "git_status shows A prefix" grep -q '^A' <<< "$result"
+
+# git_status shows untracked files
+(cd "$_git_local" && echo "untracked" > git_untrackedfile.txt)
+result=$(cd "$_git_local" && git_status)
+assert_true "git_status shows untracked file" grep -q 'git_untrackedfile.txt' <<< "$result"
+assert_true "git_status shows ?? prefix" grep -q '^??' <<< "$result"
+
+# git_status clean repo
+(cd "$_git_local" && git add -A && git commit -m "status test" >/dev/null 2>&1)
+result=$(cd "$_git_local" && git_status)
+assert_equal "git_status clean repo" "" "$result"
 
 ###############
 # Test cross-VCS consistency: every command in shrc.vcs dispatch loop

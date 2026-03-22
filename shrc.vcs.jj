@@ -188,7 +188,7 @@ jj_squash() {
 }
 
 jj_status() {
-    jj status "$@"
+    jj diff --summary "$@"
 }
 
 jj_submit() {
