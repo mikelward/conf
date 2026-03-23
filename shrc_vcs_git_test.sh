@@ -6,6 +6,9 @@
 source "$(dirname "$0")/shrc_vcs_test_helpers.sh"
 source "$_srcdir/shrc.vcs.git"
 
+# Clear git environment variables that leak in when run from a git hook
+unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE GIT_PREFIX
+
 ###############
 # Setup: create a "remote" bare repo and a local clone
 
@@ -18,7 +21,7 @@ git clone "$_git_remote" "$_git_local" >/dev/null 2>&1
 
 # Disable commit signing and hooks in test repos
 git -C "$_git_local" config commit.gpgsign false
-git -C "$_git_local" config core.hooksPath /dev/null
+git -C "$_git_local" config core.hooksPath "$_nohooks"
 
 # Create an initial commit on the local clone and push it
 (
@@ -60,7 +63,7 @@ _git_local2="$_testdir/git_local2"
 )
 git clone "$_git_remote" "$_git_local2" >/dev/null 2>&1
 git -C "$_git_local2" config commit.gpgsign false
-git -C "$_git_local2" config core.hooksPath /dev/null
+git -C "$_git_local2" config core.hooksPath "$_nohooks"
 (
     cd "$_git_local2"
     echo "remote content" > remotefile.txt

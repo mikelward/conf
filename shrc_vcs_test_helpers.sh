@@ -83,6 +83,11 @@ export JJ_EDITOR="$EDITOR"
 _testdir=$(mktemp -d)
 trap 'rm -rf "$_testdir"' EXIT
 
+# Empty directory to use as core.hooksPath to disable hooks without
+# modifying template hook files (which may be hardlinked)
+_nohooks="$_testdir/nohooks"
+mkdir "$_nohooks"
+
 # Source shrc.vcs (provides target_relative_to and other functions)
 _srcdir="$(dirname "$0")"
 # shellcheck source=shrc.vcs
