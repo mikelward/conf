@@ -11,6 +11,11 @@ if ! command -v hg >/dev/null 2>&1; then
     exit 0
 fi
 
+# Use chg (persistent command server) if available for faster tests
+if command -v chg >/dev/null 2>&1; then
+    hg() { command chg "$@"; }
+fi
+
 ###############
 # Setup: create a "remote" hg repo and a local clone
 
