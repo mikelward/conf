@@ -185,6 +185,10 @@ hg_rootdir() {
     hg root
 }
 
+hg_show() {
+    hg export "$@"
+}
+
 hg_split() {
     hg split "$@"
 }

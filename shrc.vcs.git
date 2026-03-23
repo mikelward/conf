@@ -242,6 +242,10 @@ git_status() {
     git status --short --untracked-files=all "$@"
 }
 
+git_show() {
+    git show "$@"
+}
+
 git_split() {
     git rebase -i "$@"
 }

@@ -1251,7 +1251,6 @@ if is_interactive; then
         alias yum='root yum --cacheonly'
         alias update='root yum makecache'
         alias search='yum search'
-        alias show='yum info'
         alias install='root yum install'
         alias installed='rpm -qa'
         alias uninstall='root yum erase'
@@ -1263,7 +1262,6 @@ if is_interactive; then
     elif have_command apt-get; then
         alias update='root apt-get update'
         alias search='apt-cache search --names-only'
-        alias show='apt-cache show'
         alias install='root apt-get install'
         alias installed="dpkg-query --show --showformat='\${binary:Package;-36} \${Version;-32} \${Status;-10}\n'"
         alias uninstall='root apt-get remove'

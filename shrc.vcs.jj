@@ -188,6 +188,10 @@ jj_rootdir() {
     jj workspace root
 }
 
+jj_show() {
+    jj show "$@"
+}
+
 jj_split() {
     jj split "$@"
 }

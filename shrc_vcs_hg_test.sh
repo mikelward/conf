@@ -157,6 +157,12 @@ assert_true "hg_status shows unknown file" grep -q 'hg_unknownfile.txt' <<< "$re
 rm "$_hg_local/hg_unknownfile.txt"
 
 ###############
+# Test hg show
+
+result=$(cd "$_hg_local" && hg_show)
+assert_true "hg_show displays changeset" grep -q 'statusfile' <<< "$result"
+
+###############
 # Test hg diffstat
 
 (

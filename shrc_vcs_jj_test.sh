@@ -127,6 +127,12 @@ result=$(cd "$_jj_repo" && jj_status)
 assert_equal "jj_status clean after commit" "" "$result"
 
 ###############
+# Test jj show
+
+result=$(cd "$_jj_repo" && jj_show @-)
+assert_true "jj_show displays commit" grep -q 'status test' <<< "$result"
+
+###############
 # Test jj diffstat
 
 (cd "$_jj_repo" && echo "diffstat-content" > jj_diffstatfile.txt)

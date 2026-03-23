@@ -211,6 +211,12 @@ result=$(cd "$_git_local" && git_status)
 assert_equal "git_status clean repo" "" "$result"
 
 ###############
+# Test git show
+
+result=$(cd "$_git_local" && git_show HEAD)
+assert_true "git_show displays commit" grep -q 'status test' <<< "$result"
+
+###############
 # Test git diffstat
 
 (
