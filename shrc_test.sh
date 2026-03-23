@@ -5,13 +5,14 @@
 #
 
 failures=0
+passes=0
 
 assert_equal() {
     local label="$1"
     local expected="$2"
     local actual="$3"
     if test "$expected" = "$actual"; then
-        echo "PASS: $label"
+        passes=$((passes + 1))
     else
         echo "FAIL: $label"
         echo "  expected: $expected"
@@ -322,7 +323,7 @@ assert_true() {
     local label="$1"
     shift
     if "$@"; then
-        echo "PASS: $label"
+        passes=$((passes + 1))
     else
         echo "FAIL: $label"
         echo "  expected command to succeed: $*"
@@ -338,7 +339,7 @@ assert_false() {
         echo "  expected command to fail: $*"
         failures=$((failures + 1))
     else
-        echo "PASS: $label"
+        passes=$((passes + 1))
     fi
 }
 
@@ -607,10 +608,12 @@ item: c"
     assert_equal "each0 runs command on null-delimited input" "$expected" "$result"
 fi
 
+_shell="$(basename "$(readlink -f /proc/$$/exe)" 2>/dev/null || echo "sh")"
+
 echo
 if test "$failures" -eq 0; then
-    echo "All tests passed."
+    echo "$_shell shrc_test: all $passes tests passed."
 else
-    echo "$failures test(s) failed."
+    echo "$_shell shrc_test: $failures test(s) failed, $passes passed."
     exit 1
 fi
