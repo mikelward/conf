@@ -364,8 +364,7 @@ hg clone "$_hg_remote" "$_hg_local" >/dev/null 2>&1
 
 # Test hg_outgoing with no unpushed commits (returns exit 1)
 result=$(cd "$_hg_local" && hg_outgoing 2>&1)
-rc=$?
-assert_equal "hg_outgoing no unpushed returns 1" "1" "$rc"
+assert_equal "hg_outgoing no unpushed commits" "" "$result"
 
 # Create a local commit
 (
