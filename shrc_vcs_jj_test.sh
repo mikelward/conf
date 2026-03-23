@@ -9,6 +9,9 @@ source "$(dirname "$0")/shrc_test_lib.sh"
 source "$_srcdir/shrc.vcs" >/dev/null 2>&1
 source "$_srcdir/shrc.vcs.jj"
 
+# Clear jj environment that leaks in when run from a jj hook
+unset JJ_OP_ID
+
 if ! command -v jj >/dev/null 2>&1; then
     echo "SKIP: jj not installed"
     exit 0

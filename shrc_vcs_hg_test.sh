@@ -9,6 +9,9 @@ source "$(dirname "$0")/shrc_test_lib.sh"
 source "$_srcdir/shrc.vcs" >/dev/null 2>&1
 source "$_srcdir/shrc.vcs.hg"
 
+# Clear hg environment that leaks in when run from an hg hook
+unset HG_NODE HG_PARENT1 HG_PARENT2 HG_PENDING HG_HOOKTYPE HG_HOOKNAME
+
 if ! command -v hg >/dev/null 2>&1; then
     echo "SKIP: hg not installed"
     exit 0

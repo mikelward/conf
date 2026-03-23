@@ -9,7 +9,7 @@ source "$(dirname "$0")/shrc_test_lib.sh"
 source "$_srcdir/shrc.vcs" >/dev/null 2>&1
 source "$_srcdir/shrc.vcs.git"
 
-# Clear git environment variables that leak in when run from a git hook
+# Clear git environment that leaks in when run from a git hook
 unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE GIT_PREFIX
 
 ###############
