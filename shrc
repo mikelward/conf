@@ -1296,6 +1296,7 @@ if is_interactive; then
             eval "pushd ~$1" >/dev/null
             popd +$(($1 + 1)) >/dev/null
         }
+        # shellcheck disable=SC2290
         alias -- +='plus'
         alias -- -='minus'
         alias -- +-='plusminus'
@@ -1964,6 +1965,7 @@ EOF
         }
         # bind Esc+<letter> in insert mode and <letter> in command mode
         _bind_vi_esc() {
+            # shellcheck disable=SC2145
             bindkey -M viins '\e'"$@"
             bindkey -M vicmd "$@"
         }
