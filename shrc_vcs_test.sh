@@ -1,79 +1,11 @@
 #!/bin/bash
 #
-# Tests for shrc.vcs functions.
-# Tests VCS detection, subdir, relative_path, status_chars, and clone dispatch.
+# Tests for shrc.vcs core functions and cross-VCS consistency.
+# Backend-specific tests are in shrc_vcs_{git,hg,jj}_test.sh.
 # Requires bash or zsh (uses here-strings).
 #
 
-failures=0
-
-assert_equal() {
-    local label="$1"
-    local expected="$2"
-    local actual="$3"
-    if test "$expected" = "$actual"; then
-        echo "PASS: $label"
-    else
-        echo "FAIL: $label"
-        echo "  expected: $expected"
-        echo "  actual:   $actual"
-        failures=$((failures + 1))
-    fi
-}
-
-assert_true() {
-    local label="$1"
-    shift
-    if "$@"; then
-        echo "PASS: $label"
-    else
-        echo "FAIL: $label"
-        echo "  expected command to succeed: $*"
-        failures=$((failures + 1))
-    fi
-}
-
-assert_false() {
-    local label="$1"
-    shift
-    if "$@"; then
-        echo "FAIL: $label"
-        echo "  expected command to fail: $*"
-        failures=$((failures + 1))
-    else
-        echo "PASS: $label"
-    fi
-}
-
-# Stub out shell detection
-BASH_VERSION="${BASH_VERSION:-fake}"
-ZSH_VERSION=
-is_zsh() { false; }
-is_bash() { true; }
-is_dash() { false; }
-is_sh() { false; }
-
-# We need trim_prefix for shrc.vcs functions
-trim_prefix() {
-    local _prefix="$1"
-    local _target="$2"
-    echo "${_target#$_prefix}"
-}
-
-# Source shrc.vcs (provides target_relative_to and other functions)
-# shellcheck source=shrc.vcs
-source "$(dirname "$0")/shrc.vcs"
-
-# Create a temp directory for testing
-_testdir=$(mktemp -d)
-trap 'rm -rf "$_testdir"' EXIT
-
-# Prevent any test from opening an interactive editor
-export EDITOR="sh -c 'printf \"edited by test\n\" > \"\$1\"' --"
-export VISUAL="$EDITOR"
-export GIT_EDITOR="$EDITOR"
-export HGEDITOR="$EDITOR"
-export JJ_EDITOR="$EDITOR"
+source "$(dirname "$0")/shrc_vcs_test_helpers.sh"
 
 ###############
 # Test vcs detection
@@ -263,520 +195,58 @@ assert_equal "project returns basename of projectroot" "myproject" "$result"
 unset -f projectroot
 
 ###############
-# Test git outgoing and incoming with real repos
-
-# Source git VCS functions
-source "$(dirname "$0")/shrc.vcs.git"
-
-# Create a "remote" bare repo and a local clone
-_git_remote="$_testdir/git_remote.git"
-_git_local="$_testdir/git_local"
-
-git init --bare "$_git_remote" >/dev/null 2>&1
-
-git clone "$_git_remote" "$_git_local" >/dev/null 2>&1
-
-# Disable commit signing and hooks in test repos
-git -C "$_git_local" config commit.gpgsign false
-git -C "$_git_local" config core.hooksPath /dev/null
-
-# Create an initial commit on the local clone and push it
-(
-    cd "$_git_local"
-    git commit --allow-empty -m "initial commit" >/dev/null 2>&1
-    git push -u origin HEAD >/dev/null 2>&1
-)
-
-# Test git_outgoing with no unpushed commits
-result=$(cd "$_git_local" && git_outgoing 2>&1)
-assert_equal "git_outgoing no unpushed commits" "" "$result"
-
-# Create a local commit that hasn't been pushed
-(
-    cd "$_git_local"
-    echo "new content" > newfile.txt
-    git add newfile.txt
-    git commit -m "local commit" >/dev/null 2>&1
-)
-
-# Test git_outgoing shows the unpushed commit
-result=$(cd "$_git_local" && git_outgoing 2>&1)
-assert_true "git_outgoing shows unpushed commit" test -n "$result"
-assert_true "git_outgoing contains commit message" grep -q 'local commit' <<< "$result"
-
-# Test git_incoming with no new remote commits
-(cd "$_git_local" && git fetch >/dev/null 2>&1)
-result=$(cd "$_git_local" && git_incoming 2>&1)
-assert_equal "git_incoming no new commits" "" "$result"
-
-# Push the local commit, then create a new remote commit from a second clone
-_git_local2="$_testdir/git_local2"
-(
-    cd "$_git_local"
-    git push >/dev/null 2>&1
-)
-git clone "$_git_remote" "$_git_local2" >/dev/null 2>&1
-git -C "$_git_local2" config commit.gpgsign false
-git -C "$_git_local2" config core.hooksPath /dev/null
-(
-    cd "$_git_local2"
-    echo "remote content" > remotefile.txt
-    git add remotefile.txt
-    git commit -m "remote commit" >/dev/null 2>&1
-    git push >/dev/null 2>&1
-)
-
-# Test git_incoming shows the new remote commit
-(cd "$_git_local" && git fetch >/dev/null 2>&1)
-result=$(cd "$_git_local" && git_incoming 2>&1)
-assert_true "git_incoming shows new remote commit" test -n "$result"
-assert_true "git_incoming contains commit message" grep -q 'remote commit' <<< "$result"
-
-# Test git_pending shows unpushed commits
-(
-    cd "$_git_local"
-    echo "pending content" > pendingfile.txt
-    git add pendingfile.txt
-    git commit -m "pending commit" >/dev/null 2>&1
-)
-result=$(cd "$_git_local" && git_pending 2>&1)
-assert_true "git_pending shows pending commit" test -n "$result"
-assert_true "git_pending contains commit message" grep -q 'pending commit' <<< "$result"
-
-###############
-# Test hg outgoing and incoming with real repos
-
-# Source hg VCS functions
-source "$(dirname "$0")/shrc.vcs.hg"
-
-if command -v hg >/dev/null 2>&1; then
-
-# Create a "remote" hg repo and a local clone
-_hg_remote="$_testdir/hg_remote"
-_hg_local="$_testdir/hg_local"
-
-hg init "$_hg_remote"
-(
-    cd "$_hg_remote"
-    echo "initial" > file.txt
-    hg add file.txt
-    hg commit -m "initial commit" -u "test <test@test.com>"
-)
-hg clone "$_hg_remote" "$_hg_local" >/dev/null 2>&1
-
-# Test hg_outgoing with no unpushed commits (returns exit 1)
-result=$(cd "$_hg_local" && hg_outgoing 2>&1)
-assert_equal "hg_outgoing no unpushed commits" "" "$result"
-
-# Create a local commit
-(
-    cd "$_hg_local"
-    echo "local content" > localfile.txt
-    hg add localfile.txt
-    hg commit -m "hg local commit" -u "test <test@test.com>"
-)
-
-# Test hg_outgoing shows the unpushed commit
-result=$(cd "$_hg_local" && hg_outgoing 2>&1)
-rc=$?
-assert_equal "hg_outgoing with unpushed returns 0" "0" "$rc"
-assert_true "hg_outgoing produces output" test -n "$result"
-
-# Test hg_incoming with no new remote commits (returns exit 1)
-result=$(cd "$_hg_local" && hg_incoming 2>&1)
-rc=$?
-assert_equal "hg_incoming no new returns 1" "1" "$rc"
-
-# Create a remote commit
-(
-    cd "$_hg_remote"
-    echo "remote content" > remotefile.txt
-    hg add remotefile.txt
-    hg commit -m "hg remote commit" -u "test <test@test.com>"
-)
-
-# Test hg_incoming shows the new remote commit
-result=$(cd "$_hg_local" && hg_incoming 2>&1)
-rc=$?
-assert_equal "hg_incoming with new returns 0" "0" "$rc"
-assert_true "hg_incoming produces output" test -n "$result"
-
-# Test hg_pending shows status
-(
-    cd "$_hg_local"
-    echo "modified" >> file.txt
-)
-result=$(cd "$_hg_local" && hg_pending 2>&1)
-assert_true "hg_pending shows modified files" test -n "$result"
-
-else
-echo "SKIP: hg not installed, skipping hg integration tests"
-fi
-
-###############
-# Test jj outgoing and incoming with real repos
-
-# Source jj VCS functions
-source "$(dirname "$0")/shrc.vcs.jj"
-
-if command -v jj >/dev/null 2>&1; then
-
-# Create a jj repo
-_jj_repo="$_testdir/jj_repo"
-jj git init "$_jj_repo" >/dev/null 2>&1
-
-# Test jj_outgoing with no commits (empty repo)
-result=$(cd "$_jj_repo" && jj_outgoing 2>&1)
-assert_equal "jj_outgoing empty repo" "" "$result"
-
-# Create a commit
-(
-    cd "$_jj_repo"
-    echo "jj content" > jjfile.txt
-    jj commit -m "jj test commit" >/dev/null 2>&1
-)
-
-# Test jj_outgoing shows the commit
-result=$(cd "$_jj_repo" && jj_outgoing 2>&1)
-assert_true "jj_outgoing shows mutable commit" test -n "$result"
-assert_true "jj_outgoing contains commit message" grep -q 'jj test commit' <<< "$result"
-
-# Test jj_incoming shows operation log
-result=$(cd "$_jj_repo" && jj_incoming 2>&1)
-assert_true "jj_incoming shows op log" test -n "$result"
-assert_true "jj_incoming contains commit operation" grep -q 'commit' <<< "$result"
-
-# Test jj_pending shows mutable commits
-result=$(cd "$_jj_repo" && jj_pending 2>&1)
-assert_true "jj_pending shows pending commits" test -n "$result"
-assert_true "jj_pending contains commit message" grep -q 'jj test commit' <<< "$result"
-
-# Create a second commit and verify both show up
-(
-    cd "$_jj_repo"
-    echo "more jj content" > jjfile2.txt
-    jj commit -m "jj second commit" >/dev/null 2>&1
-)
-
-result=$(cd "$_jj_repo" && jj_outgoing 2>&1)
-assert_true "jj_outgoing shows first commit" grep -q 'jj test commit' <<< "$result"
-assert_true "jj_outgoing shows second commit" grep -q 'jj second commit' <<< "$result"
-
-else
-echo "SKIP: jj not installed, skipping jj integration tests"
-fi
-
-###############
-# Test git commit, amend, recommit, reword
-
-# git_commit with -m and no files should use --all
-(
-    cd "$_git_local"
-    echo "commit-test" > commitfile.txt
-    git add commitfile.txt
-)
-(cd "$_git_local" && git_commit -m "git commit test" >/dev/null 2>&1)
-result=$(cd "$_git_local" && git log -1 --format=%s)
-assert_equal "git_commit with -m" "git commit test" "$result"
-
-# git_commit with -m and specific files should not use --all
-(
-    cd "$_git_local"
-    echo "staged" > staged.txt
-    echo "unstaged" > unstaged.txt
-    git add staged.txt unstaged.txt
-    echo "modified-unstaged" > unstaged.txt
-)
-(cd "$_git_local" && git_commit -m "partial commit" -- staged.txt >/dev/null 2>&1)
-result=$(cd "$_git_local" && git diff --name-only)
-assert_true "git_commit with files leaves unstaged changes" grep -q 'unstaged.txt' <<< "$result"
-
-# git_commit with no args commits all (--all is added)
-(
-    cd "$_git_local"
-    echo "all-content" > allfile.txt
-    git add allfile.txt
-)
-(cd "$_git_local" && git_commit -m "commit all" >/dev/null 2>&1)
-result=$(cd "$_git_local" && git status --short)
-assert_equal "git_commit no files commits all" "" "$result"
-
-# git_amend updates the last commit without changing the message
-(
-    cd "$_git_local"
-    echo "amend-content" > amendfile.txt
-    git add amendfile.txt
-)
-(cd "$_git_local" && git_amend >/dev/null 2>&1)
-result=$(cd "$_git_local" && git log -1 --format=%s)
-assert_equal "git_amend preserves message" "commit all" "$result"
-assert_true "git_amend includes new file" \
-    bash -c "cd '$_git_local' && git show --stat HEAD | grep -q amendfile.txt"
-
-# git_reword changes the commit message (uses GIT_EDITOR set above)
-(cd "$_git_local" && git_reword >/dev/null 2>&1)
-result=$(cd "$_git_local" && git log -1 --format=%s)
-assert_equal "git_reword changes message" "edited by test" "$result"
-
-###############
-# Test git branch, revert, undo
-
-# git_branch returns the current branch name
-result=$(cd "$_git_local" && git_branch)
-_default_branch=$(cd "$_git_local" && git rev-parse --abbrev-ref HEAD)
-assert_equal "git_branch returns current branch" "$_default_branch" "$result"
-
-# git_branch works after switching branches
-(cd "$_git_local" && git checkout -b test-branch >/dev/null 2>&1)
-result=$(cd "$_git_local" && git_branch)
-assert_equal "git_branch after switch" "test-branch" "$result"
-(cd "$_git_local" && git checkout "$_default_branch" >/dev/null 2>&1)
-
-# git_revert with no args resets all changes
-(
-    cd "$_git_local"
-    echo "dirty" > revertfile.txt
-    git add revertfile.txt
-)
-(cd "$_git_local" && git_revert >/dev/null 2>&1)
-result=$(cd "$_git_local" && git status --short)
-assert_equal "git_revert no args resets all" "" "$result"
-
-# git_revert with file args reverts only that file
-(
-    cd "$_git_local"
-    echo "keep" > keepfile.txt
-    echo "revert-me" > revertme.txt
-    git add keepfile.txt revertme.txt
-    git commit -m "add two files" >/dev/null 2>&1
-    echo "modified-keep" > keepfile.txt
-    echo "modified-revert" > revertme.txt
-)
-(cd "$_git_local" && git_revert revertme.txt >/dev/null 2>&1)
-result=$(cd "$_git_local" && cat revertme.txt)
-assert_equal "git_revert with file reverts that file" "revert-me" "$result"
-result=$(cd "$_git_local" && cat keepfile.txt)
-assert_equal "git_revert with file keeps other changes" "modified-keep" "$result"
-# clean up
-(cd "$_git_local" && git checkout -- keepfile.txt >/dev/null 2>&1)
-
-# git_undo unwraps the last commit, leaving files in working dir
-_before_undo=$(cd "$_git_local" && git rev-parse HEAD~)
-(cd "$_git_local" && git_undo >/dev/null 2>&1)
-_after_undo=$(cd "$_git_local" && git rev-parse HEAD)
-assert_equal "git_undo moves HEAD back" "$_before_undo" "$_after_undo"
-assert_true "git_undo leaves files in working dir" \
-    test -f "$_git_local/keepfile.txt"
-# re-commit so later tests have a clean state
-(cd "$_git_local" && git add -A && git commit -m "re-commit after undo" >/dev/null 2>&1)
-
-###############
-# Test hg commit, amend, recommit, reword
-
-if command -v hg >/dev/null 2>&1; then
-
-# hg_commit creates a new changeset
-(
-    cd "$_hg_local"
-    echo "commit-test" > commitfile.txt
-    hg add commitfile.txt
-)
-(cd "$_hg_local" && hg_commit -m "hg commit test" -u "test <test@test.com>" >/dev/null 2>&1)
-result=$(cd "$_hg_local" && hg log -r . --template '{desc}')
-assert_equal "hg_commit with -m" "hg commit test" "$result"
-
-# hg_recommit amends with new message
-(cd "$_hg_local" && hg_recommit -m "hg recommit msg" -u "test <test@test.com>" >/dev/null 2>&1)
-result=$(cd "$_hg_local" && hg log -r . --template '{desc}')
-assert_equal "hg_recommit changes message" "hg recommit msg" "$result"
-
-# hg_recommit can also add files (commit --amend)
-(
-    cd "$_hg_local"
-    echo "amend-content" > amendfile.txt
-    hg add amendfile.txt
-)
-(cd "$_hg_local" && hg_recommit -m "hg recommit msg" -u "test <test@test.com>" >/dev/null 2>&1)
-assert_true "hg_recommit includes new file" \
-    bash -c "cd '$_hg_local' && hg log -r . --template '{file_adds}' | grep -q amendfile.txt"
-
-###############
-# Test hg branch, revert, undo
-
-# hg_branch returns the current branch
-result=$(cd "$_hg_local" && hg_branch)
-assert_equal "hg_branch returns current branch" "default" "$result"
-
-# hg_revert restores a modified file
-(
-    cd "$_hg_local"
-    echo "clean-content" > hg_revertfile.txt
-    hg add hg_revertfile.txt
-    hg commit -m "add revertfile" -u "test <test@test.com>"
-    echo "dirty-content" > hg_revertfile.txt
-)
-(cd "$_hg_local" && hg_revert hg_revertfile.txt >/dev/null 2>&1)
-result=$(cd "$_hg_local" && cat hg_revertfile.txt)
-assert_equal "hg_revert restores file" "clean-content" "$result"
-
-# hg_revert only reverts the named file
-(
-    cd "$_hg_local"
-    echo "dirty-a" > hg_revertfile.txt
-    echo "dirty-b" > commitfile.txt
-)
-(cd "$_hg_local" && hg_revert hg_revertfile.txt >/dev/null 2>&1)
-result=$(cd "$_hg_local" && cat hg_revertfile.txt)
-assert_equal "hg_revert reverts named file" "clean-content" "$result"
-result=$(cd "$_hg_local" && cat commitfile.txt)
-assert_equal "hg_revert keeps other changes" "dirty-b" "$result"
-# clean up
-(cd "$_hg_local" && hg revert --all >/dev/null 2>&1 && find . -name '*.orig' -delete)
-
-###############
-# Test hg status
-
-# hg_status shows modified files
-(cd "$_hg_local" && echo "dirty" > hg_statusfile.txt && hg add hg_statusfile.txt)
-result=$(cd "$_hg_local" && hg_status)
-assert_true "hg_status shows added file" grep -q 'hg_statusfile.txt' <<< "$result"
-assert_true "hg_status shows A prefix" grep -q '^A' <<< "$result"
-
-# hg_status clean repo
-(cd "$_hg_local" && hg commit -m "status test" -u "test <test@test.com>" >/dev/null 2>&1)
-result=$(cd "$_hg_local" && hg_status)
-assert_equal "hg_status clean repo" "" "$result"
-
-# hg_status shows unknown files
-(cd "$_hg_local" && echo "unknown" > hg_unknownfile.txt)
-result=$(cd "$_hg_local" && hg_status)
-assert_true "hg_status shows unknown file" grep -q 'hg_unknownfile.txt' <<< "$result"
-# clean up
-rm "$_hg_local/hg_unknownfile.txt"
-
-fi
-
-###############
-# Test jj commit, amend, recommit, reword
-
-if command -v jj >/dev/null 2>&1; then
-
-# jj_commit creates a new commit
-(
-    cd "$_jj_repo"
-    echo "commit-test" > jj_commitfile.txt
-)
-(cd "$_jj_repo" && jj_commit -m "jj commit test" >/dev/null 2>&1)
-result=$(cd "$_jj_repo" && jj log --no-graph -r @- -T 'description')
-assert_true "jj_commit with -m" grep -q 'jj commit test' <<< "$result"
-
-# jj_amend squashes working copy into parent
-(
-    cd "$_jj_repo"
-    echo "amend-content" > jj_amendfile.txt
-)
-(cd "$_jj_repo" && jj_amend >/dev/null 2>&1)
-assert_true "jj_amend squashes into parent" \
-    bash -c "cd '$_jj_repo' && jj file show jj_amendfile.txt -r @- 2>/dev/null | grep -q amend-content"
-
-# jj_recommit updates the description
-(cd "$_jj_repo" && jj_recommit -m "jj recommit msg" >/dev/null 2>&1)
-result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
-assert_true "jj_recommit changes description" grep -q 'jj recommit msg' <<< "$result"
-
-# jj_reword with args uses -m
-(cd "$_jj_repo" && jj_reword "jj reword msg" >/dev/null 2>&1)
-result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
-assert_true "jj_reword with args" grep -q 'jj reword msg' <<< "$result"
-
-###############
-# Test jj branch, revert, undo
-
-# jj_branch is a no-op (no current bookmark concept)
-result=$(cd "$_jj_repo" && jj_branch)
-assert_equal "jj_branch returns empty" "" "$result"
-
-# jj_revert creates a commit that reverses changes
-(
-    cd "$_jj_repo"
-    echo "original-jj" > jj_revertfile.txt
-    jj commit -m "add revertfile" >/dev/null 2>&1
-    echo "modified-jj" > jj_revertfile.txt
-    jj commit -m "modify revertfile" >/dev/null 2>&1
-)
-(cd "$_jj_repo" && jj_revert -r @- --destination @ >/dev/null 2>&1)
-result=$(cd "$_jj_repo" && jj log --no-graph -r 'children(@)' -T 'description')
-assert_true "jj_revert creates revert commit" grep -q 'Revert' <<< "$result"
-
-# jj_undo reverses the last operation
-(cd "$_jj_repo" && jj_undo >/dev/null 2>&1)
-result=$(cd "$_jj_repo" && jj log --no-graph -r 'all()' -T 'description')
-assert_false "jj_undo removes revert commit" grep -q 'Revert' <<< "$result"
-
-###############
-# Test jj status
-
-# jj_status shows modified files with short format
-(cd "$_jj_repo" && echo "new-jj" > jj_statusfile.txt)
-result=$(cd "$_jj_repo" && jj_status)
-assert_true "jj_status shows added file" grep -q 'jj_statusfile.txt' <<< "$result"
-assert_true "jj_status shows A prefix" grep -q '^A' <<< "$result"
-
-# jj_status after commit shows empty output
-(cd "$_jj_repo" && jj commit -m "status test" >/dev/null 2>&1)
-result=$(cd "$_jj_repo" && jj_status)
-assert_equal "jj_status clean after commit" "" "$result"
-
-fi
-
-###############
-# Test git status
-
-# git_status shows staged files
-(cd "$_git_local" && echo "staged" > git_statusfile.txt && git add git_statusfile.txt)
-result=$(cd "$_git_local" && git_status)
-assert_true "git_status shows staged file" grep -q 'git_statusfile.txt' <<< "$result"
-assert_true "git_status shows A prefix" grep -q '^A' <<< "$result"
-
-# git_status shows untracked files
-(cd "$_git_local" && echo "untracked" > git_untrackedfile.txt)
-result=$(cd "$_git_local" && git_status)
-assert_true "git_status shows untracked file" grep -q 'git_untrackedfile.txt' <<< "$result"
-assert_true "git_status shows ?? prefix" grep -q '^??' <<< "$result"
-
-# git_status clean repo
-(cd "$_git_local" && git add -A && git commit -m "status test" >/dev/null 2>&1)
-result=$(cd "$_git_local" && git_status)
-assert_equal "git_status clean repo" "" "$result"
-
-###############
 # Test cross-VCS consistency: every command in shrc.vcs dispatch loop
 # must have a corresponding function in each backend.
 
-_shrc_vcs="$(dirname "$0")/shrc.vcs"
+# Source all backends for the consistency check
+source "$_srcdir/shrc.vcs.git"
+source "$_srcdir/shrc.vcs.hg"
+source "$_srcdir/shrc.vcs.jj"
 
 # Extract the command list from the dispatch loop in shrc.vcs
 _commands=$(
-    sed -n '/^for command in/,/; do$/p' "$_shrc_vcs" |
+    sed -n '/^for command in/,/; do$/p' "$_srcdir/shrc.vcs" |
     tr ' \\\n' '\n' |
     sed 's/[;]//g' |
     grep -v '^for$\|^command$\|^in$\|^do$\|^$'
 )
 
 for _backend in git hg jj; do
-    _backend_file="$(dirname "$0")/shrc.vcs.$_backend"
+    _backend_file="$_srcdir/shrc.vcs.$_backend"
     for _cmd in $_commands; do
         assert_true "${_backend}_${_cmd} defined" \
             grep -q "^${_backend}_${_cmd}()" "$_backend_file"
     done
 done
 
-unset _shrc_vcs _commands _backend _backend_file _cmd
+unset _commands _backend _backend_file _cmd
 
-echo
-if test "$failures" -eq 0; then
-    echo "All tests passed."
-else
-    echo "$failures test(s) failed."
+###############
+# Run backend tests in parallel
+
+_outdir="$_testdir/test_output"
+mkdir -p "$_outdir"
+
+bash "$_srcdir/shrc_vcs_git_test.sh" > "$_outdir/git" 2>&1 &
+_pid_git=$!
+bash "$_srcdir/shrc_vcs_hg_test.sh"  > "$_outdir/hg"  2>&1 &
+_pid_hg=$!
+bash "$_srcdir/shrc_vcs_jj_test.sh"  > "$_outdir/jj"  2>&1 &
+_pid_jj=$!
+
+_backend_failures=0
+for _backend in git hg jj; do
+    eval "wait \$_pid_$_backend"
+    _rc=$?
+    cat "$_outdir/$_backend"
+    if test "$_rc" -ne 0; then
+        _backend_failures=$((_backend_failures + 1))
+    fi
+done
+
+test_summary "core"
+
+if test "$_backend_failures" -gt 0; then
+    echo "$_backend_failures backend suite(s) failed."
     exit 1
 fi
