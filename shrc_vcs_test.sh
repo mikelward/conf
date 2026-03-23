@@ -305,7 +305,8 @@ assert_true "git_outgoing shows unpushed commit" test -n "$result"
 assert_true "git_outgoing contains commit message" grep -q 'local commit' <<< "$result"
 
 # Test git_incoming with no new remote commits
-result=$(cd "$_git_local" && git fetch 2>&1 && git_incoming 2>&1)
+(cd "$_git_local" && git fetch >/dev/null 2>&1)
+result=$(cd "$_git_local" && git_incoming 2>&1)
 assert_equal "git_incoming no new commits" "" "$result"
 
 # Push the local commit, then create a new remote commit from a second clone
@@ -326,7 +327,8 @@ git -C "$_git_local2" config core.hooksPath /dev/null
 )
 
 # Test git_incoming shows the new remote commit
-result=$(cd "$_git_local" && git fetch 2>&1 && git_incoming 2>&1)
+(cd "$_git_local" && git fetch >/dev/null 2>&1)
+result=$(cd "$_git_local" && git_incoming 2>&1)
 assert_true "git_incoming shows new remote commit" test -n "$result"
 assert_true "git_incoming contains commit message" grep -q 'remote commit' <<< "$result"
 

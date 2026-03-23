@@ -152,7 +152,7 @@ git_lint() {
 
 # print commits that would be pushed
 git_outgoing() {
-    git log --oneline @{push}..HEAD
+    git log --oneline @{upstream}..HEAD
 }
 
 git_pending() {
