@@ -69,6 +69,10 @@ hg_diffs() {
     hg diff "$@"
 }
 
+hg_diffstat() {
+    hg diff --stat "$@"
+}
+
 hg_evolve() {
     hg evolve "$@"
 }

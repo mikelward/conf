@@ -112,6 +112,10 @@ git_diffs() {
     git diff "$@"
 }
 
+git_diffstat() {
+    git diff --stat "$@"
+}
+
 git_evolve() {
     echo "no automatic evolve in git; use: git rebase --onto <new> <old> <branch>" >&2
     return 1

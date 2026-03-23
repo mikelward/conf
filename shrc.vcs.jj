@@ -75,6 +75,10 @@ jj_diffs() {
     jj diff "$@"
 }
 
+jj_diffstat() {
+    jj diff --stat "$@"
+}
+
 jj_fastforward() {
     jj piper pull
 }

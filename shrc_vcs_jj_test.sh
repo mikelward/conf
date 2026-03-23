@@ -127,6 +127,14 @@ result=$(cd "$_jj_repo" && jj_status)
 assert_equal "jj_status clean after commit" "" "$result"
 
 ###############
+# Test jj diffstat
+
+(cd "$_jj_repo" && echo "diffstat-content" > jj_diffstatfile.txt)
+result=$(cd "$_jj_repo" && jj_diffstat)
+assert_true "jj_diffstat shows changed file" grep -q 'jj_diffstatfile.txt' <<< "$result"
+(cd "$_jj_repo" && jj commit -m "diffstat test" >/dev/null 2>&1)
+
+###############
 # Test jj addremove
 
 # jj_addremove is a no-op (jj auto-tracks), should succeed without error

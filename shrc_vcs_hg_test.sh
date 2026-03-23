@@ -157,6 +157,19 @@ assert_true "hg_status shows unknown file" grep -q 'hg_unknownfile.txt' <<< "$re
 rm "$_hg_local/hg_unknownfile.txt"
 
 ###############
+# Test hg diffstat
+
+(
+    cd "$_hg_local"
+    echo "diffstat-content" > hg_diffstatfile.txt
+    hg add hg_diffstatfile.txt
+)
+result=$(cd "$_hg_local" && hg_diffstat)
+assert_true "hg_diffstat shows changed file" grep -q 'hg_diffstatfile.txt' <<< "$result"
+assert_true "hg_diffstat shows insertion count" grep -q 'insertion' <<< "$result"
+(cd "$_hg_local" && hg commit -m "diffstat test" -u "test <test@test.com>" >/dev/null 2>&1)
+
+###############
 # Test hg addremove
 
 # hg_addremove adds untracked and removes missing files

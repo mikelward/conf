@@ -211,6 +211,19 @@ result=$(cd "$_git_local" && git_status)
 assert_equal "git_status clean repo" "" "$result"
 
 ###############
+# Test git diffstat
+
+(
+    cd "$_git_local"
+    echo "diffstat-content" > git_diffstatfile.txt
+    git add git_diffstatfile.txt
+)
+result=$(cd "$_git_local" && git_diffstat --cached)
+assert_true "git_diffstat shows changed file" grep -q 'git_diffstatfile.txt' <<< "$result"
+assert_true "git_diffstat shows insertion count" grep -q 'insertion' <<< "$result"
+(cd "$_git_local" && git commit -m "diffstat test" >/dev/null 2>&1)
+
+###############
 # Test git addremove
 
 # git_addremove stages new files and removals
