@@ -3,6 +3,10 @@ hg_add() {
     hg add "$@"
 }
 
+hg_addremove() {
+    hg addremove "$@"
+}
+
 hg_amend() {
     hg amend "$@"
 }

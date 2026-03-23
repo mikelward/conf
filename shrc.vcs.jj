@@ -8,6 +8,11 @@ jj_add() {
     jj file track "$@"
 }
 
+jj_addremove() {
+    # jj auto-tracks all files; nothing to do
+    :
+}
+
 jj_amend() {
     jj squash "$@"
 }

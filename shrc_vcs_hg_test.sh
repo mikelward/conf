@@ -156,4 +156,20 @@ assert_true "hg_status shows unknown file" grep -q 'hg_unknownfile.txt' <<< "$re
 # clean up
 rm "$_hg_local/hg_unknownfile.txt"
 
+###############
+# Test hg addremove
+
+# hg_addremove adds untracked and removes missing files
+(
+    cd "$_hg_local"
+    echo "newfile" > hg_addremove_new.txt
+    rm -f hg_statusfile.txt
+)
+(cd "$_hg_local" && hg_addremove >/dev/null 2>&1)
+result=$(cd "$_hg_local" && hg status)
+assert_true "hg_addremove adds new file" grep -q '^A hg_addremove_new.txt' <<< "$result"
+assert_true "hg_addremove removes missing file" grep -q '^R hg_statusfile.txt' <<< "$result"
+# clean up
+(cd "$_hg_local" && hg commit -m "addremove test" -u "test <test@test.com>" >/dev/null 2>&1)
+
 test_summary "hg"

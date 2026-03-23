@@ -210,4 +210,22 @@ assert_true "git_status shows ?? prefix" grep -q '^??' <<< "$result"
 result=$(cd "$_git_local" && git_status)
 assert_equal "git_status clean repo" "" "$result"
 
+###############
+# Test git addremove
+
+# git_addremove stages new files and removals
+(
+    cd "$_git_local"
+    echo "newfile" > addremove_new.txt
+    git rm -f git_statusfile.txt >/dev/null 2>&1
+    git reset HEAD >/dev/null 2>&1
+    rm -f git_statusfile.txt
+)
+(cd "$_git_local" && git_addremove >/dev/null 2>&1)
+result=$(cd "$_git_local" && git status --short)
+assert_true "git_addremove stages new file" grep -q '^A.*addremove_new.txt' <<< "$result"
+assert_true "git_addremove stages removal" grep -q '^D.*git_statusfile.txt' <<< "$result"
+# clean up
+(cd "$_git_local" && git commit -m "addremove test" >/dev/null 2>&1)
+
 test_summary "git"

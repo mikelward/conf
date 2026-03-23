@@ -3,6 +3,10 @@ git_add() {
     git add --intent-to-add "$@"
 }
 
+git_addremove() {
+    git add --all "$@"
+}
+
 git_amend() {
     declare -a flags
     while test $# -gt 0; do

@@ -126,4 +126,15 @@ assert_true "jj_status shows A prefix" grep -q '^A' <<< "$result"
 result=$(cd "$_jj_repo" && jj_status)
 assert_equal "jj_status clean after commit" "" "$result"
 
+###############
+# Test jj addremove
+
+# jj_addremove is a no-op (jj auto-tracks), should succeed without error
+(cd "$_jj_repo" && echo "auto-tracked" > jj_addremove.txt)
+(cd "$_jj_repo" && jj_addremove >/dev/null 2>&1)
+assert_equal "jj_addremove succeeds" "0" "$?"
+# file should already be tracked by jj
+result=$(cd "$_jj_repo" && jj_status)
+assert_true "jj auto-tracks new file" grep -q 'jj_addremove.txt' <<< "$result"
+
 test_summary "jj"
