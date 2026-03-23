@@ -113,7 +113,7 @@ hg_lint() {
 
 # show changesets that would be pushed
 hg_outgoing() {
-    hg --quiet outgoing --template=oneline "$@"
+    hg --quiet log -r "outgoing() and not obsolete()" --template=oneline "$@"
 }
 
 hg_pending() {
