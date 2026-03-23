@@ -1101,11 +1101,10 @@ if is_interactive; then
         sleep 5
         code --add .
         local _dir
-        # TODO: either only support one directory or handle spaces properly
-        for _dir in "$(gendir)"; do
-            test -d "$_dir" || continue
+        _dir="$(gendir)"
+        if test -d "$_dir"; then
             code --add "$_dir"
-        done
+        fi
     }
     makelocal() {
         :
