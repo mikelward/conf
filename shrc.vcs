@@ -151,7 +151,6 @@ alias ig=ignore
 alias lg=graph
 alias ma=review
 alias pr=presubmit
-alias projectroot=rootdir
 alias re=review
 alias ro=rootdir
 alias sa=save
@@ -190,6 +189,10 @@ clone() {
 
 project() {
     basename "$(projectroot)"
+}
+
+projectroot() {
+    rootdir "$@"
 }
 
 save() {
