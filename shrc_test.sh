@@ -509,7 +509,7 @@ rm -rf "$_tmpdir"
 # AGE
 
 _tmpfile=$(mktemp)
-sleep 1
+touch -d '2 seconds ago' "$_tmpfile"
 result=$(age "$_tmpfile")
 assert_true "age returns positive number" test "$result" -ge 1
 rm -f "$_tmpfile"
@@ -554,8 +554,7 @@ rm -rf "$_tmpdir"
 # RECENT
 
 _tmpdir=$(mktemp -d)
-touch "$_tmpdir/old"
-sleep 1
+touch -d '2 seconds ago' "$_tmpdir/old"
 touch "$_tmpdir/new"
 result=$(cd "$_tmpdir" && recent)
 first_line=$(echo "$result" | head -n 1)
