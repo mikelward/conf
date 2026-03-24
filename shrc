@@ -213,6 +213,19 @@ auth_info() {
     test -n "$problems" && yellow "${problems# }"
 }
 
+# warn if the last fetch was more than 24 hours ago
+fetch_info() {
+    local timestamp
+    timestamp="$(fetchtime 2>/dev/null)" || return
+    test -n "$timestamp" || return
+    local now
+    now="$(date +%s)"
+    local age=$(( now - timestamp ))
+    if test "$age" -gt 86400; then
+        yellow "fetch"
+    fi
+}
+
 # ask the user whether to do something, return true if they say yes or Enter
 confirm() {
     printf '%s? [Y/n] ' "$*"
@@ -1328,7 +1341,7 @@ if is_interactive; then
         set_color 'normal'
         printf '\n'
         bar $((COLUMNS))
-        printf '\r%s %s%s \n' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")"
+        printf '\r%s %s%s%s \n' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")" "$(maybe_space "$(fetch_info)")"
         # TODO: consider including the outgoing count in the prompt too
         if test -n "$(outgoing 2>/dev/null)"; then
             base
