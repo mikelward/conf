@@ -77,7 +77,7 @@ git_checkout() {
     git checkout "$@"
 }
 
-git_commit() (
+git_commit() {
     declare -a flags
     while test $# -gt 0; do
         case "$1" in
@@ -102,7 +102,7 @@ git_commit() (
     # no files given, commit them all
     test $# -eq 0 && flags+=("--all")
     git commit "${flags[@]}" "$@"
-)
+}
 
 git_commitforce() {
     git_commit --no-verify "$@"

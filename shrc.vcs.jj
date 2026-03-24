@@ -63,9 +63,9 @@ jj_checkout() {
     jj edit "$@"
 }
 
-jj_commit() (
+jj_commit() {
     jj commit "$@"
-)
+}
 
 jj_commitforce() {
     jj commit "$@"
