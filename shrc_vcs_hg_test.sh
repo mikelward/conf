@@ -32,6 +32,34 @@ hg init "$_hg_remote"
 hg clone "$_hg_remote" "$_hg_local" >/dev/null 2>&1
 
 ###############
+# Test hg base
+
+# hg_base on a fresh clone shows the initial commit
+result=$(cd "$_hg_local" && hg_base)
+assert_true "hg_base fresh clone shows commit" grep -q 'initial commit' <<< "$result"
+
+# hg_base changes after a new commit
+(
+    cd "$_hg_local"
+    echo "base-test" > basefile.txt
+    hg add basefile.txt
+    hg commit -m "hg base test commit" -u "test <test@test.com>"
+)
+result=$(cd "$_hg_local" && hg_base)
+assert_true "hg_base after commit shows new commit" grep -q 'hg base test commit' <<< "$result"
+
+# hg_base changes after update to a different revision
+_hg_base_rev=$(cd "$_hg_local" && hg log -r . --template '{rev}')
+(cd "$_hg_local" && hg update -r 0 >/dev/null 2>&1)
+result=$(cd "$_hg_local" && hg_base)
+assert_true "hg_base after update shows earlier commit" grep -q 'initial commit' <<< "$result"
+
+# hg_base changes back after update to the tip
+(cd "$_hg_local" && hg update -r "$_hg_base_rev" >/dev/null 2>&1)
+result=$(cd "$_hg_local" && hg_base)
+assert_true "hg_base after update back shows latest" grep -q 'hg base test commit' <<< "$result"
+
+###############
 # Test hg outgoing and incoming
 
 # Test hg_outgoing with no unpushed commits

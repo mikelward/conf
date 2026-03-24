@@ -18,6 +18,41 @@ _jj_repo="$_testdir/jj_repo"
 jj git init "$_jj_repo" >/dev/null 2>&1
 
 ###############
+# Test jj base
+
+# jj_base on a fresh repo shows the root commit
+result=$(cd "$_jj_repo" && jj_base 2>&1)
+assert_true "jj_base fresh repo returns something" test -n "$result"
+
+# jj_base changes after a commit
+(
+    cd "$_jj_repo"
+    echo "base-test" > basefile.txt
+    jj commit -m "jj base test commit" >/dev/null 2>&1
+)
+result=$(cd "$_jj_repo" && jj_base)
+assert_true "jj_base after commit shows parent" grep -q 'jj base test commit' <<< "$result"
+
+# jj_base changes after jj prev (edit parent)
+(
+    cd "$_jj_repo"
+    echo "second" > secondfile.txt
+    jj commit -m "jj second base commit" >/dev/null 2>&1
+)
+_jj_second_base=$(cd "$_jj_repo" && jj_base)
+assert_true "jj_base shows second commit" grep -q 'jj second base commit' <<< "$_jj_second_base"
+
+# Use jj prev to move working copy to the parent
+(cd "$_jj_repo" && jj prev --edit >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj_base)
+assert_true "jj_base after prev shows earlier commit" grep -q 'jj base test commit' <<< "$result"
+
+# Move back with jj next
+(cd "$_jj_repo" && jj next --edit >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj_base)
+assert_true "jj_base after next shows later commit" grep -q 'jj second base commit' <<< "$result"
+
+###############
 # Test jj outgoing and incoming
 
 # Test jj_outgoing with no commits (empty repo)

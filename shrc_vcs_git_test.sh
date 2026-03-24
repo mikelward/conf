@@ -31,6 +31,52 @@ git -C "$_git_local" config core.hooksPath "$_nohooks"
 )
 
 ###############
+# Test git base
+
+_initial_branch=$(cd "$_git_local" && git rev-parse --abbrev-ref HEAD)
+
+# git_base on a fresh clone shows the initial commit
+result=$(cd "$_git_local" && git_base)
+assert_true "git_base fresh clone shows commit" grep -q 'initial commit' <<< "$result"
+
+# git_base shows short hash and subject
+_head_hash=$(cd "$_git_local" && git log -1 --format='%h')
+assert_true "git_base includes short hash" grep -q "$_head_hash" <<< "$result"
+
+# git_base changes after a new commit
+(
+    cd "$_git_local"
+    echo "base-test" > basefile.txt
+    git add basefile.txt
+    git commit -m "base test commit" >/dev/null 2>&1
+)
+result=$(cd "$_git_local" && git_base)
+assert_true "git_base after commit shows new commit" grep -q 'base test commit' <<< "$result"
+
+# git_base changes after checkout to a different branch
+(
+    cd "$_git_local"
+    git checkout -b base-branch >/dev/null 2>&1
+    echo "branch content" > branchfile.txt
+    git add branchfile.txt
+    git commit -m "branch commit" >/dev/null 2>&1
+)
+result=$(cd "$_git_local" && git_base)
+assert_true "git_base after checkout shows branch commit" grep -q 'branch commit' <<< "$result"
+
+# git_base changes back after checking out the original branch
+(cd "$_git_local" && git checkout "$_initial_branch" >/dev/null 2>&1)
+result=$(cd "$_git_local" && git_base)
+assert_true "git_base after checkout back shows original" grep -q 'base test commit' <<< "$result"
+
+# clean up: remove the test branch and undo the base test commit
+(
+    cd "$_git_local"
+    git branch -D base-branch >/dev/null 2>&1
+    git reset --hard HEAD~ >/dev/null 2>&1
+)
+
+###############
 # Test git outgoing and incoming
 
 # Test git_outgoing with no unpushed commits

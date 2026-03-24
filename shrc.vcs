@@ -162,7 +162,7 @@ upp() {
   presubmit
 }
 for command in add addremove amend annotate \
-    blame branch branches \
+    base blame branch branches \
     changed changelog changes checkout commit commitforce diffedit diffs diffstat \
     evolve fastforward fix graft graph histedit ignore incoming lint outgoing \
     pending pick precommit presubmit pull push \
