@@ -4,36 +4,15 @@
 # Run under both sh and bash to catch compatibility issues.
 #
 
-failures=0
-passes=0
-
-assert_equal() {
-    local label="$1"
-    local expected="$2"
-    local actual="$3"
-    if test "$expected" = "$actual"; then
-        passes=$((passes + 1))
-    else
-        echo "FAIL: $label"
-        echo "  expected: $expected"
-        echo "  actual:   $actual"
-        failures=$((failures + 1))
-    fi
-}
-
-# Source only the path functions from shrc.
-# We need to stub out things that would fail in a test environment.
-BASH_VERSION="${BASH_VERSION:-fake}"
-ZSH_VERSION=
-is_zsh() { false; }
-is_bash() { true; }
-is_dash() { false; }
-is_sh() { false; }
+. "$(dirname "$0")/shrc_test_lib.sh"
 
 # Extract and source just the path functions.
 # They are self-contained and only depend on each other.
 eval "$(sed -n '/^prepend_path()/,/^add_path()/p' "$(dirname "$0")/shrc" | head -n -1)"
 eval "$(sed -n '/^add_path()/,/^#####/p' "$(dirname "$0")/shrc" | head -n -1)"
+
+# Save PATH for restoration after path function tests
+_saved_path="$PATH"
 
 # Test prepend_path
 PATH="/usr/bin:/bin"
@@ -155,7 +134,7 @@ assert_equal "add_path end with spaces" "/usr/bin:/bin:$_tmpdir/my programs/bin"
 rm -rf "$_tmpdir"
 
 # Restore PATH for remaining tests
-PATH="/usr/bin:/bin"
+PATH="$_saved_path"
 
 ###############
 # UTILITY FUNCTIONS
@@ -315,33 +294,6 @@ delline 5 "$_tmpfile"
 result=$(cat "$_tmpfile")
 assert_equal "delline no-op for out of range line" "only line" "$result"
 rm -f "$_tmpfile"
-
-###############
-# ASSERTION HELPERS
-
-assert_true() {
-    local label="$1"
-    shift
-    if "$@"; then
-        passes=$((passes + 1))
-    else
-        echo "FAIL: $label"
-        echo "  expected command to succeed: $*"
-        failures=$((failures + 1))
-    fi
-}
-
-assert_false() {
-    local label="$1"
-    shift
-    if "$@"; then
-        echo "FAIL: $label"
-        echo "  expected command to fail: $*"
-        failures=$((failures + 1))
-    else
-        passes=$((passes + 1))
-    fi
-}
 
 ###############
 # Extract additional functions for testing.
@@ -609,10 +561,4 @@ fi
 
 _shell="$(basename "$(readlink -f /proc/$$/exe)" 2>/dev/null || echo "sh")"
 
-echo
-if test "$failures" -eq 0; then
-    echo "$_shell shrc_test: all $passes tests passed."
-else
-    echo "$_shell shrc_test: $failures test(s) failed, $passes passed."
-    exit 1
-fi
+test_summary "$_shell shrc_test"

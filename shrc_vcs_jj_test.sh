@@ -3,7 +3,10 @@
 # Tests for jj VCS backend functions.
 #
 
-source "$(dirname "$0")/shrc_vcs_test_helpers.sh"
+source "$(dirname "$0")/shrc_test_lib.sh"
+
+# shellcheck source=shrc.vcs
+source "$_srcdir/shrc.vcs" >/dev/null 2>&1
 source "$_srcdir/shrc.vcs.jj"
 
 if ! command -v jj >/dev/null 2>&1; then

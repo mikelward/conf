@@ -1,7 +1,8 @@
-#!/bin/bash
+#!/bin/sh
 #
-# Shared test helpers for shrc.vcs tests.
-# Requires bash or zsh (uses here-strings).
+# Shared test library for shrc tests.
+# Provides assertion helpers, shell stubs, and a temp directory.
+# Compatible with dash, bash, and zsh.
 #
 
 failures=0
@@ -65,7 +66,7 @@ is_bash() { true; }
 is_dash() { false; }
 is_sh() { false; }
 
-# We need trim_prefix for shrc.vcs functions
+# We need trim_prefix for shrc.vcs and prompt functions
 trim_prefix() {
     local _prefix="$1"
     local _target="$2"
@@ -88,7 +89,5 @@ trap 'rm -rf "$_testdir"' EXIT
 _nohooks="$_testdir/nohooks"
 mkdir "$_nohooks"
 
-# Source shrc.vcs (provides target_relative_to and other functions)
+# Source directory (where the test file lives)
 _srcdir="$(dirname "$0")"
-# shellcheck source=shrc.vcs
-source "$_srcdir/shrc.vcs"
