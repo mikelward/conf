@@ -1329,7 +1329,10 @@ if is_interactive; then
         printf '\n'
         bar $((COLUMNS))
         printf '\r%s %s%s \n' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")"
-        outgoing
+        # TODO: consider including the outgoing count in the prompt too
+        if test -n "$(outgoing 2>/dev/null)"; then
+            base
+        fi
         job_info
         set_title "$(title)"
         set_prompt
