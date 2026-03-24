@@ -1341,7 +1341,7 @@ if is_interactive; then
         set_color 'normal'
         printf '\n'
         bar $((COLUMNS))
-        printf '\r%s %s%s%s \n' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")" "$(maybe_space "$(fetch_info)")"
+        printf '\r%s %s%s \n' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")"
         # TODO: consider including the outgoing count in the prompt too
         if test -n "$(outgoing 2>/dev/null)"; then
             base
@@ -1527,6 +1527,10 @@ if is_interactive; then
                 if test -n "$statuschars"; then
                     printf ' '
                     yellow "$statuschars"
+                fi
+                local fetchinfo="$(fetch_info)"
+                if test -n "$fetchinfo"; then
+                    printf ' %s' "$fetchinfo"
                 fi
                 # local branch
                 # branch="$(branch)"
