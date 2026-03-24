@@ -358,6 +358,165 @@ set_prompt
 assert_equal "set_prompt sets PS1" "$_expected_ps1" "$PS1"
 
 ###############
+# WHOLE PROMPT TESTS
+# These test the complete output of preprompt in realistic scenarios.
+# Expected values show what the user would actually see in the terminal.
+
+# Resolve carriage returns to show terminal-visible output.
+# The bar is printed first, then \r returns to column 0,
+# and the prompt text overwrites the beginning of the bar.
+_resolve_cr() {
+    local LC_ALL=C.utf8
+    local line
+    while IFS= read -r line || test -n "$line"; do
+        case "$line" in
+        *$'\r'*)
+            local before="${line%%$'\r'*}"
+            local after="${line#*$'\r'}"
+            if test ${#after} -lt ${#before}; then
+                echo "${after}${before:${#after}}"
+            else
+                echo "$after"
+            fi
+            ;;
+        *)
+            echo "$line"
+            ;;
+        esac
+    done <<< "$1"
+}
+
+# Determine expected ps1_character based on actual UID
+if test "$UID" -eq 0; then
+    _ps1char='#'
+else
+    _ps1char='$'
+fi
+
+###############
+# WHOLE PROMPT: mikel on laptop, at home, need to auth
+
+HOME="$_testdir/fakehome"
+mkdir -p "$HOME"
+COLUMNS=80
+USERNAME="mikel"
+HOSTNAME="mikel-laptop"
+PWD="$HOME"
+current_command=
+SECONDS=0
+bash_last_error() { :; }
+is_ssh_valid() { false; }
+in_shpool_session() { false; }
+on_production_host() { false; }
+projectroot() { :; }
+vcs() { return 1; }
+outgoing() { return 1; }
+
+result="$(_resolve_cr "$(preprompt)")"
+expected="
+laptop shpool ~ SSH ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+assert_equal "whole prompt: laptop, home, need auth" "$expected" "$result"
+assert_equal "whole prompt: laptop sets PS1" "$_ps1char " "$PS1"
+
+###############
+# WHOLE PROMPT: mikel on laptop, in /usr, last command exited with status 1
+
+USERNAME="mikel"
+HOSTNAME="mikel-laptop"
+PWD="/usr"
+COLUMNS=80
+current_command="ls"
+SECONDS=0
+bash_last_error() { echo "status 1"; }
+is_ssh_valid() { true; }
+in_shpool_session() { false; }
+on_production_host() { false; }
+projectroot() { :; }
+vcs() { return 1; }
+outgoing() { return 1; }
+
+result="$(_resolve_cr "$(preprompt)")"
+expected="status 1
+
+laptop shpool /usr ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+assert_equal "whole prompt: laptop, /usr, status 1" "$expected" "$result"
+
+###############
+# WHOLE PROMPT: mikel on workstation, in project directory, need to shpool
+
+_vcsdir="$_testdir/conf"
+mkdir -p "$_vcsdir"
+USERNAME="mikel"
+HOSTNAME="mikel-workstation"
+PWD="$_vcsdir"
+COLUMNS=80
+current_command=
+SECONDS=0
+bash_last_error() { :; }
+is_ssh_valid() { true; }
+in_shpool_session() { false; }
+on_production_host() { false; }
+projectroot() { echo "$_vcsdir"; }
+vcs() {
+    if test $# -gt 0; then
+        local command=$1; shift
+        "git_${command}" "$@"
+    else
+        echo "git"
+    fi
+}
+git_branch() { echo "main"; }
+status_chars() { :; }
+fetch_info() { :; }
+outgoing() { return 1; }
+base() { :; }
+
+result="$(_resolve_cr "$(preprompt)")"
+expected="
+workstation shpool conf main ―――――――――――――――――――――――――――――――――――――――――――――――――――"
+assert_equal "whole prompt: workstation, project root, shpool" "$expected" "$result"
+
+###############
+# WHOLE PROMPT: mikel on workstation, in shpool session, in project subdirectory,
+#               with outgoing commit, local changes, and stale fetch
+
+_edgedir="$_testdir/edge1"
+mkdir -p "$_edgedir/ui"
+PWD="$_edgedir/ui"
+COLUMNS=80
+current_command=
+SECONDS=0
+in_shpool_session() { true; }
+SHPOOL_SESSION_NAME="edge1"
+projectroot() { echo "$_edgedir"; }
+git_branch() { echo "somebranch"; }
+status_chars() { echo "M?"; }
+fetch_info() { echo "fetch"; }
+outgoing() { echo "1 outgoing"; }
+base() { echo "abc1234 Bump targetSdk to 36"; }
+
+result="$(_resolve_cr "$(preprompt)")"
+expected="
+workstation [edge1] edge1 ui somebranch M? fetch ―――――――――――――――――――――――――――――――
+abc1234 Bump targetSdk to 36"
+assert_equal "whole prompt: workstation, shpool, subdir, outgoing, changes, fetch" "$expected" "$result"
+
+# Reset all stubs for subsequent tests
+USERNAME="testuser"
+HOSTNAME="testhost"
+current_command=
+SECONDS=0
+bash_last_error() { :; }
+is_ssh_valid() { true; }
+in_shpool_session() { false; }
+on_production_host() { false; }
+projectroot() { :; }
+vcs() { return 1; }
+outgoing() { return 1; }
+base() { :; }
+fetch_info() { :; }
+
+###############
 # VISUAL TEST MODE
 # Run: VISUAL_TEST=true bash shrc_prompt_test.sh | less -R
 # to see colored prompt output rendered in your terminal.
