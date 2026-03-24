@@ -187,6 +187,10 @@ clone() {
     esac
 }
 
+cr() {
+    cd "$(rootdir)"
+}
+
 project() {
     basename "$(projectroot)"
 }
