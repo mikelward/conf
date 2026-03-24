@@ -31,7 +31,7 @@ git_amend() {
     done
     # no files given, commit them all
     test $# -eq 0 && flags+=("--all")
-    git amend --no-edit "${flags[@]}" "$@"
+    git commit --amend --no-edit "${flags[@]}" "$@"
 }
 
 git_base() {
