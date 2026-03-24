@@ -212,7 +212,13 @@ jj_squash() {
 }
 
 jj_status() {
-    jj diff --summary "$@"
+    # Only show status for undescribed commits (the jj equivalent of
+    # uncommitted changes).  Described commits are "done".
+    local desc
+    desc="$(jj log --no-graph -r @ -T 'description' 2>/dev/null)" || return
+    if test -z "$desc"; then
+        jj diff --summary "$@"
+    fi
 }
 
 jj_submit() {
