@@ -10,3 +10,4 @@ test:
 	@dash shrc_test.sh
 	@bash shrc_test.sh
 	@bash shrc_vcs_test.sh
+	@bash shrc_prompt_test.sh
