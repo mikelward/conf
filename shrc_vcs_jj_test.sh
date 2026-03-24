@@ -156,10 +156,18 @@ result=$(cd "$_jj_repo" && jj_status)
 assert_true "jj_status shows added file" grep -q 'jj_statusfile.txt' <<< "$result"
 assert_true "jj_status shows A prefix" grep -q '^A' <<< "$result"
 
-# jj_status after commit shows empty output
+# jj_status after commit shows empty output (new @ is undescribed but empty)
 (cd "$_jj_repo" && jj commit -m "status test" >/dev/null 2>&1)
 result=$(cd "$_jj_repo" && jj_status)
 assert_equal "jj_status clean after commit" "" "$result"
+
+# jj_status hides changes in described commits
+(cd "$_jj_repo" && echo "described-content" > jj_describedfile.txt)
+(cd "$_jj_repo" && jj describe -m "already described" >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj_status)
+assert_equal "jj_status empty for described commit" "" "$result"
+# Clean up: commit so @ is fresh again
+(cd "$_jj_repo" && jj commit -m "cleanup described" >/dev/null 2>&1)
 
 ###############
 # Test jj show
