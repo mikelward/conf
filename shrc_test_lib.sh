@@ -46,6 +46,40 @@ assert_false() {
     fi
 }
 
+assert_contains() {
+    local label="$1"
+    local needle="$2"
+    local haystack="$3"
+    case "$haystack" in
+    *"$needle"*)
+        passes=$((passes + 1))
+        ;;
+    *)
+        echo "FAIL: $label"
+        echo "  expected to contain: $(printf '%s' "$needle" | cat -v)"
+        echo "  actual:              $(printf '%s' "$haystack" | cat -v)"
+        failures=$((failures + 1))
+        ;;
+    esac
+}
+
+assert_not_contains() {
+    local label="$1"
+    local needle="$2"
+    local haystack="$3"
+    case "$haystack" in
+    *"$needle"*)
+        echo "FAIL: $label"
+        echo "  expected not to contain: $(printf '%s' "$needle" | cat -v)"
+        echo "  actual:                  $(printf '%s' "$haystack" | cat -v)"
+        failures=$((failures + 1))
+        ;;
+    *)
+        passes=$((passes + 1))
+        ;;
+    esac
+}
+
 # Print summary and exit with appropriate code
 test_summary() {
     local name="${1:-tests}"
