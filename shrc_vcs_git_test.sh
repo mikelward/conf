@@ -296,4 +296,25 @@ assert_true "git_addremove stages removal" grep -q '^D.*git_statusfile.txt' <<< 
 # clean up
 (cd "$_git_local" && git commit -m "addremove test" >/dev/null 2>&1)
 
+###############
+# Test git fetch_time
+
+# git_fetchtime returns empty when FETCH_HEAD doesn't exist
+(cd "$_git_local" && rm -f "$(git rev-parse --git-dir)/FETCH_HEAD")
+result=$(cd "$_git_local" && git_fetchtime)
+assert_equal "git_fetchtime no FETCH_HEAD" "" "$result"
+
+# git_fetchtime returns a timestamp after fetch
+(cd "$_git_local" && git fetch >/dev/null 2>&1)
+result=$(cd "$_git_local" && git_fetchtime)
+assert_true "git_fetchtime after fetch is non-empty" test -n "$result"
+assert_true "git_fetchtime returns a number" test "$result" -gt 0 2>/dev/null
+
+# git_fetchtime updates after a new fetch
+old_time=$result
+sleep 1
+(cd "$_git_local" && git fetch >/dev/null 2>&1)
+new_time=$(cd "$_git_local" && git_fetchtime)
+assert_true "git_fetchtime updates after fetch" test "$new_time" -ge "$old_time"
+
 test_summary "git"

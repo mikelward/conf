@@ -87,6 +87,13 @@ jj_fastforward() {
     jj piper pull
 }
 
+jj_fetchtime() {
+    local fetch_head="$(jj workspace root)/.jj/repo/store/git/FETCH_HEAD"
+    if test -f "$fetch_head"; then
+        stat -c %Y "$fetch_head" 2>/dev/null || stat -f %m "$fetch_head" 2>/dev/null
+    fi
+}
+
 jj_fix() {
     jj fix "$@"
 }
