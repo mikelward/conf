@@ -1344,7 +1344,7 @@ if is_interactive; then
         printf '\r%s %s%s \n' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")"
         # TODO: consider including the outgoing count in the prompt too
         if test -n "$(outgoing 2>/dev/null)"; then
-            base
+            base --color=always
         fi
         job_info
         set_title "$(title)"

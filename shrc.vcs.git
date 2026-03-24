@@ -35,7 +35,7 @@ git_amend() {
 }
 
 git_base() {
-    git log -1 --format='%h %s' "$@"
+    git log -1 --oneline "$@"
 }
 
 git_annotate() {
