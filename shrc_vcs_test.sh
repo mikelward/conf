@@ -5,7 +5,11 @@
 # Requires bash or zsh (uses here-strings).
 #
 
-source "$(dirname "$0")/shrc_vcs_test_helpers.sh"
+source "$(dirname "$0")/shrc_test_lib.sh"
+
+# Source shrc.vcs (provides target_relative_to and other functions)
+# shellcheck source=shrc.vcs
+source "$_srcdir/shrc.vcs" >/dev/null 2>&1
 
 ###############
 # Test vcs detection
