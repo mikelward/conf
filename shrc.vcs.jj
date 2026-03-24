@@ -4,6 +4,10 @@ jj_absorb() {
     jj absorb "$@"
 }
 
+jj_base() {
+    jj log --no-graph -r @- --template builtin_log_oneline "$@"
+}
+
 jj_add() {
     jj file track "$@"
 }

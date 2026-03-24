@@ -11,6 +11,10 @@ hg_amend() {
     hg amend "$@"
 }
 
+hg_base() {
+    hg log -r . --template=oneline "$@"
+}
+
 hg_annotate() {
     hg annotate "$@"
 }
