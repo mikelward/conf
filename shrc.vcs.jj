@@ -5,7 +5,7 @@ jj_absorb() {
 }
 
 jj_base() {
-    jj log --no-graph -r @- --template builtin_log_oneline "$@"
+    jj --no-pager log --no-graph -r @- --template builtin_log_oneline "$@"
 }
 
 jj_add() {
