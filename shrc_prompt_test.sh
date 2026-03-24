@@ -6,7 +6,9 @@
 
 source "$(dirname "$0")/shrc_test_lib.sh"
 
-# Disable colors for predictable output
+# Disable colors for predictable output in assertions.
+# Run with VISUAL_TEST=true to see colored prompt output in terminal:
+#   VISUAL_TEST=true bash shrc_prompt_test.sh | less -R
 color=false
 normal='' bold='' underline='' standout=''
 black='' red='' green='' yellow='' blue='' magenta='' cyan='' white=''
@@ -354,6 +356,191 @@ assert_equal "preprompt sets PS1 via set_prompt" "$_expected_ps1" "$PS1"
 PS1=""
 set_prompt
 assert_equal "set_prompt sets PS1" "$_expected_ps1" "$PS1"
+
+###############
+# VISUAL TEST MODE
+# Run: VISUAL_TEST=true bash shrc_prompt_test.sh | less -R
+# to see colored prompt output rendered in your terminal.
+
+if test "${VISUAL_TEST:-}" = true; then
+    color=true
+    bold=$'\033[1m'
+    underline=$'\033[4m'
+    standout=$'\033[7m'
+    normal=$'\033[0m'
+    black=$'\033[30m'
+    red=$'\033[31m'
+    green=$'\033[32m'
+    yellow=$'\033[33m'
+    blue=$'\033[34m'
+    magenta=$'\033[35m'
+    cyan=$'\033[36m'
+    white=$'\033[37m'
+
+    echo "=== Visual Color Test ==="
+    echo ""
+    echo "--- Color functions ---"
+    red "red text"; echo ""
+    green "green text"; echo ""
+    yellow "yellow text"; echo ""
+    blue "blue text"; echo ""
+    echo ""
+
+    echo "--- host_info (non-production) ---"
+    on_production_host() { false; }
+    in_shpool_session() { false; }
+    HOSTNAME="devhost"
+    host_info
+    echo ""
+
+    echo "--- host_info (production, should be red) ---"
+    on_production_host() { true; }
+    HOSTNAME="prodhost"
+    host_info
+    echo ""
+
+    echo "--- host_info (shpool session, name should be green) ---"
+    on_production_host() { false; }
+    in_shpool_session() { true; }
+    SHPOOL_SESSION_NAME="main"
+    HOSTNAME="devhost"
+    host_info
+    echo ""
+
+    echo "--- last_job_info (error, should be red) ---"
+    in_shpool_session() { false; }
+    current_command="failing"
+    SECONDS=0
+    bash_last_error() { echo "status 1"; }
+    last_job_info
+    echo ""
+
+    echo "--- last_job_info (duration, should be yellow) ---"
+    bash_last_error() { :; }
+    current_command="slow"
+    SECONDS=65
+    last_job_info
+    echo ""
+
+    echo "--- preprompt (production host) ---"
+    on_production_host() { true; }
+    HOSTNAME="prodhost"
+    COLUMNS=40
+    current_command=
+    SECONDS=0
+    bash_last_error() { :; }
+    preprompt
+    echo ""
+
+    echo "=== End Visual Color Test ==="
+
+    # Restore
+    on_production_host() { false; }
+    in_shpool_session() { false; }
+    unset SHPOOL_SESSION_NAME
+    bash_last_error() { :; }
+    current_command=
+    HOSTNAME="testhost"
+    color=false
+    normal='' bold='' underline='' standout=''
+    black='' red='' green='' yellow='' blue='' magenta='' cyan='' white=''
+fi
+
+###############
+# COLOR TESTS
+# These use real ANSI escapes to verify color functions produce correct output.
+
+# Save and set ANSI color variables for color tests
+_saved_color="$color"
+_saved_red="$red"
+_saved_green="$green"
+_saved_yellow="$yellow"
+_saved_blue="$blue"
+_saved_normal="$normal"
+
+color=true
+red=$'\033[31m'
+green=$'\033[32m'
+yellow=$'\033[33m'
+blue=$'\033[34m'
+normal=$'\033[0m'
+
+# TEST: red() wraps text in red escape sequences
+result="$(red "error")"
+assert_equal "red() wraps text" $'\033[31m'"error"$'\033[0m' "$result"
+
+# TEST: green() wraps text in green escape sequences
+result="$(green "ok")"
+assert_equal "green() wraps text" $'\033[32m'"ok"$'\033[0m' "$result"
+
+# TEST: yellow() wraps text in yellow escape sequences
+result="$(yellow "warning")"
+assert_equal "yellow() wraps text" $'\033[33m'"warning"$'\033[0m' "$result"
+
+# TEST: blue() wraps text in blue escape sequences
+result="$(blue "info")"
+assert_equal "blue() wraps text" $'\033[34m'"info"$'\033[0m' "$result"
+
+# TEST: set_color outputs the escape for a named color
+result="$(set_color red)"
+assert_equal "set_color red" $'\033[31m' "$result"
+
+# TEST: set_color with multiple attributes
+bold=$'\033[1m'
+result="$(set_color bold red)"
+assert_equal "set_color bold red" $'\033[1m'$'\033[31m' "$result"
+bold=''
+
+# TEST: host_info uses red for production hosts
+on_production_host() { true; }
+in_shpool_session() { false; }
+HOSTNAME="prodhost"
+result="$(host_info)"
+assert_contains "production host_info contains red" $'\033[31m' "$result"
+assert_contains "production host_info contains normal reset" $'\033[0m' "$result"
+
+# TEST: host_info no red for non-production hosts
+on_production_host() { false; }
+HOSTNAME="devhost"
+result="$(host_info)"
+assert_not_contains "non-production host_info has no red" $'\033[31m' "$result"
+
+# TEST: host_info shpool session name is green
+in_shpool_session() { true; }
+SHPOOL_SESSION_NAME="main"
+result="$(host_info)"
+assert_contains "shpool session name is green" $'\033[32m'"main"$'\033[0m' "$result"
+
+# TEST: last_job_info error is red
+in_shpool_session() { false; }
+current_command="failing"
+SECONDS=0
+bash_last_error() { echo "status 1"; }
+result="$(last_job_info)"
+assert_contains "last_job_info error is red" $'\033[31m'"status 1"$'\033[0m' "$result"
+
+# TEST: last_job_info duration is yellow
+bash_last_error() { :; }
+current_command="slow"
+SECONDS=5
+result="$(last_job_info)"
+assert_contains "last_job_info duration is yellow" $'\033[33m'"took 5 seconds"$'\033[0m' "$result"
+
+# Restore color variables
+color="$_saved_color"
+red="$_saved_red"
+green="$_saved_green"
+yellow="$_saved_yellow"
+blue="$_saved_blue"
+normal="$_saved_normal"
+
+# Restore stubs
+on_production_host() { false; }
+in_shpool_session() { false; }
+unset SHPOOL_SESSION_NAME
+bash_last_error() { :; }
+current_command=
+HOSTNAME="testhost"
 
 _shell="$(basename "$(readlink -f /proc/$$/exe)" 2>/dev/null || echo "bash")"
 
