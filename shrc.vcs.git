@@ -129,6 +129,13 @@ git_fastforward() {
     git pull --ff-only
 }
 
+git_fetchtime() {
+    local fetch_head="$(git rev-parse --git-dir)/FETCH_HEAD"
+    if test -f "$fetch_head"; then
+        stat -c %Y "$fetch_head" 2>/dev/null || stat -f %m "$fetch_head" 2>/dev/null
+    fi
+}
+
 git_fix() {
     git fix "$@"
 }

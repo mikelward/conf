@@ -90,6 +90,13 @@ hg_fastforward() {
     fi
 }
 
+hg_fetchtime() {
+    local changelog="$(hg root)/.hg/store/00changelog.i"
+    if test -f "$changelog"; then
+        stat -c %Y "$changelog" 2>/dev/null || stat -f %m "$changelog" 2>/dev/null
+    fi
+}
+
 hg_fix() {
     hg fix "$@"
 }
