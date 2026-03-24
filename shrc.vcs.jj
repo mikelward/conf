@@ -128,7 +128,7 @@ jj_lint() {
 }
 
 jj_outgoing() {
-  jj --no-pager log --no-graph -r 'mutable() ~ empty()' --template 'builtin_log_oneline' "$@"
+    jj --no-pager log --no-graph -r 'mutable() ~ empty() ~ ancestors(remote_bookmarks())' --template 'builtin_log_oneline' "$@"
 }
 
 jj_pending() {

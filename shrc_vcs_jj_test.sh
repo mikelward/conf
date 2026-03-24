@@ -53,17 +53,24 @@ assert_true "jj_base shows second commit" grep -q 'jj second base commit' <<< "$
 result=$(cd "$_jj_repo" && jj_base)
 assert_true "jj_base after prev shows earlier commit" grep -q 'jj base test commit' <<< "$result"
 
-# Move back with jj next
-(cd "$_jj_repo" && jj next --edit >/dev/null 2>&1)
+# Create a new working copy change on top (prev --edit abandoned the old one)
+(cd "$_jj_repo" && jj new >/dev/null 2>&1)
 result=$(cd "$_jj_repo" && jj_base)
-assert_true "jj_base after next shows later commit" grep -q 'jj second base commit' <<< "$result"
+assert_true "jj_base after new shows current commit" grep -q 'jj second base commit' <<< "$result"
 
 ###############
 # Test jj outgoing and incoming
 
-# Test jj_outgoing with no commits (empty repo)
+# Push existing commits so they become immutable and don't appear in outgoing
+_jj_git_remote="$_testdir/jj_git_remote"
+git init --bare "$_jj_git_remote" >/dev/null 2>&1
+(cd "$_jj_repo" && jj git remote add origin "$_jj_git_remote" >/dev/null 2>&1)
+(cd "$_jj_repo" && jj bookmark create main -r @- >/dev/null 2>&1)
+(cd "$_jj_repo" && jj git push --bookmark main --allow-new >/dev/null 2>&1)
+
+# Test jj_outgoing with no unpushed commits
 result=$(cd "$_jj_repo" && jj_outgoing 2>&1)
-assert_equal "jj_outgoing empty repo" "" "$result"
+assert_equal "jj_outgoing no unpushed commits" "" "$result"
 
 # Create a commit
 (
@@ -179,7 +186,7 @@ assert_equal "jj_status empty for described commit" "" "$result"
 # Test jj show
 
 result=$(cd "$_jj_repo" && jj_show @-)
-assert_true "jj_show displays commit" grep -q 'status test' <<< "$result"
+assert_true "jj_show displays commit" grep -q 'cleanup described' <<< "$result"
 
 ###############
 # Test jj diffstat

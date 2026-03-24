@@ -68,6 +68,9 @@ assert_true "hg_base after update back shows latest" grep -q 'hg base test commi
 ###############
 # Test hg outgoing and incoming
 
+# Push the commit created by the base tests so outgoing starts clean
+(cd "$_hg_local" && hg push >/dev/null 2>&1)
+
 # Test hg_outgoing with no unpushed commits
 result=$(cd "$_hg_local" && hg_outgoing 2>&1)
 assert_equal "hg_outgoing no unpushed commits" "" "$result"
