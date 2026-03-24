@@ -1,0 +1,360 @@
+#!/bin/bash
+#
+# Tests for prompt and preprompt functions in shrc.
+# Stubs/mocks VCS and environment functions to test prompt output.
+#
+
+source "$(dirname "$0")/shrc_test_lib.sh"
+
+# Disable colors for predictable output
+color=false
+normal='' bold='' underline='' standout=''
+black='' red='' green='' yellow='' blue='' magenta='' cyan='' white=''
+
+# Disable terminal title sequences
+titlestart=''
+titlefinish=''
+
+# Set baseline environment
+HOSTNAME="testhost"
+USERNAME="testuser"
+TERM="dumb"
+shell="bash"
+
+# Extract prompt functions from shrc
+eval "$(sed -n '/^    basic_prompt()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    preprompt()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    maybe_space()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    bar()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    last_job_info()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    flash_terminal()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    host_info()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    dir_info()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    _dir_info()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    job_info()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    short_hostname()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    tilde_directory()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    set_prompt()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    ps1()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    ps1_character()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    keymap_character()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    getshopt()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    blue()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    green()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    red()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    yellow()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    set_color()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    title()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    set_title()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    short_pwd()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    project_or_pwd()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    session_name()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    show_hostname_in_title()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    i_am_root()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+eval "$(sed -n '/^    on_production_host()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+
+eval "$(sed -n '/^auth_info()/,/^}/p' "$_srcdir/shrc")"
+eval "$(sed -n '/^fetch_info()/,/^}/p' "$_srcdir/shrc")"
+eval "$(sed -n '/^is_ssh_valid()/,/^}/p' "$_srcdir/shrc")"
+
+# Extract bash_last_error
+eval "$(sed -n '/^    bash_last_error()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+
+# Stub VCS functions (no VCS by default)
+projectroot() { :; }
+projectname() { :; }
+vcs() { return 1; }
+git_branch() { :; }
+status_chars() { :; }
+outgoing() { return 1; }
+base() { :; }
+fetchtime() { return 1; }
+
+# Stub environment functions
+on_my_machine() { true; }
+on_my_workstation() { true; }
+on_my_laptop() { false; }
+on_test_host() { false; }
+on_dev_host() { false; }
+inside_tmux() { false; }
+in_shpool_session() { false; }
+bell() { :; }
+log_history() { :; }
+
+###############
+# TEST: basic_prompt
+
+basic_prompt
+assert_equal "basic_prompt sets PS1" '$ ' "$PS1"
+assert_equal "basic_prompt sets PS2" '_ ' "$PS2"
+assert_equal "basic_prompt sets PS3" '#? ' "$PS3"
+
+###############
+# TEST: ps1_character
+
+# UID is readonly in bash, so test based on actual UID
+if test "$UID" -eq 0; then
+    result="$(ps1_character)"
+    assert_equal "ps1_character for root" '#' "$result"
+
+    result="$(ps1)"
+    assert_equal "ps1 output for root" '# ' "$result"
+else
+    result="$(ps1_character)"
+    assert_equal "ps1_character for non-root" '$' "$result"
+
+    result="$(ps1)"
+    assert_equal "ps1 output for non-root" '$ ' "$result"
+fi
+
+###############
+# TEST: short_hostname
+
+HOSTNAME="testuser-myhost.example.com"
+USERNAME="testuser"
+result="$(short_hostname)"
+assert_equal "short_hostname strips domain and username prefix" "myhost" "$result"
+
+HOSTNAME="simplehost"
+result="$(short_hostname)"
+assert_equal "short_hostname simple" "simplehost" "$result"
+
+HOSTNAME="testhost"
+
+###############
+# TEST: maybe_space
+
+result="$(maybe_space "hello")"
+assert_equal "maybe_space with content" " hello" "$result"
+
+result="$(maybe_space "")"
+assert_equal "maybe_space with empty" "" "$result"
+
+result="$(maybe_space)"
+assert_equal "maybe_space with no args" "" "$result"
+
+###############
+# TEST: auth_info empty (SSH valid)
+
+is_ssh_valid() { true; }
+result="$(auth_info)"
+assert_equal "auth_info empty when ssh valid" "" "$result"
+
+###############
+# TEST: auth_info shows warning when SSH invalid
+
+is_ssh_valid() { false; }
+result="$(auth_info)"
+assert_equal "auth_info warns when ssh invalid" "SSH" "$result"
+
+# Restore
+is_ssh_valid() { true; }
+
+###############
+# TEST: dir_info outside VCS shows tilde directory
+
+projectroot() { :; }
+HOME="$_testdir/fakehome"
+mkdir -p "$HOME/documents"
+PWD="$HOME/documents"
+result="$(_dir_info "$PWD")"
+assert_equal "dir_info outside VCS shows tilde path" "~/documents" "$result"
+
+###############
+# TEST: dir_info in VCS root
+
+_vcsdir="$_testdir/myproject"
+mkdir -p "$_vcsdir"
+projectroot() { echo "$_vcsdir"; }
+# vcs with args dispatches to ${vcs}_${command}, so stub both
+vcs() {
+    if test $# -gt 0; then
+        local command=$1; shift
+        "git_${command}" "$@"
+    else
+        echo "git"
+    fi
+}
+git_branch() { echo "main"; }
+status_chars() { :; }
+fetch_info() { :; }
+
+PWD="$_vcsdir"
+result="$(_dir_info "$PWD")"
+assert_equal "dir_info at VCS root" "myproject main" "$result"
+
+###############
+# TEST: dir_info in subdirectory of VCS root
+
+_subdir="$_vcsdir/src/lib"
+mkdir -p "$_subdir"
+PWD="$_subdir"
+result="$(_dir_info "$PWD")"
+assert_equal "dir_info in VCS subdirectory" "myproject src/lib main" "$result"
+
+###############
+# TEST: dir_info with branch and status chars
+
+status_chars() { echo "M"; }
+PWD="$_vcsdir"
+result="$(_dir_info "$PWD")"
+assert_equal "dir_info with status chars" "myproject main M" "$result"
+
+###############
+# TEST: dir_info with fetch warning
+
+status_chars() { :; }
+fetch_info() { echo "fetch"; }
+result="$(_dir_info "$PWD")"
+assert_equal "dir_info with stale fetch" "myproject main fetch" "$result"
+
+# Reset stubs
+fetch_info() { :; }
+projectroot() { :; }
+vcs() { return 1; }
+
+###############
+# TEST: last_job_info with exit status 1
+
+current_command="false"
+SECONDS=0
+
+bash_last_error() { echo "status 1"; }
+result="$(last_job_info)"
+# Output ends with newline, captured by $() strips trailing newlines
+assert_equal "last_job_info shows error status" "status 1" "$result"
+
+###############
+# TEST: last_job_info with no error
+
+bash_last_error() { :; }
+current_command="true"
+SECONDS=0
+result="$(last_job_info)"
+assert_equal "last_job_info no output on success" "" "$result"
+
+###############
+# TEST: last_job_info with duration
+
+bash_last_error() { :; }
+current_command="sleep"
+SECONDS=5
+result="$(last_job_info)"
+assert_equal "last_job_info shows duration" "took 5 seconds" "$result"
+
+###############
+# TEST: last_job_info with error and duration
+
+bash_last_error() { echo "status 1"; }
+current_command="failing_command"
+SECONDS=65
+result="$(last_job_info)"
+assert_equal "last_job_info shows error and duration" "status 1 took 1 minutes 5 seconds" "$result"
+
+###############
+# TEST: last_job_info skipped when no current_command
+
+bash_last_error() { echo "status 1"; }
+current_command=
+result="$(last_job_info)"
+assert_equal "last_job_info skipped without current_command" "" "$result"
+
+###############
+# TEST: last_job_info with hours
+
+bash_last_error() { :; }
+current_command="long_command"
+SECONDS=3661
+result="$(last_job_info)"
+assert_equal "last_job_info shows hours" "took 1 hours 1 minutes 1 seconds" "$result"
+
+###############
+# TEST: last_job_info with interrupted (exit 130)
+
+bash_last_error() { echo "interrupted"; }
+current_command="interrupted_cmd"
+SECONDS=0
+result="$(last_job_info)"
+assert_equal "last_job_info shows interrupted" "interrupted" "$result"
+
+###############
+# TEST: host_info without shpool
+
+in_shpool_session() { false; }
+on_production_host() { false; }
+HOSTNAME="testhost"
+result="$(host_info)"
+# host_info prints hostname\n then shpool suggestion
+expected="testhost shpool"
+assert_equal "host_info without shpool" "$expected" "$result"
+
+###############
+# TEST: host_info with shpool session
+
+in_shpool_session() { true; }
+SHPOOL_SESSION_NAME="main"
+result="$(host_info)"
+expected="testhost [main]"
+assert_equal "host_info with shpool" "$expected" "$result"
+
+in_shpool_session() { false; }
+unset SHPOOL_SESSION_NAME
+
+###############
+# TEST: preprompt integrates components
+
+HOME="$_testdir/fakehome"
+mkdir -p "$HOME"
+COLUMNS=10
+HOSTNAME="testhost"
+in_shpool_session() { false; }
+on_production_host() { false; }
+is_ssh_valid() { true; }
+projectroot() { :; }
+vcs() { return 1; }
+outgoing() { return 1; }
+current_command=
+SECONDS=0
+PWD="$HOME"
+bash_last_error() { :; }
+
+result="$(preprompt)"
+assert_true "preprompt contains hostname" echo "$result" | grep -q "testhost"
+assert_true "preprompt contains dir" echo "$result" | grep -q "~"
+
+###############
+# TEST: preprompt with auth warning
+
+is_ssh_valid() { false; }
+current_command=
+SECONDS=0
+result="$(preprompt)"
+assert_true "preprompt contains SSH warning" echo "$result" | grep -q "SSH"
+
+# Restore
+is_ssh_valid() { true; }
+
+###############
+# TEST: preprompt sets PS1
+
+PS1=""
+current_command=
+SECONDS=0
+preprompt >/dev/null
+if test "$UID" -eq 0; then
+    _expected_ps1='# '
+else
+    _expected_ps1='$ '
+fi
+assert_equal "preprompt sets PS1 via set_prompt" "$_expected_ps1" "$PS1"
+
+###############
+# TEST: set_prompt
+
+PS1=""
+set_prompt
+assert_equal "set_prompt sets PS1" "$_expected_ps1" "$PS1"
+
+_shell="$(basename "$(readlink -f /proc/$$/exe)" 2>/dev/null || echo "bash")"
+
+test_summary "$_shell shrc_prompt_test"
