@@ -79,7 +79,7 @@ on_my_laptop() { false; }
 on_test_host() { false; }
 on_dev_host() { false; }
 inside_tmux() { false; }
-in_shpool_session() { false; }
+in_shpool() { false; }
 bell() { :; }
 log_history() { :; }
 
@@ -282,7 +282,7 @@ assert_equal "last_job_info shows interrupted" "interrupted" "$result"
 ###############
 # TEST: host_info without shpool
 
-in_shpool_session() { false; }
+in_shpool() { false; }
 on_production_host() { false; }
 HOSTNAME="testhost"
 result="$(host_info)"
@@ -293,13 +293,13 @@ assert_equal "host_info without shpool" "$expected" "$result"
 ###############
 # TEST: host_info with shpool session
 
-in_shpool_session() { true; }
+in_shpool() { true; }
 SHPOOL_SESSION_NAME="main"
 result="$(host_info)"
 expected="testhost [main]"
 assert_equal "host_info with shpool" "$expected" "$result"
 
-in_shpool_session() { false; }
+in_shpool() { false; }
 unset SHPOOL_SESSION_NAME
 
 ###############
@@ -309,7 +309,7 @@ HOME="$_testdir/fakehome"
 mkdir -p "$HOME"
 COLUMNS=10
 HOSTNAME="testhost"
-in_shpool_session() { false; }
+in_shpool() { false; }
 on_production_host() { false; }
 is_ssh_valid() { true; }
 projectroot() { :; }
@@ -406,7 +406,7 @@ current_command=
 SECONDS=0
 bash_last_error() { :; }
 is_ssh_valid() { false; }
-in_shpool_session() { false; }
+in_shpool() { false; }
 on_production_host() { false; }
 projectroot() { :; }
 vcs() { return 1; }
@@ -429,7 +429,7 @@ current_command="ls"
 SECONDS=0
 bash_last_error() { echo "status 1"; }
 is_ssh_valid() { true; }
-in_shpool_session() { false; }
+in_shpool() { false; }
 on_production_host() { false; }
 projectroot() { :; }
 vcs() { return 1; }
@@ -454,7 +454,7 @@ current_command=
 SECONDS=0
 bash_last_error() { :; }
 is_ssh_valid() { true; }
-in_shpool_session() { false; }
+in_shpool() { false; }
 on_production_host() { false; }
 projectroot() { echo "$_vcsdir"; }
 vcs() {
@@ -486,7 +486,7 @@ PWD="$_edgedir/ui"
 COLUMNS=80
 current_command=
 SECONDS=0
-in_shpool_session() { true; }
+in_shpool() { true; }
 SHPOOL_SESSION_NAME="edge1"
 projectroot() { echo "$_edgedir"; }
 git_branch() { echo "somebranch"; }
@@ -508,7 +508,7 @@ current_command=
 SECONDS=0
 bash_last_error() { :; }
 is_ssh_valid() { true; }
-in_shpool_session() { false; }
+in_shpool() { false; }
 on_production_host() { false; }
 projectroot() { :; }
 vcs() { return 1; }
@@ -547,7 +547,7 @@ if test "${VISUAL_TEST:-}" = true; then
 
     echo "--- host_info (non-production) ---"
     on_production_host() { false; }
-    in_shpool_session() { false; }
+    in_shpool() { false; }
     HOSTNAME="devhost"
     host_info
     echo ""
@@ -560,14 +560,14 @@ if test "${VISUAL_TEST:-}" = true; then
 
     echo "--- host_info (shpool session, name should be green) ---"
     on_production_host() { false; }
-    in_shpool_session() { true; }
+    in_shpool() { true; }
     SHPOOL_SESSION_NAME="main"
     HOSTNAME="devhost"
     host_info
     echo ""
 
     echo "--- last_job_info (error, should be red) ---"
-    in_shpool_session() { false; }
+    in_shpool() { false; }
     current_command="failing"
     SECONDS=0
     bash_last_error() { echo "status 1"; }
@@ -595,7 +595,7 @@ if test "${VISUAL_TEST:-}" = true; then
 
     # Restore
     on_production_host() { false; }
-    in_shpool_session() { false; }
+    in_shpool() { false; }
     unset SHPOOL_SESSION_NAME
     bash_last_error() { :; }
     current_command=
@@ -652,7 +652,7 @@ bold=''
 
 # TEST: host_info uses red for production hosts
 on_production_host() { true; }
-in_shpool_session() { false; }
+in_shpool() { false; }
 HOSTNAME="prodhost"
 result="$(host_info)"
 assert_contains "production host_info contains red" $'\033[31m' "$result"
@@ -665,13 +665,13 @@ result="$(host_info)"
 assert_not_contains "non-production host_info has no red" $'\033[31m' "$result"
 
 # TEST: host_info shpool session name is green
-in_shpool_session() { true; }
+in_shpool() { true; }
 SHPOOL_SESSION_NAME="main"
 result="$(host_info)"
 assert_contains "shpool session name is green" $'\033[32m'"main"$'\033[0m' "$result"
 
 # TEST: last_job_info error is red
-in_shpool_session() { false; }
+in_shpool() { false; }
 current_command="failing"
 SECONDS=0
 bash_last_error() { echo "status 1"; }
@@ -695,7 +695,7 @@ normal="$_saved_normal"
 
 # Restore stubs
 on_production_host() { false; }
-in_shpool_session() { false; }
+in_shpool() { false; }
 unset SHPOOL_SESSION_NAME
 bash_last_error() { :; }
 current_command=

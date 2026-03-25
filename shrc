@@ -254,8 +254,13 @@ inside_project() {
 }
 
 # return true if this session is attached to shpool
-in_shpool_session() {
+in_shpool() {
     test -n "${SHPOOL_SESSION_NAME:-}"
+}
+
+# return true if we should try to run shpool
+want_shpool() {
+    connected_remotely || inside_project
 }
 
 inside_tmux() {
@@ -968,12 +973,61 @@ if test -f "$HOME/.shrc.vcs"; then
     source "$HOME/.shrc.vcs"
 fi
 
+# TODO: Make the name unique or linked.
+shpool_switch_session_file="$HOME/.shpool_switch_session"
+
+shpool_switch_session() {
+    cat "$shpool_switch_session_file" 2>/dev/null
+}
+
+switchshpool() {
+    echo "$1" > "$shpool_switch_session_file"
+    exit 0
+}
+alias ssp=switchshpool
+alias swsh=switchshpool
+alias shsw=switchshpool
+
+switch_shpool() {
+    rm "$shpool_switch_session_file"
+    shpool attach "$1"
+}
+
+# Start an shpool session with a useful session name.
+# Disconnect if the user cleanly exited the session.
+# Stay connected if there was an error, so the user can see and fix the error.
+# Run in a loop so the user can switch to a different session.
+shpool_loop() {
+    while true; do
+        shpool_switch_session="$(shpool_switch_session)"
+        if test -n "$shpool_switch_session"; then
+            switch_shpool "$shpool_switch_session"
+        else
+            autoshpool
+        fi
+
+        if test $? -ne 0; then
+            # Maybe .shrc failed or something.
+            # Stay here so the user can see the error and fix it.
+            break
+        fi
+
+        shpool_switch_session="$(shpool_switch_session)"
+        if test -n "$shpool_switch_session"; then
+            continue
+        fi
+
+        # autoshpool exited. Exit from the parent shrc so we disconnect.
+        exit 0
+    done
+}
+
 #########################
 # INTERACTIVE SHELL SETUP
 # Set up the prompt, title, key bindings, etc.
 
 if is_interactive; then
-    if in_shpool_session; then
+    if in_shpool; then
         # Prevent shpool from clearing the screen during startup.
         # This ensures we can see any motd, errors, etc.
         clear() {
@@ -987,14 +1041,8 @@ if is_interactive; then
         # This will be overridden by autoshpool.
         export SHPOOL_INITIAL_PWD="$PWD"
     fi
-    if ! in_shpool_session && have_command shpool; then
-        if connected_remotely || inside_project; then
-            # autoshpool will start a new session.
-            # Automatically clean up at the end.
-            # Do this instead of running exec autoshpool so autoshpool failing
-            # doesn't prevent me from logging in.
-            autoshpool && exit
-        fi
+    if ! in_shpool && want_shpool && have_command shpool; then
+        shpool_loop
     fi
 
     log_history "New session as $USERNAME: $0 $*"
@@ -1479,7 +1527,7 @@ if is_interactive; then
 
         printf '%s' "$(short_hostname)"
         set_color 'normal'
-        if in_shpool_session; then
+        if in_shpool; then
             printf ' ['
             green "$SHPOOL_SESSION_NAME"
             printf ']'
@@ -2207,7 +2255,7 @@ fi
 test -f "${ZDOTDIR:-$HOME}/.shrc.local" && . "${ZDOTDIR:-$HOME}/.shrc.local"
 
 # TODO: move to .profile?
-if is_interactive && ! in_shpool_session; then
+if is_interactive && ! in_shpool; then
     if need_auth; then
         auth
     fi

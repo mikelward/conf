@@ -320,7 +320,7 @@ eval "$(sed -n '/^recent()/,/^}/p' "$(dirname "$0")/shrc")"
 eval "$(sed -n '/^connected_via_ssh()/,/^}/p' "$(dirname "$0")/shrc")"
 eval "$(sed -n '/^connected_remotely()/,/^}/p' "$(dirname "$0")/shrc")"
 eval "$(sed -n '/^inside_tmux()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^in_shpool_session()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^in_shpool()/,/^}/p' "$(dirname "$0")/shrc")"
 
 ###############
 # COMMAND INSPECTION
@@ -539,11 +539,11 @@ assert_true "inside_tmux with TMUX set" inside_tmux
 unset TMUX
 assert_false "inside_tmux without TMUX" inside_tmux
 
-# Test in_shpool_session
+# Test in_shpool
 SHPOOL_SESSION_NAME="main"
-assert_true "in_shpool_session with SHPOOL_SESSION_NAME" in_shpool_session
+assert_true "in_shpool with SHPOOL_SESSION_NAME" in_shpool
 unset SHPOOL_SESSION_NAME
-assert_false "in_shpool_session without SHPOOL_SESSION_NAME" in_shpool_session
+assert_false "in_shpool without SHPOOL_SESSION_NAME" in_shpool
 
 ###############
 # BASH-ONLY TESTS
