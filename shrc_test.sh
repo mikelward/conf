@@ -321,6 +321,9 @@ eval "$(sed -n '/^connected_via_ssh()/,/^}/p' "$(dirname "$0")/shrc")"
 eval "$(sed -n '/^connected_remotely()/,/^}/p' "$(dirname "$0")/shrc")"
 eval "$(sed -n '/^inside_tmux()/,/^}/p' "$(dirname "$0")/shrc")"
 eval "$(sed -n '/^in_shpool()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^want_shpool()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^shpool_switch_session()/,/^}/p' "$(dirname "$0")/shrc")"
+eval "$(sed -n '/^switch_shpool()/,/^}/p' "$(dirname "$0")/shrc")"
 
 ###############
 # COMMAND INSPECTION
@@ -544,6 +547,154 @@ SHPOOL_SESSION_NAME="main"
 assert_true "in_shpool with SHPOOL_SESSION_NAME" in_shpool
 unset SHPOOL_SESSION_NAME
 assert_false "in_shpool without SHPOOL_SESSION_NAME" in_shpool
+
+###############
+# SHPOOL FUNCTIONS
+
+# Test want_shpool
+# want_shpool returns true if connected remotely or inside a project
+connected_remotely() { true; }
+inside_project() { false; }
+assert_true "want_shpool when connected remotely" want_shpool
+
+connected_remotely() { false; }
+inside_project() { true; }
+assert_true "want_shpool when inside project" want_shpool
+
+connected_remotely() { true; }
+inside_project() { true; }
+assert_true "want_shpool when both remote and inside project" want_shpool
+
+connected_remotely() { false; }
+inside_project() { false; }
+assert_false "want_shpool when neither remote nor inside project" want_shpool
+
+# Test shpool_switch_session
+# Use a temp file for the switch session file
+shpool_switch_session_file="$_testdir/.shpool_switch_session"
+
+# When the file does not exist, shpool_switch_session returns empty
+rm -f "$shpool_switch_session_file"
+result="$(shpool_switch_session)"
+assert_equal "shpool_switch_session with no file" "" "$result"
+
+# When the file exists, shpool_switch_session returns its contents
+echo "mysession" > "$shpool_switch_session_file"
+result="$(shpool_switch_session)"
+assert_equal "shpool_switch_session reads session name" "mysession" "$result"
+
+# Test switch_shpool
+# Stub shpool to record what it was called with
+shpool() {
+    echo "shpool $*" >> "$_testdir/shpool_calls"
+}
+
+echo "othersession" > "$shpool_switch_session_file"
+rm -f "$_testdir/shpool_calls"
+switch_shpool "othersession"
+assert_false "switch_shpool removes session file" test -f "$shpool_switch_session_file"
+result="$(cat "$_testdir/shpool_calls")"
+assert_equal "switch_shpool calls shpool attach" "shpool attach othersession" "$result"
+
+# Clean up shpool stub and temp files
+unset -f shpool
+rm -f "$_testdir/shpool_calls"
+rm -f "$shpool_switch_session_file"
+
+# Test shpool_loop
+# Run in a ( ) subshell so exit 0 inside shpool_loop doesn't kill the test.
+# Use a marker file to distinguish exit (marker absent) from return (marker present).
+eval "$(sed -n '/^shpool_loop()/,/^}/p' "$(dirname "$0")/shrc")"
+
+_returned="$_testdir/shpool_returned"
+_switch_calls="$_testdir/shpool_switch_calls"
+_call_log="$_testdir/shpool_call_log"
+
+# Test: autoshpool succeeds, no switch file → shpool_loop calls exit 0
+shpool_switch_session() { :; }
+autoshpool() { return 0; }
+rm -f "$_returned"
+(shpool_loop; echo yes > "$_returned")
+assert_equal "shpool_loop exit code on clean autoshpool" "0" "$?"
+assert_false "shpool_loop does not return on clean autoshpool" test -f "$_returned"
+
+# Test: autoshpool fails → return from loop
+shpool_switch_session() { :; }
+autoshpool() { return 1; }
+rm -f "$_returned"
+(shpool_loop; echo yes > "$_returned")
+assert_true "shpool_loop returns on autoshpool failure" test -f "$_returned"
+
+# Test: switch file exists initially → calls switch_shpool, then autoshpool on next iteration
+# Iteration 1: shpool_switch_session returns "newsession" on first call,
+#   switch_shpool succeeds, second shpool_switch_session returns empty → exit 0
+# Use a file-based counter to vary behavior across calls.
+_counter="$_testdir/shpool_counter"
+echo "0" > "$_counter"
+rm -f "$_switch_calls" "$_call_log" "$_returned"
+shpool_switch_session() {
+    _n=$(cat "$_counter")
+    _n=$((_n + 1))
+    echo "$_n" > "$_counter"
+    if test "$_n" -eq 1; then
+        echo "newsession"
+    fi
+}
+switch_shpool() { echo "$1" >> "$_switch_calls"; return 0; }
+autoshpool() { return 0; }
+(shpool_loop; echo yes > "$_returned")
+assert_equal "shpool_loop with switch then clean exits 0" "0" "$?"
+assert_false "shpool_loop with switch then clean does not return" test -f "$_returned"
+result="$(cat "$_switch_calls" 2>/dev/null)"
+assert_equal "shpool_loop called switch_shpool with correct name" "newsession" "$result"
+
+# Test: switch_shpool fails → return from loop
+echo "0" > "$_counter"
+rm -f "$_switch_calls" "$_returned"
+shpool_switch_session() {
+    _n=$(cat "$_counter")
+    _n=$((_n + 1))
+    echo "$_n" > "$_counter"
+    echo "failsession"
+}
+switch_shpool() { echo "$1" >> "$_switch_calls"; return 1; }
+(shpool_loop; echo yes > "$_returned")
+assert_true "shpool_loop returns when switch_shpool fails" test -f "$_returned"
+result="$(cat "$_switch_calls" 2>/dev/null)"
+assert_equal "shpool_loop called switch_shpool before failing" "failsession" "$result"
+
+# Test: autoshpool succeeds, switch file appears after → continue and switch
+# Iteration 1: no switch, autoshpool succeeds, second check finds switch file → continue
+# Iteration 2: switch file found, switch_shpool succeeds, second check empty → exit 0
+echo "0" > "$_counter"
+rm -f "$_switch_calls" "$_returned"
+shpool_switch_session() {
+    _n=$(cat "$_counter")
+    _n=$((_n + 1))
+    echo "$_n" > "$_counter"
+    # Call 1 (iter1 top): empty → autoshpool
+    # Call 2 (iter1 bottom): switch requested
+    # Call 3 (iter2 top): switch requested
+    # Call 4 (iter2 bottom): empty → exit
+    if test "$_n" -eq 2 || test "$_n" -eq 3; then
+        echo "switchsession"
+    fi
+}
+switch_shpool() { echo "$1" >> "$_switch_calls"; return 0; }
+autoshpool() { return 0; }
+(shpool_loop; echo yes > "$_returned")
+assert_equal "shpool_loop with late switch exits 0" "0" "$?"
+assert_false "shpool_loop with late switch does not return" test -f "$_returned"
+result="$(cat "$_switch_calls" 2>/dev/null)"
+assert_equal "shpool_loop switched to correct session after autoshpool" "switchsession" "$result"
+
+# Clean up
+rm -f "$_returned" "$_switch_calls" "$_call_log" "$_counter"
+
+# Restore stubs
+shpool_switch_session() { cat "$shpool_switch_session_file" 2>/dev/null; }
+connected_remotely() { false; }
+inside_project() { false; }
 
 ###############
 # BASH-ONLY TESTS

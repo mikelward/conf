@@ -1006,7 +1006,7 @@ shpool_loop() {
         if test $? -ne 0; then
             # Maybe .shrc failed or something.
             # Stay here so the user can see the error and fix it.
-            break
+            return
         fi
 
         shpool_switch_session="$(shpool_switch_session)"
