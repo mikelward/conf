@@ -984,9 +984,6 @@ switchshpool() {
     echo "$1" > "$shpool_switch_session_file"
     exit 0
 }
-alias ssp=switchshpool
-alias swsh=switchshpool
-alias shsw=switchshpool
 
 switch_shpool() {
     rm "$shpool_switch_session_file"
@@ -1255,8 +1252,19 @@ if is_interactive; then
     rh() { gh "$@" | tail -n 20; }
     alias q='xa'
     alias s='subl'
+    alias sa='shpool attach'
+    alias sd='shpool detach'
+    alias shpoolswitch=switchshpool
+    alias shsw=switchshpool
+    alias spa='shpool attach'
+    alias spd='shpool detach'
     alias spell='aspell -a'
+    alias sps=switchshpool
     alias sr='ssh -l root'
+    alias ssp=switchshpool
+    alias sw=switchshpool
+    alias switch=switchshpool
+    alias swsh=switchshpool
     alias symlink='ln -sr'
     alias t='tail'
     alias tf='t -f'
