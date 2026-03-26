@@ -490,7 +490,7 @@ projectroot() { echo "$_edgedir"; }
 git_branch() { echo "somebranch"; }
 status_chars() { echo "M?"; }
 fetch_info() { echo "fetch"; }
-outgoing() { echo "1 outgoing"; }
+outgoing() { echo "abc1234 Bump targetSdk to 36"; }
 base() { echo "abc1234 Bump targetSdk to 36"; }
 
 result="$(_resolve_cr "$(preprompt)")"
