@@ -123,7 +123,7 @@ relative_path() {
     _relative_to=$(trim_prefix "$(implied_prefix)" "$_relative_to")
     target_relative_to "$_target" "$_relative_to"
 }
-alias rp=relative_path
+rp() { relative_path "$@"; }
 
 allknown() {
     local unknown="$(unknown)"
@@ -133,30 +133,30 @@ allknown() {
 
 # create version control functions to do the right thing based on vcs "$PWD"
 # TODO: fork merge, etc.
-alias ad=add
-alias ak=allknown
-alias am=amend
-alias an=annotate
-alias ann=annotate
-alias bl=blame
-alias change=recommit
-alias ci=commit
-alias cl=changelog
-alias co=checkout
-alias di=diffs
-alias ev=evolve
-alias ff=fastforward
-alias gr=graph
-alias ig=ignore
-alias lg=graph
-alias ma=review
-alias pr=presubmit
-alias re=review
-alias ro=rootdir
-alias sa=save
-alias st=status
-alias un=undo
-alias up=upload
+ad() { add "$@"; }
+ak() { allknown "$@"; }
+am() { amend "$@"; }
+an() { annotate "$@"; }
+ann() { annotate "$@"; }
+bl() { blame "$@"; }
+change() { recommit "$@"; }
+ci() { commit "$@"; }
+cl() { changelog "$@"; }
+co() { checkout "$@"; }
+di() { diffs "$@"; }
+ev() { evolve "$@"; }
+ff() { fastforward "$@"; }
+gr() { graph "$@"; }
+ig() { ignore "$@"; }
+lg() { graph "$@"; }
+ma() { review "$@"; }
+pr() { presubmit "$@"; }
+re() { review "$@"; }
+ro() { rootdir "$@"; }
+sa() { save "$@"; }
+st() { status "$@"; }
+un() { undo "$@"; }
+up() { upload "$@"; }
 upp() {
   upload
   presubmit

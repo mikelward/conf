@@ -201,7 +201,7 @@ add_path() {
 # Functions that are needed elsewhere in this file.
 
 # hook for authenticating (to ssh-agent, etc.)
-alias a=auth
+a() { auth "$@"; }
 auth() {
     ssh-add
 }
@@ -437,7 +437,7 @@ ips() {
       esac
     done
 }
-alias addrs=ips
+addrs() { ips "$@"; }
 
 # list this machine's MAC addresses
 # format: <iface> <MAC addr>[\n<iface> <MAC addr>]*
@@ -736,7 +736,7 @@ pegrep() {
         printf '%s %s\n' "$(ps -o pid= -o args= -p "$pid")" "$(envgrep "$1" "$pid")"
     done
 }
-alias peg=pegrep
+peg() { pegrep "$@"; }
 
 # grep for a pattern in the environment of processes with the given pids
 # envgrep <environment pattern> <pid>...
@@ -906,9 +906,9 @@ setx() {
     set +x
 }
 
-alias jc='journalctl --no-hostname'
-alias sc='systemctl'
-alias uc='systemctl --user'
+jc() { journalctl --no-hostname "$@"; }
+sc() { systemctl "$@"; }
+uc() { systemctl --user "$@"; }
 
 ##################################
 # ENVIRONMENT SETUP FOR ALL SHELLS
@@ -1431,7 +1431,7 @@ sh_last_error() {
     *)   echo "status $laststatus";;
     esac
 }
-alias ksh_last_error=sh_last_error
+ksh_last_error() { sh_last_error "$@"; }
 
 # print a message describing the last error, or empty if no error
 zsh_last_error() {
