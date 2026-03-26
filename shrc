@@ -344,9 +344,9 @@ is_runnable() {
 # run a command as root, with shell functions available
 root() {
     if is_function "$1"; then
-        command root bash -c ". $HOME/.shrc"'; "$@"' _ "$@"
+        command root --nohome bash -c ". \"${ZDOTDIR:-$HOME}/.shrc\""'; "$@"' _ "$@"
     else
-        command root "$@"
+        command root --nohome "$@"
     fi
 }
 
