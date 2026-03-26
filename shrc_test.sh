@@ -713,6 +713,45 @@ item: c"
     assert_equal "each0 runs command on null-delimited input" "$expected" "$result"
 fi
 
+# Test root wrapper function
+extract_func is_function
+
+# Stub "command root" to record what was called
+_root_log=""
+root_cmd() { _root_log="root: $*"; }
+
+extract_func root
+# Override root to use our stub instead of "command root"
+root() {
+    if is_function "$1"; then
+        _root_log="function: $*"
+    else
+        root_cmd "$@"
+    fi
+}
+
+# A test function to use as an argument to root
+myfunc() { echo "hello"; }
+
+# Test root with a function argument
+_root_log=""
+root myfunc arg1 arg2
+assert_equal "root detects function argument" "function: myfunc arg1 arg2" "$_root_log"
+
+# Test root with a non-function argument
+_root_log=""
+root systemctl restart nginx
+assert_equal "root passes non-function to root command" "root: systemctl restart nginx" "$_root_log"
+
+# Test root with a command that doesn't exist
+_root_log=""
+root nonexistent_command --flag
+assert_equal "root passes unknown command to root command" "root: nonexistent_command --flag" "$_root_log"
+
+# Clean up
+unset _root_log
+unset -f root_cmd myfunc root
+
 _shell="$(basename "$(readlink -f /proc/$$/exe)" 2>/dev/null || echo "sh")"
 
 test_summary "$_shell shrc_test"
