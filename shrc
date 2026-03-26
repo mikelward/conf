@@ -1020,35 +1020,12 @@ shpool_loop() {
     done
 }
 
-#########################
-# INTERACTIVE SHELL SETUP
-# Set up the prompt, title, key bindings, etc.
+##############################
+# TERMINAL AND PROMPT FUNCTIONS
+# Functions used by the interactive shell for colors, titles, and prompt.
 
-if is_interactive; then
-    if in_shpool; then
-        # Prevent shpool from clearing the screen during startup.
-        # This ensures we can see any motd, errors, etc.
-        clear() {
-            unset -f clear
-        }
-        if test -n "$SHPOOL_INITIAL_PWD"; then
-            cd "$SHPOOL_INITIAL_PWD"
-            SHPOOL_INITIAL_PWD=
-        fi
-    else
-        # This will be overridden by autoshpool.
-        export SHPOOL_INITIAL_PWD="$PWD"
-    fi
-    if ! in_shpool && want_shpool && have_command shpool; then
-        shpool_loop
-    fi
-
-    log_history "New session as $USERNAME: $0 $*"
-
-    # regain use of Ctrl+S and Ctrl+Q
-    stty start undef stop undef
-
-    # determine the graphics mode escape sequences
+# detect terminal color capabilities using tput
+init_colors() {
     color=false
     if is_runnable tput; then
         if quiet tput longname; then
@@ -1071,8 +1048,10 @@ if is_interactive; then
             kdch1="$(tput kdch1)"
         fi
     fi
+}
 
-    # determine the window title escape sequences
+# detect terminal title escape sequences based on $TERM
+init_title_sequences() {
     case "$TERM" in
     aixterm|dtterm|putty|rxvt|xterm*)
         titlestart=']0;'
@@ -1104,35 +1083,582 @@ if is_interactive; then
         fi
         ;;
     esac
+}
 
-    # prevent running "exit" if the user is still running jobs in the background
-    # the user is expected to close the jobs or disown them
-    _exit()
-    {
-        case $- in *m*)
-            # this way works in bash and zsh
-            jobs | wc -l | grep -q '^ *0 *$'
-            if test $? -eq 0; then
-                    command exit "$@"
-            else
-                jobs
-            fi
-                    ;;
-        *)
-            command exit "$@"
-            ;;
-        esac
-    }
+_color_print() {
+    if $color; then
+        printf '%s%s%s' "$1" "$2" "$normal"
+    else
+        printf '%s' "$2"
+    fi
+}
+blue() {
+    _color_print "$blue" "$*"
+}
+green() {
+    _color_print "$green" "$*"
+}
+# shadows /bin/red, but I don't use it here
+red() {
+    _color_print "$red" "$*"
+}
+yellow() {
+    _color_print "$yellow" "$*"
+}
 
-    path_or_empty() {
-        local pathname
-        pathname=$(command -v "$1")
-        if test -e "$pathname"; then
-            echo "$pathname"
+# prevent running "exit" if the user is still running jobs in the background
+# the user is expected to close the jobs or disown them
+_exit()
+{
+    case $- in *m*)
+        # this way works in bash and zsh
+        jobs | wc -l | grep -q '^ *0 *$'
+        if test $? -eq 0; then
+                command exit "$@"
         else
-            echo
+            jobs
         fi
-    }
+                ;;
+    *)
+        command exit "$@"
+        ;;
+    esac
+}
+
+path_or_empty() {
+    local pathname
+    pathname=$(command -v "$1")
+    if test -e "$pathname"; then
+        echo "$pathname"
+    else
+        echo
+    fi
+}
+
+# set a basic prompt that doesn't rely on precommand and preprompt hooks
+basic_prompt() {
+    PS1='$ '
+    PS2='_ '
+    PS3='#? '
+    set_title "$(title)"
+}
+
+# commands to execute before the prompt is displayed
+preprompt() {
+    last_job_info
+    current_command=
+    SECONDS=0
+    set_color 'normal'
+    printf '\n'
+    bar $((COLUMNS))
+    printf '\r%s %s%s \n' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")"
+    # TODO: consider including the outgoing count in the prompt too
+    if test -n "$(outgoing 2>/dev/null)"; then
+        base --color=always
+    fi
+    job_info
+    set_title "$(title)"
+    set_prompt
+    flash_terminal
+}
+
+maybe_space() {
+    test -n "$*" && printf ' %s' "$*"
+}
+
+bar() {
+    local _i=0
+    while test $_i -lt $1; do
+        printf '―'
+        _i=$((_i+1))
+    done
+}
+
+last_job_info() {
+    # Must be the very first thing.
+    local last_error="$(${shell}_last_error)"
+
+    test -z "$current_command" && return
+
+    set_color 'normal'
+    local printed=false
+    if test -n "$last_error"; then
+        red "$last_error"
+        printed=true
+    fi
+    local duration=
+    if test "$SECONDS" -gt 0; then
+        local hours minutes seconds
+        seconds="$SECONDS"
+        hours=$(($seconds/3600))
+        seconds=$(($seconds-$hours*3600))
+        minutes=$(($seconds/60))
+        seconds=$(($seconds-$minutes*60))
+        if test "$hours" -gt 0; then
+            duration="$hours hours $minutes minutes $seconds seconds"
+        elif test "$minutes" -gt 0; then
+            duration="$minutes minutes $seconds seconds"
+        elif test "$seconds" -gt 1; then
+            duration="$seconds seconds"
+        fi
+    fi
+    if test -n "$duration"; then
+        if $printed; then
+            printf ' '
+        fi
+        yellow "took $duration"
+        printed=true
+    fi
+    if $printed; then
+        printf '\n'
+    fi
+}
+
+# get the user's attention
+flash_terminal() {
+    case $TERM in xterm|xterm-*)
+        bell
+        ;;
+    esac
+}
+
+# return true if the current user is root
+i_am_root() {
+    test $UID -eq 0
+}
+
+# return true if this machine is my laptop
+_on_my_laptop() {
+    if test -f "$HOME"/.laptop; then
+        true
+    else
+        case "$HOSTNAME" in
+        *laptop*) true;;
+        *)        false;;
+        esac
+    fi
+}
+
+# return true if this machine is my laptop
+on_my_laptop() {
+    if test -z "${LAPTOP:-}"; then
+        if _on_my_laptop; then
+            LAPTOP=true
+        else
+            LAPTOP=false
+        fi
+    fi
+    "$LAPTOP"
+}
+
+# return true if this is a non-production machine I use to get work done
+on_my_machine() {
+    on_my_workstation || on_my_laptop
+}
+
+# return true if it's already obvious which host I'm on
+show_hostname_in_title() {
+    ! inside_tmux
+}
+
+# return true if this machine is a production machine
+on_production_host() {
+    ! on_my_machine && ! on_test_host && ! on_dev_host
+}
+
+# return true if this machine is a test (i.e. non production) machine
+on_test_host() {
+    case "$HOSTNAME" in
+        *test*) true;;
+        *)      false;;
+    esac
+}
+
+on_dev_host() {
+    case "$HOSTNAME" in
+        *dev*) true;;
+        *)     false;;
+    esac
+}
+
+# print information about this machine
+host_info() {
+    if on_production_host; then
+        set_color 'red'
+    fi
+
+    printf '%s' "$(short_hostname)"
+    set_color 'normal'
+    if in_shpool; then
+        printf ' ['
+        green "$SHPOOL_SESSION_NAME"
+        printf ']'
+    else
+        printf ' '
+        yellow 'shpool'
+    fi
+    set_color 'normal'
+    printf '\n'
+}
+
+# print information about all shell jobs
+# intended to be used in the preprompt
+job_info() {
+        jobs |
+            sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /' |
+            grep -v '(pwd now:'
+}
+
+# print directory stack listing in "+<number> <directory>" format
+# intended to be used in the preprompt
+dir_info() {
+        blue "$(_dir_info "$PWD")"
+}
+_dir_info() {
+    (
+        # if the directory is under version control, print
+        # <project name> <subdir under project root> <branch> <status>,
+        # otherwise just the directory with $HOME turned into ~
+        cd "$1"
+        local projectroot="$(projectroot)"
+        if test -n "$projectroot"; then
+            green "$(basename "$projectroot")"
+            local projectsubdir
+            projectsubdir="$(trim_prefix "$projectroot" "$PWD")"
+            if test -n "$projectsubdir"; then
+                printf ' '
+                blue "${projectsubdir#/}"
+            fi
+            local branch="$(vcs branch)"
+            if test -n "$branch"; then
+                printf ' %s' "$branch"
+            fi
+            local statuschars="$(status_chars)"
+            if test -n "$statuschars"; then
+                printf ' '
+                yellow "$statuschars"
+            fi
+            local fetchinfo="$(fetch_info)"
+            if test -n "$fetchinfo"; then
+                printf ' %s' "$fetchinfo"
+            fi
+            # local branch
+            # branch="$(branch)"
+            # if test -n "$branch"; then
+            #     printf ' '
+            #     green "$branch"
+            # fi
+        else
+            tilde_directory
+        fi
+    )
+}
+
+short_pwd() {
+    local projectname="$(projectname)"
+    if test -n "$projectname"; then
+        printf '%s' "$projectname"
+    else
+        printf '%s' "$(basename "$PWD")"
+    fi
+}
+
+project_or_command_or_pwd() {
+    local projectname="$(projectname)"
+    if test -n "$projectname"; then
+        printf '%s' "$projectname"
+    elif test -n "${current_command:-}"; then
+        printf '%s' "${current_command%% *}"
+    else
+        printf '%s' "$(basename "$PWD")"
+    fi
+}
+
+project_or_pwd() {
+    local projectname="$(projectname)"
+    if test -n "$projectname"; then
+        printf '%s' "$projectname"
+    else
+        printf '%s' "$(basename "$PWD")"
+    fi
+}
+
+session_name() {
+    if test -n "${SHPOOL_SESSION_NAME:-}"; then
+        printf '%s ' "$SHPOOL_SESSION_NAME"
+    elif test -n "${TMUX:-}"; then
+        printf '%s ' "$(tmux display-message -p '#S')"
+    fi
+}
+
+trim_prefix() {
+    local _prefix="$1"
+    local _target="$2"
+    echo "${_target#$_prefix}"
+}
+
+# print a message describing the last error, or empty if no error
+bash_last_error() {
+    laststatus=$?
+    case $laststatus in
+    0)   ;;
+    130) echo "interrupted";;
+    148) ;;  # suspended
+    *)   echo "status $laststatus";;
+    esac
+}
+
+# print a message describing the last error, or empty if no error
+sh_last_error() {
+    laststatus=$?
+    case $laststatus in
+    0)   ;;
+    *)   echo "status $laststatus";;
+    esac
+}
+alias ksh_last_error=sh_last_error
+
+# print a message describing the last error, or empty if no error
+zsh_last_error() {
+    laststatus=$?
+    case $laststatus in
+    0)   ;;
+    20)  ;;  # suspended (zsh < 5.0.7)
+    130) echo "interrupted";;
+    148) ;;  # suspended (zsh >= 5.0.7)
+    *)   echo "status $laststatus";;
+    esac
+}
+
+# get a short version of the hostname for use in the prompt or window title
+short_hostname() {
+    local hostname
+    local site
+    hostname="${HOSTNAME%%.*}"
+    hostname="${hostname#$USERNAME-}"
+    printf '%s' "$hostname"
+}
+
+# ssh to remote host using current shell's config
+mssh() {
+    case $SHELL in
+    *bash) bssh "$@";;
+    *zsh)  zssh "$@";;
+    *)     ssh  "$@";;
+    esac
+}
+
+# ssh to remote host using this host's bashrc
+bssh() {
+    # allow passing a single block of options to ssh/scp, e.g. -4
+    # TODO: handle more options
+    local ssh_opts=
+    case "$1" in -*)
+        ssh_opts="$1"
+        shift
+        ;;
+    esac
+    ssh $ssh_opts -t "$@" '
+export BASHRC=$(mktemp /tmp/bash.XXXXXXXX);
+scp '"$ssh_opts"' '"$HOSTNAME:${BASHRC:-.bashrc}"' "$BASHRC";
+exec bash --rcfile "$BASHRC" -i'
+}
+
+# ssh to remote host using this host's zshrc
+zssh() {
+    # allow passing a single block of options to ssh/scp, e.g. -4
+    # TODO: handle more options
+    local ssh_opts=
+    case "$1" in -*)
+        ssh_opts="$1"
+        shift
+        ;;
+    esac
+    ssh $ssh_opts -t "$@" '
+export ZDOTDIR=$(mktemp -d /tmp/zsh.XXXXXXXX);
+scp '"$ssh_opts"' '"$HOSTNAME:${ZDOTDIR:-$HOME}/.zshrc"' "$ZDOTDIR";
+exec zsh -i'
+}
+
+# print the current directory with $HOME changed to ~
+tilde_directory() {
+    printf '%s' "$PWD" | sed -e 's#^'"$HOME"'#~#'
+}
+
+# print the string that should be used as the xterm title
+title() {
+    if show_hostname_in_title; then
+        short_hostname
+        printf ' '
+    fi
+    session_name
+    project_or_pwd
+}
+
+# set all the prompt strings
+# done this way so that \[ (bash) and \{ (zsh) are handled consistently
+set_prompt() {
+    PS1="$(ps1)"
+}
+
+# output the string that should be used as the prompt
+ps1() {
+    keymap_character
+    ps1_character
+    printf ' '
+}
+
+# print a character that should be the last part of the prompt
+ps1_character() {
+    if test $UID -eq 0; then
+        printf '#'
+    else
+        printf '$'
+    fi
+}
+
+# return whether the given shell option is on
+getshopt() {
+    local _opt _val
+    while read _opt _val; do
+        if test "$_opt" = "$1"; then
+            test "$_val" = "on"
+            return
+        fi
+    done <<EOF
+$(set -o)
+EOF
+    false
+}
+
+# print a character indicating whether vi command mode is active
+keymap_character() {
+    getshopt vi || return
+    case "${keymap:-}" in
+    vicmd)
+        printf 'NORMAL'
+        ;;
+    viins|main)
+        printf 'INSERT'
+        ;;
+    esac
+}
+
+# function to run just before running a command from the command line
+# see also preexec (zsh) and DEBUG (bash)
+# the first argument is the command line being run
+precommand() {
+    log_history "$*"
+    current_command="$(expand_job "$*")"
+    set_title "$(title)"
+    set_color 'normal'
+    SECONDS=0
+}
+
+# set the xterm title to the supplied string
+set_title() {
+    if test -n "$titlestart"; then
+        printf '%s%s%s' "$titlestart" "$*" "$titlefinish"
+    fi
+}
+
+# expand job references such as %1 into the command name
+expand_job() {
+    local arg
+
+    test $# -eq 0 && return
+
+    arg=$1
+    shift
+
+    case "$arg" in f|fg)
+        arg='%+'
+        ;;
+    esac
+    case "$arg" in '%'*)
+        # can't use job_info here in bash
+        arg="$(jobs "$arg" | sed -e 's/^\[[0-9][0-9]*\][-+ ]*[^ ]* *//')"
+        ;;
+    esac
+    printf '%s' "$arg"
+    test $# -gt 0 && printf ' %s' "$@"
+}
+
+# print the supplied string inside prompt escape sequences
+# that tell the shell the escape sequences do not move the cursor
+prompt_color() {
+    local color_escape
+
+    color_escape=$(set_color "$*")
+
+    if test -n "$color_escape" && test -n "$escape_start" && test -n "$escape_end"; then
+        printf '%s%s%s' "$escape_start" "$normal" "$escape_end"
+        printf '%s%s%s' "$escape_start" "$color_escape" "$escape_end"
+    fi
+}
+# set the terminal color to the specified color or terminal attribute
+# accepts multiple arguments, e.g. set_color bold blue underline
+set_color() {
+    local arg
+
+    for arg; do
+        eval "printf \"%s\" \"\$$arg\""
+    done
+}
+escape_start=
+escape_end=
+
+terminal_supports_bracketed_paste() {
+    case $TERM in rxvt-unicode|xterm)
+        true;;
+    *)
+        false;;
+    esac
+}
+
+enable_bracketed_paste() {
+    if terminal_supports_bracketed_paste; then
+        printf '\e[?2004h'
+    fi
+}
+
+disable_bracketed_paste() {
+    if terminal_supports_bracketed_paste; then
+        printf '\e[?2004l'
+    fi
+}
+
+
+#########################
+# INTERACTIVE SHELL SETUP
+# Set up the prompt, title, key bindings, etc.
+
+if is_interactive; then
+    if in_shpool; then
+        # Prevent shpool from clearing the screen during startup.
+        # This ensures we can see any motd, errors, etc.
+        clear() {
+            unset -f clear
+        }
+        if test -n "$SHPOOL_INITIAL_PWD"; then
+            cd "$SHPOOL_INITIAL_PWD"
+            SHPOOL_INITIAL_PWD=
+        fi
+    else
+        # This will be overridden by autoshpool.
+        export SHPOOL_INITIAL_PWD="$PWD"
+    fi
+    if ! in_shpool && want_shpool && have_command shpool; then
+        shpool_loop
+    fi
+
+    log_history "New session as $USERNAME: $0 $*"
+
+    # regain use of Ctrl+S and Ctrl+Q
+    stty start undef stop undef
+
+    init_colors
+    init_title_sequences
 
     #alias '?'='path_or_empty'
     alias @='path_or_empty'
@@ -1381,529 +1907,6 @@ if is_interactive; then
         done
         ;;
     esac
-
-    # set a basic prompt that doesn't rely on precommand and preprompt hooks
-    basic_prompt() {
-        PS1='$ '
-        PS2='_ '
-        PS3='#? '
-        set_title "$(title)"
-    }
-
-    # commands to execute before the prompt is displayed
-    preprompt() {
-        last_job_info
-        current_command=
-        SECONDS=0
-        set_color 'normal'
-        printf '\n'
-        bar $((COLUMNS))
-        printf '\r%s %s%s \n' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")"
-        # TODO: consider including the outgoing count in the prompt too
-        if test -n "$(outgoing 2>/dev/null)"; then
-            base --color=always
-        fi
-        job_info
-        set_title "$(title)"
-        set_prompt
-        flash_terminal
-    }
-
-    maybe_space() {
-        test -n "$*" && printf ' %s' "$*"
-    }
-
-    bar() {
-        local _i=0
-        while test $_i -lt $1; do
-            printf '―'
-            _i=$((_i+1))
-        done
-    }
-
-    last_job_info() {
-        # Must be the very first thing.
-        local last_error="$(${shell}_last_error)"
-
-        test -z "$current_command" && return
-
-        set_color 'normal'
-        local printed=false
-        if test -n "$last_error"; then
-            red "$last_error"
-            printed=true
-        fi
-        local duration=
-        if test "$SECONDS" -gt 0; then
-            local hours minutes seconds
-            seconds="$SECONDS"
-            hours=$(($seconds/3600))
-            seconds=$(($seconds-$hours*3600))
-            minutes=$(($seconds/60))
-            seconds=$(($seconds-$minutes*60))
-            if test "$hours" -gt 0; then
-                duration="$hours hours $minutes minutes $seconds seconds"
-            elif test "$minutes" -gt 0; then
-                duration="$minutes minutes $seconds seconds"
-            elif test "$seconds" -gt 1; then
-                duration="$seconds seconds"
-            fi
-        fi
-        if test -n "$duration"; then
-            if $printed; then
-                printf ' '
-            fi
-            yellow "took $duration"
-            printed=true
-        fi
-        if $printed; then
-            printf '\n'
-        fi
-    }
-
-    # get the user's attention
-    flash_terminal() {
-        case $TERM in xterm|xterm-*)
-            bell
-            ;;
-        esac
-    }
-
-    # return true if the current user is root
-    i_am_root() {
-        test $UID -eq 0
-    }
-
-    # return true if this machine is my laptop
-    _on_my_laptop() {
-        if test -f "$HOME"/.laptop; then
-            true
-        else
-            case "$HOSTNAME" in
-            *laptop*) true;;
-            *)        false;;
-            esac
-        fi
-    }
-
-    # return true if this machine is my laptop
-    on_my_laptop() {
-        if test -z "${LAPTOP:-}"; then
-            if _on_my_laptop; then
-                LAPTOP=true
-            else
-                LAPTOP=false
-            fi
-        fi
-        "$LAPTOP"
-    }
-
-    # return true if this is a non-production machine I use to get work done
-    on_my_machine() {
-        on_my_workstation || on_my_laptop
-    }
-
-    # return true if it's already obvious which host I'm on
-    show_hostname_in_title() {
-        ! inside_tmux
-    }
-
-    # return true if this machine is a production machine
-    on_production_host() {
-        ! on_my_machine && ! on_test_host && ! on_dev_host
-    }
-
-    # return true if this machine is a test (i.e. non production) machine
-    on_test_host() {
-        case "$HOSTNAME" in
-            *test*) true;;
-            *)      false;;
-        esac
-    }
-
-    on_dev_host() {
-        case "$HOSTNAME" in
-            *dev*) true;;
-            *)     false;;
-        esac
-    }
-
-    # print information about this machine
-    host_info() {
-        if on_production_host; then
-            set_color 'red'
-        fi
-
-        printf '%s' "$(short_hostname)"
-        set_color 'normal'
-        if in_shpool; then
-            printf ' ['
-            green "$SHPOOL_SESSION_NAME"
-            printf ']'
-        else
-            printf ' '
-            yellow 'shpool'
-        fi
-        set_color 'normal'
-        printf '\n'
-    }
-
-    # print information about all shell jobs
-    # intended to be used in the preprompt
-    job_info() {
-            jobs |
-                sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /' |
-                grep -v '(pwd now:'
-    }
-
-    # print directory stack listing in "+<number> <directory>" format
-    # intended to be used in the preprompt
-    dir_info() {
-            blue "$(_dir_info "$PWD")"
-    }
-    _dir_info() {
-        (
-            # if the directory is under version control, print
-            # <project name> <subdir under project root> <branch> <status>,
-            # otherwise just the directory with $HOME turned into ~
-            cd "$1"
-            local projectroot="$(projectroot)"
-            if test -n "$projectroot"; then
-                green "$(basename "$projectroot")"
-                local projectsubdir
-                projectsubdir="$(trim_prefix "$projectroot" "$PWD")"
-                if test -n "$projectsubdir"; then
-                    printf ' '
-                    blue "${projectsubdir#/}"
-                fi
-                local branch="$(vcs branch)"
-                if test -n "$branch"; then
-                    printf ' %s' "$branch"
-                fi
-                local statuschars="$(status_chars)"
-                if test -n "$statuschars"; then
-                    printf ' '
-                    yellow "$statuschars"
-                fi
-                local fetchinfo="$(fetch_info)"
-                if test -n "$fetchinfo"; then
-                    printf ' %s' "$fetchinfo"
-                fi
-                # local branch
-                # branch="$(branch)"
-                # if test -n "$branch"; then
-                #     printf ' '
-                #     green "$branch"
-                # fi
-            else
-                tilde_directory
-            fi
-        )
-    }
-
-    short_pwd() {
-        local projectname="$(projectname)"
-        if test -n "$projectname"; then
-            printf '%s' "$projectname"
-        else
-            printf '%s' "$(basename "$PWD")"
-        fi
-    }
-
-    project_or_command_or_pwd() {
-        local projectname="$(projectname)"
-        if test -n "$projectname"; then
-            printf '%s' "$projectname"
-        elif test -n "${current_command:-}"; then
-            printf '%s' "${current_command%% *}"
-        else
-            printf '%s' "$(basename "$PWD")"
-        fi
-    }
-
-    project_or_pwd() {
-        local projectname="$(projectname)"
-        if test -n "$projectname"; then
-            printf '%s' "$projectname"
-        else
-            printf '%s' "$(basename "$PWD")"
-        fi
-    }
-
-    session_name() {
-        if test -n "${SHPOOL_SESSION_NAME:-}"; then
-            printf '%s ' "$SHPOOL_SESSION_NAME"
-        elif test -n "${TMUX:-}"; then
-            printf '%s ' "$(tmux display-message -p '#S')"
-        fi
-    }
-
-    blue() {
-        if $color; then
-            printf '%s%s%s' "$blue" "$*" "$normal"
-        else
-            printf '%s' "$*"
-        fi
-    }
-    green() {
-        if $color; then
-            printf '%s%s%s' "$green" "$*" "$normal"
-        else
-            printf '%s' "$*"
-        fi
-    }
-    # shadows /bin/red, but I don't use it here
-    red() {
-        if $color; then
-            printf '%s%s%s' "$red" "$*" "$normal"
-        else
-            printf '%s' "$*"
-        fi
-    }
-    yellow() {
-        if $color; then
-            printf '%s%s%s' "$yellow" "$*" "$normal"
-        else
-            printf '%s' "$*"
-        fi
-    }
-
-    trim_prefix() {
-        local _prefix="$1"
-        local _target="$2"
-        echo "${_target#$_prefix}"
-    }
-
-    # print a message describing the last error, or empty if no error
-    bash_last_error() {
-        laststatus=$?
-        case $laststatus in
-        0)   ;;
-        130) echo "interrupted";;
-        148) ;;  # suspended
-        *)   echo "status $laststatus";;
-        esac
-    }
-
-    # print a message describing the last error, or empty if no error
-    sh_last_error() {
-        laststatus=$?
-        case $laststatus in
-        0)   ;;
-        *)   echo "status $laststatus";;
-        esac
-    }
-    alias ksh_last_error=sh_last_error
-
-    # print a message describing the last error, or empty if no error
-    zsh_last_error() {
-        laststatus=$?
-        case $laststatus in
-        0)   ;;
-        20)  ;;  # suspended (zsh < 5.0.7)
-        130) echo "interrupted";;
-        148) ;;  # suspended (zsh >= 5.0.7)
-        *)   echo "status $laststatus";;
-        esac
-    }
-
-    # get a short version of the hostname for use in the prompt or window title
-    short_hostname() {
-        local hostname
-        local site
-        hostname="${HOSTNAME%%.*}"
-        hostname="${hostname#$USERNAME-}"
-        printf '%s' "$hostname"
-    }
-
-    # ssh to remote host using current shell's config
-    mssh() {
-        case $SHELL in
-        *bash) bssh "$@";;
-        *zsh)  zssh "$@";;
-        *)     ssh  "$@";;
-        esac
-    }
-
-    # ssh to remote host using this host's bashrc
-    bssh() {
-        # allow passing a single block of options to ssh/scp, e.g. -4
-        # TODO: handle more options
-        local ssh_opts=
-        case "$1" in -*)
-            ssh_opts="$1"
-            shift
-            ;;
-        esac
-        ssh $ssh_opts -t "$@" '
-export BASHRC=$(mktemp /tmp/bash.XXXXXXXX);
-scp '"$ssh_opts"' '"$HOSTNAME:${BASHRC:-.bashrc}"' "$BASHRC";
-exec bash --rcfile "$BASHRC" -i'
-    }
-
-    # ssh to remote host using this host's zshrc
-    zssh() {
-        # allow passing a single block of options to ssh/scp, e.g. -4
-        # TODO: handle more options
-        local ssh_opts=
-        case "$1" in -*)
-            ssh_opts="$1"
-            shift
-            ;;
-        esac
-        ssh $ssh_opts -t "$@" '
-export ZDOTDIR=$(mktemp -d /tmp/zsh.XXXXXXXX);
-scp '"$ssh_opts"' '"$HOSTNAME:${ZDOTDIR:-$HOME}/.zshrc"' "$ZDOTDIR";
-exec zsh -i'
-    }
-
-    # print the current directory with $HOME changed to ~
-    tilde_directory() {
-        printf '%s' "$PWD" | sed -e 's#^'"$HOME"'#~#'
-    }
-
-    # print the string that should be used as the xterm title
-    title() {
-        if show_hostname_in_title; then
-            short_hostname
-            printf ' '
-        fi
-        session_name
-        project_or_pwd
-    }
-
-    # set all the prompt strings
-    # done this way so that \[ (bash) and \{ (zsh) are handled consistently
-    set_prompt() {
-        PS1="$(ps1)"
-    }
-
-    # output the string that should be used as the prompt
-    ps1() {
-        keymap_character
-        ps1_character
-        printf ' '
-    }
-
-    # print a character that should be the last part of the prompt
-    ps1_character() {
-        if test $UID -eq 0; then
-            printf '#'
-        else
-            printf '$'
-        fi
-    }
-
-    # return whether the given shell option is on
-    getshopt() {
-        local _opt _val
-        while read _opt _val; do
-            if test "$_opt" = "$1"; then
-                test "$_val" = "on"
-                return
-            fi
-        done <<EOF
-$(set -o)
-EOF
-        false
-    }
-
-    # print a character indicating whether vi command mode is active
-    keymap_character() {
-        getshopt vi || return
-        case "${keymap:-}" in
-        vicmd)
-            printf 'NORMAL'
-            ;;
-        viins|main)
-            printf 'INSERT'
-            ;;
-        esac
-    }
-
-    # function to run just before running a command from the command line
-    # see also preexec (zsh) and DEBUG (bash)
-    # the first argument is the command line being run
-    precommand() {
-        log_history "$*"
-        current_command="$(expand_job "$*")"
-        set_title "$(title)"
-        set_color 'normal'
-        SECONDS=0
-    }
-
-    # set the xterm title to the supplied string
-    set_title() {
-        if test -n "$titlestart"; then
-            printf '%s%s%s' "$titlestart" "$*" "$titlefinish"
-        fi
-    }
-
-    # expand job references such as %1 into the command name
-    expand_job() {
-        local arg
-
-        test $# -eq 0 && return
-
-        arg=$1
-        shift
-
-        case "$arg" in f|fg)
-            arg='%+'
-            ;;
-        esac
-        case "$arg" in '%'*)
-            # can't use job_info here in bash
-            arg="$(jobs "$arg" | sed -e 's/^\[[0-9][0-9]*\][-+ ]*[^ ]* *//')"
-            ;;
-        esac
-        printf '%s' "$arg"
-        test $# -gt 0 && printf ' %s' "$@"
-    }
-
-    # print the supplied string inside prompt escape sequences
-    # that tell the shell the escape sequences do not move the cursor
-    prompt_color() {
-        local color_escape
-
-        color_escape=$(set_color "$*")
-
-        if test -n "$color_escape" && test -n "$escape_start" && test -n "$escape_end"; then
-            printf '%s%s%s' "$escape_start" "$normal" "$escape_end"
-            printf '%s%s%s' "$escape_start" "$color_escape" "$escape_end"
-        fi
-    }
-    # set the terminal color to the specified color or terminal attribute
-    # accepts multiple arguments, e.g. set_color bold blue underline
-    set_color() {
-        local arg
-
-        for arg; do
-            eval "printf \"%s\" \"\$$arg\""
-        done
-    }
-    escape_start=
-    escape_end=
-
-    terminal_supports_bracketed_paste() {
-        case $TERM in rxvt-unicode|xterm)
-            true;;
-        *)
-            false;;
-        esac
-    }
-
-    enable_bracketed_paste() {
-        if terminal_supports_bracketed_paste; then
-            printf '\e[?2004h'
-        fi
-    }
-
-    disable_bracketed_paste() {
-        if terminal_supports_bracketed_paste; then
-            printf '\e[?2004l'
-        fi
-    }
 
     case "$shell" in
     zsh)

@@ -8,8 +8,11 @@
 
 # Extract and source just the path functions.
 # They are self-contained and only depend on each other.
-eval "$(sed -n '/^prepend_path()/,/^add_path()/p' "$(dirname "$0")/shrc" | head -n -1)"
-eval "$(sed -n '/^add_path()/,/^#####/p' "$(dirname "$0")/shrc" | head -n -1)"
+extract_func prepend_path
+extract_func append_path
+extract_func delete_path
+extract_func inpath
+extract_func add_path
 
 # Save PATH for restoration after path function tests
 _saved_path="$PATH"
@@ -140,16 +143,16 @@ PATH="$_saved_path"
 # UTILITY FUNCTIONS
 # Extract additional functions from shrc for testing.
 
-eval "$(sed -n '/^join()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^body()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^first_arg_last()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^shift_options()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^find_test_file()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^path()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^get_address_records()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^get_ptr_records()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^each()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^delline()/,/^}/p' "$(dirname "$0")/shrc")"
+extract_func join
+extract_func body
+extract_func first_arg_last
+extract_func shift_options
+extract_func find_test_file
+extract_func path
+extract_func get_address_records
+extract_func get_ptr_records
+extract_func each
+extract_func delline
 
 # Test join
 assert_equal "join comma" "a,b,c" "$(join , a b c)"
@@ -298,32 +301,32 @@ rm -f "$_tmpfile"
 ###############
 # Extract additional functions for testing.
 
-eval "$(sed -n '/^error()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^warn()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^quiet()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^run()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^is_builtin()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^is_alias()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^is_command()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^have_command()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^is_runnable()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^bak()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^unbak()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^realdir()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^isort()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^age()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^find_up()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^what()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^trydiff()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^applydiff()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^recent()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^connected_via_ssh()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^connected_remotely()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^inside_tmux()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^in_shpool()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^want_shpool()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^shpool_switch_session()/,/^}/p' "$(dirname "$0")/shrc")"
-eval "$(sed -n '/^switch_shpool()/,/^}/p' "$(dirname "$0")/shrc")"
+extract_func error
+extract_func warn
+extract_func quiet
+extract_func run
+extract_func is_builtin
+extract_func is_alias
+extract_func is_command
+extract_func have_command
+extract_func is_runnable
+extract_func bak
+extract_func unbak
+extract_func realdir
+extract_func isort
+extract_func age
+extract_func find_up
+extract_func what
+extract_func trydiff
+extract_func applydiff
+extract_func recent
+extract_func connected_via_ssh
+extract_func connected_remotely
+extract_func inside_tmux
+extract_func in_shpool
+extract_func want_shpool
+extract_func shpool_switch_session
+extract_func switch_shpool
 
 ###############
 # COMMAND INSPECTION
@@ -604,7 +607,7 @@ rm -f "$shpool_switch_session_file"
 # Test shpool_loop
 # Run in a ( ) subshell so exit 0 inside shpool_loop doesn't kill the test.
 # Use a marker file to distinguish exit (marker absent) from return (marker present).
-eval "$(sed -n '/^shpool_loop()/,/^}/p' "$(dirname "$0")/shrc")"
+extract_func shpool_loop
 
 _returned="$_testdir/shpool_returned"
 _switch_calls="$_testdir/shpool_switch_calls"
@@ -701,7 +704,7 @@ inside_project() { false; }
 
 if test -n "${BASH_VERSION:-}" && test "$BASH_VERSION" != "fake"; then
     # Test each0 (uses read -d '' which is bash-only)
-    eval "$(sed -n '/^each0()/,/^}/p' "$(dirname "$0")/shrc")"
+    extract_func each0
 
     result=$(printf 'a\0b\0c\0' | each0 echo "item:")
     expected="item: a

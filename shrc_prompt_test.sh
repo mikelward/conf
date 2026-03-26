@@ -24,43 +24,41 @@ TERM="dumb"
 shell="bash"
 
 # Extract prompt functions from shrc
-eval "$(sed -n '/^    basic_prompt()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    preprompt()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    maybe_space()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    bar()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    last_job_info()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    flash_terminal()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    host_info()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    dir_info()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    _dir_info()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    job_info()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    short_hostname()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    tilde_directory()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    set_prompt()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    ps1()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    ps1_character()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    keymap_character()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    getshopt()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    blue()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    green()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    red()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    yellow()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    set_color()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    title()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    set_title()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    short_pwd()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    project_or_pwd()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    session_name()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    show_hostname_in_title()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    i_am_root()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-eval "$(sed -n '/^    on_production_host()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-
-eval "$(sed -n '/^auth_info()/,/^}/p' "$_srcdir/shrc")"
-eval "$(sed -n '/^fetch_info()/,/^}/p' "$_srcdir/shrc")"
-eval "$(sed -n '/^is_ssh_valid()/,/^}/p' "$_srcdir/shrc")"
-
-# Extract bash_last_error
-eval "$(sed -n '/^    bash_last_error()/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+extract_func basic_prompt
+extract_func preprompt
+extract_func maybe_space
+extract_func bar
+extract_func last_job_info
+extract_func flash_terminal
+extract_func host_info
+extract_func dir_info
+extract_func _dir_info
+extract_func job_info
+extract_func short_hostname
+extract_func tilde_directory
+extract_func set_prompt
+extract_func ps1
+extract_func ps1_character
+extract_func keymap_character
+extract_func getshopt
+extract_func _color_print
+extract_func blue
+extract_func green
+extract_func red
+extract_func yellow
+extract_func set_color
+extract_func title
+extract_func set_title
+extract_func short_pwd
+extract_func project_or_pwd
+extract_func session_name
+extract_func show_hostname_in_title
+extract_func i_am_root
+extract_func on_production_host
+extract_func auth_info
+extract_func fetch_info
+extract_func is_ssh_valid
+extract_func bash_last_error
 
 # Stub VCS functions (no VCS by default)
 projectroot() { :; }
