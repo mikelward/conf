@@ -65,7 +65,6 @@ projectroot() { :; }
 projectname() { :; }
 vcs() { return 1; }
 git_branch() { :; }
-git_prompt_info() { printf '%s\n%s\n' "$(git_branch)" "$(status_chars)"; }
 status_chars() { :; }
 outgoing() { return 1; }
 base() { :; }

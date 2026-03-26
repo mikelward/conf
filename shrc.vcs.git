@@ -178,33 +178,6 @@ git_pending() {
     git log --oneline @{upstream}..HEAD 2>/dev/null || git status --short
 }
 
-# Combined branch + status_chars in a single git call.
-# Outputs two lines: branch name, then status chars.
-git_prompt_info() {
-    local output
-    output="$(git status --short --branch --untracked-files=all 2>/dev/null)" || return 1
-
-    # First line: ## branch[...tracking [ahead N[, behind M]]]
-    local first_line="${output%%$'\n'*}"
-    local branch="${first_line#\#\# }"
-    branch="${branch%%...*}"
-    branch="${branch%% \[*}"
-    case "$branch" in
-        "No commits yet on "*)  branch="${branch#No commits yet on }";;
-        "Initial commit on "*) branch="${branch#Initial commit on }";;
-        "HEAD (no branch)")     branch="";;
-    esac
-
-    # Status chars from remaining lines
-    local statuschars=""
-    local rest="${output#*$'\n'}"
-    if test "$rest" != "$output"; then
-        statuschars="$(printf '%s\n' "$rest" | awk '$1 ~ /^([[:upper:]?!]([[:upper:]?!])*)$/ { print $1 }' | sort -u | tr '\n' ' ' | sed 's/ *$//')"
-    fi
-
-    printf '%s\n%s\n' "$branch" "$statuschars"
-}
-
 git_pick() {
     git cherry-pick "$@"
 }

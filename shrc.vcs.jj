@@ -135,14 +135,6 @@ jj_pending() {
     jj log -r 'mutable() ~ empty()' "$@"
 }
 
-# Combined branch + status_chars.
-# Outputs two lines: branch name (empty for jj), then status chars.
-jj_prompt_info() {
-    local statuschars
-    statuschars="$(jj_status 2>/dev/null | awk '$1 ~ /^([[:upper:]?!]([[:upper:]?!])*)$/ { print $1 }' | sort -u | tr '\n' ' ' | sed 's/ *$//')"
-    printf '\n%s\n' "$statuschars"
-}
-
 jj_pick() {
     jj duplicate "$@"
 }
