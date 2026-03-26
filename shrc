@@ -327,6 +327,15 @@ have_command() {
     path "$1" >/dev/null 2>&1
 }
 
+# return true if the argument is a function
+is_function() {
+    case "$(type "$1" 2>/dev/null)" in *"function"*)
+        true;;
+    *)
+        false;;
+    esac
+}
+
 # return true if the argument is an alias, builtin, command, or function
 is_runnable() {
     type "$1" >/dev/null 2>&1
