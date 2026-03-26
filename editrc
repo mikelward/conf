@@ -21,6 +21,8 @@ bind "\ep" ed-search-prev-history
 bind "\en" ed-search-next-history
 bind "\ew" em-copy-region
 bind "\e\x7f" ed-delete-prev-word
+# ed-insert-last-arg doesn't exist
+bind "\e." vi-history-word
 
 # Home, End, Delete across terminal types
 bind "\eOH" ed-move-to-beg
@@ -33,7 +35,7 @@ bind "\e[3~" ed-delete-next-char
 
 # word motion
 bind "\eb" ed-prev-word
-bind "\ef" ed-next-word
+bind "\ef" em-next-word
 bind "\ed" em-delete-next-word
 
 # vi mode additions (applied when a program switches to vi mode)
