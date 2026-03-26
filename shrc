@@ -344,7 +344,7 @@ is_runnable() {
 # run a command as root, with shell functions available
 root() {
     if is_function "$1"; then
-        command root bash -c '. "$HOME/.shrc"; "$@"' _ "$@"
+        command root bash -c ". $HOME/.shrc"'; "$@"' _ "$@"
     else
         command root "$@"
     fi
