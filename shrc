@@ -1344,11 +1344,12 @@ _dir_info() {
                 printf ' '
                 blue "${projectsubdir#/}"
             fi
-            local branch="$(vcs branch)"
+            local _prompt_info branch statuschars
+            _prompt_info="$(vcs prompt_info 2>/dev/null)"
+            { read -r branch; read -r statuschars; } <<< "$_prompt_info"
             if test -n "$branch"; then
                 printf ' %s' "$branch"
             fi
-            local statuschars="$(status_chars)"
             if test -n "$statuschars"; then
                 printf ' '
                 yellow "$statuschars"

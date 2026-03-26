@@ -139,6 +139,16 @@ hg_pending() {
     hg status
 }
 
+# Combined branch + status_chars.
+# Outputs two lines: branch name, then status chars.
+hg_prompt_info() {
+    local branch
+    branch="$(hg branch 2>/dev/null)" || return 1
+    local statuschars
+    statuschars="$(hg_status | awk '$1 ~ /^([[:upper:]?!]([[:upper:]?!])*)$/ { print $1 }' | sort -u | tr '\n' ' ' | sed 's/ *$//')"
+    printf '%s\n%s\n' "$branch" "$statuschars"
+}
+
 hg_pick() {
     hg graft "$@"
 }
