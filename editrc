@@ -36,6 +36,12 @@ bind "\eb" ed-prev-word
 bind "\ef" ed-next-word
 bind "\ed" em-delete-next-word
 
+# insert last word from previous history entry (like readline's yank-last-arg)
+# with a numeric argument, inserts the Nth word instead
+# note: may switch to vi insert mode as a side effect
+bind "\e." vi-history-word
+bind "\e_" vi-history-word
+
 # vi mode additions (applied when a program switches to vi mode)
 # Ctrl key bindings work in both emacs and vi modes
 bind "^A" ed-move-to-beg
