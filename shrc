@@ -1170,11 +1170,7 @@ preprompt() {
     printf '\n'
     bar $((COLUMNS))
     printf '\r%s %s%s \n' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")"
-    # Show the top outgoing commit (saves running both outgoing and base).
-    _outgoing="$(outgoing --color=always 2>/dev/null | head -1)"
-    if test -n "$_outgoing"; then
-        echo "$_outgoing"
-    fi
+    outgoing 2>/dev/null
     job_info
     set_title "$(title)"
     set_prompt
