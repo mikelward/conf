@@ -1,0 +1,54 @@
+# Libedit configuration
+# Equivalent of inputrc for programs using libedit instead of readline
+# (e.g. macOS Python, psql, sqlite3, sftp)
+
+# use emacs mode by default
+bind -e
+
+# tab completion
+bind ^I rl_complete
+
+# case-insensitive completion (NetBSD libedit 2016+ only)
+# bind completion-ignore-case on
+
+# visible bell
+#bind bell-style visible
+
+# emacs mode customizations
+bind "\e[A" ed-search-prev-history
+bind "\e[B" ed-search-next-history
+bind "\ep" ed-search-prev-history
+bind "\en" ed-search-next-history
+bind "\ew" em-copy-region
+bind "\e\x7f" ed-delete-prev-word
+
+# Home, End, Delete across terminal types
+bind "\eOH" ed-move-to-beg
+bind "\e[1~" ed-move-to-beg
+bind "\e[H" ed-move-to-beg
+bind "\eOF" ed-move-to-end
+bind "\e[4~" ed-move-to-end
+bind "\e[F" ed-move-to-end
+bind "\e[3~" ed-delete-next-char
+
+# word motion
+bind "\eb" ed-prev-word
+bind "\ef" ed-next-word
+bind "\ed" em-delete-next-word
+
+# vi mode additions (applied when a program switches to vi mode)
+# Ctrl key bindings work in both emacs and vi modes
+bind "^A" ed-move-to-beg
+bind "^E" ed-move-to-end
+bind "^N" ed-next-history
+bind "^P" ed-prev-history
+bind "^R" em-inc-search-prev
+bind "^W" ed-delete-prev-word
+bind "^Y" em-yank
+bind "^U" vi-kill-line-prev
+
+# program-specific settings
+# psql
+psql:bind ^I rl_complete
+# sqlite3
+sqlite3:bind ^I rl_complete

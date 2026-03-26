@@ -933,6 +933,7 @@ if test -f "$HOME/scripts/lessopen"; then
 fi
 
 test -r "$HOME"/.inputrc && export INPUTRC="$HOME"/.inputrc
+test -r "$HOME"/.editrc && export EDITRC="$HOME"/.editrc
 
 # default programs
 # kitty wants EDITOR to be set even for non-interactive shells
