@@ -69,7 +69,7 @@ zsh)
     setopt CSH_JUNKIE_HISTORY
     setopt INTERACTIVE_COMMENTS
     setopt KSH_TYPESET
-    # so aliases can contain hyphen/minus/dash
+    # so aliases like + and - work
     unsetopt POSIX_ALIASES >/dev/null 2>&1
     # so we can display jobs in the prompt
     unsetopt POSIX_JOBS >/dev/null 2>&1
@@ -1677,17 +1677,17 @@ if is_interactive; then
 
     #alias '?'='path_or_empty'
     alias @='path_or_empty'
-    alias asp='autoshpool'
-    alias attach='shpool attach'
-    alias bindkeys='daemon xbindkeys'
+    asp() { autoshpool "$@"; }
+    attach() { shpool attach "$@"; }
+    bindkeys() { daemon xbindkeys "$@"; }
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.go,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}"
     code_includes="$(eval echo --include=$code_patterns)"
-    alias c='less -FX'
-    alias cdf='cdfile'
-    alias cg='rg '"$code_includes"
-    alias ct='ctags -R'
-    alias cx='chmod +x'
-    alias d='mycode'
+    c() { less -FX "$@"; }
+    cdf() { cdfile "$@"; }
+    cg() { rg $code_includes "$@"; }
+    ct() { ctags -R "$@"; }
+    cx() { chmod +x "$@"; }
+    d() { mycode "$@"; }
     mycode() {
         makesettings
         code .
@@ -1713,117 +1713,117 @@ if is_interactive; then
         pkill "$1"
         (setsid "$1"&)
     }
-    alias detach='shpool detach'
-    alias diga='dig +noall +answer +search'
-    alias digs='dig +short +search'
+    detach() { shpool detach "$@"; }
+    diga() { dig +noall +answer +search "$@"; }
+    digs() { dig +short +search "$@"; }
     download() { cd "$HOME/Downloads"; wget "$@"; }
     # function rather than an alias so it looks better in the xterm title.
     e() { "${EDITOR:-vim}" "$@"; }
-    alias eg='g -E'
-    alias emacs='emacs -nw'
-    alias f='command fg'
-    alias g='grep -In'
-    alias gdb='gdb -q '
+    eg() { g -E "$@"; }
+    emacs() { command emacs -nw "$@"; }
+    f() { command fg "$@"; }
+    g() { grep -In "$@"; }
+    gdb() { command gdb -q "$@"; }
     # Note that grep options must go after ~/.history.
     gh() { first_arg_last grep ~/.history -a "$@"; }
-    alias gitdir='git rev-parse --git-dir'
-    alias gl='cd /var/log'
-    alias h='head'
-    alias headers='curl -L -i -sS -o/dev/null -D-'
+    gitdir() { git rev-parse --git-dir "$@"; }
+    gl() { cd /var/log "$@"; }
+    h() { head "$@"; }
+    headers() { curl -L -i -sS -o/dev/null -D- "$@"; }
     if have_command chg; then
-        alias hg='chg'
+        hg() { chg "$@"; }
     fi
-    alias hms='date +"%H:%M:%S"'
-    alias hmsns='date +"%H:%M:%S.%N"'
-    alias hosts='getent hosts'
-    alias ipy='ipython'
-    alias ipy3='ipython3'
-    alias killcode='pkill -f /usr/share/code/code'
-    alias kssh='ssh -o PreferredAuthentications=publickey'
+    hms() { date +"%H:%M:%S" "$@"; }
+    hmsns() { date +"%H:%M:%S.%N" "$@"; }
+    hosts() { getent hosts "$@"; }
+    ipy() { ipython "$@"; }
+    ipy3() { ipython3 "$@"; }
+    killcode() { pkill -f /usr/share/code/code "$@"; }
+    kssh() { ssh -o PreferredAuthentications=publickey "$@"; }
     if have_command l; then
-        alias l='l -Kv -e -x'
-        alias ll='l -pTBV -h --time-style=relative'
-        alias lt='l -Tt'
+        l() { command l -Kv -e -x "$@"; }
+        ll() { l -pTBV -h --time-style=relative "$@"; }
+        lt() { l -Tt "$@"; }
     elif quiet ls --color=auto -v -d /; then
-        alias l='ls --color=auto -v -b -x'
-        alias ll='l -l'
-        alias lt='ll -t'
+        l() { ls --color=auto -v -b -x "$@"; }
+        ll() { l -l "$@"; }
+        lt() { ll -t "$@"; }
     else
-        alias l='ls -v -b -x'
-        alias ll='l -l'
-        alias lt='ll -t'
+        l() { ls -v -b -x "$@"; }
+        ll() { l -l "$@"; }
+        lt() { ll -t "$@"; }
     fi
-    alias l1='l -1'
-    alias la='l -a'
-    alias latest='recent -1'
-    alias lc='l -C'
+    l1() { l -1 "$@"; }
+    la() { l -a "$@"; }
+    latest() { recent -1 "$@"; }
+    lc() { l -C "$@"; }
     lssock() {
         lsof -a -n -P -i "$@"
     }
-    alias lss='lssock'
-    alias j='jobs'
-    alias jd='jjd'
-    alias mjd='jjd -f'
+    lss() { lssock "$@"; }
+    j() { jobs "$@"; }
+    jd() { jjd "$@"; }
+    mjd() { jjd -f "$@"; }
     m() { make -f .Makefile "$@"; }
     ml() { m lint; }
     # shadows magtape command, but who uses that?
     mt() { m test; }
-    alias n='date +"%Y%m%d%H%M%S"'
-    alias now='date +"%Y-%m-%dT%H:%M:%S"'
-    alias nowns='date +"%Y-%m-%dT%H:%M:%S.%N"'
-    alias nv='nvim'
+    n() { date +"%Y%m%d%H%M%S" "$@"; }
+    now() { date +"%Y-%m-%dT%H:%M:%S" "$@"; }
+    nowns() { date +"%Y-%m-%dT%H:%M:%S.%N" "$@"; }
+    nv() { nvim "$@"; }
     # function rather than an alias so it looks better in the xterm title.
     p() { "${PAGER:-more}" "$@"; }
-    alias pgrep,='pgrep -d , -f'
-    alias pg,='pgrep'
-    alias phup='pkill -HUP'
-    alias popd='popd >/dev/null'
-    alias psg='psgrep'
-    alias psu='ps -o user,pid,start,time,pcpu,stat,cmd'
-    alias pushd='pushd >/dev/null'
-    alias pd='pushd'
-    alias po='popd'
-    alias pssh='ssh -o PreferredAuthentications=keyboard-interactive,password'
-    alias pr='projectroot'
-    alias py='python'
-    alias py2='python2'
-    alias py3='python3'
-    alias r='fc -e - --'
-    alias rerc="source '$HOME/.shrc'"
-    alias rg='g -IR --exclude-dir=".*"'
+    pgrep,() { pgrep -d , -f "$@"; }
+    pg,() { pgrep "$@"; }
+    phup() { pkill -HUP "$@"; }
+    popd() { builtin popd "$@" >/dev/null; }
+    psg() { psgrep "$@"; }
+    psu() { ps -o user,pid,start,time,pcpu,stat,cmd "$@"; }
+    pushd() { builtin pushd "$@" >/dev/null; }
+    pd() { pushd "$@"; }
+    po() { popd "$@"; }
+    pssh() { ssh -o PreferredAuthentications=keyboard-interactive,password "$@"; }
+    pr() { projectroot "$@"; }
+    py() { python "$@"; }
+    py2() { python2 "$@"; }
+    py3() { python3 "$@"; }
+    r() { fc -e - -- "$@"; }
+    rerc() { source "$HOME/.shrc"; }
+    rg() { g -IR --exclude-dir=".*" "$@"; }
     rh() { gh "$@" | tail -n 20; }
-    alias q='xa'
-    alias s='subl'
-    alias sa='shpool attach'
-    alias sd='shpool detach'
-    alias shpoolswitch=switchshpool
-    alias shsw=switchshpool
-    alias spa='shpool attach'
-    alias spd='shpool detach'
-    alias spell='aspell -a'
-    alias sps=switchshpool
-    alias sr='ssh -l root'
-    alias ssp=switchshpool
-    alias sw=switchshpool
-    alias switch=switchshpool
-    alias swsh=switchshpool
-    alias symlink='ln -sr'
-    alias t='tail'
-    alias tf='t -f'
-    alias tl='t -f /var/log/syslog'
-    alias today='date +"%Y-%m-%d"'
-    alias userctl='systemctl --user'
-    alias userjournal='journalctl --user'
-    alias userjnl='userjournal'
+    q() { xa "$@"; }
+    s() { subl "$@"; }
+    sa() { shpool attach "$@"; }
+    sd() { shpool detach "$@"; }
+    shpoolswitch() { switchshpool "$@"; }
+    shsw() { switchshpool "$@"; }
+    spa() { shpool attach "$@"; }
+    spd() { shpool detach "$@"; }
+    spell() { aspell -a "$@"; }
+    sps() { switchshpool "$@"; }
+    sr() { ssh -l root "$@"; }
+    ssp() { switchshpool "$@"; }
+    sw() { switchshpool "$@"; }
+    switch() { switchshpool "$@"; }
+    swsh() { switchshpool "$@"; }
+    symlink() { ln -sr "$@"; }
+    t() { tail "$@"; }
+    tf() { t -f "$@"; }
+    tl() { t -f /var/log/syslog "$@"; }
+    today() { date +"%Y-%m-%d" "$@"; }
+    userctl() { systemctl --user "$@"; }
+    userjournal() { journalctl --user "$@"; }
+    userjnl() { userjournal "$@"; }
     view() { vim -R -c ":set mouse=" "$@"; }
-    alias v='view'
-    alias vl='view /var/log/syslog'
-    alias wcp='with_agent scp'
-    alias wsh='with_agent ssh'
-    alias x='xa'
+    v() { view "$@"; }
+    vl() { view /var/log/syslog "$@"; }
+    wcp() { with_agent scp "$@"; }
+    wsh() { with_agent ssh "$@"; }
+    x() { xa "$@"; }
     xa() { while command fg; do :; done; _exit; }
-    alias xevkey='xev -event keyboard'
-    alias xr='DISPLAY=:0.0 xrandr'
+    xevkey() { xev -event keyboard "$@"; }
+    xr() { DISPLAY=:0.0 xrandr "$@"; }
 
     set_up_ssh_aliases() {
         test -f "$HOME/.ssh/config" || return
@@ -1844,41 +1844,35 @@ if is_interactive; then
     }
     set_up_ssh_aliases
 
-    # expand aliases after nohup, etc.
-    for wrapper in nohup strace sudo; do
-        alias $wrapper="$wrapper "
-    done
-
-
     # enable colors in commands that support it
     # (ls is done above)
-    quiet grep -q --color=auto "" /etc/hosts && alias grep='grep --color=auto'
+    quiet command grep -q --color=auto "" /etc/hosts && grep() { command grep --color=auto "$@"; }
 
-    have_command info && alias ginfo=$(path info)
-    # aliases to abstract away differences between package managers
+    have_command info && ginfo() { command info "$@"; }
+    # functions to abstract away differences between package managers
     if have_command yum; then
-        alias yum='root yum --cacheonly'
-        alias update='root yum makecache'
-        alias search='yum search'
-        alias install='root yum install'
-        alias installed='rpm -qa'
-        alias uninstall='root yum erase'
-        alias reinstall='root yum reinstall'
-        alias autoremove='root yum autoremove'
-        alias upgrade='root yum upgrade'
-        alias versions='yum list'
-        alias files='repoquery --file'
+        yum() { command root --nohome yum --cacheonly "$@"; }
+        update() { command root --nohome yum makecache "$@"; }
+        search() { yum search "$@"; }
+        install() { command root --nohome yum install "$@"; }
+        installed() { rpm -qa "$@"; }
+        uninstall() { command root --nohome yum erase "$@"; }
+        reinstall() { command root --nohome yum reinstall "$@"; }
+        autoremove() { command root --nohome yum autoremove "$@"; }
+        upgrade() { command root --nohome yum upgrade "$@"; }
+        versions() { yum list "$@"; }
+        files() { repoquery --file "$@"; }
     elif have_command apt-get; then
-        alias update='root apt-get update'
-        alias search='apt-cache search --names-only'
-        alias install='root apt-get install'
-        alias installed="dpkg-query --show --showformat='\${binary:Package;-36} \${Version;-32} \${Status;-10}\n'"
-        alias uninstall='root apt-get remove'
-        alias reinstall='root apt-get install --reinstall'
-        alias autoremove='root apt-get autoremove'
-        alias upgrade='root apt-get upgrade'
-        alias versions='apt-cache policy'
-        alias files='apt-file search'
+        update() { root apt-get update "$@"; }
+        search() { apt-cache search --names-only "$@"; }
+        install() { root apt-get install "$@"; }
+        installed() { dpkg-query --show --showformat='${binary:Package;-36} ${Version;-32} ${Status;-10}\n' "$@"; }
+        uninstall() { root apt-get remove "$@"; }
+        reinstall() { root apt-get install --reinstall "$@"; }
+        autoremove() { root apt-get autoremove "$@"; }
+        upgrade() { root apt-get upgrade "$@"; }
+        versions() { apt-cache policy "$@"; }
+        files() { apt-file search "$@"; }
     else
         error "No supported package manager found"
     fi
@@ -2270,7 +2264,7 @@ if is_interactive; then
     # set a simple prompt for non-bash non-zsh
     # (will be overridden immediately by bash and zsh)
     basic_prompt
-    alias _=' '
+    _() { "$@"; }
 
     # command line editing
     set -o emacs
