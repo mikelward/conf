@@ -83,11 +83,12 @@ assert_equal "hg_outgoing no unpushed commits" "" "$result"
     hg commit -m "hg local commit" -u "test <test@test.com>"
 )
 
-# Test hg_outgoing shows the unpushed commit
+# Test hg_outgoing shows the unpushed commit with @ prefix (current base)
 result=$(cd "$_hg_local" && hg_outgoing 2>&1)
 rc=$?
 assert_equal "hg_outgoing with unpushed returns 0" "0" "$rc"
 assert_true "hg_outgoing produces output" test -n "$result"
+assert_true "hg_outgoing current base has @ prefix" grep -q '^@ .*hg local commit' <<< "$result"
 
 # Test hg_incoming with no new remote commits (returns exit 1)
 result=$(cd "$_hg_local" && hg_incoming 2>&1)
