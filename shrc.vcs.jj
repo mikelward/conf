@@ -5,6 +5,10 @@ jj_absorb() {
 }
 
 jj_base() {
+    # say nothing if base is the same as remote (i.e. not mutable/outgoing)
+    local outgoing
+    outgoing=$(jj --no-pager log --no-graph -r '@- ~ ancestors(remote_bookmarks())' --template 'change_id.shortest()' 2>/dev/null)
+    test -z "$outgoing" && return
     jj --no-pager log --no-graph -r @- --template 'change_id.shortest() ++ " " ++ description.first_line() ++ "\n"' "$@"
 }
 
