@@ -35,7 +35,7 @@ git_amend() {
 }
 
 git_base() {
-    git log -1 --oneline "$@"
+    git --no-pager log -1 --oneline "$@"
 }
 
 git_annotate() {
@@ -171,11 +171,11 @@ git_lint() {
 
 # print commits that would be pushed
 git_outgoing() {
-    git log --oneline @{upstream}..HEAD
+    git --no-pager log --oneline @{upstream}..HEAD
 }
 
 git_pending() {
-    git log --oneline @{upstream}..HEAD 2>/dev/null || git status --short
+    git --no-pager log --oneline @{upstream}..HEAD 2>/dev/null || git status --short
 }
 
 git_pick() {
