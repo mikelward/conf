@@ -127,9 +127,9 @@ mkdir "$_nohooks"
 _srcdir="$(dirname "$0")"
 
 # Extract a shell function definition from a file and eval it.
-# Assumes the function starts at column 0 and ends with } at column 0.
+# Assumes the function starts at column 0 and ends with } or ) at column 0.
 # Usage: extract_func funcname [filepath]
 # filepath defaults to $_srcdir/shrc
 extract_func() {
-    eval "$(sed -n "/^$1()/,/^}/p" "${2:-$_srcdir/shrc}")"
+    eval "$(sed -n "/^$1()/,/^[})]/p" "${2:-$_srcdir/shrc}")"
 }

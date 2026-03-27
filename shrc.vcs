@@ -168,7 +168,7 @@ for command in add addremove amend annotate \
     pending pick precommit presubmit pull push \
     rebase recommit restore revert review reword \
     show split squash status submit submitforce track \
-    unamend undo unknown untrack upload uploadchain; do
+    unamend undo unknown untrack upload uploadchain where; do
     # remove any alias created in .shrc
     case "$(type "$command" 2>/dev/null)" in *alias*)
         unalias "$command"

@@ -59,13 +59,17 @@ extract_func auth_info
 extract_func fetch_info
 extract_func is_ssh_valid
 extract_func bash_last_error
+extract_func vcs_info
+extract_func status_chars "$_srcdir/shrc.vcs"
+extract_func git_where "$_srcdir/shrc.vcs.git"
 
 # Stub VCS functions (no VCS by default)
 projectroot() { :; }
 projectname() { :; }
 vcs() { return 1; }
 git_branch() { :; }
-status_chars() { :; }
+git() { return 1; }
+status() { :; }
 outgoing() { return 1; }
 base() { :; }
 fetchtime() { return 1; }
@@ -176,12 +180,18 @@ vcs() {
     fi
 }
 git_branch() { echo "main"; }
-status_chars() { :; }
-fetch_info() { :; }
+git() {
+    case "$1 $2" in
+        "rev-parse --short") echo "abc1234" ;;
+        *) command git "$@" ;;
+    esac
+}
+status() { :; }
+fetchtime() { return 1; }
 
 PWD="$_vcsdir"
 result="$(_dir_info "$PWD")"
-assert_equal "dir_info at VCS root" "myproject main" "$result"
+assert_equal "dir_info at VCS root" "myproject main abc1234" "$result"
 
 ###############
 # TEST: dir_info in subdirectory of VCS root
@@ -190,26 +200,29 @@ _subdir="$_vcsdir/src/lib"
 mkdir -p "$_subdir"
 PWD="$_subdir"
 result="$(_dir_info "$PWD")"
-assert_equal "dir_info in VCS subdirectory" "myproject src/lib main" "$result"
+assert_equal "dir_info in VCS subdirectory" "myproject src/lib main abc1234" "$result"
 
 ###############
 # TEST: dir_info with branch and status chars
 
-status_chars() { echo "M"; }
+status() { printf 'M  file1.txt\n'; }
 PWD="$_vcsdir"
 result="$(_dir_info "$PWD")"
-assert_equal "dir_info with status chars" "myproject main M" "$result"
+assert_equal "dir_info with status chars" "myproject main abc1234 M" "$result"
 
 ###############
 # TEST: dir_info with fetch warning
 
-status_chars() { :; }
-fetch_info() { echo "fetch"; }
+status() { :; }
+fetchtime() { echo "0"; }
 result="$(_dir_info "$PWD")"
-assert_equal "dir_info with stale fetch" "myproject main fetch" "$result"
+assert_equal "dir_info with stale fetch" "myproject main abc1234 fetch" "$result"
 
 # Reset stubs
-fetch_info() { :; }
+git_branch() { :; }
+git() { return 1; }
+status() { :; }
+fetchtime() { return 1; }
 projectroot() { :; }
 vcs() { return 1; }
 
@@ -464,14 +477,20 @@ vcs() {
     fi
 }
 git_branch() { echo "main"; }
-status_chars() { :; }
-fetch_info() { :; }
+git() {
+    case "$1 $2" in
+        "rev-parse --short") echo "abc1234" ;;
+        *) command git "$@" ;;
+    esac
+}
+status() { :; }
+fetchtime() { return 1; }
 outgoing() { return 1; }
-base() { :; }
+base() { echo "abc1234 Some commit"; }
 
 result="$(_resolve_cr "$(preprompt)")"
 expected="
-workstation shpool conf main ―――――――――――――――――――――――――――――――――――――――――――――――――――"
+workstation shpool conf main abc1234 ―――――――――――――――――――――――――――――――――――――――――――"
 assert_equal "whole prompt: workstation, project root, shpool" "$expected" "$result"
 
 ###############
@@ -488,14 +507,14 @@ in_shpool() { true; }
 SHPOOL_SESSION_NAME="edge1"
 projectroot() { echo "$_edgedir"; }
 git_branch() { echo "somebranch"; }
-status_chars() { echo "M?"; }
-fetch_info() { echo "fetch"; }
+status() { printf 'M  file1.txt\n?? file2.txt\n'; }
+fetchtime() { echo "0"; }
 outgoing() { echo "abc1234 Bump targetSdk to 36"; }
 base() { echo "abc1234 Bump targetSdk to 36"; }
 
 result="$(_resolve_cr "$(preprompt)")"
 expected="
-workstation [edge1] edge1 ui somebranch M? fetch ―――――――――――――――――――――――――――――――
+workstation [edge1] edge1 ui somebranch abc1234 ?? M fetch ―――――――――――――――――――――
 abc1234 Bump targetSdk to 36"
 assert_equal "whole prompt: workstation, shpool, subdir, outgoing, changes, fetch" "$expected" "$result"
 
@@ -510,9 +529,12 @@ in_shpool() { false; }
 on_production_host() { false; }
 projectroot() { :; }
 vcs() { return 1; }
+git_branch() { :; }
+git() { return 1; }
+status() { :; }
 outgoing() { return 1; }
 base() { :; }
-fetch_info() { :; }
+fetchtime() { return 1; }
 
 ###############
 # VISUAL TEST MODE

@@ -158,6 +158,54 @@ assert_equal "status_chars sorts codes" "A D M R" "$result"
 unset -f status
 
 ###############
+# Test git_where
+
+# Source git backend for git_where
+source "$_srcdir/shrc.vcs.git"
+
+# Disable colors for predictable output
+yellow() { printf '%s' "$*"; }
+
+# Stub git commands used by git_where
+git_branch() { echo "main"; }
+git() {
+    case "$1 $2" in
+        "rev-parse --short") echo "abc1234" ;;
+        *) command git "$@" ;;
+    esac
+}
+status() { :; }
+
+# Test: branch and commit id
+result=$(git_where)
+assert_equal "git_where branch and commit id" "main abc1234" "$result"
+
+# Test: branch, commit id, and status chars
+status() { printf 'M  file1.txt\n'; }
+result=$(git_where)
+assert_equal "git_where with status" "main abc1234 M" "$result"
+
+# Test: no branch (detached HEAD)
+git_branch() { :; }
+status() { :; }
+result=$(git_where)
+assert_equal "git_where detached HEAD" "abc1234" "$result"
+
+# Test: empty (no git info)
+git_branch() { :; }
+git() {
+    case "$1 $2" in
+        "rev-parse --short") return 1 ;;
+        *) command git "$@" ;;
+    esac
+}
+status() { :; }
+result=$(git_where)
+assert_equal "git_where empty" "" "$result"
+
+unset -f git_branch git status yellow
+
+###############
 # Test allknown
 
 # Stub unknown to return something

@@ -232,6 +232,23 @@ hg_undo() {
     hg undo "$@"
 }
 
+hg_where() (
+    local output=""
+    local branch="$(hg_branch)"
+    if test -n "$branch"; then
+        output="$branch"
+    fi
+    local id="$(hg log -r . --template '{node|short}\n' 2>/dev/null)"
+    if test -n "$id"; then
+        output="${output:+$output }$id"
+    fi
+    local statuschars="$(status_chars)"
+    if test -n "$statuschars"; then
+        output="${output:+$output }$(yellow "$statuschars")"
+    fi
+    printf '%s' "$output"
+)
+
 hg_unknown() {
     hg status --unknown --deleted
 }

@@ -226,6 +226,21 @@ fetch_info() {
     fi
 }
 
+# combined VCS info for the prompt: where (branch, commit id, status) + fetch staleness
+vcs_info() (
+    local where="$(vcs where)"
+    local fetchinfo="$(fetch_info)"
+
+    local output=""
+    if test -n "$where"; then
+        output="$where"
+    fi
+    if test -n "$fetchinfo"; then
+        output="${output:+$output }$fetchinfo"
+    fi
+    printf '%s' "$output"
+)
+
 # ask the user whether to do something, return true if they say yes or Enter
 confirm() {
     printf '%s? [Y/n] ' "$*"
@@ -1306,18 +1321,9 @@ _dir_info() {
                 printf ' '
                 blue "${projectsubdir#/}"
             fi
-            local branch="$(vcs branch)"
-            if test -n "$branch"; then
-                printf ' %s' "$branch"
-            fi
-            local statuschars="$(status_chars)"
-            if test -n "$statuschars"; then
-                printf ' '
-                yellow "$statuschars"
-            fi
-            local fetchinfo="$(fetch_info)"
-            if test -n "$fetchinfo"; then
-                printf ' %s' "$fetchinfo"
+            local vcsinfo="$(vcs_info)"
+            if test -n "$vcsinfo"; then
+                printf ' %s' "$vcsinfo"
             fi
             # local branch
             # branch="$(branch)"

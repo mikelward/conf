@@ -241,6 +241,19 @@ jj_undo() {
     jj undo "$@"
 }
 
+jj_where() (
+    local output=""
+    local id="$(jj --no-pager log --no-graph -r @ -T 'change_id.shortest()' 2>/dev/null)"
+    if test -n "$id"; then
+        output="$id"
+    fi
+    local statuschars="$(status_chars)"
+    if test -n "$statuschars"; then
+        output="${output:+$output }$(yellow "$statuschars")"
+    fi
+    printf '%s' "$output"
+)
+
 jj_unknown() {
     jj file list --untracked "$@"
 }

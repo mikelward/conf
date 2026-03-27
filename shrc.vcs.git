@@ -287,6 +287,23 @@ git_unamend() {
     git reset --mixed HEAD@{1}
 }
 
+git_where() (
+    local output=""
+    local branch="$(git_branch)"
+    if test -n "$branch"; then
+        output="$branch"
+    fi
+    local head="$(git rev-parse --short HEAD 2>/dev/null)"
+    if test -n "$head"; then
+        output="${output:+$output }$head"
+    fi
+    local statuschars="$(status_chars)"
+    if test -n "$statuschars"; then
+        output="${output:+$output }$(yellow "$statuschars")"
+    fi
+    printf '%s' "$output"
+)
+
 git_unknown() (
     cd "$(git rootdir)"
     git ls-files -od --exclude-standard
