@@ -326,6 +326,7 @@ extract_func inside_tmux
 extract_func in_shpool
 extract_func want_shpool
 extract_func switchshpool
+extract_func maybe_start_shpool_and_exit
 
 ###############
 # COMMAND INSPECTION
@@ -599,6 +600,65 @@ assert_true "switchshpool does not exit when autoshpool fails" test -f "$_return
 
 # Clean up
 unset -f autoshpool
+rm -f "$_autoshpool_calls" "$_returned"
+
+# Test maybe_start_shpool_and_exit
+_autoshpool_calls="$_testdir/autoshpool_calls"
+_returned="$_testdir/shpool_returned"
+
+# When not in shpool, want shpool, shpool available → calls autoshpool and exits
+rm -f "$_autoshpool_calls" "$_returned"
+(
+    in_shpool() { false; }
+    want_shpool() { true; }
+    have_command() { test "$1" = "shpool"; }
+    autoshpool() { echo "autoshpool $*" >> "$_autoshpool_calls"; return 0; }
+    maybe_start_shpool_and_exit
+    echo yes > "$_returned"
+)
+assert_false "maybe_start_shpool_and_exit exits when autoshpool succeeds" test -f "$_returned"
+result="$(cat "$_autoshpool_calls" 2>/dev/null)"
+assert_equal "maybe_start_shpool_and_exit calls autoshpool with no args" "autoshpool " "$result"
+
+# When autoshpool fails → does not exit
+rm -f "$_autoshpool_calls" "$_returned"
+(
+    in_shpool() { false; }
+    want_shpool() { true; }
+    have_command() { test "$1" = "shpool"; }
+    autoshpool() { return 1; }
+    maybe_start_shpool_and_exit
+    echo yes > "$_returned"
+)
+assert_true "maybe_start_shpool_and_exit does not exit when autoshpool fails" test -f "$_returned"
+
+# When already in shpool → does not call autoshpool
+rm -f "$_autoshpool_calls" "$_returned"
+(
+    in_shpool() { true; }
+    want_shpool() { true; }
+    have_command() { test "$1" = "shpool"; }
+    autoshpool() { echo "autoshpool $*" >> "$_autoshpool_calls"; return 0; }
+    maybe_start_shpool_and_exit
+    echo yes > "$_returned"
+)
+assert_true "maybe_start_shpool_and_exit skips when already in shpool" test -f "$_returned"
+assert_false "maybe_start_shpool_and_exit does not call autoshpool when in shpool" test -f "$_autoshpool_calls"
+
+# When don't want shpool → does not call autoshpool
+rm -f "$_autoshpool_calls" "$_returned"
+(
+    in_shpool() { false; }
+    want_shpool() { false; }
+    have_command() { test "$1" = "shpool"; }
+    autoshpool() { echo "autoshpool $*" >> "$_autoshpool_calls"; return 0; }
+    maybe_start_shpool_and_exit
+    echo yes > "$_returned"
+)
+assert_true "maybe_start_shpool_and_exit skips when not wanted" test -f "$_returned"
+assert_false "maybe_start_shpool_and_exit does not call autoshpool when not wanted" test -f "$_autoshpool_calls"
+
+# Clean up
 rm -f "$_autoshpool_calls" "$_returned"
 connected_remotely() { false; }
 inside_project() { false; }

@@ -994,6 +994,12 @@ fi
 
 switchshpool() { autoshpool switch "$1" && exit; }
 
+maybe_start_shpool_and_exit() {
+    if ! in_shpool && want_shpool && have_command shpool; then
+        autoshpool && exit
+    fi
+}
+
 ##############################
 # TERMINAL AND PROMPT FUNCTIONS
 # Functions used by the interactive shell for colors, titles, and prompt.
@@ -1619,9 +1625,7 @@ if is_interactive; then
         # This will be overridden by autoshpool.
         export SHPOOL_INITIAL_PWD="$PWD"
     fi
-    if ! in_shpool && want_shpool && have_command shpool; then
-        autoshpool && exit
-    fi
+    maybe_start_shpool_and_exit
 
     log_history "New session as $USERNAME: $0 $*"
 
