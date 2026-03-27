@@ -992,51 +992,7 @@ if test -f "$HOME/.shrc.vcs"; then
     source "$HOME/.shrc.vcs"
 fi
 
-# TODO: Make the name unique or linked.
-shpool_switch_session_file="$HOME/.shpool_switch_session"
-
-shpool_switch_session() {
-    cat "$shpool_switch_session_file" 2>/dev/null
-}
-
-switchshpool() {
-    echo "$1" > "$shpool_switch_session_file"
-    exit 0
-}
-
-switch_shpool() {
-    rm "$shpool_switch_session_file"
-    shpool attach "$1"
-}
-
-# Start an shpool session with a useful session name.
-# Disconnect if the user cleanly exited the session.
-# Stay connected if there was an error, so the user can see and fix the error.
-# Run in a loop so the user can switch to a different session.
-shpool_loop() {
-    while true; do
-        shpool_switch_session="$(shpool_switch_session)"
-        if test -n "$shpool_switch_session"; then
-            switch_shpool "$shpool_switch_session"
-        else
-            autoshpool
-        fi
-
-        if test $? -ne 0; then
-            # Maybe .shrc failed or something.
-            # Stay here so the user can see the error and fix it.
-            return
-        fi
-
-        shpool_switch_session="$(shpool_switch_session)"
-        if test -n "$shpool_switch_session"; then
-            continue
-        fi
-
-        # autoshpool exited. Exit from the parent shrc so we disconnect.
-        exit 0
-    done
-}
+switchshpool() { autoshpool switch "$1" && exit; }
 
 ##############################
 # TERMINAL AND PROMPT FUNCTIONS
@@ -1664,7 +1620,7 @@ if is_interactive; then
         export SHPOOL_INITIAL_PWD="$PWD"
     fi
     if ! in_shpool && want_shpool && have_command shpool; then
-        shpool_loop
+        autoshpool && exit
     fi
 
     log_history "New session as $USERNAME: $0 $*"
