@@ -994,6 +994,18 @@ fi
 
 switchshpool() { autoshpool switch "$1" && exit; }
 
+# if we've cd'd into a new project, switch to a shpool session for it
+_maybe_switch_shpool() {
+    in_shpool || return 0
+    local project="$(projectname)"
+    test -n "$project" || return 0
+    # already in a session for this project
+    case "$SHPOOL_SESSION_NAME" in
+        "$project"|"$project"-*|"$project"_*) return 0 ;;
+    esac
+    switchshpool "$project"
+}
+
 maybe_start_shpool_and_exit() {
     if ! in_shpool && want_shpool && have_command shpool; then
         autoshpool && exit
@@ -1643,6 +1655,7 @@ if is_interactive; then
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.go,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}"
     code_includes="$(eval echo --include=$code_patterns)"
     c() { less -FX "$@"; }
+    cd() { builtin cd "$@" && _maybe_switch_shpool; }
     cdf() { cdfile "$@"; }
     cg() { rg $code_includes "$@"; }
     ct() { ctags -R "$@"; }
