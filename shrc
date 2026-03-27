@@ -555,7 +555,7 @@ delline() {
 
 # print the block device associated with the given mount point (or file)
 dev() {
-    df -Pk "$1" | while read fs blocks used avail cap mount; do
+    df -P -k "$1" | while read fs blocks used avail cap mount; do
         case "$mount" in /*)
             echo "$fs"
         esac
@@ -1642,7 +1642,7 @@ if is_interactive; then
     bindkeys() { daemon xbindkeys "$@"; }
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.go,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}"
     code_includes="$(eval echo --include=$code_patterns)"
-    c() { less -FX "$@"; }
+    c() { less --quit-if-one-screen --no-init "$@"; }
     cdf() { cdfile "$@"; }
     cg() { rg $code_includes "$@"; }
     ct() { ctags -R "$@"; }
@@ -1680,16 +1680,16 @@ if is_interactive; then
     # function rather than an alias so it looks better in the xterm title.
     e() { "${EDITOR:-vim}" "$@"; }
     eg() { g -E "$@"; }
-    emacs() { command emacs -nw "$@"; }
+    emacs() { command emacs --no-window-system "$@"; }
     f() { command fg "$@"; }
-    g() { grep -In "$@"; }
+    g() { grep --binary-files=without-match --line-number "$@"; }
     gdb() { command gdb -q "$@"; }
     # Note that grep options must go after ~/.history.
     gh() { first_arg_last grep ~/.history -a "$@"; }
     gitdir() { git rev-parse --git-dir "$@"; }
     gl() { cd /var/log "$@"; }
     h() { head "$@"; }
-    headers() { curl -L -i -sS -o/dev/null -D- "$@"; }
+    headers() { curl --location --include --silent --show-error --output /dev/null --dump-header - "$@"; }
     if have_command chg; then
         hg() { chg "$@"; }
     fi
@@ -1701,9 +1701,9 @@ if is_interactive; then
     killcode() { pkill -f /usr/share/code/code "$@"; }
     kssh() { ssh -o PreferredAuthentications=publickey "$@"; }
     if have_command l; then
-        l() { command l -Kv -e -x "$@"; }
-        ll() { l -pTBV -h --time-style=relative "$@"; }
-        lt() { l -Tt "$@"; }
+        l() { command l -K -v -e -x "$@"; }
+        ll() { l -p -T -B -V -h --time-style=relative "$@"; }
+        lt() { l -T -t "$@"; }
     elif quiet ls --color=auto -v -d /; then
         l() { ls --color=auto -v -b -x "$@"; }
         ll() { l -l "$@"; }
@@ -1750,7 +1750,7 @@ if is_interactive; then
     py3() { python3 "$@"; }
     r() { fc -e - -- "$@"; }
     rerc() { source "$HOME/.shrc"; }
-    rg() { g -IR --exclude-dir=".*" "$@"; }
+    rg() { g --binary-files=without-match --recursive --exclude-dir=".*" "$@"; }
     rh() { gh "$@" | tail -n 20; }
     q() { xa "$@"; }
     s() { subl "$@"; }
@@ -1767,7 +1767,7 @@ if is_interactive; then
     sw() { switchshpool "$@"; }
     switch() { switchshpool "$@"; }
     swsh() { switchshpool "$@"; }
-    symlink() { ln -sr "$@"; }
+    symlink() { ln --symbolic --relative "$@"; }
     t() { tail "$@"; }
     tf() { t -f "$@"; }
     tl() { t -f /var/log/syslog "$@"; }
@@ -1886,7 +1886,7 @@ if is_interactive; then
         setopt PUSHD_SILENT
 
         # complete both commands and files for the first word, to support autocd
-        compctl -C -cf
+        compctl -C -c -f
         # fall back to case-insensitive completion then fuzzy completion
         zstyle ':completion:*' matcher-list '' \
             'm:{a-z\-}={A-Z\_}' \
@@ -1894,7 +1894,7 @@ if is_interactive; then
             'r:|?=** m:{a-z\-}={A-Z\_}'
 
         # load auto completions
-        autoload -Uz compinit bashcompinit
+        autoload -U -z compinit bashcompinit
         compinit
         bashcompinit
 
