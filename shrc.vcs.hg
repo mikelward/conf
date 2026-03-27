@@ -12,7 +12,7 @@ hg_amend() {
 }
 
 hg_base() {
-    hg log -r . --template=oneline "$@"
+    hg --pager never log -r . --template=oneline "$@"
 }
 
 hg_annotate() {
@@ -132,11 +132,11 @@ hg_lint() {
 
 # show changesets that would be pushed
 hg_outgoing() {
-    hg --quiet log -r "outgoing() and not obsolete()" --template=oneline "$@"
+    hg --pager never --quiet log -r "outgoing() and not obsolete()" --template=oneline "$@"
 }
 
 hg_pending() {
-    hg status
+    hg --pager never status
 }
 
 hg_pick() {

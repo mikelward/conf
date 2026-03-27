@@ -132,7 +132,7 @@ jj_outgoing() {
 }
 
 jj_pending() {
-    jj log -r 'mutable() ~ empty()' "$@"
+    jj --no-pager log -r 'mutable() ~ empty()' "$@"
 }
 
 jj_pick() {
