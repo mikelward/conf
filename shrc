@@ -1132,7 +1132,7 @@ preprompt() {
     printf '\n'
     bar $((COLUMNS))
     printf '\r%s %s%s \n' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")"
-    outgoing 2>/dev/null
+    base 2>/dev/null
     job_info
     set_title "$(title)"
     set_prompt
