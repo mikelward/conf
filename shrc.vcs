@@ -18,9 +18,9 @@ vcs() {
         # If it's not writable, assume we don't care about vcs here.
         test -w "$PWD" || return 1
 
-        local _vcs _rootdir
+        local _vcs _rootdir _backend _hosting
         if test -f .vcs_cache; then
-            read _vcs _rootdir <.vcs_cache
+            read _vcs _rootdir _backend _hosting <.vcs_cache
         elif test -w .; then
             read _vcs _rootdir <<<"$(
                 while test "$PWD" != "/"; do
@@ -32,9 +32,29 @@ vcs() {
                     cd ..
                 done
             )"
+            # Detect backend
+            if test "$_vcs" = "jj" && test -f "$_rootdir/.jj/repo/store/type"; then
+                read _backend <"$_rootdir/.jj/repo/store/type"
+            elif test "$_vcs" = "git"; then
+                _backend="git"
+            fi
+            # Detect hosting
+            if test "$_backend" = "git"; then
+                local _git_dir _origin_url
+                if test "$_vcs" = "jj"; then
+                    _git_dir="$_rootdir/.jj/repo/store/git"
+                else
+                    _git_dir="$_rootdir/.git"
+                fi
+                _origin_url="$(git -C "$_git_dir" remote get-url origin 2>/dev/null)"
+                case "$_origin_url" in
+                    *github.com*) _hosting="github" ;;
+                    *googlesource.com*) _hosting="gerrit" ;;
+                esac
+            fi
             # This can fail if the filesystem is read-only.
             # Ignore errors.
-            { echo "$_vcs $_rootdir" >.vcs_cache ; } 2>/dev/null
+            { echo "$_vcs $_rootdir $_backend $_hosting" >.vcs_cache ; } 2>/dev/null
         fi
         if test -z "$_vcs" || test -z "$_rootdir"; then
             return 1
@@ -53,7 +73,7 @@ rootdir() {
         if ! test -f .vcs_cache; then
             vcs >/dev/null 2>&1 || return 1
         fi
-        read _vcs _rootdir <.vcs_cache
+        read _vcs _rootdir _backend _hosting <.vcs_cache
         if test $# -gt 0; then
           local _arg
           for _arg; do
@@ -63,6 +83,30 @@ rootdir() {
           echo "$_rootdir"
         fi
         test -n "$_rootdir"
+    )
+}
+
+vcs_backend() {
+    (
+        if ! test -f .vcs_cache; then
+            vcs >/dev/null 2>&1 || return 1
+        fi
+        local _vcs _rootdir _backend _hosting
+        read _vcs _rootdir _backend _hosting <.vcs_cache
+        echo "$_backend"
+        test -n "$_backend"
+    )
+}
+
+vcs_hosting() {
+    (
+        if ! test -f .vcs_cache; then
+            vcs >/dev/null 2>&1 || return 1
+        fi
+        local _vcs _rootdir _backend _hosting
+        read _vcs _rootdir _backend _hosting <.vcs_cache
+        echo "$_hosting"
+        test -n "$_hosting"
     )
 }
 

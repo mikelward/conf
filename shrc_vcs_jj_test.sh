@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Tests for jj VCS backend functions.
+# Tests for jj VCS implementation functions.
 #
 
 source "$(dirname "$0")/shrc_test_lib.sh"
@@ -384,5 +384,64 @@ assert_equal "jj_absorb absorbed change into base" "absorb-line1-modified" "$res
 # The second commit should be unchanged
 result=$(cd "$_jj_repo" && jj log --no-graph -r @- -T 'description')
 assert_true "jj_absorb keeps second commit" grep -q 'jj absorb second commit' <<< "$result"
+
+###############
+# Test backend-dependent dispatch
+
+# Ensure cache exists with backend info
+rm -f "$_jj_repo/.vcs_cache"
+(cd "$_jj_repo" && vcs >/dev/null)
+
+# The test repo was created with jj git init, so backend should be git
+result=$(cd "$_jj_repo" && vcs_backend)
+assert_equal "jj test repo has git backend" "git" "$result"
+
+# Stub jj to capture commands dispatched by each function
+_jj_cmd_log="$_testdir/jj_cmd_log"
+
+jj() { echo "$*" >> "$_jj_cmd_log"; }
+
+: > "$_jj_cmd_log"
+(cd "$_jj_repo" && jj_push --bookmark main 2>/dev/null)
+result=$(cat "$_jj_cmd_log")
+assert_contains "jj_push uses git push for git backend" "git push" "$result"
+
+: > "$_jj_cmd_log"
+(cd "$_jj_repo" && jj_pull 2>/dev/null)
+result=$(cat "$_jj_cmd_log")
+assert_contains "jj_pull uses git fetch for git backend" "git fetch" "$result"
+
+: > "$_jj_cmd_log"
+(cd "$_jj_repo" && jj_fastforward 2>/dev/null)
+result=$(cat "$_jj_cmd_log")
+assert_contains "jj_fastforward uses git fetch for git backend" "git fetch" "$result"
+
+: > "$_jj_cmd_log"
+(cd "$_jj_repo" && jj_submit 2>/dev/null)
+result=$(cat "$_jj_cmd_log")
+assert_contains "jj_submit uses git push for git backend" "git push" "$result"
+
+: > "$_jj_cmd_log"
+(cd "$_jj_repo" && jj_review 2>/dev/null)
+result=$(cat "$_jj_cmd_log")
+assert_contains "jj_review uses git push for git backend" "git push" "$result"
+
+: > "$_jj_cmd_log"
+(cd "$_jj_repo" && jj_upload 2>/dev/null)
+result=$(cat "$_jj_cmd_log")
+assert_contains "jj_upload uses git push for git backend" "git push" "$result"
+
+: > "$_jj_cmd_log"
+(cd "$_jj_repo" && jj_uploadchain 2>/dev/null)
+result=$(cat "$_jj_cmd_log")
+assert_contains "jj_uploadchain uses git push for git backend" "git push" "$result"
+
+: > "$_jj_cmd_log"
+(cd "$_jj_repo" && jj_presubmit 2>/dev/null)
+result=$(cat "$_jj_cmd_log")
+assert_equal "jj_presubmit no-ops for git backend" "" "$result"
+
+unset -f jj
+rm -f "$_jj_cmd_log"
 
 test_summary "jj"

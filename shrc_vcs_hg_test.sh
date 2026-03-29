@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Tests for hg VCS backend functions.
+# Tests for hg VCS implementation functions.
 #
 
 source "$(dirname "$0")/shrc_test_lib.sh"

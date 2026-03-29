@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tests for shrc.vcs core functions and cross-VCS consistency.
-# Backend-specific tests are in shrc_vcs_{git,hg,jj}_test.sh.
+# Implementation-specific tests are in shrc_vcs_{git,hg,jj}_test.sh.
 # Requires bash or zsh (uses here-strings).
 #
 
@@ -49,6 +49,87 @@ assert_true "vcs creates .vcs_cache" test -f "$_testdir/gitrepo/.vcs_cache"
 # Test .vcs_cache is used on second call
 result=$(cd "$_testdir/gitrepo" && vcs)
 assert_equal "vcs uses cache on second call" "git" "$result"
+
+###############
+# Test vcs_backend and vcs_hosting
+
+# git repo should have git backend
+rm -f "$_testdir/gitrepo/.vcs_cache"
+result=$(cd "$_testdir/gitrepo" && vcs_backend)
+assert_equal "vcs_backend returns git for git repo" "git" "$result"
+
+# hg repo has no backend
+rm -f "$_testdir/hgrepo/.vcs_cache"
+result=$(cd "$_testdir/hgrepo" && vcs_backend)
+assert_equal "vcs_backend returns empty for hg repo" "" "$result"
+
+# jj repo with git backend
+mkdir -p "$_testdir/jjrepo/.jj/repo/store/git"
+echo "git" > "$_testdir/jjrepo/.jj/repo/store/type"
+rm -f "$_testdir/jjrepo/.vcs_cache"
+# Stub git to return a github remote URL
+git() {
+    if test "$1" = "-C" && test "$3" = "remote"; then
+        echo "https://github.com/user/repo.git"
+        return 0
+    fi
+    command git "$@"
+}
+result=$(cd "$_testdir/jjrepo" && vcs_backend)
+assert_equal "vcs_backend returns git for jj-git repo" "git" "$result"
+result=$(cd "$_testdir/jjrepo" && vcs_hosting)
+assert_equal "vcs_hosting returns github for github remote" "github" "$result"
+unset -f git
+
+# jj repo with gerrit remote
+mkdir -p "$_testdir/jjrepo_gerrit/.jj/repo/store/git"
+echo "git" > "$_testdir/jjrepo_gerrit/.jj/repo/store/type"
+git() {
+    if test "$1" = "-C" && test "$3" = "remote"; then
+        echo "https://chromium.googlesource.com/foo/bar"
+        return 0
+    fi
+    command git "$@"
+}
+result=$(cd "$_testdir/jjrepo_gerrit" && vcs_hosting)
+assert_equal "vcs_hosting returns gerrit for googlesource remote" "gerrit" "$result"
+unset -f git
+
+# jj repo with no origin remote
+mkdir -p "$_testdir/jjrepo_noremote/.jj/repo/store/git"
+echo "git" > "$_testdir/jjrepo_noremote/.jj/repo/store/type"
+git() {
+    if test "$1" = "-C" && test "$3" = "remote"; then
+        return 2
+    fi
+    command git "$@"
+}
+result=$(cd "$_testdir/jjrepo_noremote" && vcs_hosting)
+assert_equal "vcs_hosting returns empty for no remote" "" "$result"
+unset -f git
+
+# jj repo with non-git backend
+mkdir -p "$_testdir/jjrepo_piper/.jj/repo/store"
+echo "piper" > "$_testdir/jjrepo_piper/.jj/repo/store/type"
+result=$(cd "$_testdir/jjrepo_piper" && vcs_backend)
+assert_equal "vcs_backend returns piper for piper backend" "piper" "$result"
+result=$(cd "$_testdir/jjrepo_piper" && vcs_hosting)
+assert_equal "vcs_hosting returns empty for non-git backend" "" "$result"
+
+# Verify cache has 4 fields
+rm -f "$_testdir/jjrepo/.vcs_cache"
+git() {
+    if test "$1" = "-C" && test "$3" = "remote"; then
+        echo "https://github.com/user/repo.git"
+        return 0
+    fi
+    command git "$@"
+}
+(cd "$_testdir/jjrepo" && vcs >/dev/null)
+_cache_content=$(cat "$_testdir/jjrepo/.vcs_cache")
+assert_contains "vcs_cache contains backend" "git" "$_cache_content"
+assert_contains "vcs_cache contains hosting" "github" "$_cache_content"
+unset -f git
 
 ###############
 # Test cv (clear vcs cache)
@@ -234,9 +315,9 @@ assert_true "cp keeps original outside VCS" test -f "$_testdir/norepo2/cpfile.tx
 
 ###############
 # Test cross-VCS consistency: every command in shrc.vcs dispatch loop
-# must have a corresponding function in each backend.
+# must have a corresponding function in each implementation.
 
-# Source all backends for the consistency check
+# Source all implementations for the consistency check
 source "$_srcdir/shrc.vcs.git"
 source "$_srcdir/shrc.vcs.hg"
 source "$_srcdir/shrc.vcs.jj"
@@ -249,18 +330,18 @@ _commands=$(
     grep -v '^for$\|^command$\|^in$\|^do$\|^$'
 )
 
-for _backend in git hg jj; do
-    _backend_file="$_srcdir/shrc.vcs.$_backend"
+for _impl in git hg jj; do
+    _impl_file="$_srcdir/shrc.vcs.$_impl"
     for _cmd in $_commands; do
-        assert_true "${_backend}_${_cmd} defined" \
-            grep -q "^${_backend}_${_cmd}()" "$_backend_file"
+        assert_true "${_impl}_${_cmd} defined" \
+            grep -q "^${_impl}_${_cmd}()" "$_impl_file"
     done
 done
 
-unset _commands _backend _backend_file _cmd
+unset _commands _impl _impl_file _cmd
 
 ###############
-# Run backend tests in parallel
+# Run implementation tests in parallel
 
 _outdir="$_testdir/test_output"
 mkdir -p "$_outdir"
@@ -272,19 +353,19 @@ _pid_hg=$!
 bash "$_srcdir/shrc_vcs_jj_test.sh"  > "$_outdir/jj"  2>&1 &
 _pid_jj=$!
 
-_backend_failures=0
-for _backend in git hg jj; do
-    eval "wait \$_pid_$_backend"
+_impl_failures=0
+for _impl in git hg jj; do
+    eval "wait \$_pid_$_impl"
     _rc=$?
-    cat "$_outdir/$_backend"
+    cat "$_outdir/$_impl"
     if test "$_rc" -ne 0; then
-        _backend_failures=$((_backend_failures + 1))
+        _impl_failures=$((_impl_failures + 1))
     fi
 done
 
 test_summary "core"
 
-if test "$_backend_failures" -gt 0; then
-    echo "$_backend_failures backend suite(s) failed."
+if test "$_impl_failures" -gt 0; then
+    echo "$_impl_failures implementation suite(s) failed."
     exit 1
 fi
