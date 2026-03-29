@@ -220,6 +220,10 @@ jj_resolve() {
     jj resolve "$@"
 }
 
+jj_mergetool() {
+    jj resolve "$@"
+}
+
 jj_restore() {
     jj restore "$@"
 }

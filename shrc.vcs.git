@@ -259,6 +259,14 @@ git_rebase() {
     git rebase "$@"
 }
 
+git_resolve() {
+    git mergetool "$@"
+}
+
+git_mergetool() {
+    git mergetool "$@"
+}
+
 git_recommit() {
     git amend "$@"
 }
