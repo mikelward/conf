@@ -170,7 +170,7 @@ for command in absorb add addremove amend annotate \
     pending pick precommit presubmit pull push \
     rebase recommit remove rename restore revert review reword \
     show split squash status submit submitforce track \
-    unamend undo unknown untrack upload uploadchain; do
+    unamend uncommit undo unknown untrack upload uploadchain; do
     # remove any alias created in .shrc
     case "$(type "$command" 2>/dev/null)" in *alias*)
         unalias "$command"

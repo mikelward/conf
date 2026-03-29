@@ -323,6 +323,10 @@ git_unamend() {
     git reset --mixed HEAD@{1}
 }
 
+git_uncommit() {
+    git reset --soft HEAD~
+}
+
 git_unknown() (
     cd "$(git rootdir)"
     git ls-files -od --exclude-standard

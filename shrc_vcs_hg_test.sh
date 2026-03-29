@@ -327,6 +327,28 @@ else
 fi
 
 ###############
+# Test hg uncommit
+
+# hg_uncommit requires hg uncommit (core since Mercurial 4.6)
+if hg help uncommit >/dev/null 2>&1; then
+    (
+        cd "$_hg_local"
+        echo "uncommit-content" > hg_uncommitfile.txt
+        hg add hg_uncommitfile.txt
+        hg commit -m "hg uncommit test" -u "test <test@test.com>"
+    )
+    (cd "$_hg_local" && hg_uncommit >/dev/null 2>&1)
+    result=$(cd "$_hg_local" && hg status)
+    assert_true "hg_uncommit leaves changes in working dir" grep -q 'hg_uncommitfile.txt' <<< "$result"
+    result=$(cd "$_hg_local" && hg log -r . --template '{desc}')
+    assert_false "hg_uncommit removes file from commit" grep -q 'hg uncommit test' <<< "$result"
+    # clean up
+    (cd "$_hg_local" && hg add hg_uncommitfile.txt && hg commit -m "re-commit after uncommit" -u "test <test@test.com>" >/dev/null 2>&1)
+else
+    echo "SKIP: hg uncommit not available"
+fi
+
+###############
 # Test hg describe
 
 # hg_describe edits the commit message (like reword)
