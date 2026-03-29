@@ -1,4 +1,8 @@
 # register git VCS
+git_absorb() {
+    git absorb "$@"
+}
+
 git_add() {
     git add --intent-to-add "$@"
 }

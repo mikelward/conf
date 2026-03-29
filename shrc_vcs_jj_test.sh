@@ -221,4 +221,24 @@ _jj_drop_id=$(cd "$_jj_repo" && jj log --no-graph -r '@-' -T 'change_id.shortest
 result=$(cd "$_jj_repo" && jj log --no-graph -r 'all()' -T 'description')
 assert_false "jj_drop abandons commit" grep -q 'jj drop target' <<< "$result"
 
+###############
+# Test jj absorb
+
+# jj_absorb automatically amends changes into the correct prior commits
+(
+    cd "$_jj_repo"
+    echo "absorb-line1" > jj_absorbfile.txt
+    jj commit -m "jj absorb base commit" >/dev/null 2>&1
+    echo "absorb-line2" > jj_absorbfile2.txt
+    jj commit -m "jj absorb second commit" >/dev/null 2>&1
+    # Modify a file from the first commit
+    echo "absorb-line1-modified" > jj_absorbfile.txt
+)
+(cd "$_jj_repo" && jj_absorb >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj file show jj_absorbfile.txt -r @-- 2>/dev/null)
+assert_equal "jj_absorb absorbed change into base" "absorb-line1-modified" "$result"
+# The second commit should be unchanged
+result=$(cd "$_jj_repo" && jj log --no-graph -r @- -T 'description')
+assert_true "jj_absorb keeps second commit" grep -q 'jj absorb second commit' <<< "$result"
+
 test_summary "jj"

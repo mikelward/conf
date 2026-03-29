@@ -345,4 +345,30 @@ sleep 1
 new_time=$(cd "$_git_local" && git_fetchtime)
 assert_true "git_fetchtime updates after fetch" test "$new_time" -ge "$old_time"
 
+###############
+# Test git absorb
+
+# git_absorb requires the git-absorb tool; skip if unavailable
+if git absorb --help >/dev/null 2>&1; then
+    (
+        cd "$_git_local"
+        echo "absorb-line1" > absorbfile.txt
+        git add absorbfile.txt
+        git commit -m "absorb base commit" >/dev/null 2>&1
+        echo "absorb-line2" > absorbfile2.txt
+        git add absorbfile2.txt
+        git commit -m "absorb second commit" >/dev/null 2>&1
+        # Modify a file from the first commit
+        echo "absorb-line1-modified" > absorbfile.txt
+        git add absorbfile.txt
+    )
+    (cd "$_git_local" && git_absorb >/dev/null 2>&1)
+    result=$(cd "$_git_local" && git log -1 --format=%s HEAD~)
+    assert_equal "git_absorb amends correct commit" "absorb base commit" "$result"
+    result=$(cd "$_git_local" && git show HEAD~ -- absorbfile.txt)
+    assert_true "git_absorb absorbed change into base" grep -q 'absorb-line1-modified' <<< "$result"
+else
+    echo "SKIP: git-absorb not installed"
+fi
+
 test_summary "git"

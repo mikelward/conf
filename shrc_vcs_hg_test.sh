@@ -252,4 +252,29 @@ else
     echo "SKIP: hg prune not available (evolve extension not installed)"
 fi
 
+###############
+# Test hg absorb
+
+# hg_absorb requires the absorb extension; skip if unavailable
+if hg help absorb >/dev/null 2>&1; then
+    (
+        cd "$_hg_local"
+        echo "absorb-line1" > hg_absorbfile.txt
+        hg add hg_absorbfile.txt
+        hg commit -m "hg absorb base commit" -u "test <test@test.com>"
+        echo "absorb-line2" > hg_absorbfile2.txt
+        hg add hg_absorbfile2.txt
+        hg commit -m "hg absorb second commit" -u "test <test@test.com>"
+        # Modify a file from the first commit
+        echo "absorb-line1-modified" > hg_absorbfile.txt
+    )
+    (cd "$_hg_local" && hg_absorb >/dev/null 2>&1)
+    result=$(cd "$_hg_local" && hg log -r .~ --template '{desc}')
+    assert_equal "hg_absorb amends correct commit" "hg absorb base commit" "$result"
+    result=$(cd "$_hg_local" && hg cat -r .~ hg_absorbfile.txt)
+    assert_true "hg_absorb absorbed change into base" grep -q 'absorb-line1-modified' <<< "$result"
+else
+    echo "SKIP: hg absorb not available (absorb extension not installed)"
+fi
+
 test_summary "hg"
