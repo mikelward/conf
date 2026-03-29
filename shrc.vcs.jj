@@ -131,6 +131,10 @@ jj_move() {
     jj_rename "$@"
 }
 
+jj_next() {
+    jj next --edit "$@"
+}
+
 jj_copy() {
     command cp "$@"
 }
@@ -157,6 +161,10 @@ jj_pick() {
 
 jj_precommit() {
     jj fix "$@"
+}
+
+jj_prev() {
+    jj prev --edit "$@"
 }
 
 jj_presubmit() {

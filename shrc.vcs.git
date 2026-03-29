@@ -181,6 +181,17 @@ git_move() {
     git mv "$@"
 }
 
+git_next() {
+    local head child
+    head=$(git rev-parse HEAD)
+    child=$(git rev-list --children --all | awk -v h="$head" '$1 == h {print $2; exit}')
+    if test -z "$child"; then
+        echo "no next commit" >&2
+        return 1
+    fi
+    git checkout "$child"
+}
+
 git_copy() {
     command cp "$@" && git add "${@:$#}"
 }
@@ -212,6 +223,10 @@ git_precommit() {
 
 git_prereview() {
     git_hook pre-commit
+}
+
+git_prev() {
+    git checkout HEAD~
 }
 
 git_presubmit() {

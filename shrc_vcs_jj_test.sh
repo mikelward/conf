@@ -299,6 +299,38 @@ assert_false "jj_rm deletes file" test -f "$_jj_repo/jj_rmfile.txt"
 (cd "$_jj_repo" && jj commit -m "rm test" >/dev/null 2>&1)
 
 ###############
+# Test jj prev and next
+
+# Create a chain of commits to navigate
+(
+    cd "$_jj_repo"
+    echo "nav-a" > jj_nav_a.txt
+    jj commit -m "jj nav A" >/dev/null 2>&1
+    echo "nav-b" > jj_nav_b.txt
+    jj commit -m "jj nav B" >/dev/null 2>&1
+    echo "nav-c" > jj_nav_c.txt
+    jj commit -m "jj nav C" >/dev/null 2>&1
+)
+
+# jj_prev moves to the parent commit (from empty @ on top of C, prev edits C)
+(cd "$_jj_repo" && jj_prev >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
+assert_true "jj_prev moves to parent" grep -q 'jj nav C' <<< "$result"
+
+# jj_prev again moves to B
+(cd "$_jj_repo" && jj_prev >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
+assert_true "jj_prev moves to grandparent" grep -q 'jj nav B' <<< "$result"
+
+# jj_next moves forward to C
+(cd "$_jj_repo" && jj_next >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
+assert_true "jj_next moves to child" grep -q 'jj nav C' <<< "$result"
+
+# clean up: create a new working copy on top
+(cd "$_jj_repo" && jj new >/dev/null 2>&1)
+
+###############
 # Test jj uncommit
 
 # jj_uncommit moves changes from parent into the working copy
