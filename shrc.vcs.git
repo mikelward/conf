@@ -120,6 +120,10 @@ git_drop() {
     git rebase --onto "${1}~" "$1"
 }
 
+git_describe() {
+    git commit --amend --only --allow-empty "$@"
+}
+
 git_diffs() {
     git diff "$@"
 }

@@ -253,6 +253,14 @@ else
 fi
 
 ###############
+# Test hg describe
+
+# hg_describe edits the commit message (like reword)
+(cd "$_hg_local" && hg_describe >/dev/null 2>&1)
+result=$(cd "$_hg_local" && hg log -r . --template '{desc}')
+assert_equal "hg_describe changes message" "edited by test" "$result"
+
+###############
 # Test hg absorb
 
 # hg_absorb requires the absorb extension; skip if unavailable

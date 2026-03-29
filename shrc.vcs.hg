@@ -77,6 +77,10 @@ hg_drop() {
     hg prune "$@"
 }
 
+hg_describe() {
+    hg reword "$@"
+}
+
 hg_diffs() {
     hg diff "$@"
 }
