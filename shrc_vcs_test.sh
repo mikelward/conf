@@ -85,19 +85,35 @@ assert_equal "subdir at root returns empty" "" "$result"
 ###############
 # Test clone dispatch
 
-# clone just dispatches based on URL pattern, stub out git/hg
+# clone just dispatches based on URL pattern, stub out git/hg/jj
 _clone_log=""
-git() { _clone_log="git $*"; }
+have_command() { return 0; }
+jj() { _clone_log="jj $*"; }
 hg() { _clone_log="hg $*"; }
 
 clone https://github.com/foo/bar.git
-assert_equal "clone dispatches .git to git" "git clone https://github.com/foo/bar.git" "$_clone_log"
+assert_equal "clone dispatches .git to jj git clone" "jj git clone https://github.com/foo/bar.git" "$_clone_log"
 
 _clone_log=""
 clone https://hg.example.com/hg/repo
 assert_equal "clone dispatches /hg/ to hg" "hg clone https://hg.example.com/hg/repo" "$_clone_log"
 
-unset -f git hg
+# Test fallback to git when jj is unavailable
+unset -f jj
+have_command() { test "$1" != "jj"; }
+confirm() { return 0; }
+git() { _clone_log="git $*"; }
+_clone_log=""
+clone https://github.com/foo/bar.git
+assert_equal "clone falls back to git when jj unavailable" "git clone https://github.com/foo/bar.git" "$_clone_log"
+
+# Test declining fallback
+confirm() { return 1; }
+_clone_log=""
+clone https://github.com/foo/bar.git
+assert_equal "clone aborts when user declines git fallback" "" "$_clone_log"
+
+unset -f git hg jj have_command confirm
 unset _clone_log
 
 ###############
