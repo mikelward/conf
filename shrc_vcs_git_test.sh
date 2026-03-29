@@ -354,6 +354,69 @@ result=$(cd "$_git_local" && git log -1 --format=%s)
 assert_equal "git_describe changes message" "edited by test" "$result"
 
 ###############
+# Test git rename
+
+(
+    cd "$_git_local"
+    echo "rename-me" > git_renamefile.txt
+    git add git_renamefile.txt
+    git commit -m "add renamefile" >/dev/null 2>&1
+)
+(cd "$_git_local" && git_rename git_renamefile.txt git_renamed.txt >/dev/null 2>&1)
+assert_true "git_rename moves file" test -f "$_git_local/git_renamed.txt"
+assert_false "git_rename removes original" test -f "$_git_local/git_renamefile.txt"
+result=$(cd "$_git_local" && git status --short)
+assert_true "git_rename stages rename" grep -q 'R.*git_renamed.txt' <<< "$result"
+(cd "$_git_local" && git commit -m "rename test" >/dev/null 2>&1)
+
+###############
+# Test git remove
+
+(
+    cd "$_git_local"
+    echo "remove-me" > git_removefile.txt
+    git add git_removefile.txt
+    git commit -m "add removefile" >/dev/null 2>&1
+)
+(cd "$_git_local" && git_remove git_removefile.txt >/dev/null 2>&1)
+assert_false "git_remove deletes file" test -f "$_git_local/git_removefile.txt"
+result=$(cd "$_git_local" && git status --short)
+assert_true "git_remove stages deletion" grep -q '^D.*git_removefile.txt' <<< "$result"
+(cd "$_git_local" && git commit -m "remove test" >/dev/null 2>&1)
+
+###############
+# Test git copy
+
+(
+    cd "$_git_local"
+    echo "cp-me" > git_copyfile.txt
+    git add git_copyfile.txt
+    git commit -m "add cpfile" >/dev/null 2>&1
+)
+(cd "$_git_local" && git_copy git_copyfile.txt git_copyd.txt >/dev/null 2>&1)
+assert_true "git_copy creates copy" test -f "$_git_local/git_copyd.txt"
+assert_true "git_copy keeps original" test -f "$_git_local/git_copyfile.txt"
+result=$(cd "$_git_local" && git status --short)
+assert_true "git_copy stages new file" grep -q 'A.*git_copyd.txt' <<< "$result"
+(cd "$_git_local" && git commit -m "cp test" >/dev/null 2>&1)
+
+###############
+# Test git move
+
+(
+    cd "$_git_local"
+    echo "move-me" > git_movefile.txt
+    git add git_movefile.txt
+    git commit -m "add movefile" >/dev/null 2>&1
+)
+(cd "$_git_local" && git_move git_movefile.txt git_moved.txt >/dev/null 2>&1)
+assert_true "git_move moves file" test -f "$_git_local/git_moved.txt"
+assert_false "git_move removes original" test -f "$_git_local/git_movefile.txt"
+result=$(cd "$_git_local" && git status --short)
+assert_true "git_move stages rename" grep -q 'R.*git_moved.txt' <<< "$result"
+(cd "$_git_local" && git commit -m "move test" >/dev/null 2>&1)
+
+###############
 # Test git absorb
 
 # git_absorb requires the git-absorb tool; skip if unavailable

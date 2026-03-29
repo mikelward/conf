@@ -138,6 +138,14 @@ hg_incoming() {
     hg incoming --template=oneline "$@"
 }
 
+hg_copy() {
+    hg copy "$@"
+}
+
+hg_move() {
+    hg rename "$@"
+}
+
 hg_lint() {
     hg lint "$@"
 }
@@ -185,6 +193,14 @@ hg_rebase() {
 
 hg_recommit() {
     hg commit --amend "$@"
+}
+
+hg_remove() {
+    hg remove "$@"
+}
+
+hg_rename() {
+    hg rename "$@"
 }
 
 hg_restore() {

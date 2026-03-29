@@ -177,6 +177,14 @@ git_incoming() {
     git log --oneline HEAD..@{upstream}
 }
 
+git_copy() {
+    command cp "$@" && git add "${@:$#}"
+}
+
+git_move() {
+    git mv "$@"
+}
+
 git_lint() {
     git lint "$@"
 }
@@ -234,6 +242,14 @@ git_rebase() {
 
 git_recommit() {
     git amend "$@"
+}
+
+git_remove() {
+    git rm "$@"
+}
+
+git_rename() {
+    git mv "$@"
 }
 
 git_restore() {

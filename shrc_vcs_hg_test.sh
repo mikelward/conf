@@ -234,6 +234,71 @@ assert_true "hg_addremove removes missing file" grep -q '^R hg_statusfile.txt' <
 (cd "$_hg_local" && hg commit -m "addremove test" -u "test <test@test.com>" >/dev/null 2>&1)
 
 ###############
+# Test hg rename
+
+(
+    cd "$_hg_local"
+    echo "rename-me" > hg_renamefile.txt
+    hg add hg_renamefile.txt
+    hg commit -m "add renamefile" -u "test <test@test.com>"
+)
+(cd "$_hg_local" && hg_rename hg_renamefile.txt hg_renamed.txt >/dev/null 2>&1)
+assert_true "hg_rename moves file" test -f "$_hg_local/hg_renamed.txt"
+assert_false "hg_rename removes original" test -f "$_hg_local/hg_renamefile.txt"
+result=$(cd "$_hg_local" && hg status)
+assert_true "hg_rename stages add" grep -q '^A hg_renamed.txt' <<< "$result"
+assert_true "hg_rename stages remove" grep -q '^R hg_renamefile.txt' <<< "$result"
+(cd "$_hg_local" && hg commit -m "rename test" -u "test <test@test.com>" >/dev/null 2>&1)
+
+###############
+# Test hg remove
+
+(
+    cd "$_hg_local"
+    echo "remove-me" > hg_removefile.txt
+    hg add hg_removefile.txt
+    hg commit -m "add removefile" -u "test <test@test.com>"
+)
+(cd "$_hg_local" && hg_remove hg_removefile.txt >/dev/null 2>&1)
+assert_false "hg_remove deletes file" test -f "$_hg_local/hg_removefile.txt"
+result=$(cd "$_hg_local" && hg status)
+assert_true "hg_remove stages removal" grep -q '^R hg_removefile.txt' <<< "$result"
+(cd "$_hg_local" && hg commit -m "remove test" -u "test <test@test.com>" >/dev/null 2>&1)
+
+###############
+# Test hg copy
+
+(
+    cd "$_hg_local"
+    echo "cp-me" > hg_cpfile.txt
+    hg add hg_cpfile.txt
+    hg commit -m "add cpfile" -u "test <test@test.com>"
+)
+(cd "$_hg_local" && hg_copy hg_cpfile.txt hg_cpd.txt >/dev/null 2>&1)
+assert_true "hg_copy creates copy" test -f "$_hg_local/hg_cpd.txt"
+assert_true "hg_copy keeps original" test -f "$_hg_local/hg_cpfile.txt"
+result=$(cd "$_hg_local" && hg status)
+assert_true "hg_copy stages new file" grep -q '^A hg_cpd.txt' <<< "$result"
+(cd "$_hg_local" && hg commit -m "cp test" -u "test <test@test.com>" >/dev/null 2>&1)
+
+###############
+# Test hg move
+
+(
+    cd "$_hg_local"
+    echo "move-me" > hg_movefile.txt
+    hg add hg_movefile.txt
+    hg commit -m "add movefile" -u "test <test@test.com>"
+)
+(cd "$_hg_local" && hg_move hg_movefile.txt hg_moved.txt >/dev/null 2>&1)
+assert_true "hg_move moves file" test -f "$_hg_local/hg_moved.txt"
+assert_false "hg_move removes original" test -f "$_hg_local/hg_movefile.txt"
+result=$(cd "$_hg_local" && hg status)
+assert_true "hg_move stages add" grep -q '^A hg_moved.txt' <<< "$result"
+assert_true "hg_move stages remove" grep -q '^R hg_movefile.txt' <<< "$result"
+(cd "$_hg_local" && hg commit -m "move test" -u "test <test@test.com>" >/dev/null 2>&1)
+
+###############
 # Test hg drop
 
 # hg_drop requires the evolve extension; skip if unavailable

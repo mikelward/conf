@@ -165,10 +165,10 @@ upp() {
 }
 for command in absorb add addremove amend annotate \
     base blame branch branches \
-    changed changelog changes checkout commit commitforce describe diffedit diffs diffstat drop \
-    evolve fastforward fetchtime fix graft graph histedit ignore incoming lint outgoing \
+    changed changelog changes checkout commit commitforce copy describe diffedit diffs diffstat drop \
+    evolve fastforward fetchtime fix graft graph histedit ignore incoming lint move outgoing \
     pending pick precommit presubmit pull push \
-    rebase recommit restore revert review reword \
+    rebase recommit remove rename restore revert review reword \
     show split squash status submit submitforce track \
     unamend undo unknown untrack upload uploadchain; do
     # remove any alias created in .shrc
