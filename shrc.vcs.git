@@ -81,6 +81,10 @@ git_checkout() {
     git checkout "$@"
 }
 
+git_goto() {
+    git checkout "$@"
+}
+
 git_commit() {
     declare -a flags
     while test $# -gt 0; do

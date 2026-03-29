@@ -331,6 +331,24 @@ assert_true "jj_next moves to child" grep -q 'jj nav C' <<< "$result"
 (cd "$_jj_repo" && jj new >/dev/null 2>&1)
 
 ###############
+# Test jj goto
+
+# jj_goto switches the working copy to a specific revision
+_jj_goto_target=$(cd "$_jj_repo" && jj log --no-graph -r '@--' -T 'change_id.shortest()')
+(cd "$_jj_repo" && jj_goto "$_jj_goto_target" >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
+assert_true "jj_goto switches to target revision" grep -q 'jj nav B' <<< "$result"
+
+# jj_goto back to the tip
+_jj_goto_tip=$(cd "$_jj_repo" && jj log --no-graph -r 'heads(all())' -T 'change_id.shortest()' --limit 1)
+(cd "$_jj_repo" && jj_goto "$_jj_goto_tip" >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
+assert_true "jj_goto switches back to tip" grep -q 'jj nav C' <<< "$result"
+
+# clean up: create a new working copy on top
+(cd "$_jj_repo" && jj new >/dev/null 2>&1)
+
+###############
 # Test jj uncommit
 
 # jj_uncommit moves changes from parent into the working copy
