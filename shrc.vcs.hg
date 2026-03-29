@@ -264,6 +264,10 @@ hg_unamend() {
     hg unamend "$@"
 }
 
+hg_uncommit() {
+    hg uncommit "$@"
+}
+
 hg_undo() {
     hg undo "$@"
 }

@@ -270,6 +270,10 @@ jj_unamend() {
     jj undo "$@"
 }
 
+jj_uncommit() {
+    jj uncommit "$@"
+}
+
 jj_undo() {
     jj undo "$@"
 }

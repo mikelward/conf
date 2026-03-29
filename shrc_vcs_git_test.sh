@@ -427,6 +427,26 @@ assert_true "git_rm stages deletion" grep -q '^D.*git_rmfile.txt' <<< "$result"
 (cd "$_git_local" && git commit -m "rm test" >/dev/null 2>&1)
 
 ###############
+# Test git uncommit
+
+# git_uncommit moves HEAD back and leaves changes staged
+(
+    cd "$_git_local"
+    echo "uncommit-content" > uncommitfile.txt
+    git add uncommitfile.txt
+    git commit -m "uncommit test commit" >/dev/null 2>&1
+)
+_before_uncommit=$(cd "$_git_local" && git rev-parse HEAD~)
+(cd "$_git_local" && git_uncommit >/dev/null 2>&1)
+_after_uncommit=$(cd "$_git_local" && git rev-parse HEAD)
+assert_equal "git_uncommit moves HEAD back" "$_before_uncommit" "$_after_uncommit"
+assert_true "git_uncommit keeps file" test -f "$_git_local/uncommitfile.txt"
+result=$(cd "$_git_local" && git status --short)
+assert_true "git_uncommit leaves changes staged" grep -q '^A.*uncommitfile.txt' <<< "$result"
+# clean up
+(cd "$_git_local" && git commit -m "re-commit after uncommit" >/dev/null 2>&1)
+
+###############
 # Test git absorb
 
 # git_absorb requires the git-absorb tool; skip if unavailable

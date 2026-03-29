@@ -299,6 +299,23 @@ assert_false "jj_rm deletes file" test -f "$_jj_repo/jj_rmfile.txt"
 (cd "$_jj_repo" && jj commit -m "rm test" >/dev/null 2>&1)
 
 ###############
+# Test jj uncommit
+
+# jj_uncommit moves changes from parent into the working copy
+(
+    cd "$_jj_repo"
+    echo "uncommit-content" > jj_uncommitfile.txt
+    jj commit -m "jj uncommit test" >/dev/null 2>&1
+)
+assert_true "jj before uncommit file in parent" \
+    bash -c "cd '$_jj_repo' && jj file show jj_uncommitfile.txt -r @- 2>/dev/null | grep -q uncommit-content"
+(cd "$_jj_repo" && jj_uncommit >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj diff --summary)
+assert_true "jj_uncommit moves changes to working copy" grep -q 'jj_uncommitfile.txt' <<< "$result"
+# clean up
+(cd "$_jj_repo" && jj commit -m "re-commit after uncommit" >/dev/null 2>&1)
+
+###############
 # Test jj absorb
 
 # jj_absorb automatically amends changes into the correct prior commits
