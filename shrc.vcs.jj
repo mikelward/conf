@@ -92,7 +92,11 @@ jj_diffstat() {
 }
 
 jj_fastforward() {
-    jj piper pull
+    if test "$(vcs_backend)" = "git"; then
+        jj git fetch "$@"
+    else
+        jj piper pull
+    fi
 }
 
 jj_fetchtime() {
@@ -172,7 +176,11 @@ jj_prev() {
 }
 
 jj_presubmit() {
-    jj piper presubmit "$@"
+    if test "$(vcs_backend)" = "git"; then
+        echo "no presubmit for git-backed repos; run tests locally" >&2
+    else
+        jj piper presubmit "$@"
+    fi
 }
 
 jj_projectroot() {
@@ -180,11 +188,19 @@ jj_projectroot() {
 }
 
 jj_pull() {
-    jj sync "$@"
+    if test "$(vcs_backend)" = "git"; then
+        jj git fetch "$@"
+    else
+        jj sync "$@"
+    fi
 }
 
 jj_push() {
-    jj upload "$@"
+    if test "$(vcs_backend)" = "git"; then
+        jj git push "$@"
+    else
+        jj upload "$@"
+    fi
 }
 
 jj_rebase() {
@@ -217,7 +233,14 @@ jj_rename() {
 }
 
 jj_review() {
-    jj upload "$@"
+    if test "$(vcs_backend)" = "git"; then
+        jj git push "$@"
+        if test "$(vcs_hosting)" = "github"; then
+            echo "Create PR with: gh pr create" >&2
+        fi
+    else
+        jj upload "$@"
+    fi
 }
 
 jj_resolve() {
@@ -271,11 +294,19 @@ jj_status() {
 }
 
 jj_submit() {
-    jj submit "$@"
+    if test "$(vcs_backend)" = "git"; then
+        jj git push "$@"
+    else
+        jj submit "$@"
+    fi
 }
 
 jj_submitforce() {
-    jj submit "$@"
+    if test "$(vcs_backend)" = "git"; then
+        jj git push "$@"
+    else
+        jj submit "$@"
+    fi
 }
 
 jj_track() {
@@ -303,9 +334,23 @@ jj_untrack() {
 }
 
 jj_upload() {
-    jj upload "$@"
+    if test "$(vcs_backend)" = "git"; then
+        jj git push "$@"
+        if test "$(vcs_hosting)" = "github"; then
+            echo "Create PR with: gh pr create" >&2
+        fi
+    else
+        jj upload "$@"
+    fi
 }
 
 jj_uploadchain() {
-    jj upload "$@"
+    if test "$(vcs_backend)" = "git"; then
+        jj git push "$@"
+        if test "$(vcs_hosting)" = "github"; then
+            echo "Create PR with: gh pr create" >&2
+        fi
+    else
+        jj upload "$@"
+    fi
 }

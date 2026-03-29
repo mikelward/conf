@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Tests for git VCS backend functions.
+# Tests for git VCS implementation functions.
 #
 
 source "$(dirname "$0")/shrc_test_lib.sh"
@@ -508,5 +508,68 @@ if git absorb --help >/dev/null 2>&1; then
 else
     echo "SKIP: git-absorb not installed"
 fi
+
+###############
+# Test hosting-dependent dispatch
+
+# Ensure cache exists with backend info
+rm -f "$_git_local/.vcs_cache"
+(cd "$_git_local" && vcs >/dev/null)
+
+# Test repo has git backend
+result=$(cd "$_git_local" && vcs_backend)
+assert_equal "git test repo has git backend" "git" "$result"
+
+# Stub git to capture commands dispatched by each function
+_git_cmd_log="$_testdir/git_cmd_log"
+
+# Override vcs_hosting to return github for testing
+vcs_hosting() { echo "github"; }
+
+git() {
+    echo "$*" >> "$_git_cmd_log"
+}
+
+: > "$_git_cmd_log"
+(cd "$_git_local" && git_review 2>/dev/null)
+result=$(cat "$_git_cmd_log")
+assert_contains "git_review uses git push for github" "push" "$result"
+assert_not_contains "git_review does not use refs/for for github" "refs/for" "$result"
+
+: > "$_git_cmd_log"
+(cd "$_git_local" && git_upload 2>/dev/null)
+result=$(cat "$_git_cmd_log")
+assert_contains "git_upload uses git push for github" "push" "$result"
+assert_not_contains "git_upload does not use refs/for for github" "refs/for" "$result"
+
+: > "$_git_cmd_log"
+(cd "$_git_local" && git_uploadchain 2>/dev/null)
+result=$(cat "$_git_cmd_log")
+assert_contains "git_uploadchain uses git push for github" "push" "$result"
+assert_not_contains "git_uploadchain does not use refs/for for github" "refs/for" "$result"
+
+# Test gerrit dispatch
+vcs_hosting() { echo "gerrit"; }
+
+# Stub git_branch so the Gerrit ref can be constructed
+git_branch() { echo "testbranch"; }
+
+: > "$_git_cmd_log"
+(cd "$_git_local" && git_review 2>/dev/null)
+result=$(cat "$_git_cmd_log")
+assert_contains "git_review uses refs/for for gerrit" "refs/for" "$result"
+
+: > "$_git_cmd_log"
+(cd "$_git_local" && git_upload 2>/dev/null)
+result=$(cat "$_git_cmd_log")
+assert_contains "git_upload uses refs/for for gerrit" "refs/for" "$result"
+
+: > "$_git_cmd_log"
+(cd "$_git_local" && git_uploadchain 2>/dev/null)
+result=$(cat "$_git_cmd_log")
+assert_contains "git_uploadchain uses refs/for for gerrit" "refs/for" "$result"
+
+unset -f git vcs_hosting git_branch
+rm -f "$_git_cmd_log"
 
 test_summary "git"
