@@ -127,11 +127,15 @@ jj_incoming() {
     jj op log "$@"
 }
 
+jj_move() {
+    jj_rename "$@"
+}
+
 jj_copy() {
     command cp "$@"
 }
 
-jj_move() {
+jj_mv() {
     jj_rename "$@"
 }
 
@@ -186,6 +190,10 @@ jj_recommit() {
 jj_remove() {
     command rm "$@"
     jj file untrack "$@"
+}
+
+jj_rm() {
+    jj_remove "$@"
 }
 
 jj_rename() {

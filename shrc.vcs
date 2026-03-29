@@ -182,6 +182,32 @@ for command in absorb add addremove amend annotate \
     }'
 done
 
+cp() {
+    local _vcs="$(vcs)"
+    if test -n "$_vcs" && type "${_vcs}_copy" >/dev/null 2>&1; then
+        "${_vcs}_copy" "$@"
+    else
+        command cp "$@"
+    fi
+}
+
+mv() {
+    local _vcs="$(vcs)"
+    if test -n "$_vcs" && type "${_vcs}_mv" >/dev/null 2>&1; then
+        "${_vcs}_mv" "$@"
+    else
+        command mv "$@"
+    fi
+}
+
+rm() {
+    local _vcs="$(vcs)"
+    if test -n "$_vcs" && type "${_vcs}_rm" >/dev/null 2>&1; then
+        "${_vcs}_rm" "$@" 2>/dev/null && return
+    fi
+    command rm "$@"
+}
+
 clone() {
     case "$1" in
       *.git) git clone "$@";;

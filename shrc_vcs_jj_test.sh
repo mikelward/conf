@@ -264,30 +264,39 @@ assert_true "jj_remove untracks file" grep -q 'jj_removefile.txt' <<< "$result"
 (cd "$_jj_repo" && jj commit -m "remove test" >/dev/null 2>&1)
 
 ###############
-# Test jj copy
+# Test jj cp
 
 (
     cd "$_jj_repo"
-    echo "cp-me" > jj_cpfile.txt
+    echo "cp-me" > jj_copyfile.txt
     jj commit -m "add cpfile" >/dev/null 2>&1
 )
-(cd "$_jj_repo" && jj_copy jj_cpfile.txt jj_cpd.txt >/dev/null 2>&1)
-assert_true "jj_copy creates copy" test -f "$_jj_repo/jj_cpd.txt"
-assert_true "jj_copy keeps original" test -f "$_jj_repo/jj_cpfile.txt"
+(cd "$_jj_repo" && jj_copy jj_copyfile.txt jj_copyd.txt >/dev/null 2>&1)
+assert_true "jj_copy creates copy" test -f "$_jj_repo/jj_copyd.txt"
+assert_true "jj_copy keeps original" test -f "$_jj_repo/jj_copyfile.txt"
 (cd "$_jj_repo" && jj commit -m "cp test" >/dev/null 2>&1)
 
 ###############
-# Test jj move
+# Test jj mv and rm
 
 (
     cd "$_jj_repo"
-    echo "move-me" > jj_movefile.txt
-    jj commit -m "add movefile" >/dev/null 2>&1
+    echo "mv-me" > jj_mvfile.txt
+    jj commit -m "add mvfile" >/dev/null 2>&1
 )
-(cd "$_jj_repo" && jj_move jj_movefile.txt jj_moved.txt >/dev/null 2>&1)
-assert_true "jj_move moves file" test -f "$_jj_repo/jj_moved.txt"
-assert_false "jj_move removes original" test -f "$_jj_repo/jj_movefile.txt"
-(cd "$_jj_repo" && jj commit -m "move test" >/dev/null 2>&1)
+(cd "$_jj_repo" && jj_mv jj_mvfile.txt jj_mvd.txt >/dev/null 2>&1)
+assert_true "jj_mv moves file" test -f "$_jj_repo/jj_mvd.txt"
+assert_false "jj_mv removes original" test -f "$_jj_repo/jj_mvfile.txt"
+(cd "$_jj_repo" && jj commit -m "mv test" >/dev/null 2>&1)
+
+(
+    cd "$_jj_repo"
+    echo "rm-me" > jj_rmfile.txt
+    jj commit -m "add rmfile" >/dev/null 2>&1
+)
+(cd "$_jj_repo" && jj_rm jj_rmfile.txt >/dev/null 2>&1)
+assert_false "jj_rm deletes file" test -f "$_jj_repo/jj_rmfile.txt"
+(cd "$_jj_repo" && jj commit -m "rm test" >/dev/null 2>&1)
 
 ###############
 # Test jj absorb

@@ -199,6 +199,24 @@ assert_equal "project returns basename of projectroot" "myproject" "$result"
 unset -f projectroot
 
 ###############
+# Test rm/mv/cp fall back to system commands outside a VCS repo
+
+mkdir -p "$_testdir/norepo2"
+echo "rm-me" > "$_testdir/norepo2/rmfile.txt"
+(cd "$_testdir/norepo2" && rm rmfile.txt)
+assert_false "rm falls back to command rm outside VCS" test -f "$_testdir/norepo2/rmfile.txt"
+
+echo "mv-me" > "$_testdir/norepo2/mvfile.txt"
+(cd "$_testdir/norepo2" && mv mvfile.txt mvd.txt)
+assert_true "mv falls back to command mv outside VCS" test -f "$_testdir/norepo2/mvd.txt"
+assert_false "mv removes original outside VCS" test -f "$_testdir/norepo2/mvfile.txt"
+
+echo "cp-me" > "$_testdir/norepo2/cpfile.txt"
+(cd "$_testdir/norepo2" && cp cpfile.txt cpd.txt)
+assert_true "cp falls back to command cp outside VCS" test -f "$_testdir/norepo2/cpd.txt"
+assert_true "cp keeps original outside VCS" test -f "$_testdir/norepo2/cpfile.txt"
+
+###############
 # Test cross-VCS consistency: every command in shrc.vcs dispatch loop
 # must have a corresponding function in each backend.
 

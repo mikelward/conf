@@ -266,37 +266,46 @@ assert_true "hg_remove stages removal" grep -q '^R hg_removefile.txt' <<< "$resu
 (cd "$_hg_local" && hg commit -m "remove test" -u "test <test@test.com>" >/dev/null 2>&1)
 
 ###############
-# Test hg copy
+# Test hg cp
 
 (
     cd "$_hg_local"
-    echo "cp-me" > hg_cpfile.txt
-    hg add hg_cpfile.txt
+    echo "cp-me" > hg_copyfile.txt
+    hg add hg_copyfile.txt
     hg commit -m "add cpfile" -u "test <test@test.com>"
 )
-(cd "$_hg_local" && hg_copy hg_cpfile.txt hg_cpd.txt >/dev/null 2>&1)
-assert_true "hg_copy creates copy" test -f "$_hg_local/hg_cpd.txt"
-assert_true "hg_copy keeps original" test -f "$_hg_local/hg_cpfile.txt"
+(cd "$_hg_local" && hg_copy hg_copyfile.txt hg_copyd.txt >/dev/null 2>&1)
+assert_true "hg_copy creates copy" test -f "$_hg_local/hg_copyd.txt"
+assert_true "hg_copy keeps original" test -f "$_hg_local/hg_copyfile.txt"
 result=$(cd "$_hg_local" && hg status)
-assert_true "hg_copy stages new file" grep -q '^A hg_cpd.txt' <<< "$result"
+assert_true "hg_copy stages new file" grep -q '^A hg_copyd.txt' <<< "$result"
 (cd "$_hg_local" && hg commit -m "cp test" -u "test <test@test.com>" >/dev/null 2>&1)
 
 ###############
-# Test hg move
+# Test hg mv and rm
 
 (
     cd "$_hg_local"
-    echo "move-me" > hg_movefile.txt
-    hg add hg_movefile.txt
-    hg commit -m "add movefile" -u "test <test@test.com>"
+    echo "mv-me" > hg_mvfile.txt
+    hg add hg_mvfile.txt
+    hg commit -m "add mvfile" -u "test <test@test.com>"
 )
-(cd "$_hg_local" && hg_move hg_movefile.txt hg_moved.txt >/dev/null 2>&1)
-assert_true "hg_move moves file" test -f "$_hg_local/hg_moved.txt"
-assert_false "hg_move removes original" test -f "$_hg_local/hg_movefile.txt"
+(cd "$_hg_local" && hg_mv hg_mvfile.txt hg_mvd.txt >/dev/null 2>&1)
+assert_true "hg_mv moves file" test -f "$_hg_local/hg_mvd.txt"
+assert_false "hg_mv removes original" test -f "$_hg_local/hg_mvfile.txt"
+(cd "$_hg_local" && hg commit -m "mv test" -u "test <test@test.com>" >/dev/null 2>&1)
+
+(
+    cd "$_hg_local"
+    echo "rm-me" > hg_rmfile.txt
+    hg add hg_rmfile.txt
+    hg commit -m "add rmfile" -u "test <test@test.com>"
+)
+(cd "$_hg_local" && hg_rm hg_rmfile.txt >/dev/null 2>&1)
+assert_false "hg_rm deletes file" test -f "$_hg_local/hg_rmfile.txt"
 result=$(cd "$_hg_local" && hg status)
-assert_true "hg_move stages add" grep -q '^A hg_moved.txt' <<< "$result"
-assert_true "hg_move stages remove" grep -q '^R hg_movefile.txt' <<< "$result"
-(cd "$_hg_local" && hg commit -m "move test" -u "test <test@test.com>" >/dev/null 2>&1)
+assert_true "hg_rm stages removal" grep -q '^R hg_rmfile.txt' <<< "$result"
+(cd "$_hg_local" && hg commit -m "rm test" -u "test <test@test.com>" >/dev/null 2>&1)
 
 ###############
 # Test hg drop

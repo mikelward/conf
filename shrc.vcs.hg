@@ -138,11 +138,15 @@ hg_incoming() {
     hg incoming --template=oneline "$@"
 }
 
+hg_move() {
+    hg rename "$@"
+}
+
 hg_copy() {
     hg copy "$@"
 }
 
-hg_move() {
+hg_mv() {
     hg rename "$@"
 }
 
@@ -201,6 +205,10 @@ hg_remove() {
 
 hg_rename() {
     hg rename "$@"
+}
+
+hg_rm() {
+    hg remove "$@"
 }
 
 hg_restore() {
