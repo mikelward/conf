@@ -1,4 +1,8 @@
 # register hg VCS
+hg_absorb() {
+    hg absorb "$@"
+}
+
 hg_add() {
     hg add "$@"
 }
