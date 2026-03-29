@@ -1,5 +1,10 @@
 # Project Instructions
 
+## Style
+
+- Preserve existing code style unless there are correctness issues.
+- Use `if test` rather than `if [`.
+
 ## Testing
 
 - Always add or update tests when writing or modifying code.
