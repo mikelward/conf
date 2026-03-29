@@ -63,6 +63,10 @@ jj_checkout() {
     jj edit "$@"
 }
 
+jj_goto() {
+    jj edit "$@"
+}
+
 jj_commit() {
     jj commit "$@"
 }

@@ -61,6 +61,10 @@ hg_checkout() {
     hg checkout "$@"
 }
 
+hg_goto() {
+    hg update "$@"
+}
+
 hg_commit() {
     hg commit "$@"
 }

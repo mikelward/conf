@@ -450,6 +450,20 @@ assert_equal "git_next at tip fails" "1" "$?"
 (cd "$_git_local" && git checkout "$_default_branch" >/dev/null 2>&1)
 
 ###############
+# Test git goto
+
+# git_goto switches to a specific revision
+_git_goto_target=$(cd "$_git_local" && git rev-parse HEAD~2)
+(cd "$_git_local" && git_goto "$_git_goto_target" >/dev/null 2>&1)
+_git_goto_head=$(cd "$_git_local" && git rev-parse HEAD)
+assert_equal "git_goto switches to target revision" "$_git_goto_target" "$_git_goto_head"
+
+# git_goto switches to a branch
+(cd "$_git_local" && git_goto "$_default_branch" >/dev/null 2>&1)
+result=$(cd "$_git_local" && git rev-parse --abbrev-ref HEAD)
+assert_equal "git_goto switches to branch" "$_default_branch" "$result"
+
+###############
 # Test git uncommit
 
 # git_uncommit moves HEAD back and leaves changes staged

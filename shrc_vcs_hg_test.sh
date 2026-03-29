@@ -342,6 +342,20 @@ _hg_current=$(cd "$_hg_local" && hg log -r . --template '{rev}')
 assert_equal "hg_next moves to child" "$_hg_head" "$_hg_current"
 
 ###############
+# Test hg goto
+
+# hg_goto switches to a specific revision
+_hg_goto_target=$(cd "$_hg_local" && hg log -r ".^" --template '{rev}')
+(cd "$_hg_local" && hg_goto -r "$_hg_goto_target" >/dev/null 2>&1)
+_hg_goto_current=$(cd "$_hg_local" && hg log -r . --template '{rev}')
+assert_equal "hg_goto switches to target revision" "$_hg_goto_target" "$_hg_goto_current"
+
+# hg_goto back to the tip
+(cd "$_hg_local" && hg_goto -r tip >/dev/null 2>&1)
+_hg_goto_current=$(cd "$_hg_local" && hg log -r . --template '{rev}')
+assert_equal "hg_goto switches to tip" "$_hg_head" "$_hg_goto_current"
+
+###############
 # Test hg uncommit
 
 # hg_uncommit requires hg uncommit (core since Mercurial 4.6)
