@@ -127,6 +127,14 @@ jj_incoming() {
     jj op log "$@"
 }
 
+jj_copy() {
+    command cp "$@"
+}
+
+jj_move() {
+    jj_rename "$@"
+}
+
 jj_lint() {
     jj fix "$@"
 }
@@ -173,6 +181,19 @@ jj_evolve() {
 
 jj_recommit() {
     jj describe "$@"
+}
+
+jj_remove() {
+    command rm "$@"
+    jj file untrack "$@"
+}
+
+jj_rename() {
+    if test $# -ne 2; then
+        echo "usage: rename <source> <dest>" >&2
+        return 1
+    fi
+    command mv "$1" "$2"
 }
 
 jj_review() {

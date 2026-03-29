@@ -230,6 +230,66 @@ result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
 assert_true "jj_describe changes description" grep -q 'jj describe test' <<< "$result"
 
 ###############
+# Test jj rename
+
+(
+    cd "$_jj_repo"
+    echo "rename-me" > jj_renamefile.txt
+    jj commit -m "add renamefile" >/dev/null 2>&1
+)
+(cd "$_jj_repo" && jj_rename jj_renamefile.txt jj_renamed.txt >/dev/null 2>&1)
+assert_true "jj_rename moves file" test -f "$_jj_repo/jj_renamed.txt"
+assert_false "jj_rename removes original" test -f "$_jj_repo/jj_renamefile.txt"
+result=$(cd "$_jj_repo" && jj diff --summary)
+assert_true "jj_rename shows rename in diff" test -n "$result"
+(cd "$_jj_repo" && jj commit -m "rename test" >/dev/null 2>&1)
+
+# jj_rename with wrong number of args fails
+result=$(cd "$_jj_repo" && jj_rename only_one_arg 2>&1)
+assert_equal "jj_rename wrong args returns 1" "1" "$?"
+assert_true "jj_rename wrong args shows usage" grep -q 'usage' <<< "$result"
+
+###############
+# Test jj remove
+
+(
+    cd "$_jj_repo"
+    echo "remove-me" > jj_removefile.txt
+    jj commit -m "add removefile" >/dev/null 2>&1
+)
+(cd "$_jj_repo" && jj_remove jj_removefile.txt >/dev/null 2>&1)
+assert_false "jj_remove deletes file" test -f "$_jj_repo/jj_removefile.txt"
+result=$(cd "$_jj_repo" && jj diff --summary)
+assert_true "jj_remove untracks file" grep -q 'jj_removefile.txt' <<< "$result"
+(cd "$_jj_repo" && jj commit -m "remove test" >/dev/null 2>&1)
+
+###############
+# Test jj copy
+
+(
+    cd "$_jj_repo"
+    echo "cp-me" > jj_cpfile.txt
+    jj commit -m "add cpfile" >/dev/null 2>&1
+)
+(cd "$_jj_repo" && jj_copy jj_cpfile.txt jj_cpd.txt >/dev/null 2>&1)
+assert_true "jj_copy creates copy" test -f "$_jj_repo/jj_cpd.txt"
+assert_true "jj_copy keeps original" test -f "$_jj_repo/jj_cpfile.txt"
+(cd "$_jj_repo" && jj commit -m "cp test" >/dev/null 2>&1)
+
+###############
+# Test jj move
+
+(
+    cd "$_jj_repo"
+    echo "move-me" > jj_movefile.txt
+    jj commit -m "add movefile" >/dev/null 2>&1
+)
+(cd "$_jj_repo" && jj_move jj_movefile.txt jj_moved.txt >/dev/null 2>&1)
+assert_true "jj_move moves file" test -f "$_jj_repo/jj_moved.txt"
+assert_false "jj_move removes original" test -f "$_jj_repo/jj_movefile.txt"
+(cd "$_jj_repo" && jj commit -m "move test" >/dev/null 2>&1)
+
+###############
 # Test jj absorb
 
 # jj_absorb automatically amends changes into the correct prior commits
