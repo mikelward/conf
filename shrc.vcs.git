@@ -112,6 +112,10 @@ git_diffedit() {
     git rebase --interactive "$@"
 }
 
+git_drop() {
+    git rebase --onto "${1}~" "$1"
+}
+
 git_diffs() {
     git diff "$@"
 }

@@ -207,4 +207,18 @@ assert_equal "jj_addremove succeeds" "0" "$?"
 result=$(cd "$_jj_repo" && jj_status)
 assert_true "jj auto-tracks new file" grep -q 'jj_addremove.txt' <<< "$result"
 
+###############
+# Test jj drop
+
+# jj_drop abandons a commit
+(
+    cd "$_jj_repo"
+    echo "drop-content" > jj_dropfile.txt
+    jj commit -m "jj drop target" >/dev/null 2>&1
+)
+_jj_drop_id=$(cd "$_jj_repo" && jj log --no-graph -r '@-' -T 'change_id.shortest()')
+(cd "$_jj_repo" && jj_drop "$_jj_drop_id" >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj log --no-graph -r 'all()' -T 'description')
+assert_false "jj_drop abandons commit" grep -q 'jj drop target' <<< "$result"
+
 test_summary "jj"
