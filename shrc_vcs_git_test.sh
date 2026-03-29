@@ -346,6 +346,14 @@ new_time=$(cd "$_git_local" && git_fetchtime)
 assert_true "git_fetchtime updates after fetch" test "$new_time" -ge "$old_time"
 
 ###############
+# Test git describe
+
+# git_describe edits the commit message (like reword)
+(cd "$_git_local" && git_describe >/dev/null 2>&1)
+result=$(cd "$_git_local" && git log -1 --format=%s)
+assert_equal "git_describe changes message" "edited by test" "$result"
+
+###############
 # Test git absorb
 
 # git_absorb requires the git-absorb tool; skip if unavailable

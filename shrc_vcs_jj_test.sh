@@ -222,6 +222,14 @@ result=$(cd "$_jj_repo" && jj log --no-graph -r 'all()' -T 'description')
 assert_false "jj_drop abandons commit" grep -q 'jj drop target' <<< "$result"
 
 ###############
+# Test jj describe
+
+# jj_describe edits the commit description
+(cd "$_jj_repo" && jj_describe -m "jj describe test" >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
+assert_true "jj_describe changes description" grep -q 'jj describe test' <<< "$result"
+
+###############
 # Test jj absorb
 
 # jj_absorb automatically amends changes into the correct prior commits
