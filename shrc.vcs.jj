@@ -75,6 +75,10 @@ jj_diffedit() {
     jj diffedit "$@"
 }
 
+jj_drop() {
+    jj abandon "$@"
+}
+
 jj_diffs() {
     jj diff "$@"
 }

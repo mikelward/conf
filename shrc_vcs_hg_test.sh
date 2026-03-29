@@ -233,4 +233,23 @@ assert_true "hg_addremove removes missing file" grep -q '^R hg_statusfile.txt' <
 # clean up
 (cd "$_hg_local" && hg commit -m "addremove test" -u "test <test@test.com>" >/dev/null 2>&1)
 
+###############
+# Test hg drop
+
+# hg_drop requires the evolve extension; skip if unavailable
+if hg help prune >/dev/null 2>&1; then
+    (
+        cd "$_hg_local"
+        echo "drop-content" > hg_dropfile.txt
+        hg add hg_dropfile.txt
+        hg commit -m "hg drop target" -u "test <test@test.com>"
+    )
+    _hg_drop_rev=$(cd "$_hg_local" && hg log -r . --template '{rev}')
+    (cd "$_hg_local" && hg_drop -r "$_hg_drop_rev" >/dev/null 2>&1)
+    result=$(cd "$_hg_local" && hg log -r "not obsolete()" --template '{desc}\n')
+    assert_false "hg_drop obsoletes commit" grep -q 'hg drop target' <<< "$result"
+else
+    echo "SKIP: hg prune not available (evolve extension not installed)"
+fi
+
 test_summary "hg"

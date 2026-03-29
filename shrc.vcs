@@ -144,6 +144,7 @@ ci() { commit "$@"; }
 cl() { changelog "$@"; }
 co() { checkout "$@"; }
 di() { diffs "$@"; }
+dr() { drop "$@"; }
 ev() { evolve "$@"; }
 ff() { fastforward "$@"; }
 gr() { graph "$@"; }
@@ -163,7 +164,7 @@ upp() {
 }
 for command in add addremove amend annotate \
     base blame branch branches \
-    changed changelog changes checkout commit commitforce diffedit diffs diffstat \
+    changed changelog changes checkout commit commitforce diffedit diffs diffstat drop \
     evolve fastforward fetchtime fix graft graph histedit ignore incoming lint outgoing \
     pending pick precommit presubmit pull push \
     rebase recommit restore revert review reword \

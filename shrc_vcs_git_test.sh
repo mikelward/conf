@@ -300,6 +300,31 @@ assert_true "git_addremove stages removal" grep -q '^D.*git_statusfile.txt' <<< 
 (cd "$_git_local" && git commit -m "addremove test" >/dev/null 2>&1)
 
 ###############
+# Test git drop
+
+# git_drop removes a commit and rebases descendants
+(
+    cd "$_git_local"
+    echo "drop-base" > dropbase.txt
+    git add dropbase.txt
+    git commit -m "drop base commit" >/dev/null 2>&1
+    echo "drop-target" > droptarget.txt
+    git add droptarget.txt
+    git commit -m "drop this commit" >/dev/null 2>&1
+    echo "drop-child" > dropchild.txt
+    git add dropchild.txt
+    git commit -m "drop child commit" >/dev/null 2>&1
+)
+_drop_rev=$(cd "$_git_local" && git log --oneline | grep 'drop this commit' | awk '{print $1}')
+(cd "$_git_local" && git_drop "$_drop_rev" >/dev/null 2>&1)
+result=$(cd "$_git_local" && git log --oneline)
+assert_false "git_drop removes target commit" grep -q 'drop this commit' <<< "$result"
+assert_true "git_drop keeps child commit" grep -q 'drop child commit' <<< "$result"
+assert_true "git_drop keeps base commit" grep -q 'drop base commit' <<< "$result"
+assert_false "git_drop target file is gone" test -f "$_git_local/droptarget.txt"
+assert_true "git_drop child file remains" test -f "$_git_local/dropchild.txt"
+
+###############
 # Test git fetch_time
 
 # git_fetchtime returns empty when FETCH_HEAD doesn't exist

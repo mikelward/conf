@@ -69,6 +69,10 @@ hg_diffedit() {
     hg histedit "$@"
 }
 
+hg_drop() {
+    hg prune "$@"
+}
+
 hg_diffs() {
     hg diff "$@"
 }
