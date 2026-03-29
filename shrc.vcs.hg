@@ -142,6 +142,10 @@ hg_move() {
     hg rename "$@"
 }
 
+hg_next() {
+    hg update -r "min(children(.))" "$@"
+}
+
 hg_copy() {
     hg copy "$@"
 }
@@ -173,6 +177,10 @@ hg_precommit() {
 
 hg_prereview() {
     hg prereview "$@"
+}
+
+hg_prev() {
+    hg update -r ".^" "$@"
 }
 
 hg_presubmit() {

@@ -166,8 +166,8 @@ upp() {
 for command in absorb add addremove amend annotate \
     base blame branch branches \
     changed changelog changes checkout commit commitforce copy describe diffedit diffs diffstat drop \
-    evolve fastforward fetchtime fix graft graph histedit ignore incoming lint move outgoing \
-    pending pick precommit presubmit pull push \
+    evolve fastforward fetchtime fix graft graph histedit ignore incoming lint move next outgoing \
+    pending pick precommit presubmit prev pull push \
     rebase recommit remove rename restore revert review reword \
     show split squash status submit submitforce track \
     unamend uncommit undo unknown untrack upload uploadchain; do

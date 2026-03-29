@@ -327,6 +327,21 @@ else
 fi
 
 ###############
+# Test hg prev and next
+
+# hg_prev moves to the parent revision
+_hg_head=$(cd "$_hg_local" && hg log -r . --template '{rev}')
+_hg_parent=$(cd "$_hg_local" && hg log -r ".^" --template '{rev}')
+(cd "$_hg_local" && hg_prev >/dev/null 2>&1)
+_hg_current=$(cd "$_hg_local" && hg log -r . --template '{rev}')
+assert_equal "hg_prev moves to parent" "$_hg_parent" "$_hg_current"
+
+# hg_next moves to the child revision
+(cd "$_hg_local" && hg_next >/dev/null 2>&1)
+_hg_current=$(cd "$_hg_local" && hg log -r . --template '{rev}')
+assert_equal "hg_next moves to child" "$_hg_head" "$_hg_current"
+
+###############
 # Test hg uncommit
 
 # hg_uncommit requires hg uncommit (core since Mercurial 4.6)

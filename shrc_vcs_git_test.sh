@@ -427,6 +427,29 @@ assert_true "git_rm stages deletion" grep -q '^D.*git_rmfile.txt' <<< "$result"
 (cd "$_git_local" && git commit -m "rm test" >/dev/null 2>&1)
 
 ###############
+# Test git prev and next
+
+# git_prev moves to the parent commit
+_head_before=$(cd "$_git_local" && git rev-parse HEAD)
+_parent=$(cd "$_git_local" && git rev-parse HEAD~)
+(cd "$_git_local" && git_prev 2>/dev/null)
+_head_after=$(cd "$_git_local" && git rev-parse HEAD)
+assert_equal "git_prev moves to parent" "$_parent" "$_head_after"
+
+# git_next moves back to the child commit
+(cd "$_git_local" && git_next 2>/dev/null)
+_head_after=$(cd "$_git_local" && git rev-parse HEAD)
+assert_equal "git_next moves to child" "$_head_before" "$_head_after"
+
+# git_next at tip returns error
+(cd "$_git_local" && git checkout "$_default_branch" >/dev/null 2>&1)
+(cd "$_git_local" && git_next 2>/dev/null)
+assert_equal "git_next at tip fails" "1" "$?"
+
+# clean up: ensure we're on the branch
+(cd "$_git_local" && git checkout "$_default_branch" >/dev/null 2>&1)
+
+###############
 # Test git uncommit
 
 # git_uncommit moves HEAD back and leaves changes staged
