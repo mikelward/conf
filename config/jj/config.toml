@@ -1,3 +1,7 @@
 [user]
 name = "Mikel Ward"
 email = "mikel@mikelward.com"
+
+[merge-tools.meld]
+program = "meld"
+merge-args = ["$left", "$base", "$right", "-o", "$output"]

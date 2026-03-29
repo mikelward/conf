@@ -23,6 +23,9 @@ ignore = ~/.hgexclude
 merge = meld
 username = Mikel Ward <mikel@mikelward.com>
 
+[merge-tools]
+meld.args = $local $base $other -o $output
+
 [alias]
 graph = log --graph --template=twoline
 show = log --verbose --patch --rev

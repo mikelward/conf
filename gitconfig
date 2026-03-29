@@ -100,6 +100,10 @@
 [merge]
     tool = vimdiff
     guitool = meld
+    conflictstyle = zdiff3
+
+[rerere]
+    enabled = true
 
 [log]
     date = format-local:%Y-%m-%d %H:%M:%S
