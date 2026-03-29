@@ -385,7 +385,7 @@ assert_true "git_remove stages deletion" grep -q '^D.*git_removefile.txt' <<< "$
 (cd "$_git_local" && git commit -m "remove test" >/dev/null 2>&1)
 
 ###############
-# Test git copy
+# Test git cp
 
 (
     cd "$_git_local"
@@ -401,20 +401,30 @@ assert_true "git_copy stages new file" grep -q 'A.*git_copyd.txt' <<< "$result"
 (cd "$_git_local" && git commit -m "cp test" >/dev/null 2>&1)
 
 ###############
-# Test git move
+# Test git mv and rm
 
 (
     cd "$_git_local"
-    echo "move-me" > git_movefile.txt
-    git add git_movefile.txt
-    git commit -m "add movefile" >/dev/null 2>&1
+    echo "mv-me" > git_mvfile.txt
+    git add git_mvfile.txt
+    git commit -m "add mvfile" >/dev/null 2>&1
 )
-(cd "$_git_local" && git_move git_movefile.txt git_moved.txt >/dev/null 2>&1)
-assert_true "git_move moves file" test -f "$_git_local/git_moved.txt"
-assert_false "git_move removes original" test -f "$_git_local/git_movefile.txt"
+(cd "$_git_local" && git_mv git_mvfile.txt git_mvd.txt >/dev/null 2>&1)
+assert_true "git_mv moves file" test -f "$_git_local/git_mvd.txt"
+assert_false "git_mv removes original" test -f "$_git_local/git_mvfile.txt"
+(cd "$_git_local" && git commit -m "mv test" >/dev/null 2>&1)
+
+(
+    cd "$_git_local"
+    echo "rm-me" > git_rmfile.txt
+    git add git_rmfile.txt
+    git commit -m "add rmfile" >/dev/null 2>&1
+)
+(cd "$_git_local" && git_rm git_rmfile.txt >/dev/null 2>&1)
+assert_false "git_rm deletes file" test -f "$_git_local/git_rmfile.txt"
 result=$(cd "$_git_local" && git status --short)
-assert_true "git_move stages rename" grep -q 'R.*git_moved.txt' <<< "$result"
-(cd "$_git_local" && git commit -m "move test" >/dev/null 2>&1)
+assert_true "git_rm stages deletion" grep -q '^D.*git_rmfile.txt' <<< "$result"
+(cd "$_git_local" && git commit -m "rm test" >/dev/null 2>&1)
 
 ###############
 # Test git absorb
