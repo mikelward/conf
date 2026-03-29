@@ -210,7 +210,13 @@ rm() {
 
 clone() {
     case "$1" in
-      *.git) git clone "$@";;
+      *.git)
+        if have_command jj; then
+            jj git clone "$@"
+        elif confirm "jj is not installed. Clone using git"; then
+            git clone "$@"
+        fi
+        ;;
       */hg*) hg clone "$@";;
     esac
 }
