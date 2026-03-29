@@ -203,6 +203,14 @@ hg_rebase() {
     hg rebase "$@"
 }
 
+hg_resolve() {
+    hg resolve "$@"
+}
+
+hg_mergetool() {
+    hg resolve "$@"
+}
+
 hg_recommit() {
     hg commit --amend "$@"
 }
