@@ -312,6 +312,58 @@ status_chars() (
       sort | uniq | tr '\n' ' ' | sed -e 's/ *$//'
 )
 
+# Create or show a GitHub pull request.
+# With no -r/-m flag, creates a draft PR.
+# With -r/-m <reviewer>, creates a PR and requests review.
+_github_review() (
+    if ! have_command gh; then
+        echo "Install gh to create PRs: https://cli.github.com" >&2
+        return 1
+    fi
+
+    declare -a _reviewers=()
+    local _head=""
+    while test $# -gt 0; do
+        case "$1" in
+            -r|-m|--reviewer) _reviewers+=("--reviewer" "$2"); shift 2 ;;
+            --reviewer=*) _reviewers+=("--reviewer" "${1#*=}"); shift ;;
+            --head) _head="$2"; shift 2 ;;
+            --head=*) _head="${1#*=}"; shift ;;
+            *) shift ;;
+        esac
+    done
+
+    # For jj non-colocated repos, export GIT_DIR so gh can find the remote
+    if test "$(vcs)" = "jj" && ! test -e "$(rootdir)/.git"; then
+        local _git_dir="$(rootdir)/.jj/repo/store/git"
+        if test -d "$_git_dir"; then
+            export GIT_DIR="$_git_dir"
+        fi
+    fi
+
+    # Check if PR already exists
+    if test -n "$_head"; then
+        command gh pr view "$_head" --json url -q .url 2>/dev/null && return
+    else
+        command gh pr view --json url -q .url 2>/dev/null && return
+    fi
+
+    # Determine default branch
+    local _base
+    _base=$(command gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null)
+    test -z "$_base" && _base="main"
+
+    declare -a _flags=(--base "$_base" --fill)
+    test -n "$_head" && _flags+=(--head "$_head")
+    if test ${#_reviewers[@]} -eq 0; then
+        _flags+=(--draft)
+    else
+        _flags+=("${_reviewers[@]}")
+    fi
+
+    command gh pr create "${_flags[@]}"
+)
+
 for f in "$HOME"/.shrc.vcs.*; do
     if ! test -f "$f"; then
         warn "$f is not readable"

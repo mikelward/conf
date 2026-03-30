@@ -232,15 +232,32 @@ jj_rename() {
     command mv "$1" "$2"
 }
 
-jj_review() {
+_jj_github_review() {
+    declare -a _review_flags=()
+    declare -a _push_flags=()
+    while test $# -gt 0; do
+        case "$1" in
+            -r|-m|--reviewer) _review_flags+=(-r "$2"); shift 2 ;;
+            --reviewer=*) _review_flags+=(-r "${1#*=}"); shift ;;
+            *) _push_flags+=("$1"); shift ;;
+        esac
+    done
+
     if test "$(vcs_backend)" = "git"; then
-        jj git push "$@"
+        jj git push "${_push_flags[@]}" || return
         if test "$(vcs_hosting)" = "github"; then
-            warn "Create PR with: gh pr create"
+            local _bookmark
+            _bookmark=$(jj bookmark list -r @ 2>/dev/null | head -1 | cut -d: -f1)
+            test -n "$_bookmark" && _review_flags+=(--head "$_bookmark")
+            _github_review "${_review_flags[@]}"
         fi
     else
-        jj upload "$@"
+        jj upload "${_push_flags[@]}"
     fi
+}
+
+jj_review() {
+    _jj_github_review "$@"
 }
 
 jj_resolve() {
@@ -334,23 +351,9 @@ jj_untrack() {
 }
 
 jj_upload() {
-    if test "$(vcs_backend)" = "git"; then
-        jj git push "$@"
-        if test "$(vcs_hosting)" = "github"; then
-            warn "Create PR with: gh pr create"
-        fi
-    else
-        jj upload "$@"
-    fi
+    _jj_github_review "$@"
 }
 
 jj_uploadchain() {
-    if test "$(vcs_backend)" = "git"; then
-        jj git push "$@"
-        if test "$(vcs_hosting)" = "github"; then
-            warn "Create PR with: gh pr create"
-        fi
-    else
-        jj upload "$@"
-    fi
+    _jj_github_review "$@"
 }

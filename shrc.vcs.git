@@ -299,18 +299,43 @@ git_revert() {
     fi
 }
 
-# send the current change for Gerrit review
-git_review() {
+_git_github_review() {
+    declare -a _reviewers=()
+    declare -a _push_flags=()
     local _hosting
     _hosting="$(vcs_hosting)"
+
+    while test $# -gt 0; do
+        case "$1" in
+            -r|-m|--reviewer) _reviewers+=("$2"); shift 2 ;;
+            --reviewer=*) _reviewers+=("${1#*=}"); shift ;;
+            *) _push_flags+=("$1"); shift ;;
+        esac
+    done
+
     if test "$_hosting" = "gerrit"; then
-        git push origin HEAD:refs/for/master/$(git_branch)${1+%r=$1}
+        local _reviewer_suffix=""
+        local _r
+        for _r in "${_reviewers[@]}"; do
+            _reviewer_suffix="${_reviewer_suffix}%r=$_r"
+        done
+        git push origin "HEAD:refs/for/master/$(git_branch)${_reviewer_suffix}" "${_push_flags[@]}"
+    elif test "$_hosting" = "github"; then
+        git push "${_push_flags[@]}" || return
+        declare -a _review_flags=()
+        local _r
+        for _r in "${_reviewers[@]}"; do
+            _review_flags+=(-r "$_r")
+        done
+        _github_review "${_review_flags[@]}"
     else
-        git push "$@"
-        if test "$_hosting" = "github"; then
-            warn "Create PR with: gh pr create"
-        fi
+        git push "${_push_flags[@]}"
     fi
+}
+
+# send the current change for review
+git_review() {
+    _git_github_review "$@"
 }
 
 git_reword() {
@@ -373,27 +398,9 @@ git_untrack() {
 }
 
 git_upload() {
-    local _hosting
-    _hosting="$(vcs_hosting)"
-    if test "$_hosting" = "gerrit"; then
-        git push origin HEAD:refs/for/master/$(git_branch)${1+%r=$1}
-    else
-        git push "$@"
-        if test "$_hosting" = "github"; then
-            warn "Create PR with: gh pr create"
-        fi
-    fi
+    _git_github_review "$@"
 }
 
 git_uploadchain() {
-    local _hosting
-    _hosting="$(vcs_hosting)"
-    if test "$_hosting" = "gerrit"; then
-        git push origin HEAD:refs/for/master/$(git_branch)${1+%r=$1}
-    else
-        git push "$@"
-        if test "$_hosting" = "github"; then
-            warn "Create PR with: gh pr create"
-        fi
-    fi
+    _git_github_review "$@"
 }
