@@ -119,7 +119,7 @@ jj_graph() {
 }
 
 jj_histedit() {
-    echo "no interactive histedit in jj; use: jj squash, jj split, jj edit" >&2
+    warn "no interactive histedit in jj; use: jj squash, jj split, jj edit"
     return 1
 }
 
@@ -127,7 +127,7 @@ jj_ignore() {
     (
         cd "$(jj workspace root)"
         IFS=$'\n'
-        echo "$*" >> .gitignore
+        puts "$*" >> .gitignore
     )
 }
 
@@ -177,7 +177,7 @@ jj_prev() {
 
 jj_presubmit() {
     if test "$(vcs_backend)" = "git"; then
-        echo "no presubmit for git-backed repos; run tests locally" >&2
+        warn "no presubmit for git-backed repos; run tests locally"
     else
         jj piper presubmit "$@"
     fi
@@ -208,7 +208,7 @@ jj_rebase() {
 }
 
 jj_evolve() {
-    echo "jj automatically rebases descendants; nothing to do" >&2
+    warn "jj automatically rebases descendants; nothing to do"
 }
 
 jj_recommit() {
@@ -226,7 +226,7 @@ jj_rm() {
 
 jj_rename() {
     if test $# -ne 2; then
-        echo "usage: rename <source> <dest>" >&2
+        error "usage: rename <source> <dest>"
         return 1
     fi
     command mv "$1" "$2"
@@ -236,7 +236,7 @@ jj_review() {
     if test "$(vcs_backend)" = "git"; then
         jj git push "$@"
         if test "$(vcs_hosting)" = "github"; then
-            echo "Create PR with: gh pr create" >&2
+            warn "Create PR with: gh pr create"
         fi
     else
         jj upload "$@"
@@ -337,7 +337,7 @@ jj_upload() {
     if test "$(vcs_backend)" = "git"; then
         jj git push "$@"
         if test "$(vcs_hosting)" = "github"; then
-            echo "Create PR with: gh pr create" >&2
+            warn "Create PR with: gh pr create"
         fi
     else
         jj upload "$@"
@@ -348,7 +348,7 @@ jj_uploadchain() {
     if test "$(vcs_backend)" = "git"; then
         jj git push "$@"
         if test "$(vcs_hosting)" = "github"; then
-            echo "Create PR with: gh pr create" >&2
+            warn "Create PR with: gh pr create"
         fi
     else
         jj upload "$@"

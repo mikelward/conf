@@ -23,7 +23,7 @@ vcs() {
         #   line 2: <rootdir>                  (whole line, may contain spaces)
         local _vcs _rootdir _backend _hosting
         if test -f .vcs_cache; then
-            { read -r _vcs _backend _hosting && read -r _rootdir; } <.vcs_cache
+            { reads _vcs _backend _hosting && reads _rootdir; } <.vcs_cache
             # Sentinels for empty fields.
             test "$_backend" = "-" && _backend=""
             test "$_hosting" = "-" && _hosting=""
@@ -46,7 +46,7 @@ vcs() {
             fi
             # Detect backend
             if test "$_vcs" = "jj" && test -f "$_rootdir/.jj/repo/store/type"; then
-                read -r _backend <"$_rootdir/.jj/repo/store/type"
+                reads _backend <"$_rootdir/.jj/repo/store/type"
             elif test "$_vcs" = "git"; then
                 _backend="git"
             fi
@@ -71,13 +71,13 @@ vcs() {
             # Ignore errors.
             # Use - as sentinel for empty fields so cache always has 4 tokens.
             if test -n "$_vcs"; then
-                { printf '%s\n' "$_vcs ${_backend:--} ${_hosting:--}" "$_rootdir" >.vcs_cache ; } 2>/dev/null
+                { puts "$_vcs ${_backend:--} ${_hosting:--}"; puts "$_rootdir"; } >.vcs_cache 2>/dev/null
             fi
         fi
         if test -z "$_vcs" || test -z "$_rootdir"; then
             return 1
         fi
-        echo "$_vcs"
+        puts "$_vcs"
         test -n "$_vcs"
     )
 }
@@ -92,14 +92,14 @@ rootdir() {
             vcs >/dev/null 2>&1 || return 1
         fi
         local _vcs _rootdir _backend _hosting
-        { read -r _vcs _backend _hosting && read -r _rootdir; } <.vcs_cache
+        { reads _vcs _backend _hosting && reads _rootdir; } <.vcs_cache
         if test $# -gt 0; then
           local _arg
           for _arg; do
-            printf '%s\n' "$_rootdir/$_arg"
+            puts "$_rootdir/$_arg"
           done
         else
-          printf '%s\n' "$_rootdir"
+          puts "$_rootdir"
         fi
         test -n "$_rootdir"
     )
@@ -111,9 +111,9 @@ vcs_backend() {
             vcs >/dev/null 2>&1 || return 1
         fi
         local _vcs _backend _hosting
-        read -r _vcs _backend _hosting <.vcs_cache
+        reads _vcs _backend _hosting <.vcs_cache
         test "$_backend" = "-" && _backend=""
-        echo "$_backend"
+        puts "$_backend"
         test -n "$_backend"
     )
 }
@@ -124,16 +124,16 @@ vcs_hosting() {
             vcs >/dev/null 2>&1 || return 1
         fi
         local _vcs _backend _hosting
-        read -r _vcs _backend _hosting <.vcs_cache
+        reads _vcs _backend _hosting <.vcs_cache
         test "$_hosting" = "-" && _hosting=""
-        echo "$_hosting"
+        puts "$_hosting"
         test -n "$_hosting"
     )
 }
 
 subdir() {
     local _subdir="$(trim_prefix "$(rootdir)" "${1:-$PWD}")"
-    printf '%s\n' "${_subdir#/}"
+    puts "${_subdir#/}"
 }
 
 # hook to define any implied prefix, e.g. //depot that could be missing from
@@ -178,7 +178,7 @@ target_relative_to() {
     _result="${_result}${_target}"
     _result="${_result%/}"
     test -z "$_result" && _result="."
-    printf '%s\n' "$_result"
+    puts "$_result"
 }
 
 relative_path() {
@@ -192,7 +192,7 @@ rp() { relative_path "$@"; }
 
 allknown() {
     local unknown="$(unknown)"
-    echo "$unknown"
+    puts "$unknown"
     test -z "$unknown"
 }
 
@@ -314,7 +314,7 @@ status_chars() (
 
 for f in "$HOME"/.shrc.vcs.*; do
     if ! test -f "$f"; then
-        echo "$f is not readable"
+        warn "$f is not readable"
         continue
     fi
     source "$f"
