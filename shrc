@@ -229,7 +229,7 @@ fetch_info() {
 # ask the user whether to do something, return true if they say yes or Enter
 confirm() {
     printf '%s? [Y/n] ' "$*"
-    read REPLY
+    reads REPLY
     case "$REPLY" in
         [Yy]|'')
             true;;
@@ -283,7 +283,7 @@ workstation() {
     if test "${WORKSTATION-unset}" = "unset"; then
         WORKSTATION="$(cat "$HOME"/.workstation 2>/dev/null)"
     fi
-    echo "$WORKSTATION"
+    puts "$WORKSTATION"
 }
 
 # return true if this machine is my workstation
@@ -373,7 +373,7 @@ is_interactive() {
 
 # log the running of a command to a file
 log_history() {
-    printf '%s\n' "$(date "+%Y%m%d %H%M%S %z") $TTY $*" >> "$HISTORY_FILE"
+    puts "$(date "+%Y%m%d %H%M%S %z") $TTY $*" >> "$HISTORY_FILE"
 }
 
 # run a command with output silenced
@@ -384,7 +384,7 @@ quiet() {
 # run a command, or just print what would be run if SIMULATE is true
 run() {
     if ${SIMULATE:-false}; then
-        echo "Would run $*"
+        puts "Would run $*"
     else
         logger -p user.info "Running $*"
         "$@"
@@ -427,23 +427,23 @@ get_ptr_records() {
 
 with_address_records() {
     local hostname
-    while read -r hostname; do
-        echo "$hostname $(join " " $(addr "$hostname"))"
+    while reads hostname; do
+        puts "$hostname $(join " " $(addr "$hostname"))"
     done
 }
 
 with_hostnames() {
     local ip
-    while read -r ip; do
-        echo "$ip $(join " " $(ptr "$ip"))"
+    while reads ip; do
+        puts "$ip $(join " " $(ptr "$ip"))"
     done
 }
 
 # list this machine's IP addresses
 ips() {
-    ip -o a sh up primary scope global | while read num iface afam addr rest; do
+    ip -o a sh up primary scope global | while reads num iface afam addr rest; do
       case "$afam" in inet*)
-          echo "$iface" "$addr";;
+          puts "$iface" "$addr";;
       esac
     done
 }
@@ -517,8 +517,8 @@ body() {
     esac
 
     while test $lines -gt 0; do
-        IFS= read -r header
-        printf '%s\n' "$header"
+        IFS= reads header
+        puts "$header"
         lines=$((lines-1))
     done
     "$@"
@@ -528,9 +528,9 @@ body() {
 builddir() {
     local buildroot=$(buildroot)
     if test "$PWD" = "$buildroot"; then
-        echo "."
+        puts "."
     else
-        echo "${PWD#$(buildroot)/}"
+        puts "${PWD#$(buildroot)/}"
     fi
 }
 
@@ -565,9 +565,9 @@ delline() {
 
 # print the block device associated with the given mount point (or file)
 dev() {
-    df -P -k "$1" | while read fs blocks used avail cap mount; do
+    df -P -k "$1" | while reads fs blocks used avail cap mount; do
         case "$mount" in /*)
-            echo "$fs"
+            puts "$fs"
         esac
     done
 }
@@ -582,7 +582,7 @@ dev() {
 # run a command on each line of stdin
 each() {
   local _line
-  while IFS=$'\n' read -r _line; do
+  while IFS=$'\n' reads _line; do
     "$@" "$_line"
   done
 }
@@ -634,7 +634,7 @@ find_up() {
     (
         while true; do
             if test -f "./$1"; then
-                echo "$PWD/$1"
+                puts "$PWD/$1"
                 return 0
             fi
             if test "$PWD" = "/"; then
@@ -657,7 +657,7 @@ join() {
   (
     IFS=$1
     shift
-    echo "$*"
+    puts "$*"
   )
 }
 
@@ -710,7 +710,7 @@ path() {
         IFS=:
         for d in $PATH; do
             if test -x "$d/$1"; then
-                echo "$d/$1"
+                puts "$d/$1"
                 return
             fi
         done
@@ -1119,9 +1119,9 @@ path_or_empty() {
     local pathname
     pathname=$(command -v "$1")
     if test -e "$pathname"; then
-        echo "$pathname"
+        puts "$pathname"
     else
-        echo
+        puts
     fi
 }
 
@@ -1381,7 +1381,7 @@ session_name() {
 trim_prefix() {
     local _prefix="$1"
     local _target="$2"
-    printf '%s\n' "${_target#$_prefix}"
+    puts "${_target#$_prefix}"
 }
 
 # print a message describing the last error, or empty if no error
@@ -1389,9 +1389,9 @@ bash_last_error() {
     laststatus=$?
     case $laststatus in
     0)   ;;
-    130) echo "interrupted";;
+    130) puts "interrupted";;
     148) ;;  # suspended
-    *)   echo "status $laststatus";;
+    *)   puts "status $laststatus";;
     esac
 }
 
@@ -1400,7 +1400,7 @@ sh_last_error() {
     laststatus=$?
     case $laststatus in
     0)   ;;
-    *)   echo "status $laststatus";;
+    *)   puts "status $laststatus";;
     esac
 }
 ksh_last_error() { sh_last_error "$@"; }
@@ -1411,9 +1411,9 @@ zsh_last_error() {
     case $laststatus in
     0)   ;;
     20)  ;;  # suspended (zsh < 5.0.7)
-    130) echo "interrupted";;
+    130) puts "interrupted";;
     148) ;;  # suspended (zsh >= 5.0.7)
-    *)   echo "status $laststatus";;
+    *)   puts "status $laststatus";;
     esac
 }
 
@@ -1507,7 +1507,7 @@ ps1_character() {
 # return whether the given shell option is on
 getshopt() {
     local _opt _val
-    while read _opt _val; do
+    while reads _opt _val; do
         if test "$_opt" = "$1"; then
             test "$_val" = "on"
             return
@@ -1799,7 +1799,7 @@ if is_interactive; then
         test -f "$HOME/.ssh/config" || return
         set -f
         local _field1 _rest
-        while read -r _field1 _rest; do
+        while reads _field1 _rest; do
             case "$_field1" in [Hh]ost)
                 local _alias
                 for _alias in $_rest; do

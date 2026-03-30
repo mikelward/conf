@@ -133,7 +133,7 @@ hg_ignore() {
     (
         cd "$(hg root)"
         IFS=$'\n'
-        echo "$*" >> .hgignore
+        puts "$*" >> .hgignore
     )
 }
 
@@ -240,7 +240,7 @@ hg_revert() {
 }
 
 hg_review() {
-    echo "hg review not supported" >&2
+    warn "hg review not supported"
     false
 }
 

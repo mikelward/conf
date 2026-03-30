@@ -52,9 +52,9 @@ git_blame() {
 
 # print the name of the currently active git branch
 git_branch() {
-    git branch 2>/dev/null | while read star branch; do
+    git branch 2>/dev/null | while reads star branch; do
         if test "$star" = "*"; then
-            echo "$branch"
+            puts "$branch"
             break
         fi
     done
@@ -137,7 +137,7 @@ git_diffstat() {
 }
 
 git_evolve() {
-    echo "no automatic evolve in git; use: git rebase --onto <new> <old> <branch>" >&2
+    warn "no automatic evolve in git; use: git rebase --onto <new> <old> <branch>"
     return 1
 }
 
@@ -172,7 +172,7 @@ git_ignore() {
     (
         cd "$(git root)"
         IFS=$'\n'
-        echo "$*" >> .gitignore
+        puts "$*" >> .gitignore
     )
 }
 
@@ -190,7 +190,7 @@ git_next() {
     head=$(git rev-parse HEAD)
     child=$(git rev-list --children --all | awk -v h="$head" '$1 == h {print $2; exit}')
     if test -z "$child"; then
-        echo "no next commit" >&2
+        warn "no next commit"
         return 1
     fi
     git checkout "$child"
@@ -255,7 +255,7 @@ git_hook() {
 	if test -x "$script"; then
 	    "$script" "$@"
 	else
-		echo "No $script hook" >&2
+		warn "No $script hook"
 	fi
 }
 
@@ -308,7 +308,7 @@ git_review() {
     else
         git push "$@"
         if test "$_hosting" = "github"; then
-            echo "Create PR with: gh pr create" >&2
+            warn "Create PR with: gh pr create"
         fi
     fi
 }
@@ -380,7 +380,7 @@ git_upload() {
     else
         git push "$@"
         if test "$_hosting" = "github"; then
-            echo "Create PR with: gh pr create" >&2
+            warn "Create PR with: gh pr create"
         fi
     fi
 }
@@ -393,7 +393,7 @@ git_uploadchain() {
     else
         git push "$@"
         if test "$_hosting" = "github"; then
-            echo "Create PR with: gh pr create" >&2
+            warn "Create PR with: gh pr create"
         fi
     fi
 }

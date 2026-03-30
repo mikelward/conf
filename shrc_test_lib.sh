@@ -100,11 +100,23 @@ is_bash() { true; }
 is_dash() { false; }
 is_sh() { false; }
 
-# We need trim_prefix for shrc.vcs and prompt functions
+# We need puts, reads, warn, and trim_prefix for shrc.vcs and prompt functions
+puts() {
+    printf '%s\n' "$*"
+}
+reads() {
+    read -r "$@"
+}
+warn() {
+    printf '%s\n' "$*" >&2
+}
+error() {
+    printf '%s\n' "$*" >&2
+}
 trim_prefix() {
     local _prefix="$1"
     local _target="$2"
-    printf '%s\n' "${_target#$_prefix}"
+    puts "${_target#$_prefix}"
 }
 
 # Prevent any test from opening an interactive editor
