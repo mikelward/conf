@@ -162,10 +162,10 @@ assert_equal "puts empty" "" "$(puts)"
 assert_equal "puts special chars" "-n -e" "$(puts -n -e)"
 assert_equal "puts backslash" 'hello\nworld' "$(puts 'hello\nworld')"
 
-# Test reads (read -r wrapper)
-extract_func reads
-result=$(printf '%s\n' 'hello\tworld' | { reads val; puts "$val"; })
-assert_equal "reads preserves backslashes" 'hello\tworld' "$result"
+# Test gets (read -r wrapper)
+extract_func gets
+result=$(printf '%s\n' 'hello\tworld' | { gets val; puts "$val"; })
+assert_equal "gets preserves backslashes" 'hello\tworld' "$result"
 
 # Test join
 assert_equal "join comma" "a,b,c" "$(join , a b c)"

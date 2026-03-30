@@ -229,7 +229,7 @@ fetch_info() {
 # ask the user whether to do something, return true if they say yes or Enter
 confirm() {
     printf '%s? [Y/n] ' "$*"
-    reads REPLY
+    gets REPLY
     case "$REPLY" in
         [Yy]|'')
             true;;
@@ -302,7 +302,7 @@ puts() {
 }
 
 # read without backslash mangling
-reads() {
+gets() {
     read -r "$@"
 }
 
@@ -427,21 +427,21 @@ get_ptr_records() {
 
 with_address_records() {
     local hostname
-    while reads hostname; do
+    while gets hostname; do
         puts "$hostname $(join " " $(addr "$hostname"))"
     done
 }
 
 with_hostnames() {
     local ip
-    while reads ip; do
+    while gets ip; do
         puts "$ip $(join " " $(ptr "$ip"))"
     done
 }
 
 # list this machine's IP addresses
 ips() {
-    ip -o a sh up primary scope global | while reads num iface afam addr rest; do
+    ip -o a sh up primary scope global | while gets num iface afam addr rest; do
       case "$afam" in inet*)
           puts "$iface" "$addr";;
       esac
@@ -517,7 +517,7 @@ body() {
     esac
 
     while test $lines -gt 0; do
-        IFS= reads header
+        IFS= gets header
         puts "$header"
         lines=$((lines-1))
     done
@@ -565,7 +565,7 @@ delline() {
 
 # print the block device associated with the given mount point (or file)
 dev() {
-    df -P -k "$1" | while reads fs blocks used avail cap mount; do
+    df -P -k "$1" | while gets fs blocks used avail cap mount; do
         case "$mount" in /*)
             puts "$fs"
         esac
@@ -582,7 +582,7 @@ dev() {
 # run a command on each line of stdin
 each() {
   local _line
-  while IFS=$'\n' reads _line; do
+  while IFS=$'\n' gets _line; do
     "$@" "$_line"
   done
 }
@@ -1507,7 +1507,7 @@ ps1_character() {
 # return whether the given shell option is on
 getshopt() {
     local _opt _val
-    while reads _opt _val; do
+    while gets _opt _val; do
         if test "$_opt" = "$1"; then
             test "$_val" = "on"
             return
@@ -1799,7 +1799,7 @@ if is_interactive; then
         test -f "$HOME/.ssh/config" || return
         set -f
         local _field1 _rest
-        while reads _field1 _rest; do
+        while gets _field1 _rest; do
             case "$_field1" in [Hh]ost)
                 local _alias
                 for _alias in $_rest; do
