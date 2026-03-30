@@ -143,6 +143,7 @@ PATH="$_saved_path"
 # UTILITY FUNCTIONS
 # Extract additional functions from shrc for testing.
 
+extract_func puts
 extract_func join
 extract_func body
 extract_func first_arg_last
@@ -153,6 +154,18 @@ extract_func get_address_records
 extract_func get_ptr_records
 extract_func each
 extract_func delline
+
+# Test puts
+assert_equal "puts single arg" "hello" "$(puts hello)"
+assert_equal "puts multiple args" "hello world" "$(puts hello world)"
+assert_equal "puts empty" "" "$(puts)"
+assert_equal "puts special chars" "-n -e" "$(puts -n -e)"
+assert_equal "puts backslash" 'hello\nworld' "$(puts 'hello\nworld')"
+
+# Test reads (read -r wrapper)
+extract_func reads
+result=$(printf '%s\n' 'hello\tworld' | { reads val; puts "$val"; })
+assert_equal "reads preserves backslashes" 'hello\tworld' "$result"
 
 # Test join
 assert_equal "join comma" "a,b,c" "$(join , a b c)"
