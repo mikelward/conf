@@ -441,7 +441,83 @@ assert_contains "jj_uploadchain uses git push for git backend" "git push" "$resu
 result=$(cat "$_jj_cmd_log")
 assert_equal "jj_presubmit no-ops for git backend" "" "$result"
 
-unset -f jj
-rm -f "$_jj_cmd_log"
+###############
+# Test GitHub review/upload with gh integration
+
+vcs_hosting() { echo "github"; }
+have_command() { test "$1" = "gh" || command -v "$1" >/dev/null 2>&1; }
+
+_gh_cmd_log="$_testdir/gh_cmd_log"
+
+# Create a gh stub script on PATH so "command gh" finds it
+_gh_stub_dir="$_testdir/gh_stub"
+mkdir -p "$_gh_stub_dir"
+cat > "$_gh_stub_dir/gh" <<GHEOF
+#!/bin/sh
+echo "\$*" >> "$_gh_cmd_log"
+case "\$1 \$2" in
+    "pr view") exit 1 ;;
+    "repo view") echo "main" ;;
+esac
+GHEOF
+chmod +x "$_gh_stub_dir/gh"
+PATH="$_gh_stub_dir:$PATH"
+
+: > "$_jj_cmd_log"
+: > "$_gh_cmd_log"
+(cd "$_jj_repo" && jj_review 2>/dev/null)
+result=$(cat "$_jj_cmd_log")
+assert_contains "jj_review github pushes" "git push" "$result"
+result=$(cat "$_gh_cmd_log")
+assert_contains "jj_review github creates PR" "pr create" "$result"
+assert_contains "jj_review github creates draft PR" "--draft" "$result"
+
+: > "$_jj_cmd_log"
+: > "$_gh_cmd_log"
+(cd "$_jj_repo" && jj_review -r someone 2>/dev/null)
+result=$(cat "$_jj_cmd_log")
+assert_contains "jj_review -r github pushes" "git push" "$result"
+result=$(cat "$_gh_cmd_log")
+assert_contains "jj_review -r github creates PR" "pr create" "$result"
+assert_contains "jj_review -r adds reviewer" "--reviewer someone" "$result"
+assert_not_contains "jj_review -r not draft" "--draft" "$result"
+
+: > "$_jj_cmd_log"
+: > "$_gh_cmd_log"
+(cd "$_jj_repo" && jj_review -m mailme 2>/dev/null)
+result=$(cat "$_gh_cmd_log")
+assert_contains "jj_review -m creates PR" "pr create" "$result"
+assert_contains "jj_review -m adds reviewer" "--reviewer mailme" "$result"
+assert_not_contains "jj_review -m not draft" "--draft" "$result"
+
+: > "$_jj_cmd_log"
+: > "$_gh_cmd_log"
+(cd "$_jj_repo" && jj_review --reviewer someone 2>/dev/null)
+result=$(cat "$_gh_cmd_log")
+assert_contains "jj_review --reviewer adds reviewer" "--reviewer someone" "$result"
+assert_not_contains "jj_review --reviewer not draft" "--draft" "$result"
+
+: > "$_jj_cmd_log"
+: > "$_gh_cmd_log"
+(cd "$_jj_repo" && jj_review --reviewer=eqsign 2>/dev/null)
+result=$(cat "$_gh_cmd_log")
+assert_contains "jj_review --reviewer= adds reviewer" "--reviewer eqsign" "$result"
+assert_not_contains "jj_review --reviewer= not draft" "--draft" "$result"
+
+: > "$_jj_cmd_log"
+: > "$_gh_cmd_log"
+(cd "$_jj_repo" && jj_upload 2>/dev/null)
+result=$(cat "$_gh_cmd_log")
+assert_contains "jj_upload github creates PR" "pr create" "$result"
+
+: > "$_jj_cmd_log"
+: > "$_gh_cmd_log"
+(cd "$_jj_repo" && jj_uploadchain 2>/dev/null)
+result=$(cat "$_gh_cmd_log")
+assert_contains "jj_uploadchain github creates PR" "pr create" "$result"
+
+PATH="${PATH#$_gh_stub_dir:}"
+unset -f jj vcs_hosting have_command
+rm -f "$_jj_cmd_log" "$_gh_cmd_log"
 
 test_summary "jj"

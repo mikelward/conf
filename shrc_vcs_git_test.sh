@@ -525,6 +525,22 @@ _git_cmd_log="$_testdir/git_cmd_log"
 
 # Override vcs_hosting to return github for testing
 vcs_hosting() { echo "github"; }
+have_command() { test "$1" = "gh" || command -v "$1" >/dev/null 2>&1; }
+
+# Create a gh stub script on PATH so "command gh" finds it
+_gh_cmd_log="$_testdir/gh_cmd_log"
+_gh_stub_dir="$_testdir/gh_stub"
+mkdir -p "$_gh_stub_dir"
+cat > "$_gh_stub_dir/gh" <<GHEOF
+#!/bin/sh
+echo "\$*" >> "$_gh_cmd_log"
+case "\$1 \$2" in
+    "pr view") exit 1 ;;
+    "repo view") echo "main" ;;
+esac
+GHEOF
+chmod +x "$_gh_stub_dir/gh"
+PATH="$_gh_stub_dir:$PATH"
 
 git() {
     echo "$*" >> "$_git_cmd_log"
@@ -569,7 +585,109 @@ assert_contains "git_upload uses refs/for for gerrit" "refs/for" "$result"
 result=$(cat "$_git_cmd_log")
 assert_contains "git_uploadchain uses refs/for for gerrit" "refs/for" "$result"
 
-unset -f git vcs_hosting git_branch
-rm -f "$_git_cmd_log"
+###############
+# Test GitHub review/upload with gh integration
+
+vcs_hosting() { echo "github"; }
+
+: > "$_git_cmd_log"
+: > "$_gh_cmd_log"
+(cd "$_git_local" && git_review 2>/dev/null)
+result=$(cat "$_git_cmd_log")
+assert_contains "git_review github pushes" "push" "$result"
+result=$(cat "$_gh_cmd_log")
+assert_contains "git_review github creates PR" "pr create" "$result"
+assert_contains "git_review github creates draft PR" "--draft" "$result"
+
+: > "$_git_cmd_log"
+: > "$_gh_cmd_log"
+(cd "$_git_local" && git_review -r someone 2>/dev/null)
+result=$(cat "$_git_cmd_log")
+assert_contains "git_review -r github pushes" "push" "$result"
+result=$(cat "$_gh_cmd_log")
+assert_contains "git_review -r github creates PR" "pr create" "$result"
+assert_contains "git_review -r adds reviewer" "--reviewer someone" "$result"
+assert_not_contains "git_review -r not draft" "--draft" "$result"
+
+: > "$_git_cmd_log"
+: > "$_gh_cmd_log"
+(cd "$_git_local" && git_review -m mailme 2>/dev/null)
+result=$(cat "$_gh_cmd_log")
+assert_contains "git_review -m creates PR" "pr create" "$result"
+assert_contains "git_review -m adds reviewer" "--reviewer mailme" "$result"
+assert_not_contains "git_review -m not draft" "--draft" "$result"
+
+: > "$_git_cmd_log"
+: > "$_gh_cmd_log"
+(cd "$_git_local" && git_review --reviewer someone 2>/dev/null)
+result=$(cat "$_gh_cmd_log")
+assert_contains "git_review --reviewer adds reviewer" "--reviewer someone" "$result"
+assert_not_contains "git_review --reviewer not draft" "--draft" "$result"
+
+: > "$_git_cmd_log"
+: > "$_gh_cmd_log"
+(cd "$_git_local" && git_review --reviewer=eqsign 2>/dev/null)
+result=$(cat "$_gh_cmd_log")
+assert_contains "git_review --reviewer= adds reviewer" "--reviewer eqsign" "$result"
+assert_not_contains "git_review --reviewer= not draft" "--draft" "$result"
+
+: > "$_git_cmd_log"
+: > "$_gh_cmd_log"
+(cd "$_git_local" && git_upload 2>/dev/null)
+result=$(cat "$_gh_cmd_log")
+assert_contains "git_upload github creates PR" "pr create" "$result"
+
+: > "$_git_cmd_log"
+: > "$_gh_cmd_log"
+(cd "$_git_local" && git_uploadchain 2>/dev/null)
+result=$(cat "$_gh_cmd_log")
+assert_contains "git_uploadchain github creates PR" "pr create" "$result"
+
+###############
+# Test Gerrit review with -r flag
+
+vcs_hosting() { echo "gerrit"; }
+git_branch() { echo "testbranch"; }
+
+: > "$_git_cmd_log"
+(cd "$_git_local" && git_review 2>/dev/null)
+result=$(cat "$_git_cmd_log")
+assert_contains "git_review uses refs/for for gerrit" "refs/for" "$result"
+
+: > "$_git_cmd_log"
+(cd "$_git_local" && git_review -r someone 2>/dev/null)
+result=$(cat "$_git_cmd_log")
+assert_contains "git_review -r uses refs/for for gerrit" "refs/for" "$result"
+assert_contains "git_review -r adds gerrit reviewer" "%r=someone" "$result"
+
+: > "$_git_cmd_log"
+(cd "$_git_local" && git_review -m mailme 2>/dev/null)
+result=$(cat "$_git_cmd_log")
+assert_contains "git_review -m uses refs/for for gerrit" "refs/for" "$result"
+assert_contains "git_review -m adds gerrit reviewer" "%r=mailme" "$result"
+
+: > "$_git_cmd_log"
+(cd "$_git_local" && git_review --reviewer someone 2>/dev/null)
+result=$(cat "$_git_cmd_log")
+assert_contains "git_review --reviewer adds gerrit reviewer" "%r=someone" "$result"
+
+: > "$_git_cmd_log"
+(cd "$_git_local" && git_review --reviewer=eqsign 2>/dev/null)
+result=$(cat "$_git_cmd_log")
+assert_contains "git_review --reviewer= adds gerrit reviewer" "%r=eqsign" "$result"
+
+: > "$_git_cmd_log"
+(cd "$_git_local" && git_upload 2>/dev/null)
+result=$(cat "$_git_cmd_log")
+assert_contains "git_upload uses refs/for for gerrit" "refs/for" "$result"
+
+: > "$_git_cmd_log"
+(cd "$_git_local" && git_uploadchain 2>/dev/null)
+result=$(cat "$_git_cmd_log")
+assert_contains "git_uploadchain uses refs/for for gerrit" "refs/for" "$result"
+
+PATH="${PATH#$_gh_stub_dir:}"
+unset -f git vcs_hosting git_branch have_command
+rm -f "$_git_cmd_log" "$_gh_cmd_log"
 
 test_summary "git"
