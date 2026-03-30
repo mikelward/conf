@@ -1697,6 +1697,7 @@ if is_interactive; then
     # Note that grep options must go after ~/.history.
     gh() { first_arg_last grep ~/.history -a "$@"; }
     gitdir() { git rev-parse --git-dir "$@"; }
+    github() { command gh "$@"; }
     gl() { cd /var/log "$@"; }
     h() { head "$@"; }
     headers() { curl --location --include --silent --show-error --output /dev/null --dump-header - "$@"; }
