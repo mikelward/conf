@@ -729,6 +729,25 @@ assert_equal "root passes unknown command to root command" "root: nonexistent_co
 unset _root_log
 unset -f root_cmd myfunc root
 
+###############
+# SHELL COMPATIBILITY
+# Verify shrc does not use bashisms outside of bash/zsh-guarded sections.
+
+# Check that "source" is not used as a command outside of bash/zsh guards.
+# Lines starting with "source" or containing ". source" (after semicolons, etc.)
+# are bashisms that break in dash/sh.  Allowed: comments, and inside
+# case "$shell" in bash|zsh) ... ;; esac blocks.
+_unguarded_source=$(
+    awk '
+    /^[[:space:]]*#/           { next }           # skip comments
+    /case.*\$shell.*bash\|zsh/ { guarded++ ; next }
+    guarded && /;;/            { guarded-- ; next }
+    guarded                    { next }
+    /[[:space:];]source[[:space:]]/ || /^source[[:space:]]/ { print NR": "$0 }
+    ' "$_srcdir/shrc"
+)
+assert_equal "no unguarded source commands in shrc" "" "$_unguarded_source"
+
 _shell="$(basename "$(readlink -f /proc/$$/exe)" 2>/dev/null || echo "sh")"
 
 test_summary "$_shell shrc_test"
