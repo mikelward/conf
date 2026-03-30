@@ -296,6 +296,16 @@ on_my_workstation() {
     esac
 }
 
+# print a line to stdout
+puts() {
+    printf '%s\n' "$*"
+}
+
+# read without backslash mangling
+reads() {
+    read -r "$@"
+}
+
 # print an error message
 error() {
     printf '%s\n' "$*" >&2
