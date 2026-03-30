@@ -58,10 +58,13 @@ rm -f "$_testdir/gitrepo/.vcs_cache"
 result=$(cd "$_testdir/gitrepo" && vcs_backend)
 assert_equal "vcs_backend returns git for git repo" "git" "$result"
 
-# hg repo has no backend
+# hg repo has no backend (cache uses - sentinel)
 rm -f "$_testdir/hgrepo/.vcs_cache"
 result=$(cd "$_testdir/hgrepo" && vcs_backend)
 assert_equal "vcs_backend returns empty for hg repo" "" "$result"
+# Verify the sentinel is written to line 1 of cache
+_cache_line1=$(head -1 "$_testdir/hgrepo/.vcs_cache")
+assert_contains "hg cache uses - sentinel for backend" " - " "$_cache_line1"
 
 # jj repo with git backend
 mkdir -p "$_testdir/jjrepo/.jj/repo/store/git"
@@ -95,6 +98,62 @@ result=$(cd "$_testdir/jjrepo_gerrit" && vcs_hosting)
 assert_equal "vcs_hosting returns gerrit for googlesource remote" "gerrit" "$result"
 unset -f git
 
+# jj repo with gitlab remote
+mkdir -p "$_testdir/jjrepo_gitlab/.jj/repo/store/git"
+echo "git" > "$_testdir/jjrepo_gitlab/.jj/repo/store/type"
+git() {
+    if test "$1" = "-C" && test "$3" = "remote"; then
+        echo "https://gitlab.com/user/repo.git"
+        return 0
+    fi
+    command git "$@"
+}
+result=$(cd "$_testdir/jjrepo_gitlab" && vcs_hosting)
+assert_equal "vcs_hosting returns gitlab for gitlab.com remote" "gitlab" "$result"
+unset -f git
+
+# self-hosted gitlab
+mkdir -p "$_testdir/jjrepo_gitlab_self/.jj/repo/store/git"
+echo "git" > "$_testdir/jjrepo_gitlab_self/.jj/repo/store/type"
+git() {
+    if test "$1" = "-C" && test "$3" = "remote"; then
+        echo "https://gitlab.mycompany.com/group/repo.git"
+        return 0
+    fi
+    command git "$@"
+}
+result=$(cd "$_testdir/jjrepo_gitlab_self" && vcs_hosting)
+assert_equal "vcs_hosting returns gitlab for self-hosted gitlab" "gitlab" "$result"
+unset -f git
+
+# jj repo with bitbucket remote
+mkdir -p "$_testdir/jjrepo_bitbucket/.jj/repo/store/git"
+echo "git" > "$_testdir/jjrepo_bitbucket/.jj/repo/store/type"
+git() {
+    if test "$1" = "-C" && test "$3" = "remote"; then
+        echo "https://bitbucket.org/user/repo.git"
+        return 0
+    fi
+    command git "$@"
+}
+result=$(cd "$_testdir/jjrepo_bitbucket" && vcs_hosting)
+assert_equal "vcs_hosting returns bitbucket for bitbucket remote" "bitbucket" "$result"
+unset -f git
+
+# jj repo with sourcehut remote
+mkdir -p "$_testdir/jjrepo_srht/.jj/repo/store/git"
+echo "git" > "$_testdir/jjrepo_srht/.jj/repo/store/type"
+git() {
+    if test "$1" = "-C" && test "$3" = "remote"; then
+        echo "https://git.sr.ht/~user/repo"
+        return 0
+    fi
+    command git "$@"
+}
+result=$(cd "$_testdir/jjrepo_srht" && vcs_hosting)
+assert_equal "vcs_hosting returns sourcehut for sr.ht remote" "sourcehut" "$result"
+unset -f git
+
 # jj repo with no origin remote
 mkdir -p "$_testdir/jjrepo_noremote/.jj/repo/store/git"
 echo "git" > "$_testdir/jjrepo_noremote/.jj/repo/store/type"
@@ -116,7 +175,7 @@ assert_equal "vcs_backend returns piper for piper backend" "piper" "$result"
 result=$(cd "$_testdir/jjrepo_piper" && vcs_hosting)
 assert_equal "vcs_hosting returns empty for non-git backend" "" "$result"
 
-# Verify cache has 4 fields
+# Verify cache format: line 1 has 3 fields, line 2 has rootdir
 rm -f "$_testdir/jjrepo/.vcs_cache"
 git() {
     if test "$1" = "-C" && test "$3" = "remote"; then
@@ -126,10 +185,51 @@ git() {
     command git "$@"
 }
 (cd "$_testdir/jjrepo" && vcs >/dev/null)
-_cache_content=$(cat "$_testdir/jjrepo/.vcs_cache")
-assert_contains "vcs_cache contains backend" "git" "$_cache_content"
-assert_contains "vcs_cache contains hosting" "github" "$_cache_content"
+_cache_line1=$(head -1 "$_testdir/jjrepo/.vcs_cache")
+_cache_line2=$(sed -n '2p' "$_testdir/jjrepo/.vcs_cache")
+assert_contains "vcs_cache line 1 contains backend" "git" "$_cache_line1"
+assert_contains "vcs_cache line 1 contains hosting" "github" "$_cache_line1"
+_field_count=$(echo "$_cache_line1" | awk '{print NF}')
+assert_equal "vcs_cache line 1 has 3 fields (all set)" "3" "$_field_count"
+assert_equal "vcs_cache line 2 is rootdir" "$_testdir/jjrepo" "$_cache_line2"
 unset -f git
+
+# Verify cache has 3 fields on line 1 even when backend and hosting are empty
+rm -f "$_testdir/hgrepo/.vcs_cache"
+(cd "$_testdir/hgrepo" && vcs >/dev/null)
+_cache_line1=$(head -1 "$_testdir/hgrepo/.vcs_cache")
+_field_count=$(echo "$_cache_line1" | awk '{print NF}')
+assert_equal "vcs_cache line 1 has 3 fields (sentinels)" "3" "$_field_count"
+assert_contains "hg cache line 1 ends with - -" "- -" "$_cache_line1"
+
+# Verify cache has 3 fields on line 1 when only hosting is empty
+rm -f "$_testdir/jjrepo_noremote/.vcs_cache"
+git() {
+    if test "$1" = "-C" && test "$3" = "remote"; then
+        return 2
+    fi
+    command git "$@"
+}
+(cd "$_testdir/jjrepo_noremote" && vcs >/dev/null)
+_cache_line1=$(head -1 "$_testdir/jjrepo_noremote/.vcs_cache")
+_field_count=$(echo "$_cache_line1" | awk '{print NF}')
+assert_equal "vcs_cache line 1 has 3 fields (hosting sentinel)" "3" "$_field_count"
+assert_contains "git backend with no hosting ends with -" "git -" "$_cache_line1"
+unset -f git
+
+# Test paths with spaces
+mkdir -p "$_testdir/path with spaces/subdir"
+mkdir "$_testdir/path with spaces/.git"
+result=$(cd "$_testdir/path with spaces" && vcs)
+assert_equal "vcs detects git in path with spaces" "git" "$result"
+result=$(cd "$_testdir/path with spaces" && rootdir)
+assert_equal "rootdir works with spaces in path" "$_testdir/path with spaces" "$result"
+result=$(cd "$_testdir/path with spaces" && vcs_backend)
+assert_equal "vcs_backend works with spaces in path" "git" "$result"
+result=$(cd "$_testdir/path with spaces/subdir" && rootdir)
+assert_equal "rootdir from subdir works with spaces" "$_testdir/path with spaces" "$result"
+result=$(cd "$_testdir/path with spaces/subdir" && rootdir "file.txt")
+assert_equal "rootdir with arg works with spaces" "$_testdir/path with spaces/file.txt" "$result"
 
 ###############
 # Test cv (clear vcs cache)

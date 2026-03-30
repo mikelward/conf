@@ -18,20 +18,32 @@ vcs() {
         # If it's not writable, assume we don't care about vcs here.
         test -w "$PWD" || return 1
 
+        # Cache format (2 lines):
+        #   line 1: <vcs> <backend> <hosting>  (- for empty fields)
+        #   line 2: <rootdir>                  (whole line, may contain spaces)
         local _vcs _rootdir _backend _hosting
         if test -f .vcs_cache; then
-            read _vcs _rootdir _backend _hosting <.vcs_cache
+            { read _vcs _backend _hosting && read _rootdir; } <.vcs_cache
+            # Sentinels for empty fields.
+            test "$_backend" = "-" && _backend=""
+            test "$_hosting" = "-" && _hosting=""
         elif test -w .; then
-            read _vcs _rootdir <<<"$(
+            _rootdir="$(
                 while test "$PWD" != "/"; do
-                    test -e ".jj" && echo "jj $PWD" && break
-                    test -e ".hg" && echo "hg $PWD" && break
-                    test -e ".git" && echo "git $PWD" && break
-                    test -e ".citc" && echo "g4 $PWD" && break
-                    test -e ".p4config" && echo "g4 $PWD" && break
+                    test -e ".jj" && echo "jj" && echo "$PWD" && break
+                    test -e ".hg" && echo "hg" && echo "$PWD" && break
+                    test -e ".git" && echo "git" && echo "$PWD" && break
+                    test -e ".citc" && echo "g4" && echo "$PWD" && break
+                    test -e ".p4config" && echo "g4" && echo "$PWD" && break
                     cd ..
                 done
             )"
+            if test -n "$_rootdir"; then
+                _vcs="${_rootdir%%
+*}"
+                _rootdir="${_rootdir#*
+}"
+            fi
             # Detect backend
             if test "$_vcs" = "jj" && test -f "$_rootdir/.jj/repo/store/type"; then
                 read _backend <"$_rootdir/.jj/repo/store/type"
@@ -49,12 +61,18 @@ vcs() {
                 _origin_url="$(git -C "$_git_dir" remote get-url origin 2>/dev/null)"
                 case "$_origin_url" in
                     *github.com*) _hosting="github" ;;
+                    *gitlab.com*|*gitlab.*) _hosting="gitlab" ;;
+                    *bitbucket.org*) _hosting="bitbucket" ;;
+                    *sr.ht*) _hosting="sourcehut" ;;
                     *googlesource.com*) _hosting="gerrit" ;;
                 esac
             fi
             # This can fail if the filesystem is read-only.
             # Ignore errors.
-            { echo "$_vcs $_rootdir $_backend $_hosting" >.vcs_cache ; } 2>/dev/null
+            # Use - as sentinel for empty fields so cache always has 4 tokens.
+            if test -n "$_vcs"; then
+                { printf '%s\n' "$_vcs ${_backend:--} ${_hosting:--}" "$_rootdir" >.vcs_cache ; } 2>/dev/null
+            fi
         fi
         if test -z "$_vcs" || test -z "$_rootdir"; then
             return 1
@@ -73,7 +91,8 @@ rootdir() {
         if ! test -f .vcs_cache; then
             vcs >/dev/null 2>&1 || return 1
         fi
-        read _vcs _rootdir _backend _hosting <.vcs_cache
+        local _vcs _rootdir _backend _hosting
+        { read _vcs _backend _hosting && read _rootdir; } <.vcs_cache
         if test $# -gt 0; then
           local _arg
           for _arg; do
@@ -91,8 +110,9 @@ vcs_backend() {
         if ! test -f .vcs_cache; then
             vcs >/dev/null 2>&1 || return 1
         fi
-        local _vcs _rootdir _backend _hosting
-        read _vcs _rootdir _backend _hosting <.vcs_cache
+        local _vcs _backend _hosting
+        read _vcs _backend _hosting <.vcs_cache
+        test "$_backend" = "-" && _backend=""
         echo "$_backend"
         test -n "$_backend"
     )
@@ -103,8 +123,9 @@ vcs_hosting() {
         if ! test -f .vcs_cache; then
             vcs >/dev/null 2>&1 || return 1
         fi
-        local _vcs _rootdir _backend _hosting
-        read _vcs _rootdir _backend _hosting <.vcs_cache
+        local _vcs _backend _hosting
+        read _vcs _backend _hosting <.vcs_cache
+        test "$_hosting" = "-" && _hosting=""
         echo "$_hosting"
         test -n "$_hosting"
     )
