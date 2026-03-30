@@ -100,11 +100,11 @@ is_bash() { true; }
 is_dash() { false; }
 is_sh() { false; }
 
-# We need puts, reads, warn, and trim_prefix for shrc.vcs and prompt functions
+# We need puts, gets, warn, and trim_prefix for shrc.vcs and prompt functions
 puts() {
     printf '%s\n' "$*"
 }
-reads() {
+gets() {
     read -r "$@"
 }
 warn() {

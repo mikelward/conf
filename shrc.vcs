@@ -23,7 +23,7 @@ vcs() {
         #   line 2: <rootdir>                  (whole line, may contain spaces)
         local _vcs _rootdir _backend _hosting
         if test -f .vcs_cache; then
-            { reads _vcs _backend _hosting && reads _rootdir; } <.vcs_cache
+            { gets _vcs _backend _hosting && gets _rootdir; } <.vcs_cache
             # Sentinels for empty fields.
             test "$_backend" = "-" && _backend=""
             test "$_hosting" = "-" && _hosting=""
@@ -46,7 +46,7 @@ vcs() {
             fi
             # Detect backend
             if test "$_vcs" = "jj" && test -f "$_rootdir/.jj/repo/store/type"; then
-                reads _backend <"$_rootdir/.jj/repo/store/type"
+                gets _backend <"$_rootdir/.jj/repo/store/type"
             elif test "$_vcs" = "git"; then
                 _backend="git"
             fi
@@ -92,7 +92,7 @@ rootdir() {
             vcs >/dev/null 2>&1 || return 1
         fi
         local _vcs _rootdir _backend _hosting
-        { reads _vcs _backend _hosting && reads _rootdir; } <.vcs_cache
+        { gets _vcs _backend _hosting && gets _rootdir; } <.vcs_cache
         if test $# -gt 0; then
           local _arg
           for _arg; do
@@ -111,7 +111,7 @@ vcs_backend() {
             vcs >/dev/null 2>&1 || return 1
         fi
         local _vcs _backend _hosting
-        reads _vcs _backend _hosting <.vcs_cache
+        gets _vcs _backend _hosting <.vcs_cache
         test "$_backend" = "-" && _backend=""
         puts "$_backend"
         test -n "$_backend"
@@ -124,7 +124,7 @@ vcs_hosting() {
             vcs >/dev/null 2>&1 || return 1
         fi
         local _vcs _backend _hosting
-        reads _vcs _backend _hosting <.vcs_cache
+        gets _vcs _backend _hosting <.vcs_cache
         test "$_hosting" = "-" && _hosting=""
         puts "$_hosting"
         test -n "$_hosting"
