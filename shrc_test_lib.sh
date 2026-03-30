@@ -104,7 +104,7 @@ is_sh() { false; }
 trim_prefix() {
     local _prefix="$1"
     local _target="$2"
-    echo "${_target#$_prefix}"
+    printf '%s\n' "${_target#$_prefix}"
 }
 
 # Prevent any test from opening an interactive editor

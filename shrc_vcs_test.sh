@@ -231,6 +231,14 @@ assert_equal "rootdir from subdir works with spaces" "$_testdir/path with spaces
 result=$(cd "$_testdir/path with spaces/subdir" && rootdir "file.txt")
 assert_equal "rootdir with arg works with spaces" "$_testdir/path with spaces/file.txt" "$result"
 
+# Test paths with backslashes (read -r prevents mangling)
+mkdir -p "$_testdir/back\\slash"
+mkdir "$_testdir/back\\slash/.git"
+result=$(cd "$_testdir/back\\slash" && vcs)
+assert_equal "vcs detects git in path with backslash" "git" "$result"
+result=$(cd "$_testdir/back\\slash" && rootdir)
+assert_equal "rootdir works with backslash in path" "$_testdir/back\\slash" "$result"
+
 ###############
 # Test cv (clear vcs cache)
 

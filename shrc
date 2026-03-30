@@ -1371,7 +1371,7 @@ session_name() {
 trim_prefix() {
     local _prefix="$1"
     local _target="$2"
-    echo "${_target#$_prefix}"
+    printf '%s\n' "${_target#$_prefix}"
 }
 
 # print a message describing the last error, or empty if no error
