@@ -999,7 +999,7 @@ vcs() {
 
 # load all the version control functions (git_*, hg_*, etc.)
 if test -f "$HOME/.shrc.vcs"; then
-    source "$HOME/.shrc.vcs"
+    . "$HOME/.shrc.vcs"
 fi
 
 switchshpool() { autoshpool switch "$1" && exit; }
@@ -1759,7 +1759,7 @@ if is_interactive; then
     py2() { python2 "$@"; }
     py3() { python3 "$@"; }
     r() { fc -e - -- "$@"; }
-    rerc() { source "$HOME/.shrc"; }
+    rerc() { . "$HOME/.shrc"; }
     rg() { g --binary-files=without-match --recursive --exclude-dir=".*" "$@"; }
     rh() { gh "$@" | tail -n 20; }
     q() { xa "$@"; }
@@ -2226,7 +2226,7 @@ if is_interactive; then
             case "$f" in */000_bash_completion_compat.bash)
                 continue;;
             esac
-            source "$f" >/dev/null 2>&1
+            . "$f" >/dev/null 2>&1
         done
         ;;
     esac
