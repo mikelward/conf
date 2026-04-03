@@ -44,9 +44,7 @@ git_amend() {
 
 git_base() {
     if test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"; then
-        printf '@ (detached) '
-    else
-        printf '@ '
+        printf '(detached) '
     fi
     git --no-pager log -1 --oneline "$@"
 }
