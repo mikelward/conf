@@ -91,6 +91,34 @@ assert_true "git_base after checkout back shows original" grep -q 'base test com
 )
 
 ###############
+# Test git graph
+
+(
+    cd "$_git_local"
+    echo "graph-test" > graphfile.txt
+    git add graphfile.txt
+    git commit -m "graph test commit" >/dev/null 2>&1
+)
+_git_graph_hash=$(cd "$_git_local" && git log -1 --format='%h')
+_git_graph_branch=$(cd "$_git_local" && git rev-parse --abbrev-ref HEAD)
+_git_graph_parent_hash=$(cd "$_git_local" && git log -1 --format='%h' HEAD~)
+
+# git_graph with explicit args shows those commits
+result=$(cd "$_git_local" && git_graph -2)
+assert_equal "git_graph two commits" \
+"* $_git_graph_hash (HEAD -> $_git_graph_branch) graph test commit
+* $_git_graph_parent_hash (origin/$_git_graph_branch) initial commit" \
+"$result"
+
+# git_graph with no args shows only outgoing (unpushed) commits
+result=$(cd "$_git_local" && git_graph)
+assert_equal "git_graph no args shows outgoing only" \
+"* $_git_graph_hash (HEAD -> $_git_graph_branch) graph test commit" \
+"$result"
+
+(cd "$_git_local" && git reset --hard HEAD~ >/dev/null 2>&1)
+
+###############
 # Test git outgoing and incoming
 
 # Test git_outgoing with no unpushed commits
