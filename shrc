@@ -65,29 +65,9 @@ zsh)
     # make zsh as similar to bash as possible
     emulate sh
     setopt BRACE_EXPAND
-    setopt BANG_HIST
-    setopt CSH_JUNKIE_HISTORY
-    setopt INTERACTIVE_COMMENTS
     setopt KSH_TYPESET
     # so aliases like + and - work
     unsetopt POSIX_ALIASES >/dev/null 2>&1
-    # so we can display jobs in the prompt
-    unsetopt POSIX_JOBS >/dev/null 2>&1
-
-    # share history between shells
-    # particularly useful for zsh-autocomplete
-    setopt SHARE_HISTORY
-    HISTFILE=~/.zsh_history
-    HISTSIZE=5000
-    SAVEHIST=5000
-
-    # make tab completion do what it says
-    # e.g. in conf/config, i3s<TAB> completes to i3status/, it should
-    # autocd to i3status/, not strip the slash and run i3status
-    unsetopt AUTO_REMOVE_SLASH
-
-    # set_prompt sets PS1 to a string likely including '$', don't expand it
-    unsetopt PROMPT_SUBST
 
     # enable ksh default features
     setopt KSH_GLOB         # !(pattern) etc. like in ksh
@@ -100,9 +80,6 @@ zsh)
     unsetopt SH_GLOB
     ;;
 bash)
-    # set_prompt sets PS1 to a string likely including '$', don't expand it
-    shopt -u promptvars
-
     # enable ksh default features
     shopt -s extglob        # !(pattern) etc. like in ksh
 
@@ -118,7 +95,7 @@ esac
 : ${USERNAME:=$(id -un)}
 : ${HOSTNAME:=$(hostname -f)}
 : ${UID:=$(id -u)}
-: ${TTY:=$(tty)}
+: ${TTY:=}
 
 #######
 # PATH FUNCTIONS
@@ -924,7 +901,6 @@ uc() { systemctl --user "$@"; }
 # ENVIRONMENT SETUP FOR ALL SHELLS
 # Set $PATH early in case other stuff here needs it.
 
-CDPATH=".:$HOME:$HOME/conf:$HOME/conf/config"
 GOPATH="$HOME"
 export GOPATH
 
@@ -1621,6 +1597,38 @@ disable_bracketed_paste() {
 # Set up the prompt, title, key bindings, etc.
 
 if is_interactive; then
+    : ${TTY:=$(tty)}
+    CDPATH=".:$HOME:$HOME/conf:$HOME/conf/config"
+
+    case "$shell" in
+    zsh)
+        setopt BANG_HIST
+        setopt CSH_JUNKIE_HISTORY
+        setopt INTERACTIVE_COMMENTS
+        # so we can display jobs in the prompt
+        unsetopt POSIX_JOBS >/dev/null 2>&1
+
+        # share history between shells
+        # particularly useful for zsh-autocomplete
+        setopt SHARE_HISTORY
+        HISTFILE=~/.zsh_history
+        HISTSIZE=5000
+        SAVEHIST=5000
+
+        # make tab completion do what it says
+        # e.g. in conf/config, i3s<TAB> completes to i3status/, it should
+        # autocd to i3status/, not strip the slash and run i3status
+        unsetopt AUTO_REMOVE_SLASH
+
+        # set_prompt sets PS1 to a string likely including '$', don't expand it
+        unsetopt PROMPT_SUBST
+        ;;
+    bash)
+        # set_prompt sets PS1 to a string likely including '$', don't expand it
+        shopt -u promptvars
+        ;;
+    esac
+
     if in_shpool; then
         # Prevent shpool from clearing the screen during startup.
         # This ensures we can see any motd, errors, etc.
