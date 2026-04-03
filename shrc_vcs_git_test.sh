@@ -94,10 +94,22 @@ assert_equal "git_outgoing no unpushed commits" "" "$result"
     git commit -m "local commit" >/dev/null 2>&1
 )
 
-# Test git_outgoing shows the unpushed commit
+# Test git_outgoing shows the unpushed commit with @ prefix (HEAD is current base)
 result=$(cd "$_git_local" && git_outgoing 2>&1)
 assert_true "git_outgoing shows unpushed commit" test -n "$result"
 assert_true "git_outgoing contains commit message" grep -q 'local commit' <<< "$result"
+assert_true "git_outgoing HEAD commit has @ prefix" grep -q '^@ .*local commit' <<< "$result"
+
+# Create a second local commit and verify @ is on HEAD, * on older
+(
+    cd "$_git_local"
+    echo "more content" > newfile2.txt
+    git add newfile2.txt
+    git commit -m "second local commit" >/dev/null 2>&1
+)
+result=$(cd "$_git_local" && git_outgoing 2>&1)
+assert_true "git_outgoing HEAD has @ prefix" grep -q '^@ .*second local commit' <<< "$result"
+assert_true "git_outgoing older commit has * prefix" grep -q '^\* .*local commit' <<< "$result"
 
 # Test git_incoming with no new remote commits
 (cd "$_git_local" && git fetch >/dev/null 2>&1)

@@ -155,8 +155,16 @@ jj_lint() {
     jj fix "$@"
 }
 
+# prefix with @ for the current base, * for other commits
 jj_outgoing() {
-    jj --no-pager log --no-graph -r 'mutable() ~ empty() ~ ancestors(remote_bookmarks())' --template 'change_id.shortest() ++ " " ++ description.first_line() ++ "\n"' "$@"
+    local base
+    base=$(jj --no-pager log --no-graph -r '@-' --template 'change_id.shortest()' 2>/dev/null)
+    jj --no-pager log --no-graph -r 'mutable() ~ empty() ~ ancestors(remote_bookmarks())' --template 'change_id.shortest() ++ " " ++ description.first_line() ++ "\n"' "$@" | while IFS= read -r line; do
+        case "$line" in
+            "$base "*)  printf '@ %s\n' "$line" ;;
+            *)          printf '* %s\n' "$line" ;;
+        esac
+    done
 }
 
 jj_pending() {

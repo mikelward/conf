@@ -79,10 +79,11 @@ assert_equal "jj_outgoing no unpushed commits" "" "$result"
     jj commit -m "jj test commit" >/dev/null 2>&1
 )
 
-# Test jj_outgoing shows the commit
+# Test jj_outgoing shows the commit with prefix
 result=$(cd "$_jj_repo" && jj_outgoing 2>&1)
 assert_true "jj_outgoing shows mutable commit" test -n "$result"
 assert_true "jj_outgoing contains commit message" grep -q 'jj test commit' <<< "$result"
+assert_true "jj_outgoing has @ or * prefix" grep -q '^[*@] ' <<< "$result"
 
 # Test jj_incoming shows operation log
 result=$(cd "$_jj_repo" && jj_incoming 2>&1)
@@ -104,6 +105,8 @@ assert_true "jj_pending contains commit message" grep -q 'jj test commit' <<< "$
 result=$(cd "$_jj_repo" && jj_outgoing 2>&1)
 assert_true "jj_outgoing shows first commit" grep -q 'jj test commit' <<< "$result"
 assert_true "jj_outgoing shows second commit" grep -q 'jj second commit' <<< "$result"
+assert_true "jj_outgoing current base has @ prefix" grep -q '^@ .*jj second commit' <<< "$result"
+assert_true "jj_outgoing other commit has * prefix" grep -q '^\* .*jj test commit' <<< "$result"
 
 ###############
 # Test jj commit, amend, recommit, reword

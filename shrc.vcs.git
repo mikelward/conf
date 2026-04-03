@@ -209,8 +209,14 @@ git_lint() {
 }
 
 # print commits that would be pushed
+# prefix with @ for the current base (HEAD), * for other commits
 git_outgoing() {
-    git --no-pager log --oneline @{upstream}..HEAD
+    git --no-pager log --oneline @{upstream}..HEAD | {
+        IFS= read -r line && printf '@ %s\n' "$line"
+        while IFS= read -r line; do
+            printf '* %s\n' "$line"
+        done
+    }
 }
 
 git_pending() {

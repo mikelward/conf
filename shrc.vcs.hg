@@ -163,8 +163,16 @@ hg_lint() {
 }
 
 # show changesets that would be pushed
+# prefix with @ for the current base (working directory parent), * for other commits
 hg_outgoing() {
-    hg --pager never --quiet log -r "draft() and not obsolete()" --template=oneline "$@"
+    local base
+    base=$(hg log -r . --template '{shortest(node, 7)}')
+    hg --pager never --quiet log -r "draft() and not obsolete()" --template=oneline "$@" | while IFS= read -r line; do
+        case "$line" in
+            "$base "*)  printf '@ %s\n' "$line" ;;
+            *)          printf '* %s\n' "$line" ;;
+        esac
+    done
 }
 
 hg_pending() {
