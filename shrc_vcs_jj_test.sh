@@ -64,7 +64,7 @@ assert_true "jj_base shows parent with * prefix" grep -q '^\* .*jj base test com
 result=$(cd "$_jj_repo" && jj_base)
 assert_true "jj_base shows second commit" grep -q 'jj second base commit' <<< "$result"
 
-# jj_base changes after jj prev
+# jj prev creates a new branch point so @ still has no children - at-tip behavior
 (cd "$_jj_repo" && jj prev >/dev/null 2>&1)
 result=$(cd "$_jj_repo" && jj_base)
 assert_true "jj_base after prev shows earlier commit" grep -q 'jj base test commit' <<< "$result"
@@ -80,7 +80,8 @@ assert_true "jj_base after prev shows earlier commit" grep -q 'jj base test comm
 _jj_git_remote="$_testdir/jj_git_remote"
 git init --bare "$_jj_git_remote" >/dev/null 2>&1
 (cd "$_jj_repo" && jj git remote add origin "$_jj_git_remote" >/dev/null 2>&1)
-(cd "$_jj_repo" && jj bookmark create main -r @- >/dev/null 2>&1)
+# Point main at the latest non-empty mutable commit (not an empty WC intermediate)
+(cd "$_jj_repo" && jj bookmark create main -r "latest(mutable() ~ empty())" >/dev/null 2>&1)
 (cd "$_jj_repo" && jj git push --bookmark main --allow-new >/dev/null 2>&1)
 
 # Test jj_outgoing with no unpushed commits
@@ -316,13 +317,17 @@ assert_false "jj_rm deletes file" test -f "$_jj_repo/jj_rmfile.txt"
 ###############
 # Test jj prev and next
 
-# Create a chain of commits to navigate
+# Create a chain of commits to navigate; capture nav C's id for reliable cleanup
 (
     cd "$_jj_repo"
     echo "nav-a" > jj_nav_a.txt
     jj commit -m "jj nav A" >/dev/null 2>&1
     echo "nav-b" > jj_nav_b.txt
     jj commit -m "jj nav B" >/dev/null 2>&1
+)
+_jj_nav_c_id=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'change_id')
+(
+    cd "$_jj_repo"
     echo "nav-c" > jj_nav_c.txt
     jj commit -m "jj nav C" >/dev/null 2>&1
 )
@@ -342,9 +347,8 @@ assert_true "jj_prev again moves one step back" grep -q 'jj nav A' <<< "$result"
 result=$(cd "$_jj_repo" && jj log --no-graph -r @- -T 'description')
 assert_true "jj_next moves to child" grep -q 'jj nav B' <<< "$result"
 
-# clean up: restore to tip
-(cd "$_jj_repo" && jj next >/dev/null 2>&1)
-(cd "$_jj_repo" && jj new >/dev/null 2>&1)
+# clean up: restore to a direct child of nav C (not via jj next which creates an intermediate WC)
+(cd "$_jj_repo" && jj new "$_jj_nav_c_id" >/dev/null 2>&1)
 
 ###############
 # Test jj goto
@@ -355,8 +359,8 @@ _jj_goto_target=$(cd "$_jj_repo" && jj log --no-graph -r '@--' -T 'change_id.sho
 result=$(cd "$_jj_repo" && jj log --no-graph -r @- -T 'description')
 assert_true "jj_goto new @ is child of target" grep -q 'jj nav B' <<< "$result"
 
-# jj_goto back to the tip
-_jj_goto_tip=$(cd "$_jj_repo" && jj log --no-graph -r 'heads(mutable())' -T 'change_id.shortest()' --limit 1)
+# jj_goto back to the tip (latest non-empty mutable commit = jj nav C)
+_jj_goto_tip=$(cd "$_jj_repo" && jj log --no-graph -r 'latest(mutable() ~ empty())' -T 'change_id.shortest()')
 (cd "$_jj_repo" && jj_goto "$_jj_goto_tip" >/dev/null 2>&1)
 result=$(cd "$_jj_repo" && jj log --no-graph -r @- -T 'description')
 assert_true "jj_goto back to tip" grep -q 'jj nav C' <<< "$result"
