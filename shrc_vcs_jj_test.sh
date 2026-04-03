@@ -26,9 +26,10 @@ jj git init "$_jj_repo" >/dev/null 2>&1
 ###############
 # Test jj base
 
-# jj_base on a fresh repo shows the root commit
+# jj_base on a fresh repo shows the root commit with * prefix
 result=$(cd "$_jj_repo" && jj_base 2>&1)
 assert_true "jj_base fresh repo returns something" test -n "$result"
+assert_true "jj_base fresh repo has * prefix" grep -q '^\* ' <<< "$result"
 
 # jj_base changes after a commit
 (
@@ -38,6 +39,23 @@ assert_true "jj_base fresh repo returns something" test -n "$result"
 )
 result=$(cd "$_jj_repo" && jj_base)
 assert_true "jj_base after commit shows parent" grep -q 'jj base test commit' <<< "$result"
+assert_true "jj_base after commit has * prefix" grep -q '^\* ' <<< "$result"
+
+# jj_base omits @ line when working copy has no description
+result=$(cd "$_jj_repo" && jj_base)
+assert_false "jj_base no @ line for undescribed wc" grep -q '^@ ' <<< "$result"
+
+# jj_base shows @ line when working copy has a description
+(cd "$_jj_repo" && jj describe -m "wc description" >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj_base)
+assert_true "jj_base shows @ for described wc" grep -q '^@ .*wc description' <<< "$result"
+assert_true "jj_base still shows * for parent" grep -q '^\* .*jj base test commit' <<< "$result"
+# @ line should come before * line
+_at_line=$(grep -n '^@ ' <<< "$result" | head -1 | cut -d: -f1)
+_star_line=$(grep -n '^\* ' <<< "$result" | head -1 | cut -d: -f1)
+assert_true "jj_base @ line before * line" test "$_at_line" -lt "$_star_line"
+# Clean up: remove the description
+(cd "$_jj_repo" && jj describe -m "" >/dev/null 2>&1)
 
 # jj_base changes after jj prev (edit parent)
 (
