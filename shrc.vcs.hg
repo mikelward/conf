@@ -22,9 +22,9 @@ hg_amend() {
 
 hg_base() {
     if test "$(hg --pager never log -r . --template '{rev}')" != "$(hg --pager never log -r 'last(heads(branch(.)))' --template '{rev}')"; then
-        hg --pager never log -r . --template '@ (not at head) {onelinesummary}\n' "$@"
+        hg --pager never log -r . --template '(not at head) {onelinesummary}\n' "$@"
     else
-        hg --pager never log -r . --template '@ {onelinesummary}\n' "$@"
+        hg --pager never log -r . --template '{onelinesummary}\n' "$@"
     fi
 }
 

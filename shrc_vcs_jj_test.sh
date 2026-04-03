@@ -29,55 +29,48 @@ jj git init "$_jj_repo" >/dev/null 2>&1
 ###############
 # Test jj base
 
-# jj_base on a fresh repo shows the root commit with * prefix
+# jj_base on a fresh repo returns something (the root commit), no prefix
 result=$(cd "$_jj_repo" && jj_base 2>&1)
 assert_true "jj_base fresh repo returns something" test -n "$result"
-assert_true "jj_base fresh repo has * prefix" grep -q '^\* ' <<< "$result"
+assert_false "jj_base fresh repo has no @ prefix" grep -q '^@ ' <<< "$result"
+assert_false "jj_base fresh repo has no * prefix" grep -q '^\* ' <<< "$result"
 
-# jj_base changes after a commit
+# jj_base changes after a commit — shows parent commit description, no prefix
 (
     cd "$_jj_repo"
     echo "base-test" > basefile.txt
     jj commit -m "jj base test commit" >/dev/null 2>&1
 )
 result=$(cd "$_jj_repo" && jj_base)
-assert_true "jj_base after commit shows parent" grep -q 'jj base test commit' <<< "$result"
-assert_true "jj_base after commit has * prefix" grep -q '^\* ' <<< "$result"
+assert_true "jj_base after commit shows parent description" grep -q 'jj base test commit' <<< "$result"
+assert_false "jj_base has no @ prefix" grep -q '^@ ' <<< "$result"
+assert_false "jj_base has no * prefix" grep -q '^\* ' <<< "$result"
 
-# jj_base shows @ line even when working copy has no description
-result=$(cd "$_jj_repo" && jj_base)
-assert_true "jj_base shows @ for undescribed wc" grep -q '^@ ' <<< "$result"
-
-# jj_base shows @ line with description when working copy has one
+# jj_base shows parent even when working copy has a description
 (cd "$_jj_repo" && jj describe -m "wc description" >/dev/null 2>&1)
 result=$(cd "$_jj_repo" && jj_base)
-assert_true "jj_base shows @ with description" grep -q '^@ .*wc description' <<< "$result"
-assert_true "jj_base still shows * for parent" grep -q '^\* .*jj base test commit' <<< "$result"
-# @ line should come before * line
-_at_line=$(grep -n '^@ ' <<< "$result" | head -1 | cut -d: -f1)
-_star_line=$(grep -n '^\* ' <<< "$result" | head -1 | cut -d: -f1)
-assert_true "jj_base @ line before * line" test "$_at_line" -lt "$_star_line"
+assert_true "jj_base shows parent not wc" grep -q 'jj base test commit' <<< "$result"
+assert_false "jj_base does not show wc description" grep -q 'wc description' <<< "$result"
 # Clean up: remove the description
 (cd "$_jj_repo" && jj describe -m "" >/dev/null 2>&1)
 
-# jj_base changes after jj prev (edit parent)
+# jj_base changes after a second commit
 (
     cd "$_jj_repo"
     echo "second" > secondfile.txt
     jj commit -m "jj second base commit" >/dev/null 2>&1
 )
-_jj_second_base=$(cd "$_jj_repo" && jj_base)
-assert_true "jj_base shows second commit" grep -q 'jj second base commit' <<< "$_jj_second_base"
+result=$(cd "$_jj_repo" && jj_base)
+assert_true "jj_base shows second commit" grep -q 'jj second base commit' <<< "$result"
 
-# Use jj prev to move working copy to the parent
-(cd "$_jj_repo" && jj prev --edit >/dev/null 2>&1)
+# jj_base changes after jj prev
+(cd "$_jj_repo" && jj prev >/dev/null 2>&1)
 result=$(cd "$_jj_repo" && jj_base)
 assert_true "jj_base after prev shows earlier commit" grep -q 'jj base test commit' <<< "$result"
 
-# Create a new working copy change on top (prev --edit abandoned the old one)
+# Restore to tip for subsequent tests
+(cd "$_jj_repo" && jj next >/dev/null 2>&1)
 (cd "$_jj_repo" && jj new >/dev/null 2>&1)
-result=$(cd "$_jj_repo" && jj_base)
-assert_true "jj_base after new shows current commit" grep -q 'jj second base commit' <<< "$result"
 
 ###############
 # Test jj outgoing and incoming
@@ -333,38 +326,39 @@ assert_false "jj_rm deletes file" test -f "$_jj_repo/jj_rmfile.txt"
     jj commit -m "jj nav C" >/dev/null 2>&1
 )
 
-# jj_prev moves to the parent commit (from empty @ on top of C, prev edits C)
+# jj_prev positions @ as a new child of the parent (from empty @ on top of C)
 (cd "$_jj_repo" && jj_prev >/dev/null 2>&1)
-result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
-assert_true "jj_prev moves to parent" grep -q 'jj nav C' <<< "$result"
+result=$(cd "$_jj_repo" && jj log --no-graph -r @- -T 'description')
+assert_true "jj_prev new @ is child of C's parent" grep -q 'jj nav B' <<< "$result"
 
-# jj_prev again moves to B
+# jj_prev again positions @ as child of B's parent
 (cd "$_jj_repo" && jj_prev >/dev/null 2>&1)
-result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
-assert_true "jj_prev moves to grandparent" grep -q 'jj nav B' <<< "$result"
+result=$(cd "$_jj_repo" && jj log --no-graph -r @- -T 'description')
+assert_true "jj_prev again moves one step back" grep -q 'jj nav A' <<< "$result"
 
-# jj_next moves forward to C
+# jj_next moves forward one step
 (cd "$_jj_repo" && jj_next >/dev/null 2>&1)
-result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
-assert_true "jj_next moves to child" grep -q 'jj nav C' <<< "$result"
+result=$(cd "$_jj_repo" && jj log --no-graph -r @- -T 'description')
+assert_true "jj_next moves to child" grep -q 'jj nav B' <<< "$result"
 
-# clean up: create a new working copy on top
+# clean up: restore to tip
+(cd "$_jj_repo" && jj next >/dev/null 2>&1)
 (cd "$_jj_repo" && jj new >/dev/null 2>&1)
 
 ###############
 # Test jj goto
 
-# jj_goto switches the working copy to a specific revision
+# jj_goto creates new @ as child of target revision
 _jj_goto_target=$(cd "$_jj_repo" && jj log --no-graph -r '@--' -T 'change_id.shortest()')
 (cd "$_jj_repo" && jj_goto "$_jj_goto_target" >/dev/null 2>&1)
-result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
-assert_true "jj_goto switches to target revision" grep -q 'jj nav B' <<< "$result"
+result=$(cd "$_jj_repo" && jj log --no-graph -r @- -T 'description')
+assert_true "jj_goto new @ is child of target" grep -q 'jj nav B' <<< "$result"
 
 # jj_goto back to the tip
-_jj_goto_tip=$(cd "$_jj_repo" && jj log --no-graph -r 'heads(all())' -T 'change_id.shortest()' --limit 1)
+_jj_goto_tip=$(cd "$_jj_repo" && jj log --no-graph -r 'heads(mutable())' -T 'change_id.shortest()' --limit 1)
 (cd "$_jj_repo" && jj_goto "$_jj_goto_tip" >/dev/null 2>&1)
-result=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'description')
-assert_true "jj_goto switches back to tip" grep -q 'jj nav C' <<< "$result"
+result=$(cd "$_jj_repo" && jj log --no-graph -r @- -T 'description')
+assert_true "jj_goto back to tip" grep -q 'jj nav C' <<< "$result"
 
 # clean up: create a new working copy on top
 (cd "$_jj_repo" && jj new >/dev/null 2>&1)

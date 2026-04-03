@@ -5,7 +5,7 @@ jj_absorb() {
 }
 
 jj_base() {
-    jj --no-pager log --no-graph -r '@|@-' --template 'if(self.contained_in("@"), "@ " ++ change_id.shortest() ++ if(description.first_line(), " " ++ description.first_line()) ++ "\n", "* " ++ change_id.shortest() ++ " " ++ description.first_line() ++ "\n")' "$@"
+    jj --no-pager log --no-graph -r '@-' --template 'change_id.shortest() ++ " " ++ description.first_line() ++ "\n"' "$@"
 }
 
 jj_add() {
@@ -60,11 +60,11 @@ jj_changes() {
 }
 
 jj_checkout() {
-    jj edit "$@"
+    jj new "$@"
 }
 
 jj_goto() {
-    jj edit "$@"
+    jj new "$@"
 }
 
 jj_commit() {
@@ -140,7 +140,7 @@ jj_move() {
 }
 
 jj_next() {
-    jj next --edit "$@"
+    jj next "$@"
 }
 
 jj_copy() {
@@ -172,7 +172,7 @@ jj_precommit() {
 }
 
 jj_prev() {
-    jj prev --edit "$@"
+    jj prev "$@"
 }
 
 jj_presubmit() {
