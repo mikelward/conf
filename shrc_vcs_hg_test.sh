@@ -23,7 +23,16 @@ if command -v chg >/dev/null 2>&1; then
 fi
 
 ###############
-# Setup: create a "remote" hg repo and a local clone
+# Setup: create a test hgrc with templates and a "remote" hg repo and a local clone
+
+_hgrc="$_testdir/hgrc"
+cat > "$_hgrc" << 'EOF'
+[templates]
+shortnode = "{label('log.changeset', shortest(node, 7))}"
+shortdesc = "{desc|firstline}"
+oneline = "{shortnode} {shortdesc}\n"
+EOF
+export HGRCPATH="$_hgrc"
 
 _hg_remote="$_testdir/hg_remote"
 _hg_local="$_testdir/hg_local"
@@ -69,6 +78,28 @@ assert_true "hg_base not at head shows (not at head)" grep -q 'not at head' <<< 
 result=$(cd "$_hg_local" && hg_base)
 assert_true "hg_base after update back shows latest" grep -q 'hg base test commit' <<< "$result"
 assert_false "hg_base back at head not marked (not at head)" grep -q 'not at head' <<< "$result"
+
+###############
+# Test hg graph
+
+_hg_graph_tip=$(cd "$_hg_local" && hg --pager never log -r tip --template '{shortest(node, 7)}')
+_hg_graph_parent=$(cd "$_hg_local" && hg --pager never log -r 'tip^' --template '{shortest(node, 7)}')
+
+# hg_graph with explicit args shows those commits
+result=$(cd "$_hg_local" && hg_graph -l 2)
+assert_equal "hg_graph two commits" \
+"@  $_hg_graph_tip hg base test commit
+|
+o  $_hg_graph_parent initial commit" \
+"$result"
+
+# hg_graph with no args shows only outgoing (draft) commits
+result=$(cd "$_hg_local" && hg_graph)
+assert_equal "hg_graph no args shows outgoing only" \
+"@  $_hg_graph_tip hg base test commit
+|
+~" \
+"$result"
 
 ###############
 # Test hg outgoing and incoming

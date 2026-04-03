@@ -115,7 +115,11 @@ jj_graft() {
 }
 
 jj_graph() {
-    jj log "$@"
+    if test $# -eq 0; then
+        jj log --template 'change_id.shortest() ++ " " ++ if(description, description.first_line(), "(no description set)") ++ if(bookmarks, " [" ++ bookmarks.join(", ") ++ "]", "") ++ "\n"' -r 'mutable() ~ empty() ~ ancestors(remote_bookmarks())'
+    else
+        jj log --template 'change_id.shortest() ++ " " ++ if(description, description.first_line(), "(no description set)") ++ if(bookmarks, " [" ++ bookmarks.join(", ") ++ "]", "") ++ "\n"' "$@"
+    fi
 }
 
 jj_histedit() {

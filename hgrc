@@ -27,7 +27,7 @@ username = Mikel Ward <mikel@mikelward.com>
 meld.args = $local $base $other -o $output
 
 [alias]
-graph = log --graph --template=twoline
+graph = log --graph --template=oneline
 show = log --verbose --patch --rev
 
 [hooks]

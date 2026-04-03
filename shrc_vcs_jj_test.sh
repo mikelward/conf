@@ -74,6 +74,20 @@ assert_true "jj_base after prev shows earlier commit" grep -q 'jj base test comm
 (cd "$_jj_repo" && jj new >/dev/null 2>&1)
 
 ###############
+# Test jj graph
+
+_jj_graph_wc=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'change_id.shortest()')
+_jj_graph_parent=$(cd "$_jj_repo" && jj log --no-graph -r @- -T 'change_id.shortest()')
+_jj_graph_parent_desc=$(cd "$_jj_repo" && jj log --no-graph -r @- -T 'if(description, description.first_line(), "(no description set)")')
+result=$(cd "$_jj_repo" && jj_graph -r '@|@-')
+assert_equal "jj_graph two commits" \
+"@  $_jj_graph_wc (no description set)
+○  $_jj_graph_parent $_jj_graph_parent_desc
+│
+~" \
+"$result"
+
+###############
 # Test jj outgoing and incoming
 
 # Push existing commits so they become immutable and don't appear in outgoing

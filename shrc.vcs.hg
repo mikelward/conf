@@ -139,7 +139,11 @@ hg_graft() {
 }
 
 hg_graph() {
-    hg graph "$@"
+    if test $# -eq 0; then
+        hg --pager never log --graph --template oneline -r 'draft() and not obsolete()'
+    else
+        hg --pager never log --graph --template oneline "$@"
+    fi
 }
 
 hg_histedit() {

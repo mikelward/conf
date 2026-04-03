@@ -168,7 +168,11 @@ git_graft() {
 }
 
 git_graph() {
-    git graph "$@"
+    if test $# -eq 0; then
+        git --no-pager log --graph --pretty=format:'%C(auto)%h%C(auto)%d %s' "@{upstream}..HEAD" 2>/dev/null || git --no-pager log --graph --pretty=format:'%C(auto)%h%C(auto)%d %s'
+    else
+        git --no-pager log --graph --pretty=format:'%C(auto)%h%C(auto)%d %s' "$@"
+    fi
 }
 
 git_histedit() {
