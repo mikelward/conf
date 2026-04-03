@@ -335,7 +335,7 @@ jj_unamend() {
 }
 
 jj_uncommit() {
-    jj uncommit "$@"
+    jj squash --from @- --into @ "$@"
 }
 
 jj_undo() {
