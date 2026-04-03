@@ -29,13 +29,13 @@ jj git init "$_jj_repo" >/dev/null 2>&1
 ###############
 # Test jj base
 
-# jj_base on a fresh repo returns something (the root commit), no prefix
+# jj_base on a fresh repo returns something (the root commit), * prefix, no @ prefix
 result=$(cd "$_jj_repo" && jj_base 2>&1)
 assert_true "jj_base fresh repo returns something" test -n "$result"
 assert_false "jj_base fresh repo has no @ prefix" grep -q '^@ ' <<< "$result"
-assert_false "jj_base fresh repo has no * prefix" grep -q '^\* ' <<< "$result"
+assert_true "jj_base fresh repo has * prefix" grep -q '^\* ' <<< "$result"
 
-# jj_base changes after a commit — shows parent commit description, no prefix
+# jj_base changes after a commit — shows parent with * prefix, no @ line (wc has no description)
 (
     cd "$_jj_repo"
     echo "base-test" > basefile.txt
@@ -43,14 +43,15 @@ assert_false "jj_base fresh repo has no * prefix" grep -q '^\* ' <<< "$result"
 )
 result=$(cd "$_jj_repo" && jj_base)
 assert_true "jj_base after commit shows parent description" grep -q 'jj base test commit' <<< "$result"
-assert_false "jj_base has no @ prefix" grep -q '^@ ' <<< "$result"
-assert_false "jj_base has no * prefix" grep -q '^\* ' <<< "$result"
+assert_false "jj_base has no @ prefix when wc undescribed" grep -q '^@ ' <<< "$result"
+assert_true "jj_base has * prefix for parent" grep -q '^\* ' <<< "$result"
 
-# jj_base shows parent even when working copy has a description
+# jj_base shows both @ (wc) and * (parent) when working copy has a description
 (cd "$_jj_repo" && jj describe -m "wc description" >/dev/null 2>&1)
 result=$(cd "$_jj_repo" && jj_base)
-assert_true "jj_base shows parent not wc" grep -q 'jj base test commit' <<< "$result"
-assert_false "jj_base does not show wc description" grep -q 'wc description' <<< "$result"
+assert_true "jj_base shows parent when wc described" grep -q 'jj base test commit' <<< "$result"
+assert_true "jj_base shows wc description with @ prefix" grep -q '^@ .*wc description' <<< "$result"
+assert_true "jj_base shows parent with * prefix" grep -q '^\* .*jj base test commit' <<< "$result"
 # Clean up: remove the description
 (cd "$_jj_repo" && jj describe -m "" >/dev/null 2>&1)
 

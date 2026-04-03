@@ -5,7 +5,7 @@ jj_absorb() {
 }
 
 jj_base() {
-    jj --no-pager log --no-graph -r '@-' --template 'change_id.shortest() ++ " " ++ description.first_line() ++ "\n"' "$@"
+    jj --no-pager log --no-graph -r '@|@-' --template 'if(self.contained_in("@"), if(description.first_line(), "@ " ++ change_id.shortest() ++ " " ++ description.first_line() ++ "\n"), "* " ++ change_id.shortest() ++ " " ++ description.first_line() ++ "\n")' "$@"
 }
 
 jj_add() {
