@@ -24,7 +24,7 @@ _jj_repo="$_testdir/jj_repo"
 jj git init "$_jj_repo" >/dev/null 2>&1
 # Configure a test user so commits can be pushed
 (cd "$_jj_repo" && jj config set --repo user.name "Test User")
-(cd "$_jj_repo" && jj config set --repo user.email "test@test.com")
+(cd "$_jj_repo" && jj config set --repo user.email "test@example.com")
 
 ###############
 # Test jj base

@@ -33,7 +33,7 @@ hg init "$_hg_remote"
     cd "$_hg_remote"
     echo "initial" > file.txt
     hg add file.txt
-    hg commit -m "initial commit" -u "test <test@test.com>"
+    hg commit -m "initial commit" -u "test <test@example.com>"
 )
 hg clone "$_hg_remote" "$_hg_local" >/dev/null 2>&1
 
@@ -50,7 +50,7 @@ assert_true "hg_base fresh clone has @ prefix" grep -q '^@ ' <<< "$result"
     cd "$_hg_local"
     echo "base-test" > basefile.txt
     hg add basefile.txt
-    hg commit -m "hg base test commit" -u "test <test@test.com>"
+    hg commit -m "hg base test commit" -u "test <test@example.com>"
 )
 result=$(cd "$_hg_local" && hg_base)
 assert_true "hg_base after commit shows new commit" grep -q 'hg base test commit' <<< "$result"
@@ -85,7 +85,7 @@ assert_equal "hg_outgoing no unpushed commits" "" "$result"
     cd "$_hg_local"
     echo "local content" > localfile.txt
     hg add localfile.txt
-    hg commit -m "hg local commit" -u "test <test@test.com>"
+    hg commit -m "hg local commit" -u "test <test@example.com>"
 )
 
 # Test hg_outgoing shows the unpushed commit
@@ -104,7 +104,7 @@ assert_equal "hg_incoming no new returns 1" "1" "$rc"
     cd "$_hg_remote"
     echo "remote content" > remotefile.txt
     hg add remotefile.txt
-    hg commit -m "hg remote commit" -u "test <test@test.com>"
+    hg commit -m "hg remote commit" -u "test <test@example.com>"
 )
 
 # Test hg_incoming shows the new remote commit
@@ -130,12 +130,12 @@ assert_true "hg_pending shows modified files" test -n "$result"
     echo "commit-test" > commitfile.txt
     hg add commitfile.txt
 )
-(cd "$_hg_local" && hg_commit -m "hg commit test" -u "test <test@test.com>" >/dev/null 2>&1)
+(cd "$_hg_local" && hg_commit -m "hg commit test" -u "test <test@example.com>" >/dev/null 2>&1)
 result=$(cd "$_hg_local" && hg log -r . --template '{desc}')
 assert_equal "hg_commit with -m" "hg commit test" "$result"
 
 # hg_recommit amends with new message
-(cd "$_hg_local" && hg_recommit -m "hg recommit msg" -u "test <test@test.com>" >/dev/null 2>&1)
+(cd "$_hg_local" && hg_recommit -m "hg recommit msg" -u "test <test@example.com>" >/dev/null 2>&1)
 result=$(cd "$_hg_local" && hg log -r . --template '{desc}')
 assert_equal "hg_recommit changes message" "hg recommit msg" "$result"
 
@@ -145,7 +145,7 @@ assert_equal "hg_recommit changes message" "hg recommit msg" "$result"
     echo "amend-content" > amendfile.txt
     hg add amendfile.txt
 )
-(cd "$_hg_local" && hg_recommit -m "hg recommit msg" -u "test <test@test.com>" >/dev/null 2>&1)
+(cd "$_hg_local" && hg_recommit -m "hg recommit msg" -u "test <test@example.com>" >/dev/null 2>&1)
 assert_true "hg_recommit includes new file" \
     bash -c "cd '$_hg_local' && hg log -r . --template '{file_adds}' | grep -q amendfile.txt"
 
@@ -161,7 +161,7 @@ assert_equal "hg_branch returns current branch" "default" "$result"
     cd "$_hg_local"
     echo "clean-content" > hg_revertfile.txt
     hg add hg_revertfile.txt
-    hg commit -m "add revertfile" -u "test <test@test.com>"
+    hg commit -m "add revertfile" -u "test <test@example.com>"
     echo "dirty-content" > hg_revertfile.txt
 )
 (cd "$_hg_local" && hg_revert hg_revertfile.txt >/dev/null 2>&1)
@@ -192,7 +192,7 @@ assert_true "hg_status shows added file" grep -q 'hg_statusfile.txt' <<< "$resul
 assert_true "hg_status shows A prefix" grep -q '^A' <<< "$result"
 
 # hg_status clean repo
-(cd "$_hg_local" && hg commit -m "status test" -u "test <test@test.com>" >/dev/null 2>&1)
+(cd "$_hg_local" && hg commit -m "status test" -u "test <test@example.com>" >/dev/null 2>&1)
 result=$(cd "$_hg_local" && hg_status)
 assert_equal "hg_status clean repo" "" "$result"
 
@@ -220,7 +220,7 @@ assert_true "hg_show displays changeset" grep -q 'statusfile' <<< "$result"
 result=$(cd "$_hg_local" && hg_diffstat)
 assert_true "hg_diffstat shows changed file" grep -q 'hg_diffstatfile.txt' <<< "$result"
 assert_true "hg_diffstat shows insertion count" grep -q 'insertion' <<< "$result"
-(cd "$_hg_local" && hg commit -m "diffstat test" -u "test <test@test.com>" >/dev/null 2>&1)
+(cd "$_hg_local" && hg commit -m "diffstat test" -u "test <test@example.com>" >/dev/null 2>&1)
 
 ###############
 # Test hg addremove
@@ -236,7 +236,7 @@ result=$(cd "$_hg_local" && hg status)
 assert_true "hg_addremove adds new file" grep -q '^A hg_addremove_new.txt' <<< "$result"
 assert_true "hg_addremove removes missing file" grep -q '^R hg_statusfile.txt' <<< "$result"
 # clean up
-(cd "$_hg_local" && hg commit -m "addremove test" -u "test <test@test.com>" >/dev/null 2>&1)
+(cd "$_hg_local" && hg commit -m "addremove test" -u "test <test@example.com>" >/dev/null 2>&1)
 
 ###############
 # Test hg rename
@@ -245,7 +245,7 @@ assert_true "hg_addremove removes missing file" grep -q '^R hg_statusfile.txt' <
     cd "$_hg_local"
     echo "rename-me" > hg_renamefile.txt
     hg add hg_renamefile.txt
-    hg commit -m "add renamefile" -u "test <test@test.com>"
+    hg commit -m "add renamefile" -u "test <test@example.com>"
 )
 (cd "$_hg_local" && hg_rename hg_renamefile.txt hg_renamed.txt >/dev/null 2>&1)
 assert_true "hg_rename moves file" test -f "$_hg_local/hg_renamed.txt"
@@ -253,7 +253,7 @@ assert_false "hg_rename removes original" test -f "$_hg_local/hg_renamefile.txt"
 result=$(cd "$_hg_local" && hg status)
 assert_true "hg_rename stages add" grep -q '^A hg_renamed.txt' <<< "$result"
 assert_true "hg_rename stages remove" grep -q '^R hg_renamefile.txt' <<< "$result"
-(cd "$_hg_local" && hg commit -m "rename test" -u "test <test@test.com>" >/dev/null 2>&1)
+(cd "$_hg_local" && hg commit -m "rename test" -u "test <test@example.com>" >/dev/null 2>&1)
 
 ###############
 # Test hg remove
@@ -262,13 +262,13 @@ assert_true "hg_rename stages remove" grep -q '^R hg_renamefile.txt' <<< "$resul
     cd "$_hg_local"
     echo "remove-me" > hg_removefile.txt
     hg add hg_removefile.txt
-    hg commit -m "add removefile" -u "test <test@test.com>"
+    hg commit -m "add removefile" -u "test <test@example.com>"
 )
 (cd "$_hg_local" && hg_remove hg_removefile.txt >/dev/null 2>&1)
 assert_false "hg_remove deletes file" test -f "$_hg_local/hg_removefile.txt"
 result=$(cd "$_hg_local" && hg status)
 assert_true "hg_remove stages removal" grep -q '^R hg_removefile.txt' <<< "$result"
-(cd "$_hg_local" && hg commit -m "remove test" -u "test <test@test.com>" >/dev/null 2>&1)
+(cd "$_hg_local" && hg commit -m "remove test" -u "test <test@example.com>" >/dev/null 2>&1)
 
 ###############
 # Test hg cp
@@ -277,14 +277,14 @@ assert_true "hg_remove stages removal" grep -q '^R hg_removefile.txt' <<< "$resu
     cd "$_hg_local"
     echo "cp-me" > hg_copyfile.txt
     hg add hg_copyfile.txt
-    hg commit -m "add cpfile" -u "test <test@test.com>"
+    hg commit -m "add cpfile" -u "test <test@example.com>"
 )
 (cd "$_hg_local" && hg_copy hg_copyfile.txt hg_copyd.txt >/dev/null 2>&1)
 assert_true "hg_copy creates copy" test -f "$_hg_local/hg_copyd.txt"
 assert_true "hg_copy keeps original" test -f "$_hg_local/hg_copyfile.txt"
 result=$(cd "$_hg_local" && hg status)
 assert_true "hg_copy stages new file" grep -q '^A hg_copyd.txt' <<< "$result"
-(cd "$_hg_local" && hg commit -m "cp test" -u "test <test@test.com>" >/dev/null 2>&1)
+(cd "$_hg_local" && hg commit -m "cp test" -u "test <test@example.com>" >/dev/null 2>&1)
 
 ###############
 # Test hg mv and rm
@@ -293,24 +293,24 @@ assert_true "hg_copy stages new file" grep -q '^A hg_copyd.txt' <<< "$result"
     cd "$_hg_local"
     echo "mv-me" > hg_mvfile.txt
     hg add hg_mvfile.txt
-    hg commit -m "add mvfile" -u "test <test@test.com>"
+    hg commit -m "add mvfile" -u "test <test@example.com>"
 )
 (cd "$_hg_local" && hg_mv hg_mvfile.txt hg_mvd.txt >/dev/null 2>&1)
 assert_true "hg_mv moves file" test -f "$_hg_local/hg_mvd.txt"
 assert_false "hg_mv removes original" test -f "$_hg_local/hg_mvfile.txt"
-(cd "$_hg_local" && hg commit -m "mv test" -u "test <test@test.com>" >/dev/null 2>&1)
+(cd "$_hg_local" && hg commit -m "mv test" -u "test <test@example.com>" >/dev/null 2>&1)
 
 (
     cd "$_hg_local"
     echo "rm-me" > hg_rmfile.txt
     hg add hg_rmfile.txt
-    hg commit -m "add rmfile" -u "test <test@test.com>"
+    hg commit -m "add rmfile" -u "test <test@example.com>"
 )
 (cd "$_hg_local" && hg_rm hg_rmfile.txt >/dev/null 2>&1)
 assert_false "hg_rm deletes file" test -f "$_hg_local/hg_rmfile.txt"
 result=$(cd "$_hg_local" && hg status)
 assert_true "hg_rm stages removal" grep -q '^R hg_rmfile.txt' <<< "$result"
-(cd "$_hg_local" && hg commit -m "rm test" -u "test <test@test.com>" >/dev/null 2>&1)
+(cd "$_hg_local" && hg commit -m "rm test" -u "test <test@example.com>" >/dev/null 2>&1)
 
 ###############
 # Test hg drop
@@ -321,7 +321,7 @@ if hg help prune >/dev/null 2>&1; then
         cd "$_hg_local"
         echo "drop-content" > hg_dropfile.txt
         hg add hg_dropfile.txt
-        hg commit -m "hg drop target" -u "test <test@test.com>"
+        hg commit -m "hg drop target" -u "test <test@example.com>"
     )
     _hg_drop_rev=$(cd "$_hg_local" && hg log -r . --template '{rev}')
     (cd "$_hg_local" && hg_drop -r "$_hg_drop_rev" >/dev/null 2>&1)
@@ -369,7 +369,7 @@ if hg --config extensions.uncommit= help uncommit >/dev/null 2>&1; then
         cd "$_hg_local"
         echo "uncommit-content" > hg_uncommitfile.txt
         hg add hg_uncommitfile.txt
-        hg commit -m "hg uncommit test" -u "test <test@test.com>"
+        hg commit -m "hg uncommit test" -u "test <test@example.com>"
     )
     (cd "$_hg_local" && hg_uncommit >/dev/null 2>&1)
     result=$(cd "$_hg_local" && hg status)
@@ -377,7 +377,7 @@ if hg --config extensions.uncommit= help uncommit >/dev/null 2>&1; then
     result=$(cd "$_hg_local" && hg log -r . --template '{desc}')
     assert_false "hg_uncommit removes file from commit" grep -q 'hg uncommit test' <<< "$result"
     # clean up
-    (cd "$_hg_local" && hg add hg_uncommitfile.txt && hg commit -m "re-commit after uncommit" -u "test <test@test.com>" >/dev/null 2>&1)
+    (cd "$_hg_local" && hg add hg_uncommitfile.txt && hg commit -m "re-commit after uncommit" -u "test <test@example.com>" >/dev/null 2>&1)
 else
     echo "SKIP: hg uncommit not available"
 fi
@@ -399,10 +399,10 @@ if hg --config extensions.absorb= help absorb >/dev/null 2>&1; then
         cd "$_hg_local"
         echo "absorb-line1" > hg_absorbfile.txt
         hg add hg_absorbfile.txt
-        hg commit -m "hg absorb base commit" -u "test <test@test.com>"
+        hg commit -m "hg absorb base commit" -u "test <test@example.com>"
         echo "absorb-line2" > hg_absorbfile2.txt
         hg add hg_absorbfile2.txt
-        hg commit -m "hg absorb second commit" -u "test <test@test.com>"
+        hg commit -m "hg absorb second commit" -u "test <test@example.com>"
         # Modify a file from the first commit
         echo "absorb-line1-modified" > hg_absorbfile.txt
     )
