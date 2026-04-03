@@ -554,4 +554,27 @@ PATH="${PATH#$_gh_stub_dir:}"
 unset -f jj vcs_hosting have_command
 rm -f "$_jj_cmd_log" "$_gh_cmd_log"
 
+###############
+# Test jj map
+
+# jj_map at tip shows base (no graph markers)
+result=$(cd "$_jj_repo" && jj_map)
+assert_true "jj_map at tip produces output" test -n "$result"
+assert_false "jj_map at tip has no graph markers" grep -qE '^[@○◆]' <<< "$result"
+
+# Create two commits so we can jj edit the first and have a child above it
+_jj_map_a_id=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'change_id')
+(cd "$_jj_repo" && echo "map-a" > _jj_map_a.txt && jj commit -m "jj map base commit" >/dev/null 2>&1)
+_jj_map_b_id=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'change_id')
+(cd "$_jj_repo" && echo "map-b" > _jj_map_b.txt && jj commit -m "jj map child commit" >/dev/null 2>&1)
+
+# jj_map when editing a commit that has children shows graph
+(cd "$_jj_repo" && jj edit "$_jj_map_a_id" >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj_map)
+assert_true "jj_map when editing shows graph markers" grep -qE '^[@○◆]' <<< "$result"
+assert_true "jj_map when editing shows current commit" grep -q 'jj map base commit' <<< "$result"
+assert_true "jj_map when editing shows child commit" grep -q 'jj map child commit' <<< "$result"
+# Restore: new WC on top of the child commit
+(cd "$_jj_repo" && jj new "$_jj_map_b_id" >/dev/null 2>&1)
+
 test_summary "jj"

@@ -59,12 +59,12 @@ assert_true "git_base after commit shows new commit" grep -q 'base test commit' 
 assert_false "git_base has no @ prefix" grep -q '^@ ' <<< "$result"
 assert_false "git_base on branch not detached" grep -q '(detached)' <<< "$result"
 
-# git_base shows (detached) when HEAD is detached
+# git_base shows the current commit even when HEAD is detached (no graph)
 _detach_hash=$(cd "$_git_local" && git rev-parse HEAD)
 (cd "$_git_local" && git checkout "$_detach_hash" >/dev/null 2>&1)
 result=$(cd "$_git_local" && git_base)
-assert_false "git_base detached has no @ prefix" grep -q '^@ ' <<< "$result"
-assert_true "git_base detached shows (detached)" grep -q '(detached)' <<< "$result"
+assert_true "git_base detached shows commit" grep -q 'base test commit' <<< "$result"
+assert_false "git_base detached has no graph markers" grep -q '^\*' <<< "$result"
 (cd "$_git_local" && git checkout "$_initial_branch" >/dev/null 2>&1)
 
 # git_base changes after checkout to a different branch
@@ -117,6 +117,22 @@ assert_equal "git_graph no args shows outgoing only" \
 "$result"
 
 (cd "$_git_local" && git reset --hard HEAD~ >/dev/null 2>&1)
+
+###############
+# Test git map
+
+# git_map on a branch shows base (no graph markers)
+result=$(cd "$_git_local" && git_map)
+assert_true "git_map on branch shows commit" grep -q 'initial commit' <<< "$result"
+assert_false "git_map on branch has no graph markers" grep -q '^\*' <<< "$result"
+
+# git_map when HEAD is detached shows graph
+_git_map_hash=$(cd "$_git_local" && git rev-parse HEAD)
+(cd "$_git_local" && git checkout "$_git_map_hash" >/dev/null 2>&1)
+result=$(cd "$_git_local" && git_map)
+assert_true "git_map detached shows commit" grep -q 'initial commit' <<< "$result"
+assert_true "git_map detached has graph markers" grep -q '^\*' <<< "$result"
+(cd "$_git_local" && git checkout "$_initial_branch" >/dev/null 2>&1)
 
 ###############
 # Test git outgoing and incoming

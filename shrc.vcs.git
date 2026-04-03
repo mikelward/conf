@@ -49,6 +49,14 @@ git_base() {
     git --no-pager log -1 --oneline "$@"
 }
 
+git_map() {
+    if test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"; then
+        git_graph
+    else
+        git_base "$@"
+    fi
+}
+
 git_annotate() {
     git blame "$@"
 }
