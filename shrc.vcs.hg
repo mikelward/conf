@@ -3,6 +3,7 @@
 # {onelinesummary} is used intentionally in several functions below.
 # It can be customized via command-templates.oneline-summary in
 # .hgrc.local.
+
 hg_absorb() {
     hg --config extensions.absorb= absorb --apply-changes "$@"
 }
