@@ -16,6 +16,11 @@ hg_amend() {
 }
 
 hg_base() {
+    # say nothing if base is already public (i.e. same as remote)
+    # draft() check is purely local (phase metadata), no network calls
+    local draft
+    draft=$(hg --pager never log -r ". and draft()" --template x 2>/dev/null)
+    test -z "$draft" && return
     hg --pager never log -r . --template=oneline "$@"
 }
 

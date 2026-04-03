@@ -39,6 +39,12 @@ git_amend() {
 }
 
 git_base() {
+    # say nothing if base is the same as upstream
+    local upstream
+    upstream=$(git rev-parse @{upstream} 2>/dev/null) || { git --no-pager log -1 --oneline "$@"; return; }
+    local head
+    head=$(git rev-parse HEAD)
+    test "$head" = "$upstream" && return
     git --no-pager log -1 --oneline "$@"
 }
 
