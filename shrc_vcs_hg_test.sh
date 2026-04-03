@@ -101,6 +101,19 @@ assert_equal "hg_graph no args shows outgoing only" \
 "$result"
 
 ###############
+# Test hg at_tip
+
+# hg_at_tip at head of branch returns true
+(cd "$_hg_local" && hg_at_tip)
+assert_equal "hg_at_tip at head returns 0" "0" "$?"
+
+# hg_at_tip not at head of branch returns false
+(cd "$_hg_local" && hg update -r 0 >/dev/null 2>&1)
+(cd "$_hg_local" && hg_at_tip)
+assert_equal "hg_at_tip not at head returns 1" "1" "$?"
+(cd "$_hg_local" && hg update -r tip >/dev/null 2>&1)
+
+###############
 # Test hg map
 
 # hg_map at head shows base (no graph markers)

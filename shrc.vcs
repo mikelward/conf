@@ -228,7 +228,7 @@ upp() {
   upload
   presubmit
 }
-for command in absorb add addremove amend annotate \
+for command in absorb add addremove amend annotate at_tip \
     base blame branch branches \
     changed changelog changes checkout commit commitforce copy describe diffedit diffs diffstat drop \
     evolve fastforward fetchtime fix goto graft graph histedit ignore incoming lint map move next outgoing \
