@@ -21,10 +21,14 @@ hg_amend() {
 }
 
 hg_base() {
-    if test "$(hg --pager never log -r . --template '{rev}')" != "$(hg --pager never log -r 'last(heads(branch(.)))' --template '{rev}')"; then
-        hg --pager never log -r . --template '(not at head) {onelinesummary}\n' "$@"
+    hg --pager never log -r . --template '{onelinesummary}\n' "$@"
+}
+
+hg_map() {
+    if test -n "$(hg --pager never log -r '. and last(heads(branch(.)))' --template x 2>/dev/null)"; then
+        hg_base "$@"
     else
-        hg --pager never log -r . --template '{onelinesummary}\n' "$@"
+        hg_graph
     fi
 }
 
