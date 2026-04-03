@@ -8,11 +8,15 @@ jj_base() {
     jj --no-pager log --no-graph -r '@|@-' --template 'if(self.contained_in("@"), if(description.first_line(), "@ " ++ change_id.shortest() ++ " " ++ description.first_line() ++ "\n"), "* " ++ change_id.shortest() ++ " " ++ description.first_line() ++ "\n")' "$@"
 }
 
+jj_at_tip() {
+    test -z "$(jj --no-pager log --no-graph -r 'children(@) | (children(@-) ~ @)' --template '"x"' 2>/dev/null)"
+}
+
 jj_map() {
-    if test -n "$(jj --no-pager log --no-graph -r 'children(@)' --template '"x"' 2>/dev/null)"; then
-        jj_graph
-    else
+    if jj_at_tip; then
         jj_base "$@"
+    else
+        jj_graph
     fi
 }
 

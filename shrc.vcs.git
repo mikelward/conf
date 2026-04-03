@@ -49,11 +49,15 @@ git_base() {
     git --no-pager log -1 --oneline "$@"
 }
 
+git_at_tip() {
+    test "$(git rev-parse --abbrev-ref HEAD)" != "HEAD"
+}
+
 git_map() {
-    if test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"; then
-        git_graph
-    else
+    if git_at_tip; then
         git_base "$@"
+    else
+        git_graph
     fi
 }
 

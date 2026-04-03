@@ -119,6 +119,21 @@ assert_equal "git_graph no args shows outgoing only" \
 (cd "$_git_local" && git reset --hard HEAD~ >/dev/null 2>&1)
 
 ###############
+# Test git at_tip
+
+# git_at_tip on a branch returns true
+(cd "$_git_local" && git checkout "$_initial_branch" >/dev/null 2>&1)
+(cd "$_git_local" && git_at_tip)
+assert_equal "git_at_tip on branch returns 0" "0" "$?"
+
+# git_at_tip when HEAD is detached returns false
+_git_at_tip_hash=$(cd "$_git_local" && git rev-parse HEAD)
+(cd "$_git_local" && git checkout "$_git_at_tip_hash" >/dev/null 2>&1)
+(cd "$_git_local" && git_at_tip)
+assert_equal "git_at_tip detached returns 1" "1" "$?"
+(cd "$_git_local" && git checkout "$_initial_branch" >/dev/null 2>&1)
+
+###############
 # Test git map
 
 # git_map on a branch shows base (no graph markers)

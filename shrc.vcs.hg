@@ -24,8 +24,12 @@ hg_base() {
     hg --pager never log -r . --template '{onelinesummary}\n' "$@"
 }
 
+hg_at_tip() {
+    test -n "$(hg --pager never log -r '. and last(heads(branch(.)))' --template x 2>/dev/null)"
+}
+
 hg_map() {
-    if test -n "$(hg --pager never log -r '. and last(heads(branch(.)))' --template x 2>/dev/null)"; then
+    if hg_at_tip; then
         hg_base "$@"
     else
         hg_graph

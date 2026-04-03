@@ -555,6 +555,37 @@ unset -f jj vcs_hosting have_command
 rm -f "$_jj_cmd_log" "$_gh_cmd_log"
 
 ###############
+# Test jj at_tip
+
+# jj_at_tip with no children returns true
+(cd "$_jj_repo" && jj_at_tip)
+assert_equal "jj_at_tip no children returns 0" "0" "$?"
+
+# jj_at_tip when editing a commit with children returns false
+_jj_at_tip_a_id=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'change_id')
+(cd "$_jj_repo" && echo "at-tip-a" > _jj_at_tip_a.txt && jj commit -m "jj at_tip base" >/dev/null 2>&1)
+(cd "$_jj_repo" && echo "at-tip-b" > _jj_at_tip_b.txt && jj commit -m "jj at_tip child" >/dev/null 2>&1)
+(cd "$_jj_repo" && jj edit "$_jj_at_tip_a_id" >/dev/null 2>&1)
+(cd "$_jj_repo" && jj_at_tip)
+assert_equal "jj_at_tip with children returns 1" "1" "$?"
+# jj_at_tip with described working copy and children returns false
+(cd "$_jj_repo" && jj describe -m "described wc" >/dev/null 2>&1)
+(cd "$_jj_repo" && jj_at_tip)
+assert_equal "jj_at_tip described wc with children returns 1" "1" "$?"
+(cd "$_jj_repo" && jj describe -m "" >/dev/null 2>&1)
+# jj_at_tip when jj new to mid-tree returns false (parent has other children)
+_jj_at_tip_mid=$(cd "$_jj_repo" && jj log --no-graph -r @- -T 'change_id.shortest()')
+(cd "$_jj_repo" && jj new "$_jj_at_tip_mid" >/dev/null 2>&1)
+(cd "$_jj_repo" && jj_at_tip)
+assert_equal "jj_at_tip mid-tree new returns 1" "1" "$?"
+# jj_at_tip with described working copy at actual tip returns true
+(cd "$_jj_repo" && jj new >/dev/null 2>&1)
+(cd "$_jj_repo" && jj describe -m "described at tip" >/dev/null 2>&1)
+(cd "$_jj_repo" && jj_at_tip)
+assert_equal "jj_at_tip described wc at tip returns 0" "0" "$?"
+(cd "$_jj_repo" && jj describe -m "" >/dev/null 2>&1)
+
+###############
 # Test jj map
 
 # jj_map at tip shows base (no graph markers)
