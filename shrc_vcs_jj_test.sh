@@ -41,14 +41,14 @@ result=$(cd "$_jj_repo" && jj_base)
 assert_true "jj_base after commit shows parent" grep -q 'jj base test commit' <<< "$result"
 assert_true "jj_base after commit has * prefix" grep -q '^\* ' <<< "$result"
 
-# jj_base omits @ line when working copy has no description
+# jj_base shows @ line even when working copy has no description
 result=$(cd "$_jj_repo" && jj_base)
-assert_false "jj_base no @ line for undescribed wc" grep -q '^@ ' <<< "$result"
+assert_true "jj_base shows @ for undescribed wc" grep -q '^@ ' <<< "$result"
 
-# jj_base shows @ line when working copy has a description
+# jj_base shows @ line with description when working copy has one
 (cd "$_jj_repo" && jj describe -m "wc description" >/dev/null 2>&1)
 result=$(cd "$_jj_repo" && jj_base)
-assert_true "jj_base shows @ for described wc" grep -q '^@ .*wc description' <<< "$result"
+assert_true "jj_base shows @ with description" grep -q '^@ .*wc description' <<< "$result"
 assert_true "jj_base still shows * for parent" grep -q '^\* .*jj base test commit' <<< "$result"
 # @ line should come before * line
 _at_line=$(grep -n '^@ ' <<< "$result" | head -1 | cut -d: -f1)

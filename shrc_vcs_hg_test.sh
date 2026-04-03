@@ -40,10 +40,10 @@ hg clone "$_hg_remote" "$_hg_local" >/dev/null 2>&1
 ###############
 # Test hg base
 
-# hg_base on a fresh clone shows the initial commit with * prefix
+# hg_base on a fresh clone shows the initial commit with @ prefix
 result=$(cd "$_hg_local" && hg_base)
 assert_true "hg_base fresh clone shows commit" grep -q 'initial commit' <<< "$result"
-assert_true "hg_base fresh clone has * prefix" grep -q '^\* ' <<< "$result"
+assert_true "hg_base fresh clone has @ prefix" grep -q '^@ ' <<< "$result"
 
 # hg_base changes after a new commit
 (
@@ -54,18 +54,21 @@ assert_true "hg_base fresh clone has * prefix" grep -q '^\* ' <<< "$result"
 )
 result=$(cd "$_hg_local" && hg_base)
 assert_true "hg_base after commit shows new commit" grep -q 'hg base test commit' <<< "$result"
-assert_true "hg_base after commit has * prefix" grep -q '^\* .*hg base test commit' <<< "$result"
+assert_true "hg_base after commit has @ prefix" grep -q '^@ .*hg base test commit' <<< "$result"
+assert_false "hg_base at head not marked (not at head)" grep -q '(not at head)' <<< "$result"
 
 # hg_base changes after update to a different revision
 _hg_base_rev=$(cd "$_hg_local" && hg log -r . --template '{rev}')
 (cd "$_hg_local" && hg update -r 0 >/dev/null 2>&1)
 result=$(cd "$_hg_local" && hg_base)
 assert_true "hg_base after update shows earlier commit" grep -q 'initial commit' <<< "$result"
+assert_true "hg_base not at head shows (not at head)" grep -q '(not at head)' <<< "$result"
 
 # hg_base changes back after update to the tip
 (cd "$_hg_local" && hg update -r "$_hg_base_rev" >/dev/null 2>&1)
 result=$(cd "$_hg_local" && hg_base)
 assert_true "hg_base after update back shows latest" grep -q 'hg base test commit' <<< "$result"
+assert_false "hg_base back at head not marked (not at head)" grep -q '(not at head)' <<< "$result"
 
 ###############
 # Test hg outgoing and incoming
