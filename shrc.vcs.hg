@@ -1,6 +1,6 @@
 # register hg VCS
 hg_absorb() {
-    hg absorb "$@"
+    hg --config extensions.absorb= absorb --apply-changes "$@"
 }
 
 hg_add() {
@@ -15,8 +15,10 @@ hg_amend() {
     hg amend "$@"
 }
 
+# Uses {onelinesummary} so users can customize via
+# command-templates.oneline-summary in .hgrc
 hg_base() {
-    hg --pager never log -r . --template=oneline "$@"
+    hg --pager never log -r . --template '{onelinesummary}\n' "$@"
 }
 
 hg_annotate() {
@@ -38,7 +40,11 @@ hg_branches() {
 }
 
 hg_change() {
-   hg reword "$@"
+    if test $# -eq 0; then
+        hg commit --amend -e
+    else
+        hg commit --amend "$@"
+    fi
 }
 
 hg_changed() {
@@ -50,7 +56,7 @@ hg_changed() {
 }
 
 hg_changelog() {
-    hg log --template=oneline "$@"
+    hg log --template '{onelinesummary}\n' "$@"
 }
 
 hg_changes() {
@@ -82,7 +88,11 @@ hg_drop() {
 }
 
 hg_describe() {
-    hg reword "$@"
+    if test $# -eq 0; then
+        hg commit --amend -e
+    else
+        hg commit --amend "$@"
+    fi
 }
 
 hg_diffs() {
@@ -139,7 +149,7 @@ hg_ignore() {
 
 # show changesets that would be fetched
 hg_incoming() {
-    hg incoming --template=oneline "$@"
+    hg incoming --template '{onelinesummary}\n' "$@"
 }
 
 hg_move() {
@@ -164,7 +174,7 @@ hg_lint() {
 
 # show changesets that would be pushed
 hg_outgoing() {
-    hg --pager never --quiet log -r "draft() and not obsolete()" --template=oneline "$@"
+    hg --pager never --quiet log -r "draft() and not obsolete()" --template '{onelinesummary}\n' "$@"
 }
 
 hg_pending() {
@@ -245,7 +255,11 @@ hg_review() {
 }
 
 hg_reword() {
-    hg reword "$@"
+    if test $# -eq 0; then
+        hg commit --amend -e
+    else
+        hg commit --amend "$@"
+    fi
 }
 
 hg_rootdir() {
@@ -285,7 +299,7 @@ hg_unamend() {
 }
 
 hg_uncommit() {
-    hg uncommit "$@"
+    hg --config extensions.uncommit= uncommit "$@"
 }
 
 hg_undo() {
