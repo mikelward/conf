@@ -40,9 +40,10 @@ hg clone "$_hg_remote" "$_hg_local" >/dev/null 2>&1
 ###############
 # Test hg base
 
-# hg_base on a fresh clone shows the initial commit
+# hg_base on a fresh clone shows the initial commit with * prefix
 result=$(cd "$_hg_local" && hg_base)
 assert_true "hg_base fresh clone shows commit" grep -q 'initial commit' <<< "$result"
+assert_true "hg_base fresh clone has * prefix" grep -q '^\* ' <<< "$result"
 
 # hg_base changes after a new commit
 (
@@ -53,6 +54,7 @@ assert_true "hg_base fresh clone shows commit" grep -q 'initial commit' <<< "$re
 )
 result=$(cd "$_hg_local" && hg_base)
 assert_true "hg_base after commit shows new commit" grep -q 'hg base test commit' <<< "$result"
+assert_true "hg_base after commit has * prefix" grep -q '^\* .*hg base test commit' <<< "$result"
 
 # hg_base changes after update to a different revision
 _hg_base_rev=$(cd "$_hg_local" && hg log -r . --template '{rev}')

@@ -1,4 +1,8 @@
 # register git VCS
+#
+# --oneline is used intentionally in several functions below.
+# It respects color settings and can be customized via
+# pretty.oneline in .gitconfig.
 git_absorb() {
     git absorb "$@"
 }
@@ -39,6 +43,7 @@ git_amend() {
 }
 
 git_base() {
+    printf '* '
     git --no-pager log -1 --oneline "$@"
 }
 
