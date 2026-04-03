@@ -1,4 +1,8 @@
 # register hg VCS
+#
+# {onelinesummary} is used intentionally in several functions below.
+# It can be customized via command-templates.oneline-summary in
+# .hgrc.local.
 hg_absorb() {
     hg --config extensions.absorb= absorb --apply-changes "$@"
 }
@@ -15,10 +19,8 @@ hg_amend() {
     hg amend "$@"
 }
 
-# Uses {onelinesummary} so users can customize via
-# command-templates.oneline-summary in .hgrc
 hg_base() {
-    hg --pager never log -r . --template '{onelinesummary}\n' "$@"
+    hg --pager never log -r . --template '* {onelinesummary}\n' "$@"
 }
 
 hg_annotate() {

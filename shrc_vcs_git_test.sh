@@ -38,9 +38,10 @@ git -C "$_git_local" config core.hooksPath "$_nohooks"
 
 _initial_branch=$(cd "$_git_local" && git rev-parse --abbrev-ref HEAD)
 
-# git_base on a fresh clone shows the initial commit
+# git_base on a fresh clone shows the initial commit with * prefix
 result=$(cd "$_git_local" && git_base)
 assert_true "git_base fresh clone shows commit" grep -q 'initial commit' <<< "$result"
+assert_true "git_base fresh clone has * prefix" grep -q '^\* ' <<< "$result"
 
 # git_base shows short hash and subject
 _head_hash=$(cd "$_git_local" && git log -1 --format='%h')
@@ -55,6 +56,7 @@ assert_true "git_base includes short hash" grep -q "$_head_hash" <<< "$result"
 )
 result=$(cd "$_git_local" && git_base)
 assert_true "git_base after commit shows new commit" grep -q 'base test commit' <<< "$result"
+assert_true "git_base after commit has * prefix" grep -q '^\* .*base test commit' <<< "$result"
 
 # git_base changes after checkout to a different branch
 (
