@@ -290,10 +290,7 @@ function projectname
     end
 end
 
-# print the root directory of the current project
-function projectroot
-    return 1
-end
+# projectroot is provided by vcs.fish (sourced below)
 
 # cd to the real directory that the specified file is in, resolving symlinks
 function cdfile
@@ -575,6 +572,61 @@ if test -f $HOME/scripts/lessopen
     set --export LESSOPEN "|$HOME"'/scripts/lessopen "%s"'
 end
 
+# load version control functions (requires vcs in $PATH)
+if have_command vcs
+    set _vcs_fish (status dirname)/vcs.fish
+    if test -f $_vcs_fish
+        source $_vcs_fish
+    end
+end
+
+# ask the user whether to do something, return true if they say yes or Enter
+function confirm
+    printf '%s? [Y/n] ' "$argv"
+    read REPLY
+    switch $REPLY
+    case Y y ''
+        true
+    case '*'
+        false
+    end
+end
+
+function connected_via_ssh
+    test -n "$SSH_CONNECTION"
+end
+
+# return true if this session is on a remote machine
+function connected_remotely
+    connected_via_ssh
+end
+
+# return true if this is inside a VCS workspace/source root
+function inside_project
+    set _pr (projectroot 2>/dev/null)
+    test -n "$_pr"
+end
+
+# return true if this session is attached to shpool
+function in_shpool
+    test -n "$SHPOOL_SESSION_NAME"
+end
+
+# return true if we should try to run shpool
+function want_shpool
+    connected_remotely; or inside_project
+end
+
+function switchshpool
+    autoshpool switch $argv[1]; and exit
+end
+
+function maybe_start_shpool_and_exit
+    if not in_shpool; and want_shpool; and have_command shpool
+        autoshpool; and exit
+    end
+end
+
 #########################
 # INTERACTIVE SHELL SETUP
 # Set up the prompt, title, key bindings, etc.
@@ -691,6 +743,7 @@ if is_interactive
     # Note that grep options must go after ~/.history.
     alias gh='first_arg_last grep ~/.history -a'
     alias gitdir='git rev-parse --git-dir'
+    function github; command gh $argv; end
     alias gl='cd /var/log'
     alias h='head'
     alias headers='curl -L -i -sS -o/dev/null -D-'
@@ -723,10 +776,13 @@ if is_interactive
     end
     alias lss='lssock'
     alias j='jobs'
+    function jd; jjd $argv; end
     alias m='make -f .Makefile'
+    function mjd; jjd -f $argv; end
     alias ml='m lint'
     # shadows magtape command, but who uses that?
     alias mt='m test'
+    function n; date +"%Y%m%d%H%M%S" $argv; end
     alias now='date +"%Y-%m-%dT%H:%M:%S"'
     alias nowns='date +"%Y-%m-%dT%H:%M:%S.%N"'
     alias nv='nvim'
@@ -752,8 +808,21 @@ if is_interactive
     end
     alias q='xa'
     alias s='subl'
+    function sa; shpool attach $argv; end
+    function sd; shpool detach $argv; end
+    function asp; autoshpool $argv; end
+    function attach; shpool attach $argv; end
+    function detach; shpool detach $argv; end
+    function shpoolswitch; switchshpool $argv; end
+    function shsw; switchshpool $argv; end
+    function spa; shpool attach $argv; end
+    function spd; shpool detach $argv; end
     alias spell='aspell -a'
+    function sps; switchshpool $argv; end
     alias sr='ssh -l root'
+    function ssp; switchshpool $argv; end
+    function sw; switchshpool $argv; end
+    function swsh; switchshpool $argv; end
     alias symlink='ln -sr'
     alias t='tail'
     alias tf='t -f'
@@ -1021,10 +1090,6 @@ if is_interactive
                 grep -v '(pwd now:'
     end
 
-    function status_chars
-        :
-    end
-
     # print directory stack listing in "+<number> <directory>" format
     # intended to be used in the preprompt
     function dir_info
@@ -1090,15 +1155,6 @@ if is_interactive
         end
     end
 
-    # print the name of the current branch
-    function branch
-        :
-    end
-
-    # print the name of all branches
-    function branches
-        :
-    end
 
     function blue
         if $color
@@ -1130,26 +1186,8 @@ if is_interactive
         end
     end
 
-    # print what remote commits would get pulled
-    function incoming
-        :
-    end
-
-    # print what local commits would get pushed
-    function outgoing
-        :
-    end
-
-    # clone a version control system repo
-    function clone
-        switch $argv[1]
-        case '*.git'
-            git clone $argv
-        case '*'
-            hg clone $argv
-        end
-    end
-
+    # VCS aliases that config.fish defines (vcs.fish provides the functions,
+    # these just add the short aliases that conflict with config.fish names)
     alias am='amend'
     alias ci='commit'
     alias di='diffs'
@@ -1159,14 +1197,6 @@ if is_interactive
     alias ma='review'
     # fish reserves the word "status"
     alias st='vcs status'
-    for command in \
-        add amend annotate branch branches \
-        changed changelog changes checkout commit commitforce diffs \
-        fix graph incoming lint outgoing pending precommit presubmit pull \
-        push recommit revert review reword submit submitforce \
-        unknown upload uploadchain
-        alias $command="vcs $command"
-    end
 
     # get a short version of the hostname for use in the prompt or window title
     function short_hostname

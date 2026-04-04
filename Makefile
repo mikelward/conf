@@ -7,6 +7,8 @@ test:
 	@dash -n profile
 	@dash -n exitrc
 	@fish -n config/fish/config.fish
+	@fish -n config/fish/vcs.fish
+	@fish config_fish_test.fish
 	@dash shrc_test.sh
 	@bash shrc_test.sh
 	@bash shrc_vcs_test.sh
