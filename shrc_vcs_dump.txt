@@ -1,0 +1,1520 @@
+#!/bin/bash
+# Version control additions to .shrc.
+
+# print the name of the version control system in use in $PWD
+# TODO: implement in terms of rootdir
+vcs() {
+    (
+        IFS=' '
+        if test $# -gt 0; then
+            local vcs="$(vcs)"
+            test -z "$vcs" && return 1
+            local command=$1
+            shift
+            "${vcs}_${command}" "$@"
+            return
+        fi
+
+        # If it's not writable, assume we don't care about vcs here.
+        test -w "$PWD" || return 1
+
+        # Cache format (2 lines):
+        #   line 1: <vcs> <backend> <hosting>  (- for empty fields)
+        #   line 2: <rootdir>                  (whole line, may contain spaces)
+        local _vcs _rootdir _backend _hosting
+        if test -f .vcs_cache; then
+            { gets _vcs _backend _hosting && gets _rootdir; } <.vcs_cache
+            # Sentinels for empty fields.
+            test "$_backend" = "-" && _backend=""
+            test "$_hosting" = "-" && _hosting=""
+        elif test -w .; then
+            _rootdir="$(
+                while test "$PWD" != "/"; do
+                    test -e ".jj" && printf '%s\n' "jj" "$PWD" && break
+                    test -e ".hg" && printf '%s\n' "hg" "$PWD" && break
+                    test -e ".git" && printf '%s\n' "git" "$PWD" && break
+                    test -e ".citc" && printf '%s\n' "g4" "$PWD" && break
+                    test -e ".p4config" && printf '%s\n' "g4" "$PWD" && break
+                    cd ..
+                done
+            )"
+            if test -n "$_rootdir"; then
+                _vcs="${_rootdir%%
+*}"
+                _rootdir="${_rootdir#*
+}"
+            fi
+            # Detect backend
+            if test "$_vcs" = "jj" && test -f "$_rootdir/.jj/repo/store/type"; then
+                gets _backend <"$_rootdir/.jj/repo/store/type"
+            elif test "$_vcs" = "git"; then
+                _backend="git"
+            fi
+            # Detect hosting
+            if test "$_backend" = "git"; then
+                local _git_dir _origin_url
+                if test "$_vcs" = "jj"; then
+                    _git_dir="$_rootdir/.jj/repo/store/git"
+                else
+                    _git_dir="$_rootdir/.git"
+                fi
+                _origin_url="$(git -C "$_git_dir" remote get-url origin 2>/dev/null)"
+                case "$_origin_url" in
+                    *github.com*) _hosting="github" ;;
+                    *gitlab.com*|*gitlab.*) _hosting="gitlab" ;;
+                    *bitbucket.org*) _hosting="bitbucket" ;;
+                    *sr.ht*) _hosting="sourcehut" ;;
+                    *googlesource.com*) _hosting="gerrit" ;;
+                esac
+            fi
+            # This can fail if the filesystem is read-only.
+            # Ignore errors.
+            # Use - as sentinel for empty fields so cache always has 4 tokens.
+            if test -n "$_vcs"; then
+                { puts "$_vcs ${_backend:--} ${_hosting:--}"; puts "$_rootdir"; } >.vcs_cache 2>/dev/null
+            fi
+        fi
+        if test -z "$_vcs" || test -z "$_rootdir"; then
+            return 1
+        fi
+        puts "$_vcs"
+        test -n "$_vcs"
+    )
+}
+
+cv() {
+    find . -type f -name .vcs_cache -delete
+}
+
+rootdir() {
+    (
+        if ! test -f .vcs_cache; then
+            vcs >/dev/null 2>&1 || return 1
+        fi
+        local _vcs _rootdir _backend _hosting
+        { gets _vcs _backend _hosting && gets _rootdir; } <.vcs_cache
+        if test $# -gt 0; then
+          local _arg
+          for _arg; do
+            puts "$_rootdir/$_arg"
+          done
+        else
+          puts "$_rootdir"
+        fi
+        test -n "$_rootdir"
+    )
+}
+
+vcs_backend() {
+    (
+        if ! test -f .vcs_cache; then
+            vcs >/dev/null 2>&1 || return 1
+        fi
+        local _vcs _backend _hosting
+        gets _vcs _backend _hosting <.vcs_cache
+        test "$_backend" = "-" && _backend=""
+        puts "$_backend"
+        test -n "$_backend"
+    )
+}
+
+vcs_hosting() {
+    (
+        if ! test -f .vcs_cache; then
+            vcs >/dev/null 2>&1 || return 1
+        fi
+        local _vcs _backend _hosting
+        gets _vcs _backend _hosting <.vcs_cache
+        test "$_hosting" = "-" && _hosting=""
+        puts "$_hosting"
+        test -n "$_hosting"
+    )
+}
+
+subdir() {
+    local _subdir="$(trim_prefix "$(rootdir)" "${1:-$PWD}")"
+    puts "${_subdir#/}"
+}
+
+# hook to define any implied prefix, e.g. //depot that could be missing from
+# either side, relative_path will strip this from both sides
+implied_prefix() {
+  :
+}
+
+target_relative_to() {
+    local _target="$1"
+    local _from="${2:-.}"
+
+    # normalize "." to empty
+    test "$_from" = "." && _from=""
+    test "$_target" = "." && _target=""
+
+    # strip common leading path components
+    while test -n "$_from"; do
+        local _ff="${_from%%/*}"
+        local _ft="${_target%%/*}"
+        test "$_ff" != "$_ft" && break
+        case "$_from" in
+            */*) _from="${_from#*/}" ;;
+            *)   _from="" ;;
+        esac
+        case "$_target" in
+            */*) _target="${_target#*/}" ;;
+            *)   _target="" ;;
+        esac
+    done
+
+    # prepend ../ for each remaining component in _from
+    local _result=""
+    while test -n "$_from"; do
+        _result="../${_result}"
+        case "$_from" in
+            */*) _from="${_from#*/}" ;;
+            *)   break ;;
+        esac
+    done
+
+    _result="${_result}${_target}"
+    _result="${_result%/}"
+    test -z "$_result" && _result="."
+    puts "$_result"
+}
+
+relative_path() {
+    local _target="$1"
+    local _relative_to="${2:-$(subdir)}"
+    _target=$(trim_prefix "$(implied_prefix)" "$_target")
+    _relative_to=$(trim_prefix "$(implied_prefix)" "$_relative_to")
+    target_relative_to "$_target" "$_relative_to"
+}
+rp() { relative_path "$@"; }
+
+allknown() {
+    local unknown="$(unknown)"
+    puts "$unknown"
+    test -z "$unknown"
+}
+
+# create version control functions to do the right thing based on vcs "$PWD"
+# TODO: fork merge, etc.
+ab() { absorb "$@"; }
+ad() { add "$@"; }
+ak() { allknown "$@"; }
+am() { amend "$@"; }
+an() { annotate "$@"; }
+ann() { annotate "$@"; }
+bl() { blame "$@"; }
+change() { recommit "$@"; }
+ci() { commit "$@"; }
+cl() { changelog "$@"; }
+co() { checkout "$@"; }
+di() { diffs "$@"; }
+dr() { drop "$@"; }
+ev() { evolve "$@"; }
+ff() { fastforward "$@"; }
+gr() { graph "$@"; }
+ig() { ignore "$@"; }
+lg() { graph "$@"; }
+ma() { review "$@"; }
+pr() { presubmit "$@"; }
+re() { review "$@"; }
+ro() { rootdir "$@"; }
+sa() { save "$@"; }
+st() { status "$@"; }
+un() { undo "$@"; }
+up() { upload "$@"; }
+upp() {
+  upload
+  presubmit
+}
+for command in absorb add addremove amend annotate at_tip \
+    base blame branch branches \
+    changed changelog changes checkout commit commitforce copy describe diffedit diffs diffstat drop \
+    evolve fastforward fetchtime fix goto graft graph histedit ignore incoming lint map move next outgoing \
+    mergetool pending pick precommit presubmit prev pull push \
+    rebase recommit remove rename resolve restore revert review reword \
+    show split squash status submit submitforce track \
+    unamend uncommit undo unknown untrack upload uploadchain; do
+    # remove any alias created in .shrc
+    case "$(type "$command" 2>/dev/null)" in *alias*)
+        unalias "$command"
+        ;;
+    esac
+    # create the function
+    eval "$command"'() {
+        vcs '"$command"' "$@"
+    }'
+done
+
+cp() {
+    local _vcs="$(vcs)"
+    if test -n "$_vcs" && type "${_vcs}_copy" >/dev/null 2>&1; then
+        "${_vcs}_copy" "$@"
+    else
+        command cp "$@"
+    fi
+}
+
+mv() {
+    local _vcs="$(vcs)"
+    if test -n "$_vcs" && type "${_vcs}_mv" >/dev/null 2>&1; then
+        "${_vcs}_mv" "$@"
+    else
+        command mv "$@"
+    fi
+}
+
+rm() {
+    local _vcs="$(vcs)"
+    if test -n "$_vcs" && type "${_vcs}_rm" >/dev/null 2>&1; then
+        "${_vcs}_rm" "$@" 2>/dev/null && return
+    fi
+    command rm "$@"
+}
+
+clone() {
+    case "$1" in
+      *.git)
+        if have_command jj; then
+            jj git clone "$@"
+        elif confirm "jj is not installed. Clone using git"; then
+            git clone "$@"
+        fi
+        ;;
+      */hg*) hg clone "$@";;
+    esac
+}
+
+cr() {
+    cd "$(rootdir)"
+}
+
+rd() {
+    cd "$(rootdir)"
+}
+
+project() {
+    basename "$(projectroot)"
+}
+
+projectroot() {
+    rootdir "$@"
+}
+
+save() {
+    allknown && fix
+}
+
+status_chars() (
+    status |
+      awk '$1 ~ /^([[:upper:]?!]([[:upper:]?!])*)$/ { print $1 }' |
+      sort | uniq | tr '\n' ' ' | sed -e 's/ *$//'
+)
+
+# Create or show a GitHub pull request.
+# With no -r/-m flag, creates a draft PR.
+# With -r/-m <reviewer>, creates a PR and requests review.
+_github_review() (
+    if ! have_command gh; then
+        echo "Install gh to create PRs: https://cli.github.com" >&2
+        return 1
+    fi
+
+    declare -a _reviewers=()
+    local _head=""
+    while test $# -gt 0; do
+        case "$1" in
+            -r|-m|--reviewer) _reviewers+=("--reviewer" "$2"); shift 2 ;;
+            --reviewer=*) _reviewers+=("--reviewer" "${1#*=}"); shift ;;
+            --head) _head="$2"; shift 2 ;;
+            --head=*) _head="${1#*=}"; shift ;;
+            *) shift ;;
+        esac
+    done
+
+    # For jj non-colocated repos, export GIT_DIR so gh can find the remote
+    if test "$(vcs)" = "jj" && ! test -e "$(rootdir)/.git"; then
+        local _git_dir="$(rootdir)/.jj/repo/store/git"
+        if test -d "$_git_dir"; then
+            export GIT_DIR="$_git_dir"
+        fi
+    fi
+
+    # Check if PR already exists
+    if test -n "$_head"; then
+        command gh pr view "$_head" --json url -q .url 2>/dev/null && return
+    else
+        command gh pr view --json url -q .url 2>/dev/null && return
+    fi
+
+    # Determine default branch
+    local _base
+    _base=$(command gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null)
+    test -z "$_base" && _base="main"
+
+    declare -a _flags=(--base "$_base" --fill)
+    test -n "$_head" && _flags+=(--head "$_head")
+    if test ${#_reviewers[@]} -eq 0; then
+        _flags+=(--draft)
+    else
+        _flags+=("${_reviewers[@]}")
+    fi
+
+    command gh pr create "${_flags[@]}"
+)
+
+for f in "$HOME"/.shrc.vcs.*; do
+    if ! test -f "$f"; then
+        warn "$f is not readable"
+        continue
+    fi
+    source "$f"
+done
+# register git VCS
+#
+# --oneline is used intentionally in several functions below.
+# It respects color settings and can be customized via
+# pretty.oneline in .gitconfig.
+git_absorb() {
+    git absorb "$@"
+}
+
+git_add() {
+    git add --intent-to-add "$@"
+}
+
+git_addremove() {
+    git add --all "$@"
+}
+
+git_amend() {
+    declare -a flags
+    while test $# -gt 0; do
+        case "$1" in
+        --)
+            flags+=("$1")
+            shift
+            break
+            ;;
+        -m|-C|-c|-F|-t)
+            flags+=("$1" "$2")
+            shift 2
+            ;;
+        -*)
+            flags+=("$1")
+            shift
+            ;;
+        *)
+            break
+            ;;
+        esac
+    done
+    # no files given, commit them all
+    test $# -eq 0 && flags+=("--all")
+    git commit --amend --no-edit "${flags[@]}" "$@"
+}
+
+git_base() {
+    if test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"; then
+        printf '(detached) '
+    fi
+    git --no-pager log -1 --oneline "$@"
+}
+
+git_at_tip() {
+    test "$(git rev-parse --abbrev-ref HEAD)" != "HEAD"
+}
+
+git_map() {
+    if git_at_tip; then
+        git_base "$@"
+    else
+        git_graph
+    fi
+}
+
+git_annotate() {
+    git blame "$@"
+}
+
+git_blame() {
+    git blame "$@"
+}
+
+# print the name of the currently active git branch
+git_branch() {
+    git branch 2>/dev/null | while gets star branch; do
+        if test "$star" = "*"; then
+            puts "$branch"
+            break
+        fi
+    done
+}
+
+# print the name of all (local by default) git branches
+git_branches() {
+    git branch "$@"
+}
+
+git_changed() {
+    git diff --name-only "$@"
+}
+
+git_changelog() {
+    git log --oneline "$@"
+}
+
+git_changes() {
+    git diff "$@"
+}
+
+git_checkout() {
+    git checkout "$@"
+}
+
+git_goto() {
+    git checkout "$@"
+}
+
+git_commit() {
+    declare -a flags
+    while test $# -gt 0; do
+        case "$1" in
+        --)
+            flags+=("$1")
+            shift
+            break
+            ;;
+        -m|-C|-c|-F|-t)
+            flags+=("$1" "$2")
+            shift 2
+            ;;
+        -*)
+            flags+=("$1")
+            shift
+            ;;
+        *)
+            break
+            ;;
+        esac
+    done
+    # no files given, commit them all
+    test $# -eq 0 && flags+=("--all")
+    git commit "${flags[@]}" "$@"
+}
+
+git_commitforce() {
+    git_commit --no-verify "$@"
+}
+
+git_diffedit() {
+    git rebase --interactive "$@"
+}
+
+git_drop() {
+    git rebase --onto "${1}~" "$1"
+}
+
+git_describe() {
+    git commit --amend --only --allow-empty "$@"
+}
+
+git_diffs() {
+    git diff "$@"
+}
+
+git_diffstat() {
+    git diff --stat "$@"
+}
+
+git_evolve() {
+    warn "no automatic evolve in git; use: git rebase --onto <new> <old> <branch>"
+    return 1
+}
+
+git_fastforward() {
+    git pull --ff-only
+}
+
+git_fetchtime() {
+    local fetch_head="$(git rev-parse --git-dir)/FETCH_HEAD"
+    if test -f "$fetch_head"; then
+        stat -c %Y "$fetch_head" 2>/dev/null || stat -f %m "$fetch_head" 2>/dev/null
+    fi
+}
+
+git_fix() {
+    git fix "$@"
+}
+
+git_graft() {
+    git cherry-pick "$@"
+}
+
+git_graph() {
+    if test $# -eq 0; then
+        git --no-pager log --graph --pretty=format:'%C(auto)%h%C(auto)%d %s' "@{upstream}..HEAD" 2>/dev/null || git --no-pager log --graph --pretty=format:'%C(auto)%h%C(auto)%d %s'
+    else
+        git --no-pager log --graph --pretty=format:'%C(auto)%h%C(auto)%d %s' "$@"
+    fi
+}
+
+git_histedit() {
+    git rebase --interactive
+}
+
+git_ignore() {
+    (
+        cd "$(git root)"
+        IFS=$'\n'
+        puts "$*" >> .gitignore
+    )
+}
+
+# print commits that would be pulled
+git_incoming() {
+    git log --oneline HEAD..@{upstream}
+}
+
+git_move() {
+    git mv "$@"
+}
+
+git_next() {
+    local head child
+    head=$(git rev-parse HEAD)
+    child=$(git rev-list --children --all | awk -v h="$head" '$1 == h {print $2; exit}')
+    if test -z "$child"; then
+        warn "no next commit"
+        return 1
+    fi
+    git checkout "$child"
+}
+
+git_copy() {
+    command cp "$@" && git add "${@:$#}"
+}
+
+git_mv() {
+    git mv "$@"
+}
+
+git_lint() {
+    git lint "$@"
+}
+
+# print commits that would be pushed
+git_outgoing() {
+    git --no-pager log --oneline @{upstream}..HEAD
+}
+
+git_pending() {
+    git --no-pager log --oneline @{upstream}..HEAD 2>/dev/null || git status --short
+}
+
+git_pick() {
+    git cherry-pick "$@"
+}
+
+git_precommit() {
+    git_hook pre-commit
+}
+
+git_prereview() {
+    git_hook pre-commit
+}
+
+git_prev() {
+    git checkout HEAD~
+}
+
+git_presubmit() {
+    git_hook pre-push
+}
+
+git_projectroot() {
+    git root
+}
+
+git_pull() {
+    git pull --rebase "$@"
+}
+
+git_push() {
+    git push "$@"
+}
+
+git_hook() {
+    local script="$(git rev-parse --git-dir)/hooks/$1"
+	shift
+	if test -x "$script"; then
+	    "$script" "$@"
+	else
+		warn "No $script hook"
+	fi
+}
+
+git_rebase() {
+    git rebase "$@"
+}
+
+git_resolve() {
+    git mergetool "$@"
+}
+
+git_mergetool() {
+    git mergetool "$@"
+}
+
+git_recommit() {
+    git amend "$@"
+}
+
+git_remove() {
+    git rm "$@"
+}
+
+git_rename() {
+    git mv "$@"
+}
+
+git_rm() {
+    git rm "$@"
+}
+
+git_restore() {
+   git checkout -- "$@"
+}
+
+git_revert() {
+    if test $# -eq 0; then
+        git reset --hard HEAD
+    else
+        git checkout -- "$@"
+    fi
+}
+
+_git_github_review() {
+    declare -a _reviewers=()
+    declare -a _push_flags=()
+    local _hosting
+    _hosting="$(vcs_hosting)"
+
+    while test $# -gt 0; do
+        case "$1" in
+            -r|-m|--reviewer) _reviewers+=("$2"); shift 2 ;;
+            --reviewer=*) _reviewers+=("${1#*=}"); shift ;;
+            *) _push_flags+=("$1"); shift ;;
+        esac
+    done
+
+    if test "$_hosting" = "gerrit"; then
+        local _reviewer_suffix=""
+        local _r
+        for _r in "${_reviewers[@]}"; do
+            _reviewer_suffix="${_reviewer_suffix}%r=$_r"
+        done
+        git push origin "HEAD:refs/for/master/$(git_branch)${_reviewer_suffix}" "${_push_flags[@]}"
+    elif test "$_hosting" = "github"; then
+        git push "${_push_flags[@]}" || return
+        declare -a _review_flags=()
+        local _r
+        for _r in "${_reviewers[@]}"; do
+            _review_flags+=(-r "$_r")
+        done
+        _github_review "${_review_flags[@]}"
+    else
+        git push "${_push_flags[@]}"
+    fi
+}
+
+# send the current change for review
+git_review() {
+    _git_github_review "$@"
+}
+
+git_reword() {
+    git commit --amend --only --allow-empty
+}
+
+git_rootdir() {
+    git rootdir
+}
+
+git_status() {
+    git status --short --untracked-files=all "$@"
+}
+
+git_show() {
+    git show "$@"
+}
+
+git_split() {
+    git rebase -i "$@"
+}
+
+git_squash() {
+    git merge --squash "$@"
+}
+
+git_submit() {
+    git push "$@"
+}
+
+git_submitforce() {
+    git push --no-verify "$@"
+}
+
+git_track() {
+    git add --intent-to-add "$@"
+}
+
+git_undo() {
+    git reset --mixed HEAD~
+}
+
+git_unamend() {
+    # Note --mixed. We assume we want to revert the index, too, as if the index
+    # didn't exist, the same as other aliases here.
+    git reset --mixed HEAD@{1}
+}
+
+git_uncommit() {
+    git reset --soft HEAD~
+}
+
+git_unknown() (
+    cd "$(git rootdir)"
+    git ls-files -od --exclude-standard
+)
+
+git_untrack() {
+    git rm --cached "$@"
+}
+
+git_upload() {
+    _git_github_review "$@"
+}
+
+git_uploadchain() {
+    _git_github_review "$@"
+}
+# register hg VCS
+#
+# {onelinesummary} is used intentionally in several functions below.
+# It can be customized via command-templates.oneline-summary in
+# .hgrc.local.
+
+hg_absorb() {
+    hg --config extensions.absorb= absorb --apply-changes "$@"
+}
+
+hg_add() {
+    hg add "$@"
+}
+
+hg_addremove() {
+    hg addremove "$@"
+}
+
+hg_amend() {
+    hg amend "$@"
+}
+
+hg_base() {
+    hg --pager never log -r . --template '{onelinesummary}\n' "$@"
+}
+
+hg_at_tip() {
+    test -n "$(hg --pager never log -r '. and last(heads(branch(.)))' --template x 2>/dev/null)"
+}
+
+hg_map() {
+    if hg_at_tip; then
+        hg_base "$@"
+    else
+        hg_graph
+    fi
+}
+
+hg_annotate() {
+    hg annotate "$@"
+}
+
+hg_blame() {
+    hg blame "$@"
+}
+
+# print the name of the currently active mercurial branch
+hg_branch() {
+    hg branch 2>/dev/null
+}
+
+# print the name of all mercurial branches
+hg_branches() {
+    hg branches
+}
+
+hg_change() {
+    if test $# -eq 0; then
+        hg commit --amend -e
+    else
+        hg commit --amend "$@"
+    fi
+}
+
+hg_changed() {
+    if test $# -eq 0; then
+        hg status --no-status
+    else
+        hg log "$@" --template "{files}\n"
+    fi
+}
+
+hg_changelog() {
+    hg log --template '{onelinesummary}\n' "$@"
+}
+
+hg_changes() {
+    hg diff "$@"
+}
+
+hg_checkout() {
+    hg checkout "$@"
+}
+
+hg_goto() {
+    hg update "$@"
+}
+
+hg_commit() {
+    hg commit "$@"
+}
+
+hg_commitforce() {
+    hg --config hooks.precommit= --config hooks.pre-commit= commit "$@"
+}
+
+hg_diffedit() {
+    hg histedit "$@"
+}
+
+hg_drop() {
+    hg prune "$@"
+}
+
+hg_describe() {
+    if test $# -eq 0; then
+        hg commit --amend -e
+    else
+        hg commit --amend "$@"
+    fi
+}
+
+hg_diffs() {
+    hg diff "$@"
+}
+
+hg_diffstat() {
+    hg diff --stat "$@"
+}
+
+hg_evolve() {
+    hg evolve "$@"
+}
+
+hg_fastforward() {
+    if hg sync --tool=internal:fail; then
+        true
+    else
+        hg rebase --abort
+        false
+    fi
+}
+
+hg_fetchtime() {
+    local changelog="$(hg root)/.hg/store/00changelog.i"
+    if test -f "$changelog"; then
+        stat -c %Y "$changelog" 2>/dev/null || stat -f %m "$changelog" 2>/dev/null
+    fi
+}
+
+hg_fix() {
+    hg fix "$@"
+}
+
+hg_graft() {
+    hg graft "$@"
+}
+
+hg_graph() {
+    if test $# -eq 0; then
+        hg --pager never log --graph --template oneline -r 'draft() and not obsolete()'
+    else
+        hg --pager never log --graph --template oneline "$@"
+    fi
+}
+
+hg_histedit() {
+    hg histedit
+}
+
+hg_ignore() {
+    (
+        cd "$(hg root)"
+        IFS=$'\n'
+        puts "$*" >> .hgignore
+    )
+}
+
+# show changesets that would be fetched
+hg_incoming() {
+    hg incoming --template '{onelinesummary}\n' "$@"
+}
+
+hg_move() {
+    hg rename "$@"
+}
+
+hg_next() {
+    hg update -r "min(children(.))" "$@"
+}
+
+hg_copy() {
+    hg copy "$@"
+}
+
+hg_mv() {
+    hg rename "$@"
+}
+
+hg_lint() {
+    hg lint "$@"
+}
+
+# show changesets that would be pushed
+hg_outgoing() {
+    hg --pager never --quiet log -r "draft() and not obsolete()" --template '{onelinesummary}\n' "$@"
+}
+
+hg_pending() {
+    hg --pager never status
+}
+
+hg_pick() {
+    hg graft "$@"
+}
+
+hg_precommit() {
+    hg precommit "$@"
+}
+
+hg_prereview() {
+    hg prereview "$@"
+}
+
+hg_prev() {
+    hg update -r ".^" "$@"
+}
+
+hg_presubmit() {
+    hg presubmit "$@"
+}
+
+hg_projectroot() {
+    hg root
+}
+
+hg_pull() {
+    hg pull --update --rebase "$@"
+}
+
+hg_push() {
+    hg push "$@"
+}
+
+hg_rebase() {
+    hg rebase "$@"
+}
+
+hg_resolve() {
+    hg resolve "$@"
+}
+
+hg_mergetool() {
+    hg resolve "$@"
+}
+
+hg_recommit() {
+    hg commit --amend "$@"
+}
+
+hg_remove() {
+    hg remove "$@"
+}
+
+hg_rename() {
+    hg rename "$@"
+}
+
+hg_rm() {
+    hg remove "$@"
+}
+
+hg_restore() {
+    hg revert "$@"
+}
+
+hg_revert() {
+    hg revert "$@"
+}
+
+hg_review() {
+    warn "hg review not supported"
+    false
+}
+
+hg_reword() {
+    if test $# -eq 0; then
+        hg commit --amend -e
+    else
+        hg commit --amend "$@"
+    fi
+}
+
+hg_rootdir() {
+    hg root
+}
+
+hg_show() {
+    hg export "$@"
+}
+
+hg_split() {
+    hg split "$@"
+}
+
+hg_squash() {
+    hg fold "$@"
+}
+
+hg_submit() {
+    hg submit
+}
+
+hg_submitforce() {
+    hg --config hooks.preoutgoing= --config hooks.pre-push= submit
+}
+
+hg_status() {
+    hg status "$@"
+}
+
+hg_track() {
+    hg add "$@"
+}
+
+hg_unamend() {
+    hg unamend "$@"
+}
+
+hg_uncommit() {
+    hg --config extensions.uncommit= uncommit "$@"
+}
+
+hg_undo() {
+    hg undo "$@"
+}
+
+hg_unknown() {
+    hg status --unknown --deleted
+}
+
+hg_untrack() {
+    hg forget "$@"
+}
+
+hg_upload() {
+    test $# -eq 0 && set -- -r .
+    hg push "$@"
+}
+
+hg_uploadchain() {
+    hg uploadchain "$@"
+}
+# vim: set ft=sh:
+
+jj_absorb() {
+    jj absorb "$@"
+}
+
+jj_base() {
+    jj --no-pager log --no-graph -r '@|@-' --template 'if(self.contained_in("@"), if(description.first_line(), "@ " ++ change_id.shortest() ++ " " ++ description.first_line() ++ "\n"), "* " ++ change_id.shortest() ++ " " ++ description.first_line() ++ "\n")' "$@"
+}
+
+jj_at_tip() {
+    test -z "$(jj --no-pager log --no-graph -r 'children(@) | (children(@-) ~ @)' --template '"x"' 2>/dev/null)"
+}
+
+jj_map() {
+    if jj_at_tip; then
+        jj_base "$@"
+    else
+        jj_graph
+    fi
+}
+
+jj_add() {
+    jj file track "$@"
+}
+
+jj_addremove() {
+    # jj auto-tracks all files; nothing to do
+    :
+}
+
+jj_amend() {
+    jj squash "$@"
+}
+
+jj_annotate() {
+    jj file annotate "$@"
+}
+
+jj_blame() {
+    jj file blame "$@"
+}
+
+jj_branch() {
+  # there is no current bookmark in jj
+  :
+}
+
+# print the name of all bookmarks
+jj_branches() {
+    jj bookmark list
+}
+
+jj_change() {
+    jj describe "$@"
+}
+
+jj_describe() {
+    jj describe "$@"
+}
+
+jj_changed() {
+    jj diff --summary "$@"
+}
+
+jj_changelog() {
+    jj log --template=builtin_log_oneline "$@"
+}
+
+jj_changes() {
+    jj diff "$@"
+}
+
+jj_checkout() {
+    jj new "$@"
+}
+
+jj_goto() {
+    jj new "$@"
+}
+
+jj_commit() {
+    jj commit "$@"
+}
+
+jj_commitforce() {
+    jj commit "$@"
+}
+
+jj_diffedit() {
+    jj diffedit "$@"
+}
+
+jj_drop() {
+    jj abandon "$@"
+}
+
+jj_diffs() {
+    jj diff "$@"
+}
+
+jj_diffstat() {
+    jj diff --stat "$@"
+}
+
+jj_fastforward() {
+    if test "$(vcs_backend)" = "git"; then
+        jj git fetch "$@"
+    else
+        jj piper pull
+    fi
+}
+
+jj_fetchtime() {
+    local fetch_head="$(jj workspace root)/.jj/repo/store/git/FETCH_HEAD"
+    if test -f "$fetch_head"; then
+        stat -c %Y "$fetch_head" 2>/dev/null || stat -f %m "$fetch_head" 2>/dev/null
+    fi
+}
+
+jj_fix() {
+    jj fix "$@"
+}
+
+jj_graft() {
+    jj duplicate "$@"
+}
+
+jj_graph() {
+    if test $# -eq 0; then
+        jj log --template 'change_id.shortest() ++ " " ++ if(description, description.first_line(), "(no description set)") ++ if(bookmarks, " [" ++ bookmarks.join(", ") ++ "]", "") ++ "\n"' -r 'mutable() ~ empty() ~ ancestors(remote_bookmarks())'
+    else
+        jj log --template 'change_id.shortest() ++ " " ++ if(description, description.first_line(), "(no description set)") ++ if(bookmarks, " [" ++ bookmarks.join(", ") ++ "]", "") ++ "\n"' "$@"
+    fi
+}
+
+jj_histedit() {
+    warn "no interactive histedit in jj; use: jj squash, jj split, jj edit"
+    return 1
+}
+
+jj_ignore() {
+    (
+        cd "$(jj workspace root)"
+        IFS=$'\n'
+        puts "$*" >> .gitignore
+    )
+}
+
+jj_incoming() {
+    jj op log "$@"
+}
+
+jj_move() {
+    jj_rename "$@"
+}
+
+jj_next() {
+    jj next "$@"
+}
+
+jj_copy() {
+    command cp "$@"
+}
+
+jj_mv() {
+    jj_rename "$@"
+}
+
+jj_lint() {
+    jj fix "$@"
+}
+
+jj_outgoing() {
+    jj --no-pager log --no-graph -r 'mutable() ~ empty() ~ ancestors(remote_bookmarks())' --template 'change_id.shortest() ++ " " ++ description.first_line() ++ "\n"' "$@"
+}
+
+jj_pending() {
+    jj --no-pager log -r 'mutable() ~ empty()' "$@"
+}
+
+jj_pick() {
+    jj duplicate "$@"
+}
+
+jj_precommit() {
+    jj fix "$@"
+}
+
+jj_prev() {
+    jj prev "$@"
+}
+
+jj_presubmit() {
+    if test "$(vcs_backend)" = "git"; then
+        warn "no presubmit for git-backed repos; run tests locally"
+    else
+        jj piper presubmit "$@"
+    fi
+}
+
+jj_projectroot() {
+    jj workspace root
+}
+
+jj_pull() {
+    if test "$(vcs_backend)" = "git"; then
+        jj git fetch "$@"
+    else
+        jj sync "$@"
+    fi
+}
+
+jj_push() {
+    if test "$(vcs_backend)" = "git"; then
+        jj git push "$@"
+    else
+        jj upload "$@"
+    fi
+}
+
+jj_rebase() {
+    jj rebase "$@"
+}
+
+jj_evolve() {
+    warn "jj automatically rebases descendants; nothing to do"
+}
+
+jj_recommit() {
+    jj describe "$@"
+}
+
+jj_remove() {
+    command rm "$@"
+    jj file untrack "$@"
+}
+
+jj_rm() {
+    jj_remove "$@"
+}
+
+jj_rename() {
+    if test $# -ne 2; then
+        error "usage: rename <source> <dest>"
+        return 1
+    fi
+    command mv "$1" "$2"
+}
+
+_jj_github_review() {
+    declare -a _review_flags=()
+    declare -a _push_flags=()
+    while test $# -gt 0; do
+        case "$1" in
+            -r|-m|--reviewer) _review_flags+=(-r "$2"); shift 2 ;;
+            --reviewer=*) _review_flags+=(-r "${1#*=}"); shift ;;
+            *) _push_flags+=("$1"); shift ;;
+        esac
+    done
+
+    if test "$(vcs_backend)" = "git"; then
+        jj git push "${_push_flags[@]}" || return
+        if test "$(vcs_hosting)" = "github"; then
+            local _bookmark
+            _bookmark=$(jj bookmark list -r @ 2>/dev/null | head -1 | cut -d: -f1)
+            test -n "$_bookmark" && _review_flags+=(--head "$_bookmark")
+            _github_review "${_review_flags[@]}"
+        fi
+    else
+        jj upload "${_push_flags[@]}"
+    fi
+}
+
+jj_review() {
+    _jj_github_review "$@"
+}
+
+jj_resolve() {
+    jj resolve "$@"
+}
+
+jj_mergetool() {
+    jj resolve "$@"
+}
+
+jj_restore() {
+    jj restore "$@"
+}
+
+jj_revert() {
+    jj revert "$@"
+}
+
+jj_reword() {
+    if test $# -eq 0; then
+        jj describe
+    else
+        jj describe -m "$@"
+    fi
+}
+
+jj_rootdir() {
+    jj workspace root
+}
+
+jj_show() {
+    jj show "$@"
+}
+
+jj_split() {
+    jj split "$@"
+}
+
+jj_squash() {
+    jj squash "$@"
+}
+
+jj_status() {
+    # Only show status for undescribed commits (the jj equivalent of
+    # uncommitted changes).  Described commits are "done".
+    local desc
+    desc="$(jj log --no-graph -r @ -T 'description' 2>/dev/null)" || return
+    if test -z "$desc"; then
+        jj diff --summary "$@"
+    fi
+}
+
+jj_submit() {
+    if test "$(vcs_backend)" = "git"; then
+        jj git push "$@"
+    else
+        jj submit "$@"
+    fi
+}
+
+jj_submitforce() {
+    if test "$(vcs_backend)" = "git"; then
+        jj git push "$@"
+    else
+        jj submit "$@"
+    fi
+}
+
+jj_track() {
+    jj file track "$@"
+}
+
+jj_unamend() {
+    jj undo "$@"
+}
+
+jj_uncommit() {
+    jj squash --from @- --into @ "$@"
+}
+
+jj_undo() {
+    jj undo "$@"
+}
+
+jj_unknown() {
+    jj file list --untracked "$@"
+}
+
+jj_untrack() {
+    jj untrack "$@"
+}
+
+jj_upload() {
+    _jj_github_review "$@"
+}
+
+jj_uploadchain() {
+    _jj_github_review "$@"
+}
