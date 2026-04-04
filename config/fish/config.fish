@@ -494,6 +494,31 @@ function first_arg_last
     $command $argv $arg
 end
 
+# shift options (arguments starting with -) before a fixed target argument
+# e.g. shift_options ssh somehost -v hostname --fqdn
+#   => ssh -v somehost hostname --fqdn
+#
+# supports -fsomefile and --file=somefile formats
+# options after -- are not shifted
+function shift_options
+    set _command $argv[1]
+    set _target $argv[2]
+    set --erase argv[1..2]
+    set _options
+    while test (count $argv) -gt 0
+        switch $argv[1]
+        case - --
+            break
+        case '-*'
+            set --append _options $argv[1]
+            set --erase argv[1]
+        case '*'
+            break
+        end
+    end
+    $_command $_options $_target $argv
+end
+
 # convert a time from one timezone to another
 # tz2tz <from timezone> <to timezone> <date spec>
 function tz2tz
@@ -754,13 +779,20 @@ if is_interactive
     alias xr='DISPLAY=:0.0 xrandr'
 
     function set_up_ssh_aliases
-        set _ssh_machines $HOME/.ssh/machines
-        test -f $_ssh_machines; or return
+        test -f $HOME/.ssh/config; or return
 
-        while read fqdn
-            set short (string match --regex '^[^.]*' $fqdn)
-            printf 'alias %s="ssh %s"' $short $fqdn | source
-        end <$_ssh_machines
+        while read _field1 _rest
+            switch $_field1
+            case Host host
+                for _alias in (string split ' ' $_rest)
+                    # skip wildcards and patterns
+                    string match --quiet '*\**' $_alias; and continue
+                    string match --quiet '*\?*' $_alias; and continue
+                    string match --quiet '*-*' $_alias; and continue
+                    eval "function $_alias; shift_options ssh -t $_alias \$argv; end"
+                end
+            end
+        end <$HOME/.ssh/config
     end
     set_up_ssh_aliases
 
