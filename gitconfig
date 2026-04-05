@@ -117,6 +117,9 @@
 [push]
     default = current
 
+[submodule]
+    recurse = true
+
 [init]
     templatedir = ~/.gittemplates
     defaultBranch = main
