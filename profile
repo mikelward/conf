@@ -27,6 +27,12 @@ fi
 # XXX temporarily disabled due to https://github.com/kovidgoyal/kitty/issues/1867
 #test -f "$HOME"/.exitrc && trap '. "$HOME/.exitrc"' EXIT
 
+# Build and install vcs tools from the submodule if present and Go is available.
+# make is a no-op (~30ms) when sources haven't changed, so this is safe on every login.
+if test -f "$HOME/conf/vcs/Makefile" && command -v go >/dev/null 2>&1; then
+    make -C "$HOME/conf/vcs" install PREFIX="$HOME/.local" >/dev/null 2>&1
+fi
+
 if test -t 0; then
     # disable flow control so applications can use ^Q and ^S
     type stty >/dev/null 2>/dev/null && stty -ixon

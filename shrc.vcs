@@ -1,6 +1,61 @@
 #!/bin/bash
 # Version control additions to .shrc.
 
+# When the vcs binary is available, use it for detection and commands.
+# Otherwise fall back to the shell implementation.
+if have_command vcs; then
+
+vcs() {
+    if test $# -eq 0; then
+        command vcs detect
+    else
+        command vcs "$@"
+    fi
+}
+
+cv() {
+    command vcs clearcache
+}
+
+rootdir() {
+    command vcs rootdir "$@"
+}
+
+vcs_backend() {
+    command vcs backend
+}
+
+vcs_hosting() {
+    command vcs hosting
+}
+
+# Use vcs binary for cp/mv/rm overrides.
+cp() {
+    if command vcs detect >/dev/null 2>&1; then
+        command vcs copy "$@"
+    else
+        command cp "$@"
+    fi
+}
+
+mv() {
+    if command vcs detect >/dev/null 2>&1; then
+        command vcs move "$@"
+    else
+        command mv "$@"
+    fi
+}
+
+rm() {
+    if command vcs detect >/dev/null 2>&1; then
+        command vcs remove "$@" 2>/dev/null && return
+    fi
+    command rm "$@"
+}
+
+else
+# Fallback: shell-only VCS implementation (no vcs binary).
+
 # print the name of the version control system in use in $PWD
 # TODO: implement in terms of rootdir
 vcs() {
@@ -131,6 +186,35 @@ vcs_hosting() {
     )
 }
 
+cp() {
+    local _vcs="$(vcs)"
+    if test -n "$_vcs" && type "${_vcs}_copy" >/dev/null 2>&1; then
+        "${_vcs}_copy" "$@"
+    else
+        command cp "$@"
+    fi
+}
+
+mv() {
+    local _vcs="$(vcs)"
+    if test -n "$_vcs" && type "${_vcs}_mv" >/dev/null 2>&1; then
+        "${_vcs}_mv" "$@"
+    else
+        command mv "$@"
+    fi
+}
+
+rm() {
+    local _vcs="$(vcs)"
+    if test -n "$_vcs" && type "${_vcs}_rm" >/dev/null 2>&1; then
+        "${_vcs}_rm" "$@" 2>/dev/null && return
+    fi
+    command rm "$@"
+}
+
+fi
+# End of binary vs. shell-fallback split.
+
 subdir() {
     local _subdir="$(trim_prefix "$(rootdir)" "${1:-$PWD}")"
     puts "${_subdir#/}"
@@ -247,32 +331,6 @@ for command in absorb add addremove amend annotate at_tip \
     }'
 done
 
-cp() {
-    local _vcs="$(vcs)"
-    if test -n "$_vcs" && type "${_vcs}_copy" >/dev/null 2>&1; then
-        "${_vcs}_copy" "$@"
-    else
-        command cp "$@"
-    fi
-}
-
-mv() {
-    local _vcs="$(vcs)"
-    if test -n "$_vcs" && type "${_vcs}_mv" >/dev/null 2>&1; then
-        "${_vcs}_mv" "$@"
-    else
-        command mv "$@"
-    fi
-}
-
-rm() {
-    local _vcs="$(vcs)"
-    if test -n "$_vcs" && type "${_vcs}_rm" >/dev/null 2>&1; then
-        "${_vcs}_rm" "$@" 2>/dev/null && return
-    fi
-    command rm "$@"
-}
-
 clone() {
     case "$1" in
       *.git)
@@ -364,10 +422,13 @@ _github_review() (
     command gh pr create "${_flags[@]}"
 )
 
-for f in "$HOME"/.shrc.vcs.*; do
-    if ! test -f "$f"; then
-        warn "$f is not readable"
-        continue
-    fi
-    source "$f"
-done
+# Only source shell VCS implementations when the vcs binary is not available.
+if ! have_command vcs; then
+    for f in "$HOME"/.shrc.vcs.*; do
+        if ! test -f "$f"; then
+            warn "$f is not readable"
+            continue
+        fi
+        source "$f"
+    done
+fi
