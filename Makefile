@@ -1,3 +1,12 @@
+install: install-dotfiles install-vcs
+
+install-dotfiles:
+	confinst
+
+install-vcs:
+	git submodule update --init vcs
+	$(MAKE) -C vcs install
+
 test:
 	@shellcheck -s bash -S error shrc
 	@dash -n shrc
@@ -12,3 +21,6 @@ test:
 	@bash shrc_vcs_test.sh
 	@bash shrc_vcs_binary_test.sh
 	@bash shrc_prompt_test.sh
+	@bash makefile_test.sh
+
+.PHONY: install install-dotfiles install-vcs test
