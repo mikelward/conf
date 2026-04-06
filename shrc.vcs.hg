@@ -220,6 +220,57 @@ hg_presubmit() {
     hg presubmit "$@"
 }
 
+hg_prompt_info() {
+    local _green="${green:-}" _blue="${blue:-}" _yellow="${yellow:-}" _normal="${normal:-}"
+
+    local _rootdir
+    _rootdir="$(rootdir 2>/dev/null)" || _rootdir="$(hg root 2>/dev/null)" || return 1
+    local _project
+    _project="$(basename "$_rootdir")"
+    local _subdir="${PWD#"$_rootdir"}"
+    _subdir="${_subdir#/}"
+
+    local _branch
+    _branch="$(hg branch 2>/dev/null)"
+
+    # Status chars
+    local _status_output
+    _status_output="$(hg status 2>/dev/null)"
+    local _status_chars=""
+    if test -n "$_status_output"; then
+        _status_chars="$(printf '%s\n' "$_status_output" | awk '$1 ~ /^([[:upper:]?!]([[:upper:]?!])*)$/ { print $1 }' | sort -u | tr '\n' ' ')"
+        _status_chars="${_status_chars% }"
+    fi
+
+    # Fetch staleness
+    local _fetch_stale=""
+    local _changelog="$_rootdir/.hg/store/00changelog.i"
+    if test -f "$_changelog"; then
+        local _ts _now _age
+        _ts=$(stat -c %Y "$_changelog" 2>/dev/null || stat -f %m "$_changelog" 2>/dev/null)
+        if test -n "$_ts"; then
+            _now=$(date +%s)
+            _age=$((_now - _ts))
+            test "$_age" -gt 86400 && _fetch_stale="fetch"
+        fi
+    fi
+
+    # Build dir info line
+    printf '%s%s%s' "$_green" "$_project" "$_normal"
+    test -n "$_subdir" && printf ' %s%s%s' "$_blue" "$_subdir" "$_normal"
+    test -n "$_branch" && printf ' %s' "$_branch"
+    test -n "$_status_chars" && printf ' %s%s%s' "$_yellow" "$_status_chars" "$_normal"
+    test -n "$_fetch_stale" && printf ' %s%s%s' "$_yellow" "$_fetch_stale" "$_normal"
+    printf '\n'
+
+    # Map output
+    if hg_at_tip; then
+        hg --pager never log -r . --template '{onelinesummary}\n' 2>/dev/null
+    else
+        hg --pager never log --graph --template oneline -r 'draft() and not obsolete()' 2>/dev/null
+    fi
+}
+
 hg_projectroot() {
     hg root
 }

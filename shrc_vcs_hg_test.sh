@@ -474,4 +474,68 @@ else
     echo "SKIP: hg absorb not available (absorb extension not installed)"
 fi
 
+###############
+# Test hg prompt_info
+
+# Disable colors for predictable output
+green='' blue='' yellow='' normal=''
+
+# hg_prompt_info at repo root shows project name and branch
+result=$(cd "$_hg_local" && hg_prompt_info)
+_pi_project="$(basename "$_hg_local")"
+_pi_branch=$(cd "$_hg_local" && hg branch)
+_pi_dir_line="${result%%$'\n'*}"
+assert_contains "hg_prompt_info shows project name" "$_pi_project" "$_pi_dir_line"
+assert_contains "hg_prompt_info shows branch" "$_pi_branch" "$_pi_dir_line"
+
+# hg_prompt_info includes map output (second line)
+_pi_map_line=""
+case "$result" in *$'\n'*) _pi_map_line="${result#*$'\n'}" ;; esac
+assert_true "hg_prompt_info includes map output" test -n "$_pi_map_line"
+
+# hg_prompt_info from subdirectory shows subdir
+mkdir -p "$_hg_local/sub/dir"
+result=$(cd "$_hg_local/sub/dir" && hg_prompt_info)
+_pi_dir_line="${result%%$'\n'*}"
+assert_contains "hg_prompt_info shows subdir" "sub/dir" "$_pi_dir_line"
+
+# hg_prompt_info with dirty files shows status chars
+(cd "$_hg_local" && echo "dirty" > _pi_dirty.txt)
+result=$(cd "$_hg_local" && hg_prompt_info)
+_pi_dir_line="${result%%$'\n'*}"
+assert_contains "hg_prompt_info dirty shows ?" "?" "$_pi_dir_line"
+
+# hg_prompt_info with added files shows status chars
+(cd "$_hg_local" && hg add _pi_dirty.txt)
+result=$(cd "$_hg_local" && hg_prompt_info)
+_pi_dir_line="${result%%$'\n'*}"
+assert_contains "hg_prompt_info added shows A" "A" "$_pi_dir_line"
+(cd "$_hg_local" && hg commit -m "prompt_info dirty test" -u "test <test@example.com>" >/dev/null 2>&1)
+
+# hg_prompt_info clean repo has no status chars
+result=$(cd "$_hg_local" && hg_prompt_info)
+_pi_dir_line="${result%%$'\n'*}"
+assert_equal "hg_prompt_info clean dir line" "$_pi_project $_pi_branch" "$_pi_dir_line"
+
+# Performance: time prompt_info vs separate calls
+_pi_start=$(date +%s%N 2>/dev/null || echo "0")
+for _i in $(seq 1 10); do
+    (cd "$_hg_local" && hg_prompt_info >/dev/null 2>&1)
+done
+_pi_end=$(date +%s%N 2>/dev/null || echo "0")
+if test "$_pi_start" != "0" && test "$_pi_end" != "0"; then
+    _pi_combined_ms=$(( (_pi_end - _pi_start) / 1000000 ))
+    echo "  10 x hg_prompt_info: ${_pi_combined_ms}ms"
+fi
+
+_pi_start=$(date +%s%N 2>/dev/null || echo "0")
+for _i in $(seq 1 10); do
+    (cd "$_hg_local" && hg_branch >/dev/null 2>&1 && hg_status >/dev/null 2>&1 && hg_map >/dev/null 2>&1)
+done
+_pi_end=$(date +%s%N 2>/dev/null || echo "0")
+if test "$_pi_start" != "0" && test "$_pi_end" != "0"; then
+    _pi_separate_ms=$(( (_pi_end - _pi_start) / 1000000 ))
+    echo "  10 x branch+status+map: ${_pi_separate_ms}ms"
+fi
+
 test_summary "hg"

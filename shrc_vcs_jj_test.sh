@@ -608,4 +608,64 @@ assert_true "jj_map when editing shows child commit" grep -q 'jj map child commi
 # Restore: new WC on top of the child commit
 (cd "$_jj_repo" && jj new "$_jj_map_b_id" >/dev/null 2>&1)
 
+###############
+# Test jj prompt_info
+
+# Disable colors for predictable output
+green='' blue='' yellow='' normal=''
+
+# jj_prompt_info at repo root shows project name (no branch for jj)
+result=$(cd "$_jj_repo" && jj_prompt_info)
+_pi_project="$(basename "$_jj_repo")"
+_pi_dir_line="${result%%$'\n'*}"
+assert_contains "jj_prompt_info shows project name" "$_pi_project" "$_pi_dir_line"
+
+# jj_prompt_info includes map output (second line)
+_pi_map_line=""
+case "$result" in *$'\n'*) _pi_map_line="${result#*$'\n'}" ;; esac
+assert_true "jj_prompt_info includes map output" test -n "$_pi_map_line"
+
+# jj_prompt_info from subdirectory shows subdir
+mkdir -p "$_jj_repo/sub/dir"
+result=$(cd "$_jj_repo/sub/dir" && jj_prompt_info)
+_pi_dir_line="${result%%$'\n'*}"
+assert_contains "jj_prompt_info shows subdir" "sub/dir" "$_pi_dir_line"
+
+# jj_prompt_info with undescribed changes shows status chars
+(cd "$_jj_repo" && jj describe -m "" >/dev/null 2>&1)
+(cd "$_jj_repo" && echo "dirty" > _pi_dirty.txt)
+result=$(cd "$_jj_repo" && jj_prompt_info)
+_pi_dir_line="${result%%$'\n'*}"
+assert_contains "jj_prompt_info dirty undescribed shows A" "A" "$_pi_dir_line"
+
+# jj_prompt_info with described changes hides status
+(cd "$_jj_repo" && jj describe -m "described wc" >/dev/null 2>&1)
+result=$(cd "$_jj_repo" && jj_prompt_info)
+_pi_dir_line="${result%%$'\n'*}"
+assert_equal "jj_prompt_info described hides status" "$_pi_project" "$_pi_dir_line"
+
+# Clean up
+(cd "$_jj_repo" && jj commit -m "prompt_info test" >/dev/null 2>&1)
+
+# Performance: time prompt_info vs separate calls
+_pi_start=$(date +%s%N 2>/dev/null || echo "0")
+for _i in $(seq 1 10); do
+    (cd "$_jj_repo" && jj_prompt_info >/dev/null 2>&1)
+done
+_pi_end=$(date +%s%N 2>/dev/null || echo "0")
+if test "$_pi_start" != "0" && test "$_pi_end" != "0"; then
+    _pi_combined_ms=$(( (_pi_end - _pi_start) / 1000000 ))
+    echo "  10 x jj_prompt_info: ${_pi_combined_ms}ms"
+fi
+
+_pi_start=$(date +%s%N 2>/dev/null || echo "0")
+for _i in $(seq 1 10); do
+    (cd "$_jj_repo" && jj_branch >/dev/null 2>&1 && jj_status >/dev/null 2>&1 && jj_map >/dev/null 2>&1)
+done
+_pi_end=$(date +%s%N 2>/dev/null || echo "0")
+if test "$_pi_start" != "0" && test "$_pi_end" != "0"; then
+    _pi_separate_ms=$(( (_pi_end - _pi_start) / 1000000 ))
+    echo "  10 x branch+status+map: ${_pi_separate_ms}ms"
+fi
+
 test_summary "jj"

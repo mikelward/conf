@@ -260,6 +260,70 @@ git_presubmit() {
     git_hook pre-push
 }
 
+git_prompt_info() {
+    local _green="${green:-}" _blue="${blue:-}" _yellow="${yellow:-}" _normal="${normal:-}"
+
+    local _rootdir
+    _rootdir="$(rootdir 2>/dev/null)" || _rootdir="$(git rev-parse --show-toplevel 2>/dev/null)" || return 1
+    local _project
+    _project="$(basename "$_rootdir")"
+    local _subdir="${PWD#"$_rootdir"}"
+    _subdir="${_subdir#/}"
+
+    # Single git call for branch + status
+    local _output
+    _output="$(git status --short --branch --untracked-files=all 2>/dev/null)" || return 1
+
+    # Parse branch from first line: "## branch...tracking" or "## HEAD (no branch)"
+    local _nl=$'\n'
+    local _branch_line="${_output%%${_nl}*}"
+    local _branch="${_branch_line#\#\# }"
+    _branch="${_branch%%...*}"
+    _branch="${_branch%% \[*}"
+    case "$_branch" in
+        "HEAD (no branch)"|"No commits yet on "*|"Initial commit on "*) _branch="" ;;
+    esac
+
+    # Status chars from remaining lines
+    local _status_lines=""
+    case "$_output" in
+        *"${_nl}"*) _status_lines="${_output#*${_nl}}" ;;
+    esac
+    local _status_chars=""
+    if test -n "$_status_lines"; then
+        _status_chars="$(printf '%s\n' "$_status_lines" | awk '$1 ~ /^([[:upper:]?!]([[:upper:]?!])*)$/ { print $1 }' | sort -u | tr '\n' ' ')"
+        _status_chars="${_status_chars% }"
+    fi
+
+    # Fetch staleness (avoid fork in common case)
+    local _fetch_stale=""
+    if test -d "$_rootdir/.git" && test -f "$_rootdir/.git/FETCH_HEAD"; then
+        local _ts _now _age
+        _ts=$(stat -c %Y "$_rootdir/.git/FETCH_HEAD" 2>/dev/null || stat -f %m "$_rootdir/.git/FETCH_HEAD" 2>/dev/null)
+        if test -n "$_ts"; then
+            _now=$(date +%s)
+            _age=$((_now - _ts))
+            test "$_age" -gt 86400 && _fetch_stale="fetch"
+        fi
+    fi
+
+    # Build dir info line
+    printf '%s%s%s' "$_green" "$_project" "$_normal"
+    test -n "$_subdir" && printf ' %s%s%s' "$_blue" "$_subdir" "$_normal"
+    test -n "$_branch" && printf ' %s' "$_branch"
+    test -n "$_status_chars" && printf ' %s%s%s' "$_yellow" "$_status_chars" "$_normal"
+    test -n "$_fetch_stale" && printf ' %s%s%s' "$_yellow" "$_fetch_stale" "$_normal"
+    printf '\n'
+
+    # Map output (base when on branch, graph when detached)
+    if test -n "$_branch"; then
+        git --no-pager log -1 --oneline 2>/dev/null
+    else
+        git --no-pager log --graph --pretty=format:'%C(auto)%h%C(auto)%d %s' "@{upstream}..HEAD" 2>/dev/null || \
+        git --no-pager log --graph --pretty=format:'%C(auto)%h%C(auto)%d %s' 2>/dev/null
+    fi
+}
+
 git_projectroot() {
     git root
 }

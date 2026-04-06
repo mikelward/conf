@@ -1141,8 +1141,21 @@ preprompt() {
     set_color 'normal'
     printf '\n'
     bar $((COLUMNS))
-    printf '\r%s %s%s \n' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")"
-    map 2>/dev/null
+    local _vcs_prompt _dir_line _map_output
+    _vcs_prompt="$(vcs prompt_info 2>/dev/null)"
+    if test -n "$_vcs_prompt"; then
+        local _nl=$'\n'
+        _dir_line="${_vcs_prompt%%${_nl}*}"
+        _map_output=""
+        case "$_vcs_prompt" in
+            *"${_nl}"*) _map_output="${_vcs_prompt#*${_nl}}" ;;
+        esac
+        printf '\r%s %s%s \n' "$(host_info)" "$_dir_line" "$(maybe_space "$(auth_info)")"
+        test -n "$_map_output" && printf '%s\n' "$_map_output"
+    else
+        printf '\r%s %s%s \n' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")"
+        map 2>/dev/null
+    fi
     job_info
     set_title "$(title)"
     set_prompt

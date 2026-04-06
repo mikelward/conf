@@ -492,12 +492,62 @@ status_chars() { echo "M?"; }
 fetch_info() { echo "fetch"; }
 outgoing() { echo "abc1234 Bump targetSdk to 36"; }
 base() { echo "abc1234 Bump targetSdk to 36"; }
+map() { base; }
 
 result="$(_resolve_cr "$(preprompt)")"
 expected="
 workstation [edge1] edge1 ui somebranch M? fetch ―――――――――――――――――――――――――――――――
 abc1234 Bump targetSdk to 36"
 assert_equal "whole prompt: workstation, shpool, subdir, outgoing, changes, fetch" "$expected" "$result"
+
+###############
+# WHOLE PROMPT: prompt_info path — same scenario as above but via vcs prompt_info
+
+# Set up vcs to dispatch to git_prompt_info
+vcs() {
+    if test $# -gt 0; then
+        local command=$1; shift
+        "git_${command}" "$@"
+    else
+        echo "git"
+    fi
+}
+git_prompt_info() {
+    printf 'edge1 ui somebranch M? fetch\n'
+    printf 'abc1234 Bump targetSdk to 36\n'
+}
+# These should NOT be called when prompt_info path is taken
+projectroot() { echo "SHOULD_NOT_APPEAR"; }
+status_chars() { echo "SHOULD_NOT_APPEAR"; }
+git_branch() { echo "SHOULD_NOT_APPEAR"; }
+fetch_info() { echo "SHOULD_NOT_APPEAR"; }
+base() { echo "SHOULD_NOT_APPEAR"; }
+map() { echo "SHOULD_NOT_APPEAR"; }
+
+result="$(_resolve_cr "$(preprompt)")"
+expected="
+workstation [edge1] edge1 ui somebranch M? fetch ―――――――――――――――――――――――――――――――
+abc1234 Bump targetSdk to 36"
+assert_equal "whole prompt: prompt_info path matches old output" "$expected" "$result"
+
+###############
+# WHOLE PROMPT: prompt_info fallback — when prompt_info is not defined
+
+unset -f git_prompt_info
+# Restore old-style stubs
+projectroot() { echo "$_edgedir"; }
+git_branch() { echo "somebranch"; }
+status_chars() { echo "M?"; }
+fetch_info() { echo "fetch"; }
+outgoing() { echo "abc1234 Bump targetSdk to 36"; }
+base() { echo "abc1234 Bump targetSdk to 36"; }
+map() { base; }
+
+result="$(_resolve_cr "$(preprompt)")"
+expected="
+workstation [edge1] edge1 ui somebranch M? fetch ―――――――――――――――――――――――――――――――
+abc1234 Bump targetSdk to 36"
+assert_equal "whole prompt: fallback matches when prompt_info unavailable" "$expected" "$result"
 
 # Reset all stubs for subsequent tests
 USERNAME="testuser"

@@ -760,4 +760,108 @@ PATH="${PATH#$_gh_stub_dir:}"
 unset -f git vcs_hosting git_branch have_command
 rm -f "$_git_cmd_log" "$_gh_cmd_log"
 
+###############
+# Test git prompt_info
+
+# Disable colors for predictable output
+green='' blue='' yellow='' normal=''
+
+# Ensure clean state
+(cd "$_git_local" && git add -A && git commit -m "prompt_info setup" >/dev/null 2>&1)
+
+# git_prompt_info at repo root shows project name and branch
+result=$(cd "$_git_local" && git_prompt_info)
+_pi_project="$(basename "$_git_local")"
+_pi_branch=$(cd "$_git_local" && git rev-parse --abbrev-ref HEAD)
+_pi_dir_line="${result%%$'\n'*}"
+assert_contains "git_prompt_info shows project name" "$_pi_project" "$_pi_dir_line"
+assert_contains "git_prompt_info shows branch" "$_pi_branch" "$_pi_dir_line"
+
+# git_prompt_info includes map output (second line)
+_pi_map_line=""
+case "$result" in *$'\n'*) _pi_map_line="${result#*$'\n'}" ;; esac
+assert_true "git_prompt_info includes map output" test -n "$_pi_map_line"
+_pi_head_hash=$(cd "$_git_local" && git log -1 --format='%h')
+assert_contains "git_prompt_info map shows commit hash" "$_pi_head_hash" "$_pi_map_line"
+
+# git_prompt_info from subdirectory shows subdir
+mkdir -p "$_git_local/sub/dir"
+result=$(cd "$_git_local/sub/dir" && git_prompt_info)
+_pi_dir_line="${result%%$'\n'*}"
+assert_contains "git_prompt_info shows subdir" "sub/dir" "$_pi_dir_line"
+
+# Clean up subdir test artifacts
+rm -rf "$_git_local/sub"
+
+# git_prompt_info with dirty files shows status chars
+(cd "$_git_local" && echo "dirty" > _pi_dirty.txt)
+result=$(cd "$_git_local" && git_prompt_info)
+_pi_dir_line="${result%%$'\n'*}"
+assert_contains "git_prompt_info dirty shows ??" "??" "$_pi_dir_line"
+
+# git_prompt_info with staged files shows status chars
+(cd "$_git_local" && git add _pi_dirty.txt)
+result=$(cd "$_git_local" && git_prompt_info)
+_pi_dir_line="${result%%$'\n'*}"
+assert_contains "git_prompt_info staged shows A" "A" "$_pi_dir_line"
+(cd "$_git_local" && git commit -m "prompt_info dirty test" >/dev/null 2>&1)
+
+# git_prompt_info clean repo has no status chars
+result=$(cd "$_git_local" && git_prompt_info)
+_pi_dir_line="${result%%$'\n'*}"
+assert_equal "git_prompt_info clean dir line" "$_pi_project $_pi_branch" "$_pi_dir_line"
+
+# git_prompt_info when detached shows graph instead of base
+_pi_detach_hash=$(cd "$_git_local" && git rev-parse HEAD)
+(cd "$_git_local" && git checkout "$_pi_detach_hash" >/dev/null 2>&1)
+result=$(cd "$_git_local" && git_prompt_info)
+_pi_dir_line="${result%%$'\n'*}"
+assert_equal "git_prompt_info detached has no branch" "$_pi_project" "$_pi_dir_line"
+_pi_map_line=""
+case "$result" in *$'\n'*) _pi_map_line="${result#*$'\n'}" ;; esac
+assert_true "git_prompt_info detached has map" test -n "$_pi_map_line"
+assert_true "git_prompt_info detached map has graph markers" grep -q '^\*' <<< "$_pi_map_line"
+(cd "$_git_local" && git checkout "$_pi_branch" >/dev/null 2>&1)
+
+# git_prompt_info with stale FETCH_HEAD shows fetch warning
+# Create a FETCH_HEAD and backdate it using touch -d (GNU) or touch -t (portable)
+_pi_git_dir="$_git_local/.git"
+echo "0000000000000000000000000000000000000000	not-for-merge	branch 'main' of test" > "$_pi_git_dir/FETCH_HEAD"
+touch -d "3 days ago" "$_pi_git_dir/FETCH_HEAD" 2>/dev/null || \
+touch -t "$(date -d '3 days ago' +%Y%m%d%H%M.%S 2>/dev/null || date -v-3d +%Y%m%d%H%M.%S 2>/dev/null)" "$_pi_git_dir/FETCH_HEAD" 2>/dev/null
+# Verify the timestamp is actually old before asserting
+_pi_fetch_ts=$(stat -c %Y "$_pi_git_dir/FETCH_HEAD" 2>/dev/null)
+_pi_now=$(date +%s)
+_pi_fetch_age=$(( _pi_now - ${_pi_fetch_ts:-$_pi_now} ))
+if test "$_pi_fetch_age" -gt 86400; then
+    result=$(cd "$_git_local" && git_prompt_info)
+    _pi_dir_line="${result%%$'\n'*}"
+    assert_contains "git_prompt_info stale fetch shows fetch" "fetch" "$_pi_dir_line"
+else
+    echo "SKIP: could not backdate FETCH_HEAD (age=${_pi_fetch_age}s)"
+fi
+# Restore fresh fetch
+touch "$_pi_git_dir/FETCH_HEAD"
+
+# Performance: time prompt_info vs separate calls
+_pi_start=$(date +%s%N 2>/dev/null || echo "0")
+for _i in $(seq 1 10); do
+    (cd "$_git_local" && git_prompt_info >/dev/null 2>&1)
+done
+_pi_end=$(date +%s%N 2>/dev/null || echo "0")
+if test "$_pi_start" != "0" && test "$_pi_end" != "0"; then
+    _pi_combined_ms=$(( (_pi_end - _pi_start) / 1000000 ))
+    echo "  10 x git_prompt_info: ${_pi_combined_ms}ms"
+fi
+
+_pi_start=$(date +%s%N 2>/dev/null || echo "0")
+for _i in $(seq 1 10); do
+    (cd "$_git_local" && git_branch >/dev/null 2>&1 && git_status >/dev/null 2>&1 && git_map >/dev/null 2>&1)
+done
+_pi_end=$(date +%s%N 2>/dev/null || echo "0")
+if test "$_pi_start" != "0" && test "$_pi_end" != "0"; then
+    _pi_separate_ms=$(( (_pi_end - _pi_start) / 1000000 ))
+    echo "  10 x branch+status+map: ${_pi_separate_ms}ms"
+fi
+
 test_summary "git"
