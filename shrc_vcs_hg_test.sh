@@ -130,6 +130,41 @@ assert_true "hg_map not at head has graph markers" grep -q '^[@o]' <<< "$result"
 (cd "$_hg_local" && hg update -r "$_hg_map_tip_rev" >/dev/null 2>&1)
 
 ###############
+# Test hg prompt-info
+
+_hg_prompt_revision=$(cd "$_hg_local" && hg log -r . --template '{node|short}')
+result=$(cd "$_hg_local" && hg_prompt-info)
+expected="VCS=hg
+BACKEND=
+HOSTING=
+ROOTDIR=$_hg_local
+SUBDIR=
+BRANCH=default
+REVISION=$_hg_prompt_revision
+STATUS=
+FETCH="
+assert_equal "hg_prompt-info at repo root" "$expected" "$result"
+
+mkdir -p "$_hg_local/subdir"
+(
+    cd "$_hg_local"
+    echo "dirty" >> file.txt
+    echo "untracked" > subdir/untracked.txt
+)
+result=$(cd "$_hg_local/subdir" && hg_prompt-info)
+expected="VCS=hg
+BACKEND=
+HOSTING=
+ROOTDIR=$_hg_local
+SUBDIR=subdir
+BRANCH=default
+REVISION=$_hg_prompt_revision
+STATUS=? M
+FETCH="
+assert_equal "hg_prompt-info in subdir with status" "$expected" "$result"
+(cd "$_hg_local" && hg revert file.txt >/dev/null 2>&1 && rm -rf subdir && rm -f .vcs_cache && find . -name '*.orig' -delete)
+
+###############
 # Test hg outgoing and incoming
 
 # Push the commit created by the base tests so outgoing starts clean
