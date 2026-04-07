@@ -22,5 +22,6 @@ test:
 	@bash shrc_vcs_binary_test.sh
 	@bash shrc_prompt_test.sh
 	@bash makefile_test.sh
+	@bash amethyst_test.sh
 
 .PHONY: install install-dotfiles install-vcs test
