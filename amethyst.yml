@@ -1,0 +1,87 @@
+# Amethyst tiling window manager configuration
+# Keybindings match KDE/Krohnkite setup with alt (option) as modifier
+
+mod1:
+  - option
+
+mod2:
+  - option
+  - control
+
+layouts:
+  - tall
+  - 3column-left
+  - column
+  - wide
+  - fullscreen
+
+mouse-follows-focus: true
+follow-space-thrown-windows: true
+new-windows-to-main: false
+window-margins: true
+window-margin-size: 5
+
+# Keybindings matching Krohnkite
+# Resize (Krohnkite: Meta+\ and Meta+/)
+expand-main:
+  mod: mod1
+  key: backslash
+
+shrink-main:
+  mod: mod1
+  key: slash
+
+# Layouts (Krohnkite: Meta+` for monocle, Meta+,/. for cycle)
+select-fullscreen-layout:
+  mod: mod1
+  key: grave
+
+cycle-layout-backward:
+  mod: mod1
+  key: comma
+
+cycle-layout:
+  mod: mod1
+  key: period
+
+# Set master (Krohnkite: Meta+Return)
+swap-main:
+  mod: mod1
+  key: return
+
+# Throw window to space (Krohnkite: Meta+Shift+1-9)
+throw-space-1:
+  mod: mod2
+  key: "1"
+
+throw-space-2:
+  mod: mod2
+  key: "2"
+
+throw-space-3:
+  mod: mod2
+  key: "3"
+
+throw-space-4:
+  mod: mod2
+  key: "4"
+
+throw-space-5:
+  mod: mod2
+  key: "5"
+
+throw-space-6:
+  mod: mod2
+  key: "6"
+
+throw-space-7:
+  mod: mod2
+  key: "7"
+
+throw-space-8:
+  mod: mod2
+  key: "8"
+
+throw-space-9:
+  mod: mod2
+  key: "9"
