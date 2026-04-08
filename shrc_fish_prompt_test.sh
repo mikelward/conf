@@ -264,4 +264,57 @@ workstation [edge1] edge1 ui somebranch * fetch ――――――――――�
 $_ps1char "
 assert_equal "fish whole prompt: workstation, shpool, subdir, dirty, fetch" "$expected" "$result"
 
+###############
+# TEST: fish_mode_prompt displays the current vi-style bind mode
+
+result="$(_fish_run 'set -g fish_bind_mode insert; fish_mode_prompt')"
+assert_equal "fish_mode_prompt insert mode" "INSERT " "$result"
+
+result="$(_fish_run 'set -g fish_bind_mode default; fish_mode_prompt')"
+assert_equal "fish_mode_prompt default (normal) mode" "NORMAL " "$result"
+
+result="$(_fish_run 'set -g fish_bind_mode visual; fish_mode_prompt')"
+assert_equal "fish_mode_prompt visual mode" "VISUAL " "$result"
+
+result="$(_fish_run 'set -g fish_bind_mode replace; fish_mode_prompt')"
+assert_equal "fish_mode_prompt replace mode" "REPLACE " "$result"
+
+result="$(_fish_run 'set -g fish_bind_mode replace_one; fish_mode_prompt')"
+assert_equal "fish_mode_prompt replace_one mode" "REPLACE " "$result"
+
+result="$(_fish_run 'set -e fish_bind_mode; fish_mode_prompt')"
+assert_equal "fish_mode_prompt empty when fish_bind_mode unset" "" "$result"
+
+result="$(_fish_run 'set -g fish_bind_mode mystery; fish_mode_prompt')"
+assert_equal "fish_mode_prompt falls back to raw mode name" "mystery " "$result"
+
+###############
+# TEST: my_vi_key_bindings is selected as the key binding function
+
+result="$(_fish_run 'echo $fish_key_bindings')"
+assert_equal "fish sets fish_key_bindings to my_vi_key_bindings" "my_vi_key_bindings" "$result"
+
+###############
+# PERFORMANCE
+# prompt_line runs on every prompt, so its cost matters. Time 50 calls
+# inside a single fish process so we're measuring wrapper overhead, not
+# fish startup.
+_fish_run '
+    set -g HOSTNAME mikel-workstation
+    set -g USERNAME mikel
+    function vcs
+        switch $argv[1]
+            case prompt-line; echo "testhost shpool ~"
+            case "*"; return 1
+        end
+    end
+    set _start (date +%s%N)
+    for i in (seq 1 50)
+        prompt_line >/dev/null 2>&1
+    end
+    set _end (date +%s%N)
+    set _elapsed_ms (math "($_end - $_start) / 1000000")
+    echo "  50 x fish prompt_line (binary stub): $_elapsed_ms""ms"
+'
+
 test_summary "fish shrc_fish_prompt_test"
