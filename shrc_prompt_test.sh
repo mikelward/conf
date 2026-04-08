@@ -26,6 +26,7 @@ shell="bash"
 # Extract prompt functions from shrc
 extract_func basic_prompt
 extract_func preprompt
+extract_func prompt_line
 extract_func maybe_space
 extract_func bar
 extract_func last_job_info
@@ -265,6 +266,91 @@ have_command() {
 vcs() { return 1; }
 
 ###############
+# TEST: prompt_line delegates to `vcs prompt-line` when binary is available
+
+have_command() {
+    case "$1" in
+        vcs) return 0 ;;
+        *) command -v "$1" >/dev/null 2>&1 ;;
+    esac
+}
+# Capture the flags the binary is called with by echoing them from the
+# stub, so $(prompt_line) returns the arg list and we can assert on it.
+vcs() {
+    case "$1" in
+        prompt-line)
+            shift
+            echo "called-with: $*"
+            ;;
+        *) return 1 ;;
+    esac
+}
+HOSTNAME="mikel-laptop"
+USERNAME="mikel"
+on_production_host() { false; }
+result="$(prompt_line)"
+assert_contains "prompt_line delegates to vcs prompt-line" "called-with:" "$result"
+assert_contains "prompt_line passes --hostname=<short_hostname>" "--hostname=laptop" "$result"
+assert_contains "prompt_line passes --color=never when color disabled" "--color=never" "$result"
+assert_not_contains "prompt_line omits --production off production" "--production" "$result"
+
+###############
+# TEST: prompt_line passes --production for production hosts
+
+on_production_host() { true; }
+result="$(prompt_line)"
+assert_contains "prompt_line passes --production on production host" "--production" "$result"
+on_production_host() { false; }
+
+###############
+# TEST: prompt_line passes --color=always when color enabled
+
+_saved_color="$color"
+color=true
+result="$(prompt_line)"
+assert_contains "prompt_line passes --color=always when color enabled" "--color=always" "$result"
+color="$_saved_color"
+
+###############
+# TEST: prompt_line falls back to shell composition when vcs binary missing
+
+have_command() {
+    case "$1" in
+        vcs) return 1 ;;
+        *) command -v "$1" >/dev/null 2>&1 ;;
+    esac
+}
+HOME="$_testdir/fakehome"
+mkdir -p "$HOME"
+PWD="$HOME"
+HOSTNAME="testhost"
+USERNAME="testuser"
+in_shpool() { false; }
+on_production_host() { false; }
+is_ssh_valid() { true; }
+result="$(prompt_line)"
+# host_info = "testhost shpool", dir_info = "~ vcs" (binary missing warning),
+# auth_info empty. Composition: "testhost shpool ~ vcs"
+assert_equal "prompt_line fallback composes shell pieces" "testhost shpool ~ vcs" "$result"
+
+###############
+# TEST: prompt_line fallback includes auth warning
+
+is_ssh_valid() { false; }
+result="$(prompt_line)"
+assert_equal "prompt_line fallback includes SSH warning" "testhost shpool ~ vcs SSH" "$result"
+
+# Restore default stubs
+is_ssh_valid() { true; }
+have_command() {
+    case "$1" in
+        vcs) return 0 ;;
+        *) command -v "$1" >/dev/null 2>&1 ;;
+    esac
+}
+vcs() { return 1; }
+
+###############
 # TEST: last_job_info with exit status 1
 
 current_command="false"
@@ -362,7 +448,13 @@ in_shpool() { false; }
 on_production_host() { false; }
 is_ssh_valid() { true; }
 projectroot() { :; }
-vcs() { return 1; }
+# Stub vcs prompt-line to return the composed line the binary would emit.
+vcs() {
+    case "$1" in
+        prompt-line) echo "testhost shpool ~" ;;
+        *) return 1 ;;
+    esac
+}
 outgoing() { return 1; }
 current_command=
 SECONDS=0
@@ -379,11 +471,18 @@ assert_true "preprompt contains dir" echo "$result" | grep -q "~"
 is_ssh_valid() { false; }
 current_command=
 SECONDS=0
+vcs() {
+    case "$1" in
+        prompt-line) echo "testhost shpool ~ SSH" ;;
+        *) return 1 ;;
+    esac
+}
 result="$(preprompt)"
 assert_true "preprompt contains SSH warning" echo "$result" | grep -q "SSH"
 
 # Restore
 is_ssh_valid() { true; }
+vcs() { return 1; }
 
 ###############
 # TEST: preprompt sets PS1
@@ -458,7 +557,15 @@ is_ssh_valid() { false; }
 in_shpool() { false; }
 on_production_host() { false; }
 projectroot() { :; }
-vcs() { return 1; }
+# `vcs prompt-line` is what the binary would render; stub it with the
+# expected pre-composed first line so the test still exercises the
+# bar/CR framing in preprompt.
+vcs() {
+    case "$1" in
+        prompt-line) echo "laptop shpool ~ SSH" ;;
+        *) return 1 ;;
+    esac
+}
 outgoing() { return 1; }
 
 result="$(_resolve_cr "$(preprompt)")"
@@ -481,7 +588,12 @@ is_ssh_valid() { true; }
 in_shpool() { false; }
 on_production_host() { false; }
 projectroot() { :; }
-vcs() { return 1; }
+vcs() {
+    case "$1" in
+        prompt-line) echo "laptop shpool /usr" ;;
+        *) return 1 ;;
+    esac
+}
 outgoing() { return 1; }
 
 result="$(_resolve_cr "$(preprompt)")"
@@ -507,7 +619,7 @@ in_shpool() { false; }
 on_production_host() { false; }
 vcs() {
     case "$1" in
-        prompt-info) echo "conf main" ;;
+        prompt-line) echo "workstation shpool conf main" ;;
         *) return 1 ;;
     esac
 }
@@ -533,7 +645,7 @@ in_shpool() { true; }
 SHPOOL_SESSION_NAME="edge1"
 vcs() {
     case "$1" in
-        prompt-info) echo "edge1 ui somebranch * fetch" ;;
+        prompt-line) echo "workstation [edge1] edge1 ui somebranch * fetch" ;;
         *) return 1 ;;
     esac
 }
@@ -748,6 +860,77 @@ unset SHPOOL_SESSION_NAME
 bash_last_error() { :; }
 current_command=
 HOSTNAME="testhost"
+
+###############
+# PERFORMANCE
+# prompt_line runs on every prompt, so its cost matters. Time 50 calls on
+# both the binary path (vcs prompt-line) and the shell fallback
+# (host_info + dir_info + auth_info) to detect regressions. A warning is
+# printed when the binary path is slower than fallback — that would defeat
+# the whole point of the refactor.
+
+_perf_time() {
+    local _runs="$1"
+    local _fn="$2"
+    local _start _end
+    _start=$(date +%s%N 2>/dev/null || echo "0")
+    local _i=0
+    while test $_i -lt "$_runs"; do
+        "$_fn" >/dev/null 2>&1
+        _i=$((_i + 1))
+    done
+    _end=$(date +%s%N 2>/dev/null || echo "0")
+    if test "$_start" != "0" && test "$_end" != "0"; then
+        echo $(( (_end - _start) / 1000000 ))
+    else
+        echo "-1"
+    fi
+}
+
+# Binary path: stub `vcs prompt-line` to echo a fixed line. Measures the
+# cost of the wrapper (short_hostname, flag assembly, $() capture) without
+# actually forking a Go binary.
+have_command() {
+    case "$1" in
+        vcs) return 0 ;;
+        *) command -v "$1" >/dev/null 2>&1 ;;
+    esac
+}
+vcs() {
+    case "$1" in
+        prompt-line) echo "testhost shpool ~" ;;
+        *) return 1 ;;
+    esac
+}
+_binary_ms=$(_perf_time 50 prompt_line)
+
+# Fallback path: force have_command vcs to fail so prompt_line composes
+# in the shell via host_info + dir_info + auth_info.
+have_command() {
+    case "$1" in
+        vcs) return 1 ;;
+        *) command -v "$1" >/dev/null 2>&1 ;;
+    esac
+}
+_fallback_ms=$(_perf_time 50 prompt_line)
+
+if test "$_binary_ms" != "-1" && test "$_fallback_ms" != "-1"; then
+    echo "  50 x prompt_line (binary stub): ${_binary_ms}ms"
+    echo "  50 x prompt_line (fallback):    ${_fallback_ms}ms"
+    if test "$_binary_ms" -gt "$_fallback_ms"; then
+        echo "  WARN: binary path is slower than shell fallback - possible regression"
+    fi
+fi
+
+# Restore stubs for remaining tests (none after this in this file, but
+# keep the environment clean in case tests are added later).
+have_command() {
+    case "$1" in
+        vcs) return 0 ;;
+        *) command -v "$1" >/dev/null 2>&1 ;;
+    esac
+}
+vcs() { return 1; }
 
 _shell="$(basename "$(readlink -f /proc/$$/exe)" 2>/dev/null || echo "bash")"
 
