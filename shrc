@@ -213,19 +213,6 @@ auth_info() {
     test -n "$problems" && yellow "${problems# }"
 }
 
-# warn if the last fetch was more than 24 hours ago
-fetch_info() {
-    local timestamp
-    timestamp="$(fetchtime 2>/dev/null)" || return
-    test -n "$timestamp" || return
-    local now
-    now="$(date +%s)"
-    local age=$(( now - timestamp ))
-    if test "$age" -gt 86400; then
-        yellow "fetch"
-    fi
-}
-
 # ask the user whether to do something, return true if they say yes or Enter
 confirm() {
     printf '%s? [Y/n] ' "$*"
@@ -1301,45 +1288,32 @@ job_info() {
 dir_info() {
         blue "$(_dir_info "$PWD")"
 }
-_dir_info() {
-    (
-        # if the directory is under version control, print
-        # <project name> <subdir under project root> <branch> <status>,
-        # otherwise just the directory with $HOME turned into ~
-        cd "$1"
-        local projectroot="$(projectroot)"
-        if test -n "$projectroot"; then
-            green "$(basename "$projectroot")"
-            local projectsubdir
-            projectsubdir="$(trim_prefix "$projectroot" "$PWD")"
-            if test -n "$projectsubdir"; then
-                printf ' '
-                blue "${projectsubdir#/}"
-            fi
-            local branch="$(vcs branch)"
-            if test -n "$branch"; then
-                printf ' %s' "$branch"
-            fi
-            local statuschars="$(status_chars)"
-            if test -n "$statuschars"; then
-                printf ' '
-                yellow "$statuschars"
-            fi
-            local fetchinfo="$(fetch_info)"
-            if test -n "$fetchinfo"; then
-                printf ' %s' "$fetchinfo"
-            fi
-            # local branch
-            # branch="$(branch)"
-            # if test -n "$branch"; then
-            #     printf ' '
-            #     green "$branch"
-            # fi
-        else
-            tilde_directory
-        fi
-    )
-}
+_dir_info() (
+    # Inside a VCS repo, delegate to `vcs prompt-info` which bundles
+    # project/subdir/branch/status/fetch into a single invocation and
+    # applies colors itself. Outside a repo (or when the binary returns
+    # nothing), fall back to the tilde-expanded directory. When the vcs
+    # binary is not installed, print the directory plus a yellow `vcs`
+    # warning so the missing tooling is obvious.
+    cd "$1" || return
+    if ! have_command vcs; then
+        tilde_directory
+        printf ' '
+        yellow "vcs"
+        return
+    fi
+    local _color_flag=--color=never
+    if $color; then
+        _color_flag=--color=always
+    fi
+    local info
+    if info="$(vcs prompt-info "$_color_flag" 2>/dev/null)" \
+            && test -n "$info"; then
+        printf '%s' "$info"
+    else
+        tilde_directory
+    fi
+)
 
 short_pwd() {
     local projectname="$(projectname)"
