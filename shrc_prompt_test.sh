@@ -31,12 +31,8 @@ extract_func maybe_space
 extract_func bar
 extract_func last_job_info
 extract_func flash_terminal
-extract_func host_info
-extract_func dir_info
-extract_func _dir_info
 extract_func job_info
 extract_func short_hostname
-extract_func tilde_directory
 extract_func set_prompt
 extract_func ps1
 extract_func ps1_character
@@ -60,14 +56,10 @@ extract_func auth_info
 extract_func is_ssh_valid
 extract_func bash_last_error
 
-# Stub VCS functions (no VCS by default).
-# _dir_info calls `have_command vcs` and `vcs prompt-info`; stub both so
-# tests don't depend on whether the real binary is installed.
+# Stub VCS functions (no VCS by default). prompt_line calls
+# `vcs prompt-line`; stub vcs() so tests don't depend on the real binary.
 have_command() {
-    case "$1" in
-        vcs) return 0 ;;
-        *) command -v "$1" >/dev/null 2>&1 ;;
-    esac
+    command -v "$1" >/dev/null 2>&1
 }
 projectroot() { :; }
 projectname() { :; }
@@ -159,121 +151,11 @@ assert_equal "auth_info warns when ssh invalid" "SSH" "$result"
 is_ssh_valid() { true; }
 
 ###############
-# TEST: dir_info outside VCS shows tilde directory
-# `vcs prompt-info` exits non-zero when not in a repo; _dir_info should
-# fall back to the tilde-expanded path.
+# TEST: prompt_line delegates to `vcs prompt-line`
 
 HOME="$_testdir/fakehome"
 mkdir -p "$HOME/documents"
 PWD="$HOME/documents"
-vcs() { return 1; }
-result="$(_dir_info "$PWD")"
-assert_equal "dir_info outside VCS shows tilde path" "~/documents" "$result"
-
-###############
-# TEST: dir_info at VCS root
-# `vcs prompt-info` bundles project/branch/status/fetch into one line;
-# _dir_info just prints what the binary returns.
-
-_vcsdir="$_testdir/myproject"
-mkdir -p "$_vcsdir"
-vcs() {
-    case "$1" in
-        prompt-info) echo "myproject main" ;;
-        *) return 1 ;;
-    esac
-}
-PWD="$_vcsdir"
-result="$(_dir_info "$PWD")"
-assert_equal "dir_info at VCS root" "myproject main" "$result"
-
-###############
-# TEST: dir_info in subdirectory of VCS root
-
-_subdir="$_vcsdir/src/lib"
-mkdir -p "$_subdir"
-vcs() {
-    case "$1" in
-        prompt-info) echo "myproject src/lib main" ;;
-        *) return 1 ;;
-    esac
-}
-PWD="$_subdir"
-result="$(_dir_info "$PWD")"
-assert_equal "dir_info in VCS subdirectory" "myproject src/lib main" "$result"
-
-###############
-# TEST: dir_info shows dirty status
-
-vcs() {
-    case "$1" in
-        prompt-info) echo "myproject main *" ;;
-        *) return 1 ;;
-    esac
-}
-PWD="$_vcsdir"
-result="$(_dir_info "$PWD")"
-assert_equal "dir_info with dirty status" "myproject main *" "$result"
-
-###############
-# TEST: dir_info with stale fetch
-
-vcs() {
-    case "$1" in
-        prompt-info) echo "myproject main fetch" ;;
-        *) return 1 ;;
-    esac
-}
-result="$(_dir_info "$PWD")"
-assert_equal "dir_info with stale fetch" "myproject main fetch" "$result"
-
-###############
-# TEST: dir_info falls back to tilde path when prompt-info fails
-
-PWD="$HOME/documents"
-vcs() {
-    case "$1" in
-        prompt-info) return 1 ;;
-        *) return 1 ;;
-    esac
-}
-result="$(_dir_info "$PWD")"
-assert_equal "dir_info falls back when prompt-info fails" "~/documents" "$result"
-
-###############
-# TEST: dir_info warns when vcs binary is not installed
-
-_saved_have_command="$(type have_command)"
-have_command() {
-    case "$1" in
-        vcs) return 1 ;;
-        *) command -v "$1" >/dev/null 2>&1 ;;
-    esac
-}
-PWD="$HOME/documents"
-result="$(_dir_info "$PWD")"
-assert_equal "dir_info warns when vcs missing" "~/documents vcs" "$result"
-
-# Restore have_command stub
-have_command() {
-    case "$1" in
-        vcs) return 0 ;;
-        *) command -v "$1" >/dev/null 2>&1 ;;
-    esac
-}
-
-# Reset stubs
-vcs() { return 1; }
-
-###############
-# TEST: prompt_line delegates to `vcs prompt-line` when binary is available
-
-have_command() {
-    case "$1" in
-        vcs) return 0 ;;
-        *) command -v "$1" >/dev/null 2>&1 ;;
-    esac
-}
 # Capture the flags the binary is called with by echoing them from the
 # stub, so $(prompt_line) returns the arg list and we can assert on it.
 vcs() {
@@ -311,43 +193,7 @@ result="$(prompt_line)"
 assert_contains "prompt_line passes --color=always when color enabled" "--color=always" "$result"
 color="$_saved_color"
 
-###############
-# TEST: prompt_line falls back to shell composition when vcs binary missing
-
-have_command() {
-    case "$1" in
-        vcs) return 1 ;;
-        *) command -v "$1" >/dev/null 2>&1 ;;
-    esac
-}
-HOME="$_testdir/fakehome"
-mkdir -p "$HOME"
-PWD="$HOME"
-HOSTNAME="testhost"
-USERNAME="testuser"
-in_shpool() { false; }
-on_production_host() { false; }
-is_ssh_valid() { true; }
-result="$(prompt_line)"
-# host_info = "testhost shpool", dir_info = "~ vcs" (binary missing warning),
-# auth_info empty. Composition: "testhost shpool ~ vcs"
-assert_equal "prompt_line fallback composes shell pieces" "testhost shpool ~ vcs" "$result"
-
-###############
-# TEST: prompt_line fallback includes auth warning
-
-is_ssh_valid() { false; }
-result="$(prompt_line)"
-assert_equal "prompt_line fallback includes SSH warning" "testhost shpool ~ vcs SSH" "$result"
-
-# Restore default stubs
-is_ssh_valid() { true; }
-have_command() {
-    case "$1" in
-        vcs) return 0 ;;
-        *) command -v "$1" >/dev/null 2>&1 ;;
-    esac
-}
+# Reset stubs
 vcs() { return 1; }
 
 ###############
@@ -413,29 +259,6 @@ current_command="interrupted_cmd"
 SECONDS=0
 result="$(last_job_info)"
 assert_equal "last_job_info shows interrupted" "interrupted" "$result"
-
-###############
-# TEST: host_info without shpool
-
-in_shpool() { false; }
-on_production_host() { false; }
-HOSTNAME="testhost"
-result="$(host_info)"
-# host_info prints hostname\n then shpool suggestion
-expected="testhost shpool"
-assert_equal "host_info without shpool" "$expected" "$result"
-
-###############
-# TEST: host_info with shpool session
-
-in_shpool() { true; }
-SHPOOL_SESSION_NAME="main"
-result="$(host_info)"
-expected="testhost [main]"
-assert_equal "host_info with shpool" "$expected" "$result"
-
-in_shpool() { false; }
-unset SHPOOL_SESSION_NAME
 
 ###############
 # TEST: preprompt integrates components
@@ -705,27 +528,6 @@ if test "${VISUAL_TEST:-}" = true; then
     blue "blue text"; echo ""
     echo ""
 
-    echo "--- host_info (non-production) ---"
-    on_production_host() { false; }
-    in_shpool() { false; }
-    HOSTNAME="devhost"
-    host_info
-    echo ""
-
-    echo "--- host_info (production, should be red) ---"
-    on_production_host() { true; }
-    HOSTNAME="prodhost"
-    host_info
-    echo ""
-
-    echo "--- host_info (shpool session, name should be green) ---"
-    on_production_host() { false; }
-    in_shpool() { true; }
-    SHPOOL_SESSION_NAME="main"
-    HOSTNAME="devhost"
-    host_info
-    echo ""
-
     echo "--- last_job_info (error, should be red) ---"
     in_shpool() { false; }
     current_command="failing"
@@ -810,26 +612,6 @@ result="$(set_color bold red)"
 assert_equal "set_color bold red" $'\033[1m'$'\033[31m' "$result"
 bold=''
 
-# TEST: host_info uses red for production hosts
-on_production_host() { true; }
-in_shpool() { false; }
-HOSTNAME="prodhost"
-result="$(host_info)"
-assert_contains "production host_info contains red" $'\033[31m' "$result"
-assert_contains "production host_info contains normal reset" $'\033[0m' "$result"
-
-# TEST: host_info no red for non-production hosts
-on_production_host() { false; }
-HOSTNAME="devhost"
-result="$(host_info)"
-assert_not_contains "non-production host_info has no red" $'\033[31m' "$result"
-
-# TEST: host_info shpool session name is green
-in_shpool() { true; }
-SHPOOL_SESSION_NAME="main"
-result="$(host_info)"
-assert_contains "shpool session name is green" $'\033[32m'"main"$'\033[0m' "$result"
-
 # TEST: last_job_info error is red
 in_shpool() { false; }
 current_command="failing"
@@ -863,73 +645,30 @@ HOSTNAME="testhost"
 
 ###############
 # PERFORMANCE
-# prompt_line runs on every prompt, so its cost matters. Time 50 calls on
-# both the binary path (vcs prompt-line) and the shell fallback
-# (host_info + dir_info + auth_info) to detect regressions. A warning is
-# printed when the binary path is slower than fallback — that would defeat
-# the whole point of the refactor.
+# prompt_line runs on every prompt, so its cost matters. Time 50 calls
+# with `vcs prompt-line` stubbed to echo a fixed line — this measures
+# the wrapper overhead (short_hostname, flag assembly, $() capture)
+# without forking a Go binary.
 
-_perf_time() {
-    local _runs="$1"
-    local _fn="$2"
-    local _start _end
-    _start=$(date +%s%N 2>/dev/null || echo "0")
-    local _i=0
-    while test $_i -lt "$_runs"; do
-        "$_fn" >/dev/null 2>&1
-        _i=$((_i + 1))
-    done
-    _end=$(date +%s%N 2>/dev/null || echo "0")
-    if test "$_start" != "0" && test "$_end" != "0"; then
-        echo $(( (_end - _start) / 1000000 ))
-    else
-        echo "-1"
-    fi
-}
-
-# Binary path: stub `vcs prompt-line` to echo a fixed line. Measures the
-# cost of the wrapper (short_hostname, flag assembly, $() capture) without
-# actually forking a Go binary.
-have_command() {
-    case "$1" in
-        vcs) return 0 ;;
-        *) command -v "$1" >/dev/null 2>&1 ;;
-    esac
-}
 vcs() {
     case "$1" in
         prompt-line) echo "testhost shpool ~" ;;
         *) return 1 ;;
     esac
 }
-_binary_ms=$(_perf_time 50 prompt_line)
-
-# Fallback path: force have_command vcs to fail so prompt_line composes
-# in the shell via host_info + dir_info + auth_info.
-have_command() {
-    case "$1" in
-        vcs) return 1 ;;
-        *) command -v "$1" >/dev/null 2>&1 ;;
-    esac
-}
-_fallback_ms=$(_perf_time 50 prompt_line)
-
-if test "$_binary_ms" != "-1" && test "$_fallback_ms" != "-1"; then
-    echo "  50 x prompt_line (binary stub): ${_binary_ms}ms"
-    echo "  50 x prompt_line (fallback):    ${_fallback_ms}ms"
-    if test "$_binary_ms" -gt "$_fallback_ms"; then
-        echo "  WARN: binary path is slower than shell fallback - possible regression"
-    fi
+_start=$(date +%s%N 2>/dev/null || echo "0")
+_i=0
+while test $_i -lt 50; do
+    prompt_line >/dev/null 2>&1
+    _i=$((_i + 1))
+done
+_end=$(date +%s%N 2>/dev/null || echo "0")
+if test "$_start" != "0" && test "$_end" != "0"; then
+    _elapsed_ms=$(( (_end - _start) / 1000000 ))
+    echo "  50 x prompt_line (binary stub): ${_elapsed_ms}ms"
 fi
 
-# Restore stubs for remaining tests (none after this in this file, but
-# keep the environment clean in case tests are added later).
-have_command() {
-    case "$1" in
-        vcs) return 0 ;;
-        *) command -v "$1" >/dev/null 2>&1 ;;
-    esac
-}
+# Reset
 vcs() { return 1; }
 
 _shell="$(basename "$(readlink -f /proc/$$/exe)" 2>/dev/null || echo "bash")"

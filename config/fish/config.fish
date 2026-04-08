@@ -852,26 +852,19 @@ if is_interactive
     end
 
     # print the first line of the preprompt: host + dir + auth.
-    # Delegates to `vcs prompt-line` when the binary is available so the whole
-    # line renders in a single process. Falls back to composing host_info +
-    # dir_info + auth_info in fish when vcs is not installed.
+    # Delegates to `vcs prompt-line` so the whole line renders in one
+    # process. Policy (short hostname, production-host coloring) stays in
+    # fish and is passed via flags.
     function prompt_line
-        if have_command vcs
-            set _color_flag --color=never
-            if $color
-                set _color_flag --color=always
-            end
-            set _flags --hostname=(short_hostname | string collect) $_color_flag
-            if on_production_host
-                set _flags --production $_flags
-            end
-            vcs prompt-line $_flags
-        else
-            printf '%s %s%s' \
-                (host_info | string collect) \
-                (dir_info | string collect) \
-                (maybe_space (auth_info) | string collect)
+        set _color_flag --color=never
+        if $color
+            set _color_flag --color=always
         end
+        set _flags --hostname=(short_hostname | string collect) $_color_flag
+        if on_production_host
+            set _flags --production $_flags
+        end
+        vcs prompt-line $_flags
     end
 
     function last_job_info
@@ -996,25 +989,6 @@ if is_interactive
         end
     end
 
-    # print information about this machine
-    function host_info
-        if on_production_host
-            my_set_color 'red'
-        end
-        printf '%s' (short_hostname | string collect)
-        my_set_color 'normal'
-        if in_shpool
-            printf ' ['
-            green $SHPOOL_SESSION_NAME
-            printf ']'
-        else
-            printf ' '
-            yellow 'shpool'
-        end
-        my_set_color 'normal'
-        printf '\n'
-    end
-
     # return true if running inside a shpool session
     function in_shpool
         test -n "$SHPOOL_SESSION_NAME"
@@ -1050,36 +1024,6 @@ if is_interactive
             jobs |
                 sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /' |
                 grep -v '(pwd now:'
-    end
-
-    # print directory info for the prompt
-    # intended to be used in the preprompt
-    function dir_info
-        blue (_dir_info $PWD | string collect)
-    end
-    function _dir_info
-        # Inside a VCS repo, delegate to `vcs prompt-info` which bundles
-        # project/subdir/branch/status/fetch into a single invocation and
-        # applies colors itself. Outside a repo (or when the binary returns
-        # nothing), fall back to the tilde-expanded directory. When the vcs
-        # binary is not installed, print the directory plus a yellow `vcs`
-        # warning so the missing tooling is obvious.
-        if not have_command vcs
-            tilde_directory
-            printf ' '
-            yellow 'vcs'
-            return
-        end
-        set _color_flag --color=never
-        if $color
-            set _color_flag --color=always
-        end
-        set info (vcs prompt-info $_color_flag 2>/dev/null | string collect)
-        if test -n "$info"
-            printf '%s' $info
-        else
-            tilde_directory
-        end
     end
 
     function short_pwd
@@ -1234,11 +1178,6 @@ exec bash --rcfile "$BASHRC" -i'
 export ZDOTDIR "$(mktemp -d /tmp/zsh.XXXXXXXX)";
 scp $ssh_opts "'$HOSTNAME:$ZDOTDIR/.zshrc'" "$ZDOTDIR";
 exec zsh -i'
-    end
-
-    # print the current directory with $HOME changed to ~
-    function tilde_directory
-        printf '%s' $PWD | sed -e 's#^'$HOME'#~#'
     end
 
     # print the string that should be used as the xterm title
