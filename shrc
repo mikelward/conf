@@ -78,8 +78,8 @@ zsh)
     # particularly useful for zsh-autocomplete
     setopt SHARE_HISTORY
     HISTFILE=~/.zsh_history
-    HISTSIZE=5000
-    SAVEHIST=5000
+    HISTSIZE=100000
+    SAVEHIST=100000
 
     # make tab completion do what it says
     # e.g. in conf/config, i3s<TAB> completes to i3status/, it should
