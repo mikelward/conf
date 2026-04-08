@@ -574,6 +574,40 @@ function what
     type $argv[1]
 end
 
+# Trailing-slash autocd: typing `foo/` at the prompt changes into foo
+# (same lookup as `cd`, so CDPATH still applies), while bare `foo`
+# remains a "command not found" error. Fish has no direct equivalent
+# of bash's `shopt -s autocd` / zsh's `setopt AUTO_CD`, and we wouldn't
+# use them anyway -- they auto-cd on *any* bare directory name, too
+# easy to trigger by accident. Requiring a trailing `/` makes the
+# intent explicit.
+#
+# We preserve any pre-existing fish_command_not_found (e.g. distros
+# that ship one to suggest `apt install X`) by copying it to
+# system_fish_command_not_found before we override. The `functions -q`
+# guard on the copy target keeps re-sourcing idempotent.
+if functions -q fish_command_not_found
+    and not functions -q system_fish_command_not_found
+    functions -c fish_command_not_found system_fish_command_not_found
+end
+
+function fish_command_not_found
+    if string match -q -- '*/' $argv[1]
+        if test -d $argv[1]
+            cd -- $argv[1]
+            return
+        end
+    end
+    if functions -q system_fish_command_not_found
+        system_fish_command_not_found $argv
+    else if functions -q __fish_default_command_not_found_handler
+        __fish_default_command_not_found_handler $argv
+    else
+        echo "fish: Unknown command: $argv[1]" >&2
+        return 127
+    end
+end
+
 ##################################
 # ENVIRONMENT SETUP FOR ALL SHELLS
 # Set $PATH early in case other stuff here needs it.
