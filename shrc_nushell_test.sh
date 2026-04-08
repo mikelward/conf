@@ -387,9 +387,23 @@ assert_contains "nu CDPATH contains HOME" "$_testdir/nufakehome" "$result"
 assert_not_contains "nu CDPATH does not contain conf" "$_testdir/nufakehome/conf" "$result"
 
 ###############
-# TEST: no command_not_found hook is installed. See the big comment in
-# config.nu for why nushell autocd via the hook doesn't work.
-result="$(_nu_run 'print -n (($env.config.hooks.command_not_found | describe))')"
+# TEST: trailing-slash autocd is provided by nushell's native REPL path
+# handling, not by any hook of ours. Assert that config.nu does not
+# install a command_not_found or pre_execution autocd hook (the two
+# approaches we've considered) -- we rely on nushell itself.
+result="$(_nu_run 'print -n ($env.config.hooks.command_not_found | describe)')"
 assert_equal "nu command_not_found hook is not set" "nothing" "$result"
+result="$(_nu_run 'print -n ($env.config.hooks.pre_execution | length)')"
+assert_equal "nu pre_execution hook list is empty" "0" "$result"
+
+# TEST: `cd` into a trailing-slash path works (sanity check for the
+# `cd ./foo/` fallback users can type explicitly).
+result="$(_nu_run '
+let base = ($env.HOME | path expand)
+mkdir ([$base "cdtest" "sub"] | path join)
+cd ([$base "cdtest"] | path join)
+cd ./sub/
+print -n $env.PWD')"
+assert_contains "nu cd with trailing slash enters directory" "cdtest/sub" "$result"
 
 test_summary "nushell shrc_nushell_test"
