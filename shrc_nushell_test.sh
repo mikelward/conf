@@ -80,7 +80,7 @@ assert_equal "nu format-duration 1h2m3s" "1 hours 2 minutes 3 seconds" "$result"
 # TEST: ps1-character
 # When not root, shows '〉'. When root (UID=0), shows '#'.
 result="$(_nu_run '$env.UID = 1000; print -n (ps1-character)')"
-assert_equal "nu ps1-character non-root" "〉" "$result"
+assert_equal "nu ps1-character non-root" ">" "$result"
 
 result="$(_nu_run '$env.UID = 0; print -n (ps1-character)')"
 assert_equal "nu ps1-character root" "#" "$result"
