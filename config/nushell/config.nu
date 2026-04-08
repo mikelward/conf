@@ -885,22 +885,14 @@ $env.config = ($env.config | upsert show_banner false)
 $env.config = ($env.config | upsert history.file_format "plaintext")
 $env.config = ($env.config | upsert history.max_size 100000)
 
-# NOTE: no trailing-slash autocd for nushell.
-#
-# The other shells (bash/zsh/fish) implement it via their
-# command-not-found hook -- see shrc's maybe_autocd_trailing_slash and
-# config.fish's fish_command_not_found. Nushell has an equivalent
-# $env.config.hooks.command_not_found hook, but two things block us:
-#
-#   1. cd inside a closure is scoped to that closure, so the hook
-#      can't actually change the calling shell's PWD.
-#   2. Worse, as of nushell 0.111, *assigning* a command_not_found
-#      hook closure causes any env vars set after the assignment to
-#      be silently dropped the moment the hook is triggered (the
-#      closure's captured env clobbers the outer scope on return).
-#
-# Bare `./foo/` at the nushell prompt will just error with "command
-# not found". Type `cd ./foo/` explicitly.
+# Trailing-slash autocd: no hook needed. Nushell's REPL already cds
+# when a path to an existing directory is entered bare, including
+# `foo/`, `./foo/`, `/abs/path/`, and `../`. Bare names without a path
+# separator (`foo`) still go through command lookup and error if not
+# found, which matches shrc's maybe_autocd_trailing_slash. This is a
+# REPL-only behavior -- `nu -c './foo/'` errors -- so the nushell test
+# suite only asserts that no overriding hook is installed and that an
+# explicit `cd ./foo/` still works.
 
 # source local overrides file (work vs home, etc.)
 # Nushell's `source` is a parse-time operation, so the file must exist at
