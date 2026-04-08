@@ -56,19 +56,23 @@ extract_func show_hostname_in_title
 extract_func i_am_root
 extract_func on_production_host
 extract_func auth_info
-extract_func fetch_info
 extract_func is_ssh_valid
 extract_func bash_last_error
 
-# Stub VCS functions (no VCS by default)
+# Stub VCS functions (no VCS by default).
+# _dir_info calls `have_command vcs` and `vcs prompt-info`; stub both so
+# tests don't depend on whether the real binary is installed.
+have_command() {
+    case "$1" in
+        vcs) return 0 ;;
+        *) command -v "$1" >/dev/null 2>&1 ;;
+    esac
+}
 projectroot() { :; }
 projectname() { :; }
 vcs() { return 1; }
-git_branch() { :; }
-status_chars() { :; }
 outgoing() { return 1; }
 base() { :; }
-fetchtime() { return 1; }
 
 # Stub environment functions
 on_my_machine() { true; }
@@ -152,33 +156,29 @@ is_ssh_valid() { true; }
 
 ###############
 # TEST: dir_info outside VCS shows tilde directory
+# `vcs prompt-info` exits non-zero when not in a repo; _dir_info should
+# fall back to the tilde-expanded path.
 
-projectroot() { :; }
 HOME="$_testdir/fakehome"
 mkdir -p "$HOME/documents"
 PWD="$HOME/documents"
+vcs() { return 1; }
 result="$(_dir_info "$PWD")"
 assert_equal "dir_info outside VCS shows tilde path" "~/documents" "$result"
 
 ###############
-# TEST: dir_info in VCS root
+# TEST: dir_info at VCS root
+# `vcs prompt-info` bundles project/branch/status/fetch into one line;
+# _dir_info just prints what the binary returns.
 
 _vcsdir="$_testdir/myproject"
 mkdir -p "$_vcsdir"
-projectroot() { echo "$_vcsdir"; }
-# vcs with args dispatches to ${vcs}_${command}, so stub both
 vcs() {
-    if test $# -gt 0; then
-        local command=$1; shift
-        "git_${command}" "$@"
-    else
-        echo "git"
-    fi
+    case "$1" in
+        prompt-info) echo "myproject main" ;;
+        *) return 1 ;;
+    esac
 }
-git_branch() { echo "main"; }
-status_chars() { :; }
-fetch_info() { :; }
-
 PWD="$_vcsdir"
 result="$(_dir_info "$PWD")"
 assert_equal "dir_info at VCS root" "myproject main" "$result"
@@ -188,29 +188,77 @@ assert_equal "dir_info at VCS root" "myproject main" "$result"
 
 _subdir="$_vcsdir/src/lib"
 mkdir -p "$_subdir"
+vcs() {
+    case "$1" in
+        prompt-info) echo "myproject src/lib main" ;;
+        *) return 1 ;;
+    esac
+}
 PWD="$_subdir"
 result="$(_dir_info "$PWD")"
 assert_equal "dir_info in VCS subdirectory" "myproject src/lib main" "$result"
 
 ###############
-# TEST: dir_info with branch and status chars
+# TEST: dir_info shows dirty status
 
-status_chars() { echo "M"; }
+vcs() {
+    case "$1" in
+        prompt-info) echo "myproject main *" ;;
+        *) return 1 ;;
+    esac
+}
 PWD="$_vcsdir"
 result="$(_dir_info "$PWD")"
-assert_equal "dir_info with status chars" "myproject main M" "$result"
+assert_equal "dir_info with dirty status" "myproject main *" "$result"
 
 ###############
-# TEST: dir_info with fetch warning
+# TEST: dir_info with stale fetch
 
-status_chars() { :; }
-fetch_info() { echo "fetch"; }
+vcs() {
+    case "$1" in
+        prompt-info) echo "myproject main fetch" ;;
+        *) return 1 ;;
+    esac
+}
 result="$(_dir_info "$PWD")"
 assert_equal "dir_info with stale fetch" "myproject main fetch" "$result"
 
+###############
+# TEST: dir_info falls back to tilde path when prompt-info fails
+
+PWD="$HOME/documents"
+vcs() {
+    case "$1" in
+        prompt-info) return 1 ;;
+        *) return 1 ;;
+    esac
+}
+result="$(_dir_info "$PWD")"
+assert_equal "dir_info falls back when prompt-info fails" "~/documents" "$result"
+
+###############
+# TEST: dir_info warns when vcs binary is not installed
+
+_saved_have_command="$(type have_command)"
+have_command() {
+    case "$1" in
+        vcs) return 1 ;;
+        *) command -v "$1" >/dev/null 2>&1 ;;
+    esac
+}
+PWD="$HOME/documents"
+result="$(_dir_info "$PWD")"
+assert_equal "dir_info warns when vcs missing" "~/documents vcs" "$result"
+
+# Restore have_command stub
+have_command() {
+    case "$1" in
+        vcs) return 0 ;;
+        *) command -v "$1" >/dev/null 2>&1 ;;
+    esac
+}
+
 # Reset stubs
-fetch_info() { :; }
-projectroot() { :; }
 vcs() { return 1; }
 
 ###############
@@ -454,18 +502,12 @@ bash_last_error() { :; }
 is_ssh_valid() { true; }
 in_shpool() { false; }
 on_production_host() { false; }
-projectroot() { echo "$_vcsdir"; }
 vcs() {
-    if test $# -gt 0; then
-        local command=$1; shift
-        "git_${command}" "$@"
-    else
-        echo "git"
-    fi
+    case "$1" in
+        prompt-info) echo "conf main" ;;
+        *) return 1 ;;
+    esac
 }
-git_branch() { echo "main"; }
-status_chars() { :; }
-fetch_info() { :; }
 outgoing() { return 1; }
 base() { :; }
 
@@ -486,16 +528,18 @@ current_command=
 SECONDS=0
 in_shpool() { true; }
 SHPOOL_SESSION_NAME="edge1"
-projectroot() { echo "$_edgedir"; }
-git_branch() { echo "somebranch"; }
-status_chars() { echo "M?"; }
-fetch_info() { echo "fetch"; }
+vcs() {
+    case "$1" in
+        prompt-info) echo "edge1 ui somebranch * fetch" ;;
+        *) return 1 ;;
+    esac
+}
 outgoing() { echo "abc1234 Bump targetSdk to 36"; }
 base() { echo "abc1234 Bump targetSdk to 36"; }
 
 result="$(_resolve_cr "$(preprompt)")"
 expected="
-workstation [edge1] edge1 ui somebranch M? fetch ―――――――――――――――――――――――――――――――
+workstation [edge1] edge1 ui somebranch * fetch ――――――――――――――――――――――――――――――――
 abc1234 Bump targetSdk to 36"
 assert_equal "whole prompt: workstation, shpool, subdir, outgoing, changes, fetch" "$expected" "$result"
 
@@ -508,11 +552,9 @@ bash_last_error() { :; }
 is_ssh_valid() { true; }
 in_shpool() { false; }
 on_production_host() { false; }
-projectroot() { :; }
 vcs() { return 1; }
 outgoing() { return 1; }
 base() { :; }
-fetch_info() { :; }
 
 ###############
 # VISUAL TEST MODE

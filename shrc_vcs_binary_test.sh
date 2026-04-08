@@ -61,6 +61,26 @@ result=$(cd "$_testdir/gitrepo" && vcs_backend)
 assert_equal "vcs_backend returns git via binary" "git" "$result"
 
 ###############
+# Test prompt_info wrapper
+
+# Wrapper should delegate directly to `command vcs prompt-info`.
+_prompt_info_body="$(type prompt_info)"
+assert_contains "prompt_info() calls command vcs prompt-info" \
+    "command vcs prompt-info" "$_prompt_info_body"
+
+# In a real repo the binary should emit a non-empty plain line starting
+# with the project name.
+result=$(cd "$_testdir/gitrepo" && prompt_info --color=never)
+assert_equal "prompt_info succeeds in git repo" "0" "$?"
+assert_true "prompt_info output non-empty in git repo" test -n "$result"
+_first_token="${result%% *}"
+assert_equal "prompt_info output starts with project name" "gitrepo" "$_first_token"
+
+# Outside a repo, prompt_info should fail (non-zero exit).
+(cd "$_testdir/norepo" && prompt_info --color=never >/dev/null 2>&1)
+assert_equal "prompt_info fails outside repo" "1" "$?"
+
+###############
 # Test cv (clearcache) via binary
 
 # Create a .vcs_cache manually

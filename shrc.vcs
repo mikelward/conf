@@ -29,6 +29,10 @@ vcs_hosting() {
     command vcs hosting
 }
 
+prompt_info() {
+    command vcs prompt-info "$@"
+}
+
 # Use vcs binary for cp/mv/rm overrides.
 cp() {
     if command vcs detect >/dev/null 2>&1; then
