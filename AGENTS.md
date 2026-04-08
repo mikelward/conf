@@ -14,3 +14,4 @@
 - Do not consider a task complete until tests are included.
 - When modifying VCS functions or prompt functions, run performance tests, include timing info, and warn of any regressions.
 - When touching `shrc.vcs*` files, install `jj` and `hg` locally before running tests so that all VCS test suites execute rather than being skipped.
+- When touching `config/nushell/*` files, install `nu` locally before running tests so that the nushell test suite executes rather than being skipped.
