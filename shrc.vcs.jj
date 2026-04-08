@@ -179,6 +179,13 @@ jj_pending() {
     jj --no-pager log -r 'mutable() ~ empty()' "$@"
 }
 
+jj_prompt-info() {
+    local _branch _revision
+    _branch="$(jj --no-pager log --no-graph -r @ -T 'bookmarks.join(" ")' 2>/dev/null)"
+    _revision="$(jj --no-pager log --no-graph -r @ -T 'change_id.shortest()' 2>/dev/null)"
+    _vcs_emit_prompt_info "$_branch" "$_revision"
+}
+
 jj_pick() {
     jj duplicate "$@"
 }

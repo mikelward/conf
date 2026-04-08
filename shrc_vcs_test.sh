@@ -32,6 +32,12 @@ mkdir "$_testdir/jjrepo/.jj"
 result=$(cd "$_testdir/jjrepo" && vcs)
 assert_equal "vcs detects jj repo" "jj" "$result"
 
+# Test mixed markers prefer jj over hg and git
+mkdir -p "$_testdir/mixedrepo"
+mkdir "$_testdir/mixedrepo/.git" "$_testdir/mixedrepo/.hg" "$_testdir/mixedrepo/.jj"
+result=$(cd "$_testdir/mixedrepo" && vcs)
+assert_equal "vcs prefers jj over hg and git" "jj" "$result"
+
 # Test no vcs
 mkdir -p "$_testdir/norepo"
 result=$(cd "$_testdir/norepo" && vcs)
@@ -360,7 +366,21 @@ status() { printf 'R  f1\nD  f2\nA  f3\nM  f4\n'; }
 result=$(status_chars)
 assert_equal "status_chars sorts codes" "A D M R" "$result"
 
+# Ignore vcs cache files created by detection
+status() { printf '?? .vcs_cache\nM  file.txt\n?? subdir/.vcs_cache\n'; }
+result=$(status_chars)
+assert_equal "status_chars ignores vcs cache files" "M" "$result"
+
 unset -f status
+
+###############
+# Test prompt-info field formatting
+
+result=$(_vcs_prompt_field STATUS "M ??")
+assert_equal "prompt-info preserves space-separated values" "STATUS=M ??" "$result"
+
+result=$(_vcs_prompt_field MESSAGE $'line1\nline2')
+assert_equal "prompt-info quotes multiline values" 'MESSAGE="line1\nline2"' "$result"
 
 ###############
 # Test allknown

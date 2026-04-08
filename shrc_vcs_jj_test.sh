@@ -74,6 +74,42 @@ assert_true "jj_base after prev shows earlier commit" grep -q 'jj base test comm
 (cd "$_jj_repo" && jj new >/dev/null 2>&1)
 
 ###############
+# Test jj prompt-info
+
+_jj_prompt_revision=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'change_id.shortest()')
+result=$(cd "$_jj_repo" && jj_prompt-info)
+expected="VCS=jj
+BACKEND=git
+HOSTING=
+ROOTDIR=$_jj_repo
+SUBDIR=
+BRANCH=
+REVISION=$_jj_prompt_revision
+STATUS=
+FETCH="
+assert_equal "jj_prompt-info at repo root" "$expected" "$result"
+
+mkdir -p "$_jj_repo/subdir"
+(
+    cd "$_jj_repo"
+    echo "dirty" >> secondfile.txt
+    echo "new" > subdir/untracked.txt
+)
+_jj_prompt_revision=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'change_id.shortest()')
+result=$(cd "$_jj_repo/subdir" && jj_prompt-info)
+expected="VCS=jj
+BACKEND=git
+HOSTING=
+ROOTDIR=$_jj_repo
+SUBDIR=subdir
+BRANCH=
+REVISION=$_jj_prompt_revision
+STATUS=A M
+FETCH="
+assert_equal "jj_prompt-info in subdir with status" "$expected" "$result"
+(cd "$_jj_repo" && jj restore . >/dev/null 2>&1 && rm -rf subdir && rm -f .vcs_cache)
+
+###############
 # Test jj graph
 
 _jj_graph_wc=$(cd "$_jj_repo" && jj log --no-graph -r @ -T 'change_id.shortest()')

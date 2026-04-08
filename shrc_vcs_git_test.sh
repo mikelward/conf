@@ -150,6 +150,46 @@ assert_true "git_map detached has graph markers" grep -q '^\*' <<< "$result"
 (cd "$_git_local" && git checkout "$_initial_branch" >/dev/null 2>&1)
 
 ###############
+# Test git prompt-info
+
+_git_prompt_revision=$(cd "$_git_local" && git rev-parse --short HEAD)
+result=$(cd "$_git_local" && git_prompt-info)
+expected="VCS=git
+BACKEND=git
+HOSTING=
+ROOTDIR=$_git_local
+SUBDIR=
+BRANCH=$_initial_branch
+REVISION=$_git_prompt_revision
+STATUS=
+FETCH="
+assert_equal "git_prompt-info at repo root" "$expected" "$result"
+
+mkdir -p "$_git_local/subdir"
+(
+    cd "$_git_local"
+    echo "prompt-info tracked" > prompt-info.txt
+    git add prompt-info.txt
+    git commit -m "prompt info test" >/dev/null 2>&1
+    git push >/dev/null 2>&1
+    echo "dirty" >> prompt-info.txt
+    echo "untracked" > subdir/untracked.txt
+)
+_git_prompt_revision=$(cd "$_git_local" && git rev-parse --short HEAD)
+result=$(cd "$_git_local/subdir" && git_prompt-info)
+expected="VCS=git
+BACKEND=git
+HOSTING=
+ROOTDIR=$_git_local
+SUBDIR=subdir
+BRANCH=$_initial_branch
+REVISION=$_git_prompt_revision
+STATUS=?? M
+FETCH="
+assert_equal "git_prompt-info in subdir with status" "$expected" "$result"
+(cd "$_git_local" && git reset --hard HEAD >/dev/null 2>&1 && rm -rf subdir && rm -f .vcs_cache)
+
+###############
 # Test git outgoing and incoming
 
 # Test git_outgoing with no unpushed commits

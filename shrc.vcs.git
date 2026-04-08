@@ -240,6 +240,13 @@ git_pending() {
     git --no-pager log --oneline @{upstream}..HEAD 2>/dev/null || git status --short
 }
 
+git_prompt-info() {
+    local _branch _revision
+    _branch="$(git_branch)"
+    _revision="$(git rev-parse --short HEAD 2>/dev/null)"
+    _vcs_emit_prompt_info "$_branch" "$_revision"
+}
+
 git_pick() {
     git cherry-pick "$@"
 }

@@ -200,6 +200,13 @@ hg_pending() {
     hg --pager never status
 }
 
+hg_prompt-info() {
+    local _branch _revision
+    _branch="$(hg_branch 2>/dev/null)"
+    _revision="$(hg log -r . --template '{node|short}\n' 2>/dev/null)"
+    _vcs_emit_prompt_info "$_branch" "$_revision"
+}
+
 hg_pick() {
     hg graft "$@"
 }

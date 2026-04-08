@@ -95,12 +95,20 @@ assert_false "cv removes .vcs_cache via binary" test -f "$_testdir/gitrepo/.vcs_
 _status_body="$(type status)"
 assert_contains "status() calls vcs" "vcs" "$_status_body"
 
+_prompt_info_body="$(type prompt-info)"
+assert_contains "prompt-info() calls vcs" "vcs" "$_prompt_info_body"
+
 # Verify actual command execution (vcs status in a git repo)
 (cd "$_testdir/gitrepo" && git -c user.email=test@test.com -c user.name=Test commit --allow-empty -m "test" >/dev/null 2>&1)
 result=$(cd "$_testdir/gitrepo" && vcs status 2>&1)
 # status should succeed (exit 0) in a clean repo
 (cd "$_testdir/gitrepo" && vcs status >/dev/null 2>&1)
 assert_equal "vcs status succeeds in git repo" "0" "$?"
+
+result=$(cd "$_testdir/gitrepo" && vcs prompt-info)
+assert_contains "vcs prompt-info includes VCS via binary" "VCS=git" "$result"
+assert_contains "vcs prompt-info includes backend via binary" "BACKEND=git" "$result"
+assert_contains "vcs prompt-info includes rootdir via binary" "ROOTDIR=$_testdir/gitrepo" "$result"
 
 ###############
 # Test cp/mv/rm fallback outside VCS
