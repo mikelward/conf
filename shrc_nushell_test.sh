@@ -380,4 +380,10 @@ clone 'https://github.com/foo/bar.git'
 " 'n' | tr -d '\n')"
 assert_not_contains "nu clone aborts when user declines git fallback" "git clone" "$result"
 
+###############
+# TEST: CDPATH is set and does not include conf/ subdirectories
+result="$(_nu_run 'print -n ($env.CDPATH | str join ":")')"
+assert_contains "nu CDPATH contains HOME" "$_testdir/nufakehome" "$result"
+assert_not_contains "nu CDPATH does not contain conf" "$_testdir/nufakehome/conf" "$result"
+
 test_summary "nushell shrc_nushell_test"

@@ -578,7 +578,7 @@ end
 # ENVIRONMENT SETUP FOR ALL SHELLS
 # Set $PATH early in case other stuff here needs it.
 
-set --export CDPATH . $HOME $HOME/conf $HOME/conf/config
+set --export CDPATH . $HOME
 set --export GOPATH $HOME
 
 add_path /usr/local/bin

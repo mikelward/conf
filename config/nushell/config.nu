@@ -425,8 +425,6 @@ def session-name [] {
 $env.CDPATH = [
     "."
     $env.HOME
-    ([$env.HOME "conf"] | path join)
-    ([$env.HOME "conf" "config"] | path join)
 ]
 $env.GOPATH = $env.HOME
 

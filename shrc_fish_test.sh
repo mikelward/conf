@@ -184,6 +184,7 @@ assert_equal "fish maybe_start_shpool_and_exit no-op without shpool" "survived" 
 
 result="$(HOME=$_testdir/fakehome fish --no-config -c "source $_config; echo \$CDPATH" 2>/dev/null)"
 assert_contains "fish CDPATH contains HOME" "$_testdir/fakehome" "$result"
+assert_not_contains "fish CDPATH does not contain conf" "$_testdir/fakehome/conf" "$result"
 
 ###############
 # TEST: EDITRC is exported when ~/.editrc exists
