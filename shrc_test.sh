@@ -738,6 +738,60 @@ assert_contains "shrc CDPATH contains HOME" "\$HOME" "$_cdpath_line"
 assert_not_contains "shrc CDPATH does not contain \$HOME/conf" "\$HOME/conf" "$_cdpath_line"
 
 ###############
+# Trailing-slash autocd hook (maybe_autocd_trailing_slash)
+# Verify shrc no longer enables the aggressive autocd options.
+assert_equal "shrc does not shopt -s autocd" "" \
+    "$(grep -E '^[[:space:]]*shopt -s autocd' "$_srcdir/shrc")"
+assert_equal "shrc does not setopt AUTO_CD" "" \
+    "$(grep -E '^[[:space:]]*setopt AUTO_CD' "$_srcdir/shrc")"
+
+extract_func maybe_autocd_trailing_slash
+
+# Set up a temp directory tree for cd tests
+_autocd_root="$_testdir/autocd"
+mkdir -p "$_autocd_root/sub"
+
+# Trailing slash on an existing dir cds into it.
+_saved_pwd="$PWD"
+(
+    cd "$_autocd_root" || exit 1
+    CDPATH=  # avoid surprising CDPATH lookups during the test
+    maybe_autocd_trailing_slash "./sub/" >/dev/null 2>&1
+    if test "$PWD" = "$_autocd_root/sub"; then
+        exit 0
+    else
+        exit 1
+    fi
+)
+assert_equal "maybe_autocd_trailing_slash cds on trailing slash" "0" "$?"
+cd "$_saved_pwd" || true
+
+# Trailing slash on a non-existent dir falls through to the "not found"
+# fallback (no system hook defined here).
+result=$(CDPATH= maybe_autocd_trailing_slash "./no_such_dir_xyz/" 2>&1)
+assert_contains "maybe_autocd_trailing_slash non-existent falls through" \
+    "command not found" "$result"
+
+# No trailing slash: falls through to the "not found" fallback.
+result=$(maybe_autocd_trailing_slash "someweirdcmd" 2>&1)
+assert_contains "maybe_autocd_trailing_slash no slash falls through" \
+    "command not found" "$result"
+
+# With a saved system hook, it gets called for non-matches.
+system_command_not_found_handle() { printf 'SYSTEM:%s\n' "$1"; }
+result=$(maybe_autocd_trailing_slash "someweirdcmd" 2>&1)
+assert_equal "maybe_autocd_trailing_slash delegates to system hook" \
+    "SYSTEM:someweirdcmd" "$result"
+unset -f system_command_not_found_handle
+
+# And the zsh-style name also works.
+system_command_not_found_handler() { printf 'SYSTEMR:%s\n' "$1"; }
+result=$(maybe_autocd_trailing_slash "someweirdcmd" 2>&1)
+assert_equal "maybe_autocd_trailing_slash delegates to zsh-style system hook" \
+    "SYSTEMR:someweirdcmd" "$result"
+unset -f system_command_not_found_handler
+
+###############
 # SHELL COMPATIBILITY
 # Verify shrc does not use bashisms outside of bash/zsh-guarded sections.
 

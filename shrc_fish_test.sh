@@ -210,4 +210,61 @@ assert_equal "fish LSCOLORS for xterm" "exfxxxxxcxxxxx" "$result"
 result="$(HOME=$_testdir/fakehome TERM=linux fish --no-config -c "source $_config; echo \$LSCOLORS" 2>/dev/null)"
 assert_equal "fish LSCOLORS for linux terminal" "ExFxxxxxCxxxxx" "$result"
 
+###############
+# TEST: trailing-slash autocd via fish_command_not_found
+# Typing `foo/` at the prompt should cd into foo if it's a directory.
+
+_fish_autocd="$_testdir/fish_autocd"
+mkdir -p "$_fish_autocd/sub"
+
+# fish_command_not_found cds into an existing dir when given a trailing slash
+result="$(_fish_run '
+    cd '"$_fish_autocd"'
+    set -e CDPATH
+    fish_command_not_found ./sub/ >/dev/null 2>&1
+    pwd
+')"
+assert_equal "fish fish_command_not_found cds on trailing slash" \
+    "$_fish_autocd/sub" "$result"
+
+# fish_command_not_found without a trailing slash falls through
+result="$(_fish_run '
+    fish_command_not_found someweirdcmd 2>&1
+' 2>&1)"
+assert_contains "fish fish_command_not_found no slash falls through" \
+    "Unknown command" "$result"
+
+# fish_command_not_found with non-existent trailing slash falls through
+result="$(_fish_run '
+    fish_command_not_found ./no_such_dir_xyz/ 2>&1
+' 2>&1)"
+assert_contains "fish fish_command_not_found non-existent falls through" \
+    "Unknown command" "$result"
+
+# When a system_fish_command_not_found is defined ahead of sourcing,
+# it is preserved and called for non-slash commands.
+result="$(HOME=$_testdir/fakehome fish --no-config -c '
+    function fish_command_not_found
+        echo "SYSTEM:$argv[1]"
+    end
+    source '"$_config"'
+    fish_command_not_found someweirdcmd
+' 2>&1)"
+assert_contains "fish preserves and delegates to system hook" \
+    "SYSTEM:someweirdcmd" "$result"
+
+# Re-sourcing the config does NOT wrap the system hook inside itself
+# (idempotency: system_fish_command_not_found should still print SYSTEM:,
+# not be clobbered by our own override).
+result="$(HOME=$_testdir/fakehome fish --no-config -c '
+    function fish_command_not_found
+        echo "SYSTEM:$argv[1]"
+    end
+    source '"$_config"'
+    source '"$_config"'
+    system_fish_command_not_found xyz
+' 2>&1)"
+assert_contains "fish re-sourcing preserves system hook idempotently" \
+    "SYSTEM:xyz" "$result"
+
 test_summary "fish shrc_fish_test"

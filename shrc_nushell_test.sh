@@ -305,7 +305,7 @@ cd $env.HOME
 print -n (render-prompt)')"
 assert_contains "nu render-prompt contains separator" "―" "$result"
 assert_contains "nu render-prompt contains hostname in prompt line" "laptop" "$result"
-assert_contains "nu render-prompt ends with 〉 prompt" "〉 " "$result"
+assert_contains "nu render-prompt ends with > prompt" "> " "$result"
 
 # And with UID=0, the prompt character should be #.
 result="$(_nu_run '
@@ -385,5 +385,11 @@ assert_not_contains "nu clone aborts when user declines git fallback" "git clone
 result="$(_nu_run 'print -n ($env.CDPATH | str join ":")')"
 assert_contains "nu CDPATH contains HOME" "$_testdir/nufakehome" "$result"
 assert_not_contains "nu CDPATH does not contain conf" "$_testdir/nufakehome/conf" "$result"
+
+###############
+# TEST: no command_not_found hook is installed. See the big comment in
+# config.nu for why nushell autocd via the hook doesn't work.
+result="$(_nu_run 'print -n (($env.config.hooks.command_not_found | describe))')"
+assert_equal "nu command_not_found hook is not set" "nothing" "$result"
 
 test_summary "nushell shrc_nushell_test"

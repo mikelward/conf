@@ -907,6 +907,37 @@ jc() { journalctl --no-hostname "$@"; }
 sc() { systemctl "$@"; }
 uc() { systemctl --user "$@"; }
 
+# Shared body of the bash/zsh command-not-found hooks wired up below in
+# the interactive section. If the missed "command" ends with a `/`, try
+# to cd there (same lookup as `cd`, so CDPATH still applies); otherwise
+# delegate to whichever saved system hook exists. This gives us a
+# "trailing-slash autocd": typing `foo/` at the prompt changes into
+# foo, while bare `foo` stays a "command not found" error.
+#
+# We deliberately avoid `shopt -s autocd` (bash) / `setopt AUTO_CD`
+# (zsh), which auto-cd on *any* bare directory name -- far too
+# aggressive and easy to trigger by accident (e.g. a typo that happens
+# to name a directory). Requiring a trailing `/` makes the intent
+# explicit.
+maybe_autocd_trailing_slash() {
+    case "$1" in
+    */)
+        if test -d "$1"; then
+            cd -- "$1"
+            return
+        fi
+        ;;
+    esac
+    if is_function system_command_not_found_handle; then
+        system_command_not_found_handle "$@"
+    elif is_function system_command_not_found_handler; then
+        system_command_not_found_handler "$@"
+    else
+        printf '%s: command not found\n' "$1" >&2
+        return 127
+    fi
+}
+
 ##################################
 # ENVIRONMENT SETUP FOR ALL SHELLS
 # Set $PATH early in case other stuff here needs it.
@@ -1824,15 +1855,28 @@ if is_interactive; then
 
     case "$shell" in
     zsh)
-        # zsh enhancements
-        setopt AUTO_CD
+        # zsh enhancements. NOTE: AUTO_CD is deliberately not set --
+        # see maybe_autocd_trailing_slash and the command_not_found_handler
+        # hook below for our trailing-slash autocd replacement.
         setopt CORRECT
         setopt DVORAK
         setopt EXTENDED_GLOB
         setopt PROMPT_PERCENT
         setopt PUSHD_SILENT
 
-        # complete both commands and files for the first word, to support autocd
+        # Save any pre-existing command_not_found_handler (e.g. distros
+        # with a "try `apt install X`" helper) under a system_* alias so
+        # we can fall through to it. The `! is_function system_*` guard
+        # keeps re-sourcing this file idempotent.
+        if is_function command_not_found_handler \
+           && ! is_function system_command_not_found_handler; then
+            eval "system_$(declare -f command_not_found_handler)"
+        fi
+        command_not_found_handler() {
+            maybe_autocd_trailing_slash "$@"
+        }
+
+        # complete both commands and files for the first word
         compctl -C -c -f
         # fall back to case-insensitive completion then fuzzy completion
         zstyle ':completion:*' matcher-list '' \
@@ -2051,10 +2095,24 @@ if is_interactive; then
 
         ;;
     bash)
-        # bash enhancements
-        shopt -s autocd
+        # bash enhancements. NOTE: `shopt -s autocd` is deliberately
+        # not set -- see maybe_autocd_trailing_slash and the
+        # command_not_found_handle hook below for our trailing-slash
+        # autocd replacement.
         shopt -s checkwinsize
         shopt -s lithist
+
+        # Save any pre-existing command_not_found_handle (e.g. Ubuntu's
+        # command-not-found package's "sudo apt install X" helper)
+        # under a system_* alias so we can fall through to it. The
+        # `! is_function system_*` guard keeps re-sourcing idempotent.
+        if is_function command_not_found_handle \
+           && ! is_function system_command_not_found_handle; then
+            eval "system_$(declare -f command_not_found_handle)"
+        fi
+        command_not_found_handle() {
+            maybe_autocd_trailing_slash "$@"
+        }
 
         escape_start='\['
         escape_end='\]'
