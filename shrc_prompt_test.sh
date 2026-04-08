@@ -73,6 +73,9 @@ projectname() { :; }
 vcs() { return 1; }
 outgoing() { return 1; }
 base() { :; }
+# `map` is defined in shrc.vcs via the command dispatch loop; stub it
+# here so preprompt's `map 2>/dev/null` call is a silent no-op by default.
+map() { :; }
 
 # Stub environment functions
 on_my_machine() { true; }
@@ -534,6 +537,10 @@ vcs() {
         *) return 1 ;;
     esac
 }
+# `map` is what preprompt actually calls (since commit 426dcda replaced
+# the direct `base` call). It's defined in shrc.vcs's command dispatch
+# loop and not extracted by this test, so stub it directly.
+map() { echo "abc1234 Bump targetSdk to 36"; }
 outgoing() { echo "abc1234 Bump targetSdk to 36"; }
 base() { echo "abc1234 Bump targetSdk to 36"; }
 
@@ -555,6 +562,7 @@ on_production_host() { false; }
 vcs() { return 1; }
 outgoing() { return 1; }
 base() { :; }
+map() { :; }
 
 ###############
 # VISUAL TEST MODE
