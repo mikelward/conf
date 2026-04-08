@@ -730,6 +730,14 @@ unset _root_log
 unset -f root_cmd myfunc root
 
 ###############
+# CDPATH
+# Verify CDPATH contains HOME but not the conf/config subdirectories, which
+# would surprisingly shadow directory names when `cd`ing from anywhere.
+_cdpath_line=$(sed -n 's/^CDPATH=//p' "$_srcdir/shrc")
+assert_contains "shrc CDPATH contains HOME" "\$HOME" "$_cdpath_line"
+assert_not_contains "shrc CDPATH does not contain \$HOME/conf" "\$HOME/conf" "$_cdpath_line"
+
+###############
 # SHELL COMPATIBILITY
 # Verify shrc does not use bashisms outside of bash/zsh-guarded sections.
 
