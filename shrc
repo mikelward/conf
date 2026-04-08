@@ -1128,12 +1128,35 @@ preprompt() {
     set_color 'normal'
     printf '\n'
     bar $((COLUMNS))
-    printf '\r%s %s%s \n' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")"
+    printf '\r%s \n' "$(prompt_line)"
     map 2>/dev/null
     job_info
     set_title "$(title)"
     set_prompt
     flash_terminal
+}
+
+# print the first line of the preprompt: host + dir + auth.
+# Delegates to `vcs prompt-line` when the binary is available so the whole
+# line renders in a single process. Falls back to composing host_info +
+# dir_info + auth_info in the shell when vcs is not installed.
+prompt_line() {
+    if have_command vcs; then
+        local _color_flag=--color=never
+        if $color; then
+            _color_flag=--color=always
+        fi
+        local _production=
+        if on_production_host; then
+            _production=--production
+        fi
+        vcs prompt-line \
+            --hostname="$(short_hostname)" \
+            $_production \
+            "$_color_flag"
+    else
+        printf '%s %s%s' "$(host_info)" "$(dir_info)" "$(maybe_space "$(auth_info)")"
+    fi
 }
 
 maybe_space() {

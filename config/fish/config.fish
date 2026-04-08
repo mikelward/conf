@@ -843,15 +843,35 @@ if is_interactive
         my_set_color 'normal'
         printf '\n'
         bar $COLUMNS
-        printf '\r%s %s%s \n' \
-            (host_info | string collect) \
-            (dir_info | string collect) \
-            (maybe_space (auth_info) | string collect)
+        printf '\r%s \n' (prompt_line | string collect)
         vcs map 2>/dev/null
         job_info
         set_title (title | string collect)
         ps1
         flash_terminal
+    end
+
+    # print the first line of the preprompt: host + dir + auth.
+    # Delegates to `vcs prompt-line` when the binary is available so the whole
+    # line renders in a single process. Falls back to composing host_info +
+    # dir_info + auth_info in fish when vcs is not installed.
+    function prompt_line
+        if have_command vcs
+            set _color_flag --color=never
+            if $color
+                set _color_flag --color=always
+            end
+            set _flags --hostname=(short_hostname | string collect) $_color_flag
+            if on_production_host
+                set _flags --production $_flags
+            end
+            vcs prompt-line $_flags
+        else
+            printf '%s %s%s' \
+                (host_info | string collect) \
+                (dir_info | string collect) \
+                (maybe_space (auth_info) | string collect)
+        end
     end
 
     function last_job_info

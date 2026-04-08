@@ -279,6 +279,64 @@ _resolve_cr() {
 _ps1char='>'
 
 ###############
+# TEST: prompt_line delegates to `vcs prompt-line` when binary available
+
+result="$(_fish_run '
+    set -g HOSTNAME mikel-laptop
+    set -g USERNAME mikel
+    function on_production_host; return 1; end
+    function vcs
+        switch $argv[1]
+            case prompt-line
+                echo "called-with: $argv[2..]"
+            case "*"; return 1
+        end
+    end
+    prompt_line
+')"
+assert_contains "fish prompt_line delegates to vcs prompt-line" "called-with:" "$result"
+assert_contains "fish prompt_line passes --hostname=<short_hostname>" "--hostname=laptop" "$result"
+assert_contains "fish prompt_line passes --color=never when color disabled" "--color=never" "$result"
+assert_not_contains "fish prompt_line omits --production off production" "--production" "$result"
+
+###############
+# TEST: prompt_line passes --production on production hosts
+
+result="$(_fish_run '
+    set -g HOSTNAME prodhost
+    set -g USERNAME mikel
+    function on_production_host; return 0; end
+    function vcs
+        switch $argv[1]
+            case prompt-line
+                echo "called-with: $argv[2..]"
+            case "*"; return 1
+        end
+    end
+    prompt_line
+')"
+assert_contains "fish prompt_line passes --production on production host" "--production" "$result"
+
+###############
+# TEST: prompt_line falls back to shell composition when vcs binary missing
+
+result="$(_fish_run '
+    set -g HOSTNAME testhost
+    set -g USERNAME testuser
+    mkdir -p $HOME
+    cd $HOME
+    function have_command
+        switch $argv[1]
+            case vcs; return 1
+            case "*"; command -v $argv[1] >/dev/null 2>&1
+        end
+    end
+    function is_ssh_valid; return 0; end
+    prompt_line
+')"
+assert_equal "fish prompt_line fallback composes shell pieces" "testhost shpool ~ vcs" "$result"
+
+###############
 # WHOLE PROMPT: laptop, home directory, need to auth
 
 result="$(_fish_run '
@@ -288,7 +346,12 @@ result="$(_fish_run '
     mkdir -p $HOME
     cd $HOME
     function is_ssh_valid; return 1; end
-    function vcs; return 1; end
+    function vcs
+        switch $argv[1]
+            case prompt-line; echo "laptop shpool ~ SSH"
+            case "*"; return 1
+        end
+    end
     fish_prompt
 ')"
 result="$(_resolve_cr "$result")"
@@ -306,7 +369,7 @@ result="$(_fish_run '
     set -g COLUMNS 80
     function vcs
         switch $argv[1]
-            case prompt-info; echo "conf main"
+            case prompt-line; echo "workstation shpool conf main"
             case "*"; return 1
         end
     end
@@ -328,7 +391,7 @@ result="$(_fish_run '
     set -g SHPOOL_SESSION_NAME edge1
     function vcs
         switch $argv[1]
-            case prompt-info; echo "edge1 ui somebranch * fetch"
+            case prompt-line; echo "workstation [edge1] edge1 ui somebranch * fetch"
             case "*"; return 1
         end
     end
