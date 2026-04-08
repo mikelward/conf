@@ -561,7 +561,7 @@ def title [] {
 
 # print a character that should be the last part of the prompt
 def ps1-character [] {
-    if (i-am-root) { "#" } else { "〉" }
+    if (i-am-root) { "#" } else { ">" }
 }
 
 # get the user's attention (terminal bell in xterm)
