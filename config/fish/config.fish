@@ -87,7 +87,8 @@ end
 
 # returns whether I need to authenticate
 function need_auth
-    test -n (auth_info)
+    set _info (auth_info | string collect)
+    test -n "$_info"
 end
 
 # return true if this machine is my workstation
@@ -113,6 +114,37 @@ function on_my_workstation
     end
 end
 
+# return true if this session arrived over ssh
+function connected_via_ssh
+    test -n "$SSH_CONNECTION"
+end
+
+# return true if this session is on a remote machine
+function connected_remotely
+    connected_via_ssh
+end
+
+# return true if this is inside a VCS workspace/source root
+function inside_project
+    set _root (projectroot | string collect)
+    test -n "$_root"
+end
+
+# return true if this session is attached to shpool
+function in_shpool
+    test -n "$SHPOOL_SESSION_NAME"
+end
+
+# return true if we should try to run shpool
+function want_shpool
+    connected_remotely; or inside_project
+end
+
+# return true if this session is inside a tmux server
+function inside_tmux
+    test -n "$TMUX"
+end
+
 # print an error message
 function error
     printf '%s\n' "$argv" >&2
@@ -133,10 +165,11 @@ function is_interactive
     status --is-interactive
 end
 
-## log the running of a command to a file
-#function log_history
-#    printf '%s\n' (date "+%Y%m%d %H%M%S %z") $TTY $argv" >> $HISTORY_FILE
-#end
+# log the running of a command to a file
+function log_history
+    test -n "$HISTORY_FILE"; or return
+    printf '%s %s %s\n' (date "+%Y%m%d %H%M%S %z") $TTY "$argv" >> $HISTORY_FILE
+end
 
 # run a command with output silenced
 function quiet
@@ -494,6 +527,28 @@ function first_arg_last
     $command $argv $arg
 end
 
+# Pass leading -x options of a command to a different first positional arg.
+# shift_options <command> <target> [-x ...] [args...]
+# Runs `<command> [-x ...] <target> [args...]`.
+function shift_options
+    set _command $argv[1]
+    set _target $argv[2]
+    set --erase argv[1..2]
+    set _options
+    while test (count $argv) -gt 0
+        switch $argv[1]
+        case '-' '--'
+            break
+        case '-*'
+            set --append _options $argv[1]
+            set --erase argv[1]
+        case '*'
+            break
+        end
+    end
+    $_command $_options $_target $argv
+end
+
 # convert a time from one timezone to another
 # tz2tz <from timezone> <to timezone> <date spec>
 function tz2tz
@@ -523,10 +578,15 @@ end
 # ENVIRONMENT SETUP FOR ALL SHELLS
 # Set $PATH early in case other stuff here needs it.
 
+set --export CDPATH . $HOME $HOME/conf $HOME/conf/config
 set --export GOPATH $HOME
 
+add_path /usr/local/bin
 add_path $HOME/android-sdk-linux/platform-tools
+add_path $HOME/android-studio/bin
 add_path $HOME/Android/Sdk/platform-tools
+add_path $HOME/depot_tools
+add_path $HOME/google-cloud-sdk/bin
 add_path $HOME/.cargo/bin
 add_path $HOME/.local/bin
 add_path $HOME/bin start
@@ -541,13 +601,56 @@ for dir in /opt/*/bin
 end
 add_path /sbin end
 add_path /usr/sbin end
+if have_command brew
+    brew shellenv | source
+end
 
 # set HISTORY_FILE for log_history
-set HISTORY_FILE $HOME/.history
+set --export HISTORY_FILE $HOME/.history
 
 set --export LESS "-R"
 if test -f $HOME/scripts/lessopen
     set --export LESSOPEN "|$HOME"'/scripts/lessopen "%s"'
+end
+
+test -r $HOME/.inputrc; and set --export INPUTRC $HOME/.inputrc
+test -r $HOME/.editrc; and set --export EDITRC $HOME/.editrc
+
+# default programs
+# kitty wants EDITOR to be set even for non-interactive shells
+is_runnable vi; and set --export EDITOR vi
+is_runnable vim; and set --export EDITOR vim
+is_runnable editline; and set --export EDITOR editline
+is_runnable more; and set --export PAGER more
+is_runnable less; and set --export PAGER less
+is_runnable meld; and test -n "$DISPLAY"; and set --export DIFF meld
+
+# program defaults
+set --export BLOCKSIZE 1024
+set --export CLICOLOR true
+set --export GREP_COLOR 4     # BSD grep and older GNU grep - underline matches
+set --export GREP_COLORS 'mt=4'  # GNU grep - underline matches
+
+# colors for ls
+switch $TERM
+case linux putty vt220
+    # colors for white on black
+    set --export LSCOLORS 'ExFxxxxxCxxxxx'
+    set --export LS_COLORS 'no=00:fi=00:di=01;34:ln=01;35:so=00;00:bd=00;00:cd=00;00:or=01;31:pi=00;00:ex=01;32'
+case '*'
+    # colors for black on white
+    set --export LSCOLORS 'exfxxxxxcxxxxx'
+    set --export LS_COLORS 'no=00:fi=00:di=00;34:ln=00;35:so=00;00:bd=00;00:cd=00;00:or=00;31:pi=00;00:ex=00;32'
+end
+
+function switchshpool
+    autoshpool switch $argv[1]; and exit
+end
+
+function maybe_start_shpool_and_exit
+    if not in_shpool; and want_shpool; and have_command shpool
+        autoshpool; and exit
+    end
 end
 
 #########################
@@ -555,11 +658,32 @@ end
 # Set up the prompt, title, key bindings, etc.
 
 if is_interactive
+    if in_shpool
+        # Prevent shpool from clearing the screen during startup.
+        # This ensures we can see any motd, errors, etc.
+        function clear
+            functions --erase clear
+        end
+        if test -n "$SHPOOL_INITIAL_PWD"
+            cd $SHPOOL_INITIAL_PWD
+            set --erase SHPOOL_INITIAL_PWD
+        end
+    else
+        # This will be overridden by autoshpool.
+        set --export SHPOOL_INITIAL_PWD $PWD
+    end
+    maybe_start_shpool_and_exit
 
-    #log_history "New session as $USERNAME: $0 ""$argv"
+    log_history "New session as $USERNAME: $0 $argv"
+
+    # use custom vi-like key bindings (emacs bindings layered on vi mode)
+    set -g fish_key_bindings my_vi_key_bindings
 
     # regain use of Ctrl+S and Ctrl+Q
     stty start undef stop undef 2>/dev/null
+
+    # mirror zsh's `zle_highlight=(default:bold)` so user input stands out.
+    set -g fish_color_command --bold
 
     # determine the graphics mode escape sequences
     set --global color false
@@ -630,6 +754,9 @@ if is_interactive
 
     #alias '?'='path_or_empty'
     alias @='path_or_empty'
+    alias asp='autoshpool'
+    alias attach='shpool attach'
+    alias detach='shpool detach'
     alias bindkeys='daemon xbindkeys'
     set code_patterns "*.c" "*.h" "*.cc" "*.cpp" "*.hh" "*.coffee" "*.go" "*.hs" "*.java" "*.js" "*.pl" "*.py" "*.sh" "*.rb" "*.swig" "*.ts"
     set code_includes "--include="$code_patterns
@@ -698,6 +825,8 @@ if is_interactive
     end
     alias lss='lssock'
     alias j='jobs'
+    alias jd='jjd'
+    alias mjd='jjd -f'
     alias m='make -f .Makefile'
     alias ml='m lint'
     # shadows magtape command, but who uses that?
@@ -727,8 +856,18 @@ if is_interactive
     end
     alias q='xa'
     alias s='subl'
+    alias sa='shpool attach'
+    alias sd='shpool detach'
+    alias shpoolswitch='switchshpool'
+    alias shsw='switchshpool'
+    alias spa='shpool attach'
+    alias spd='shpool detach'
     alias spell='aspell -a'
+    alias sps='switchshpool'
     alias sr='ssh -l root'
+    alias ssp='switchshpool'
+    alias sw='switchshpool'
+    alias swsh='switchshpool'
     alias symlink='ln -sr'
     alias t='tail'
     alias tf='t -f'
@@ -754,13 +893,21 @@ if is_interactive
     alias xr='DISPLAY=:0.0 xrandr'
 
     function set_up_ssh_aliases
-        set _ssh_machines $HOME/.ssh/machines
-        test -f $_ssh_machines; or return
+        set _ssh_config $HOME/.ssh/config
+        test -f $_ssh_config; or return
 
-        while read fqdn
-            set short (string match --regex '^[^.]*' $fqdn)
-            printf 'alias %s="ssh %s"' $short $fqdn | source
-        end <$_ssh_machines
+        while read _line
+            set _match (string match --regex '^[[:space:]]*[Hh]ost[[:space:]]+(.*)$' -- $_line)
+            test -n "$_match"; or continue
+            set _hosts (string replace --all --regex '[[:space:]]+' ' ' -- $_match[2] | string trim | string split --no-empty ' ')
+            for _alias in $_hosts
+                switch $_alias
+                case '*\**' '*\?*' '*-*'
+                    continue
+                end
+                eval "function $_alias; shift_options ssh -t $_alias \$argv; end"
+            end
+        end <$_ssh_config
     end
     set_up_ssh_aliases
 
@@ -825,7 +972,7 @@ if is_interactive
 #    end
 #
     function preexec --on-event fish_preexec
-        #log_history "$argv"
+        log_history "$argv"
         set --global last_job_status 0
         set --global current_command $argv
         #set_title (title | string collect)
@@ -961,14 +1108,6 @@ if is_interactive
         not inside_tmux
     end
 
-    function connected_via_ssh
-        test -n "$SSH_CONNECTION"
-    end
-
-    function inside_tmux
-        test -n "$TMUX"
-    end
-
     # return true if this machine is a production machine
     function on_production_host
         not on_my_machine; and not on_test_host; and not on_dev_host
@@ -987,11 +1126,6 @@ if is_interactive
         case '*dev*'; true
         case '*'; false
         end
-    end
-
-    # return true if running inside a shpool session
-    function in_shpool
-        test -n "$SHPOOL_SESSION_NAME"
     end
 
     # print a leading space before $argv if $argv is non-empty
@@ -1207,6 +1341,25 @@ exec zsh -i'
         printf '>'
     end
 
+    # print the current vi-like editing mode (e.g. INSERT, NORMAL).
+    # Overrides fish's default fish_mode_prompt. Fish prepends this to the
+    # last line of fish_prompt so the mode appears right before the cursor.
+    function fish_mode_prompt
+        test -z "$fish_bind_mode"; and return
+        switch $fish_bind_mode
+        case default
+            printf 'NORMAL '
+        case insert
+            printf 'INSERT '
+        case visual
+            printf 'VISUAL '
+        case replace_one replace
+            printf 'REPLACE '
+        case '*'
+            printf '%s ' $fish_bind_mode
+        end
+    end
+
     # set the xterm title to the supplied string
     function set_title
         if test -n "$titlestart"
@@ -1247,34 +1400,6 @@ exec zsh -i'
     # (will be overridden immediately by bash and zsh)
     # TODO: configure prompt
     #basic_prompt
-
-    # TODO: move out of interactive block?
-    # program defaults
-    set --export BLOCKSIZE 1024
-    set --export GREP_COLOR 4
-
-    # default programs
-    is_runnable vi; and set --export EDITOR vi
-    is_runnable vim; and set --export EDITOR vim
-    is_runnable editline; and set --export EDITOR editline
-    is_runnable more; and set --export PAGER more
-    is_runnable less; and set --export PAGER less
-    is_runnable meld; and test -n "$DISPLAY"; and set --export DIFF meld
-
-    # colors for ls
-    switch $TERM
-    case linux putty vt220
-        # colors for white on black
-        set --export LSCOLORS 'ExFxxxxxCxxxxx'
-        set --export LS_COLORS 'no=00:fi=00:di=01;34:ln=01;35:so=00;00:bd=00;00:cd=00;00:or=01;31:pi=00;00:ex 01;32'
-    case '*'
-        # colors for black on white
-        set --export LSCOLORS 'exfxxxxxcxxxxx'
-        set --export LS_COLORS 'no=00:fi=00:di=00;34:ln=00;35:so=00;00:bd=00;00:cd=00;00:or=00;31:pi=00;00:ex 00;32'
-    end
-
-    # command line editing
-    test -r $HOME/.inputrc; and set --export INPUTRC $HOME/.inputrc
 end
 
 # source local overrides file (work vs home, etc.)
