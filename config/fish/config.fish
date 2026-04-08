@@ -120,12 +120,12 @@ end
 
 # return true if the argument exists as a command, bypassing aliases
 function have_command
-    type --force-path --quiet $argv[1]
+    command --search $argv[1] >/dev/null 2>&1
 end
 
 # return true if the argument is an alias, builtin, command, or function
 function is_runnable
-    type --path --quiet $argv[1]
+    type --query $argv[1]
 end
 
 # return true if the shell is interactive
@@ -559,7 +559,7 @@ if is_interactive
     #log_history "New session as $USERNAME: $0 ""$argv"
 
     # regain use of Ctrl+S and Ctrl+Q
-    stty start undef stop undef
+    stty start undef stop undef 2>/dev/null
 
     # determine the graphics mode escape sequences
     set --global color false
@@ -842,7 +842,12 @@ if is_interactive
     function fish_prompt
         my_set_color 'normal'
         printf '\n'
-        printf '%s %s %s\n' (host_info) (dir_info) (auth_info)
+        bar $COLUMNS
+        printf '\r%s %s%s \n' \
+            (host_info | string collect) \
+            (dir_info | string collect) \
+            (maybe_space (auth_info) | string collect)
+        vcs map 2>/dev/null
         job_info
         set_title (title | string collect)
         ps1
@@ -978,7 +983,45 @@ if is_interactive
         end
         printf '%s' (short_hostname | string collect)
         my_set_color 'normal'
+        if in_shpool
+            printf ' ['
+            green $SHPOOL_SESSION_NAME
+            printf ']'
+        else
+            printf ' '
+            yellow 'shpool'
+        end
+        my_set_color 'normal'
         printf '\n'
+    end
+
+    # return true if running inside a shpool session
+    function in_shpool
+        test -n "$SHPOOL_SESSION_NAME"
+    end
+
+    # print a leading space before $argv if $argv is non-empty
+    function maybe_space
+        test -n "$argv"; and printf ' %s' "$argv"
+    end
+
+    # print $argv[1] "―" characters (used as a separator in the prompt)
+    function bar
+        set _width $argv[1]
+        set _i 0
+        while test $_i -lt $_width
+            printf '―'
+            set _i (math $_i + 1)
+        end
+    end
+
+    # print the current session name, if any, with a trailing space
+    function session_name
+        if test -n "$SHPOOL_SESSION_NAME"
+            printf '%s ' $SHPOOL_SESSION_NAME
+        else if test -n "$TMUX"
+            printf '%s ' (tmux display-message -p '#S' | string collect)
+        end
     end
 
     # print information about all shell jobs
@@ -989,40 +1032,31 @@ if is_interactive
                 grep -v '(pwd now:'
     end
 
-    function status_chars
-        :
-    end
-
-    # print directory stack listing in "+<number> <directory>" format
+    # print directory info for the prompt
     # intended to be used in the preprompt
     function dir_info
-            blue (_dir_info $PWD)
+        blue (_dir_info $PWD | string collect)
     end
     function _dir_info
-        # if the directory is under version control, print
-        # <project name> <subdir under project root> <branch>,
-        # otherwise just the directory with $HOME turned into ~
-        cd $argv[1]
-        set projectroot (projectroot)
-        if test -n "$projectroot"
-            green (basename $projectroot)
-            local projectsubdir
-            set projectsubdir (trim_prefix (projectroot) $PWD)
-            if test -n "$projectsubdir"
-                printf ' '
-                blue $projectsubdir
-            end
-            set statuschars (status_chars)
-            if test -n "$statuschars"
-                printf ' '
-                yellow $statuschars
-            end
-            # local branch
-            # set branch (branch)
-            # if test -n "$branch"
-            #     printf ' '
-            #     green $branch
-            # end
+        # Inside a VCS repo, delegate to `vcs prompt-info` which bundles
+        # project/subdir/branch/status/fetch into a single invocation and
+        # applies colors itself. Outside a repo (or when the binary returns
+        # nothing), fall back to the tilde-expanded directory. When the vcs
+        # binary is not installed, print the directory plus a yellow `vcs`
+        # warning so the missing tooling is obvious.
+        if not have_command vcs
+            tilde_directory
+            printf ' '
+            yellow 'vcs'
+            return
+        end
+        set _color_flag --color=never
+        if $color
+            set _color_flag --color=always
+        end
+        set info (vcs prompt-info $_color_flag 2>/dev/null | string collect)
+        if test -n "$info"
+            printf '%s' $info
         else
             tilde_directory
         end
@@ -1128,9 +1162,9 @@ if is_interactive
     # fish reserves the word "status"
     alias st='vcs status'
     for command in \
-        add amend annotate branch branches \
+        add amend annotate base branch branches \
         changed changelog changes checkout commit commitforce diffs \
-        fix graph incoming lint outgoing pending precommit presubmit pull \
+        fix graph incoming lint map outgoing pending precommit presubmit pull \
         push recommit revert review reword submit submitforce \
         unknown upload uploadchain
         alias $command="vcs $command"
@@ -1193,6 +1227,7 @@ exec zsh -i'
             short_hostname
             printf ' '
         end
+        session_name
         project_or_pwd
     end
 
