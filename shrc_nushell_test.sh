@@ -948,6 +948,8 @@ c" "$result"
 ###############
 # TEST: VCS aliases are defined even when the vcs binary is missing.
 # The stubs shouldn't fail to parse and `which` should find them.
+# `clone` remains a custom command (has real logic). The rest are now
+# aliases after the def->alias conversion.
 for _name in add amend annotate base branch branches changed changelog \
              changes checkout commit commitforce diffs fix graph incoming \
              lint map outgoing pending precommit presubmit pull push \
@@ -961,6 +963,69 @@ for _name in add amend annotate base branch branches changed changelog \
             assert_true "nu vcs alias $_name is defined (got: $result)" "false" ;;
     esac
 done
+
+# Explicit: clone is the only vcs wrapper that should still be a custom
+# command (it has real dispatch logic). Everything else is an alias.
+result="$(_nu_run 'which clone | get 0.type')"
+assert_equal "nu clone remains a custom command" "custom" "$result"
+
+for _name in add commit diffs graph push pull st ci di gr; do
+    result="$(_nu_run "which $_name | get 0.type")"
+    assert_equal "nu $_name is an alias after def->alias conversion" "alias" "$result"
+done
+
+###############
+# TEST: vcs aliases pass flags through to ^vcs without the wrapper's
+# flag parser catching them.
+#
+# Regression: the previous `def <cmd> [...args] { vcs "<cmd>" ...$args }`
+# pattern caused nushell's parser to reject unknown flags on the
+# wrapper, so typing `ci -m "fix"` errored with `unknown flag -m`.
+# Aliases are parse-time substitutions, so flags flow directly to the
+# external command and never see the wrapper's signature.
+_vcs_stub="$_testdir/vcs_stub"
+mkdir -p "$_vcs_stub"
+cat > "$_vcs_stub/vcs" <<'EOF'
+#!/bin/sh
+# Echo all args so tests can see what the alias dispatched.
+printf 'vcs-stub:'
+for _a; do
+    printf ' %s' "$_a"
+done
+printf '\n'
+EOF
+chmod +x "$_vcs_stub/vcs"
+
+# Long-form: commit -m "message"
+result="$(_nu_run "
+\$env.PATH = ['$_vcs_stub' '/usr/bin' '/bin']
+commit -m fix")"
+assert_contains "nu commit alias passes -m through to ^vcs" "vcs-stub: commit -m fix" "$result"
+
+# Short alias: ci -m "message" (the classic case that used to fail)
+result="$(_nu_run "
+\$env.PATH = ['$_vcs_stub' '/usr/bin' '/bin']
+ci -m fix")"
+assert_contains "nu ci alias passes -m through to ^vcs" "vcs-stub: commit -m fix" "$result"
+
+# Long flag: diffs --stat
+result="$(_nu_run "
+\$env.PATH = ['$_vcs_stub' '/usr/bin' '/bin']
+di --stat")"
+assert_contains "nu di alias passes --stat through to ^vcs" "vcs-stub: diffs --stat" "$result"
+
+# Positional + flag combo: graph --limit 10
+result="$(_nu_run "
+\$env.PATH = ['$_vcs_stub' '/usr/bin' '/bin']
+gr --limit 10")"
+assert_contains "nu gr alias passes --limit N through to ^vcs" "vcs-stub: graph --limit 10" "$result"
+
+# Bare `vcs` at the REPL falls through to the external automatically
+# (no `alias vcs = ^vcs` needed — nushell auto-resolves unknown names).
+result="$(_nu_run "
+\$env.PATH = ['$_vcs_stub' '/usr/bin' '/bin']
+vcs detect some/arg")"
+assert_contains "nu bare vcs resolves to ^vcs via PATH" "vcs-stub: detect some/arg" "$result"
 
 ###############
 # TEST: is-env-set handles missing, empty, and set values.
