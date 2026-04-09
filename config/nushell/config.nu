@@ -79,9 +79,19 @@ def quiet [...args] {
     try { ^($args | first) ...($args | skip 1) out+err> /dev/null } catch { return }
 }
 
+# log the running of a command to $env.HISTORY_FILE, no-op if unset
+def log-history [...args: string] {
+    let file = ($env.HISTORY_FILE? | default "")
+    if ($file | is-empty) { return }
+    let ts = (^date "+%Y%m%d %H%M%S %z" | str trim)
+    let tty = ($env.TTY? | default "")
+    let msg = ($args | str join " ")
+    $"($ts) ($tty) ($msg)(char newline)" | save --append $file
+}
+
 # return true if the named env var is set to a non-empty value
 def is-env-set [name: string] {
-    ($env | get -o $name | is-not-empty)
+    ($name in $env) and (($env | get $name | into string) | is-not-empty)
 }
 
 # prompt the user for a yes/no answer; default yes on empty reply
@@ -147,6 +157,25 @@ def connected-remotely [] {
 # return true if the current shell is attached to shpool
 def in-shpool [] {
     is-env-set "SHPOOL_SESSION_NAME"
+}
+
+# return true if this is inside a VCS workspace/source root
+def inside-project [] {
+    ((projectroot) | is-not-empty)
+}
+
+# return true if we should try to run shpool
+def want-shpool [] {
+    (connected-remotely) or (inside-project)
+}
+
+# start shpool if this session warrants it, then exit the current shell.
+# Mirrors shrc's maybe_start_shpool_and_exit.
+def maybe-start-shpool-and-exit [] {
+    if (not (in-shpool)) and (want-shpool) and (have-command "shpool") {
+        let r = (^autoshpool | complete)
+        if $r.exit_code == 0 { exit }
+    }
 }
 
 # return true if inside tmux
@@ -257,7 +286,10 @@ def addrs [] { ips }
 
 # make a backup (file.bak) of each argument
 def bak [...files: path] {
-    for f in $files { ^mv -i $f ($f | into string | $"($in).bak") }
+    for f in $files {
+        let s = ($f | into string)
+        ^mv -i $s ($s + ".bak")
+    }
 }
 
 # restore a .bak file (or back the restore direction)
@@ -265,7 +297,7 @@ def unbak [...files: path] {
     for f in $files {
         let s = ($f | into string)
         if ($s | str ends-with ".bak") {
-            let dest = ($s | str substring 0..(-4))
+            let dest = ($s | str substring 0..<(-4))
             if ($s | path exists) { ^mv -i $s $dest }
         } else {
             let src = ($s + ".bak")
@@ -341,6 +373,36 @@ def find-up [file: string] {
     }
 }
 
+# forward the first --lines lines of stdin unchanged, then run the given
+# command on the remaining body. e.g. `ps | body grep ps` or
+# `netstat -tn | body --lines 2 grep ':22\>'`. The default header count is
+# 1. Nushell's parser reserves bare `-N` flags for commands that declare
+# them, so shrc/fish's `body -2 grep ssh` shorthand is spelled
+# `body --lines=2 grep ssh` here.
+def body [--lines (-l): int = 1, ...args: string] {
+    let all = ($in | lines)
+    let headers = ($all | first $lines)
+    let body_lines = ($all | skip $lines)
+    for h in $headers { print $h }
+    $body_lines | str join (char newline) | ^($args | first) ...($args | skip 1)
+}
+
+# delete a specific line number from a file in place
+def delline [line: int, file: path] {
+    ^sed -i -e $"($line)d" $file
+}
+
+# see what changes a command would make to a file
+# e.g. `trydiff mdformat README.md`
+def trydiff [cmd: string, file: path] {
+    let temp = ($"($file).trydiff.($nu.pid)")
+    ^$cmd $file | save --force $temp
+    # diff exits 1 when files differ, which is the common case here; don't
+    # let nushell surface that as a command error.
+    try { ^diff $file $temp }
+    ^rm $temp
+}
+
 # replace a file with a sorted version of itself
 def isort [file: path] {
     let tmp = (($file | into string) + ".bak")
@@ -382,6 +444,26 @@ def first-arg-last [...args] {
     let first = ($args | get 1)
     let rest = ($args | skip 2)
     ^$cmd ...$rest $first
+}
+
+# pass leading -x options of a command to a different first positional arg.
+# shift-options <command> <target> [-x ...] [args...]
+# runs `<command> [-x ...] <target> [args...]`. Stops collecting options at
+# the first non-option, at `-`, or at `--`.
+def shift-options [command: string, target: string, ...args: string] {
+    mut options = []
+    mut rest = $args
+    while ($rest | is-not-empty) {
+        let head = ($rest | first)
+        if ($head == "-") or ($head == "--") { break }
+        if ($head | str starts-with "-") {
+            $options = ($options | append $head)
+            $rest = ($rest | skip 1)
+        } else {
+            break
+        }
+    }
+    ^$command ...$options $target ...$rest
 }
 
 # convert a time from one timezone to another
@@ -977,6 +1059,18 @@ $env.config = ($env.config | upsert hooks.pre_prompt [{||
 # REPL-only behavior -- `nu -c './foo/'` errors -- so the nushell test
 # suite only asserts that no overriding hook is installed and that an
 # explicit `cd ./foo/` still works.
+
+# Maybe attach to shpool instead of running a bare nu interactively.
+# Skipped in non-interactive mode so the test suite stays quiet. Mirrors
+# shrc's `maybe_start_shpool_and_exit` call on startup.
+if (is-interactive) {
+    maybe-start-shpool-and-exit
+}
+
+# Log session start to $env.HISTORY_FILE, matching shrc/fish.
+if (is-interactive) {
+    log-history $"New session as ($env.USERNAME? | default ''): nu"
+}
 
 # authenticate on startup if needed, mirroring shrc's startup check.
 # Skipped when attached to a shpool session (credentials come from the

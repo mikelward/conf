@@ -572,6 +572,206 @@ print -n (auth-info)")"
 assert_equal "nu auth-info empty on success" "" "$result"
 
 ###############
+# TEST: bak / unbak roundtrip. Clear any leftover files first since tests
+# share _fakehome.
+result="$(_nu_run '
+cd $env.HOME
+["baktest" "baktest.bak"] | each {|f| if ($f | path exists) { ^rm -f $f } } | ignore
+"hello" | save --force baktest
+bak "baktest"
+print -n (ls baktest* | get name | path basename | str join ",")')"
+assert_equal "nu bak creates .bak file" "baktest.bak" "$result"
+
+result="$(_nu_run '
+cd $env.HOME
+["baktest" "baktest.bak"] | each {|f| if ($f | path exists) { ^rm -f $f } } | ignore
+"hello" | save --force baktest
+bak "baktest"
+unbak "baktest.bak"
+print -n (ls baktest* | get name | path basename | str join ",")
+print -n "|"
+print -n (open baktest)')"
+assert_equal "nu unbak restores original" "baktest|hello" "$result"
+
+# unbak handles short names: the old `0..(-4)` substring math was
+# off-by-one and dropped only three chars. This tests a short filename
+# where the old and new implementations differ.
+result="$(_nu_run '
+cd $env.HOME
+["shortbak" "shortbak.bak"] | each {|f| if ($f | path exists) { ^rm -f $f } } | ignore
+"x" | save --force shortbak
+bak "shortbak"
+unbak "shortbak.bak"
+print -n (open shortbak)')"
+assert_equal "nu unbak short filename roundtrip" "x" "$result"
+
+###############
+# TEST: log-history appends timestamped entries to HISTORY_FILE
+result="$(_nu_run '
+$env.HISTORY_FILE = ([$env.HOME "history.log"] | path join)
+$env.TTY = "/dev/pts/42"
+log-history "hello world"
+open --raw $env.HISTORY_FILE | str trim')"
+assert_contains "nu log-history writes argv" "hello world" "$result"
+assert_contains "nu log-history writes tty" "/dev/pts/42" "$result"
+
+# log-history no-ops when HISTORY_FILE is empty
+result="$(_nu_run '
+$env.HISTORY_FILE = ""
+log-history "ignored"
+print -n "done"')"
+assert_equal "nu log-history no-op when HISTORY_FILE empty" "done" "$result"
+
+# log-history also no-ops when HISTORY_FILE unset entirely
+result="$(_nu_run '
+hide-env --ignore-errors HISTORY_FILE
+log-history "ignored"
+print -n "done"')"
+assert_equal "nu log-history no-op when HISTORY_FILE unset" "done" "$result"
+
+###############
+# TEST: inside-project / want-shpool / maybe-start-shpool-and-exit
+# projectroot returns "" by default, so inside-project is false.
+result="$(_nu_run '
+if (inside-project) { print -n yes } else { print -n no }')"
+assert_equal "nu inside-project false when projectroot is empty" "no" "$result"
+
+# want-shpool: false when neither remote nor inside project.
+result="$(_nu_run '
+hide-env --ignore-errors SSH_CONNECTION
+if (want-shpool) { print -n yes } else { print -n no }')"
+assert_equal "nu want-shpool false when not remote and not in project" "no" "$result"
+
+# want-shpool: true when SSH_CONNECTION is set (remote).
+result="$(_nu_run '
+$env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+if (want-shpool) { print -n yes } else { print -n no }')"
+assert_equal "nu want-shpool true when remote" "yes" "$result"
+
+# Note: the "inside project" positive case isn't tested here because
+# nushell resolves `projectroot` at def-time, so overriding it after
+# `source config.nu` doesn't affect `inside-project`. The default-empty
+# case above plus the SSH_CONNECTION case cover the main logic; users
+# overriding `projectroot` in an autoload/*.nu file will get the other
+# branch naturally.
+
+# maybe-start-shpool-and-exit is a no-op when shpool is not on PATH, even if
+# the other conditions would otherwise fire. The test simply asserts that
+# calling it returns normally (no exit/crash).
+result="$(_nu_run '
+$env.PATH = []
+$env.SSH_CONNECTION = "1.2.3.4 22"
+hide-env --ignore-errors SHPOOL_SESSION_NAME
+maybe-start-shpool-and-exit
+print -n "returned"')"
+assert_equal "nu maybe-start-shpool-and-exit no-op without shpool" "returned" "$result"
+
+###############
+# TEST: shift-options rearranges leading flags to come before the target.
+# Nushell's parser only lets flags flow through via spread from wrappers,
+# matching how fish aliases and shrc functions actually use shift_options.
+result="$(_nu_run '
+def wrap [...args: string] { shift-options echo target ...$args }
+wrap "-a" "-b" "rest" | str trim')"
+assert_equal "nu shift-options moves options before target" "-a -b target rest" "$result"
+
+result="$(_nu_run '
+def wrap [...args: string] { shift-options echo target ...$args }
+wrap "rest" | str trim')"
+assert_equal "nu shift-options no options" "target rest" "$result"
+
+result="$(_nu_run '
+def wrap [...args: string] { shift-options echo target ...$args }
+wrap "-x" | str trim')"
+assert_equal "nu shift-options option only" "-x target" "$result"
+
+result="$(_nu_run '
+def wrap [...args: string] { shift-options echo target ...$args }
+wrap "--" "-b" | str trim')"
+assert_equal "nu shift-options stops at --" "target -- -b" "$result"
+
+###############
+# TEST: delline removes the given line in place
+result="$(_nu_run '
+cd $env.HOME
+"line1
+line2
+line3" | save --force lines.txt
+delline 2 lines.txt
+open lines.txt | str trim')"
+assert_equal "nu delline removes line 2" "line1
+line3" "$result"
+
+###############
+# TEST: body forwards the first N header lines then runs the command on the
+# remaining body. Default is 1 header line.
+result="$(_nu_run '
+"HEAD
+c
+a
+b" | body sort | str trim')"
+assert_equal "nu body default 1-line header" "HEAD
+a
+b
+c" "$result"
+
+# --lines 2 keeps a two-line header.
+result="$(_nu_run '
+"H1
+H2
+y
+x
+z" | body --lines 2 sort | str trim')"
+assert_equal "nu body --lines 2 preserves two headers" "H1
+H2
+x
+y
+z" "$result"
+
+###############
+# TEST: trydiff runs the command on the file, diffs the result, leaves the
+# original untouched. Using `sort` on unsorted input guarantees a diff.
+result="$(_nu_run '
+cd $env.HOME
+"b
+a
+c" | save --force t.txt
+trydiff sort t.txt
+print "==="
+open t.txt | str trim')"
+# diff output should mention the sorted rearrangement
+assert_contains "nu trydiff emits a diff" "> " "$result"
+# And the file should be unchanged afterwards.
+assert_contains "nu trydiff leaves file untouched" "b
+a
+c" "$result"
+
+###############
+# TEST: VCS aliases are defined even when the vcs binary is missing.
+# The stubs shouldn't fail to parse and `which` should find them.
+for _name in add amend annotate base branch branches changed changelog \
+             changes checkout commit commitforce diffs fix graph incoming \
+             lint map outgoing pending precommit presubmit pull push \
+             recommit revert review reword submit submitforce unknown \
+             upload uploadchain clone st ci di gr lg ma am; do
+    result="$(_nu_run "which $_name | get 0.type? | default nothing" 2>&1)"
+    case "$result" in
+        *custom*|*alias*)
+            assert_true "nu vcs alias $_name is defined" "true" ;;
+        *)
+            assert_true "nu vcs alias $_name is defined (got: $result)" "false" ;;
+    esac
+done
+
+###############
+# TEST: is-env-set handles missing, empty, and set values.
+# Regression coverage for the `get -o` flag that used to break on nu 0.105+.
+result="$(_nu_run '
+hide-env --ignore-errors NU_TOTALLY_UNSET
+if (is-env-set "NU_TOTALLY_UNSET") { print -n y } else { print -n n }')"
+assert_equal "nu is-env-set false when missing from env" "n" "$result"
+
+###############
 # TEST: config.nu does not ship a manual `source` for local overrides;
 # users drop files in ~/.config/nushell/autoload/, which nushell
 # auto-sources. Missing directory is not an error -- covered implicitly
