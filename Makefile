@@ -24,7 +24,7 @@ test:
 	@bash shrc_prompt_test.sh
 	@bash shrc_fish_test.sh
 	@bash shrc_fish_prompt_test.sh
-	@bash shrc_nushell_test.sh
+	@if command -v nu >/dev/null 2>&1; then nu shrc_nushell_test.nu; else echo "nushell not installed, skipping nushell tests"; fi
 	@bash makefile_test.sh
 	@bash amethyst_test.sh
 
