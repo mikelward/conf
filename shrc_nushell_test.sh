@@ -388,13 +388,11 @@ assert_not_contains "nu CDPATH does not contain conf" "$_testdir/nufakehome/conf
 
 ###############
 # TEST: trailing-slash autocd is provided by nushell's native REPL path
-# handling, not by any hook of ours. Assert that config.nu does not
-# install a command_not_found or pre_execution autocd hook (the two
-# approaches we've considered) -- we rely on nushell itself.
+# handling, not by any command_not_found hook of ours. We do install a
+# pre_execution hook for command-duration tracking (covered separately
+# below); the assertion here is just that no autocd hook is installed.
 result="$(_nu_run 'print -n ($env.config.hooks.command_not_found | describe)')"
 assert_equal "nu command_not_found hook is not set" "nothing" "$result"
-result="$(_nu_run 'print -n ($env.config.hooks.pre_execution | length)')"
-assert_equal "nu pre_execution hook list is empty" "0" "$result"
 
 # TEST: `cd` into a trailing-slash path works (sanity check for the
 # `cd ./foo/` fallback users can type explicitly).
@@ -405,5 +403,183 @@ cd ([$base "cdtest"] | path join)
 cd ./sub/
 print -n $env.PWD')"
 assert_contains "nu cd with trailing slash enters directory" "cdtest/sub" "$result"
+
+###############
+# TEST: last-job-info shows nothing when no command has run
+result="$(_nu_run '
+hide-env --ignore-errors CMD_DURATION
+print -n (last-job-info)')"
+assert_equal "nu last-job-info empty when CMD_DURATION unset" "" "$result"
+
+# And nothing when the duration is below the display threshold.
+result="$(_nu_run '
+$env.CMD_DURATION = 0sec
+print -n (last-job-info)')"
+assert_equal "nu last-job-info empty for 0sec" "" "$result"
+
+result="$(_nu_run '
+$env.CMD_DURATION = 1sec
+print -n (last-job-info)')"
+assert_equal "nu last-job-info empty for 1sec (rounds down)" "" "$result"
+
+# With a meaningful duration it should contain the formatted text.
+result="$(_nu_run '
+$env.CMD_DURATION = 5sec
+print -n (last-job-info)')"
+assert_contains "nu last-job-info shows took for 5sec" "took 5 seconds" "$result"
+
+result="$(_nu_run '
+$env.CMD_DURATION = 1hr
+print -n (last-job-info)')"
+assert_contains "nu last-job-info shows hours for 1hr" "1 hours" "$result"
+
+###############
+# TEST: title-escape wraps the title in an OSC 0 sequence for xterm,
+# and returns empty for non-xterm-family terminals.
+result="$(_nu_run '
+$env.TERM = "xterm-256color"
+print -n (title-escape "my title")')"
+assert_contains "nu title-escape includes OSC 0 on xterm" "]0;my title" "$result"
+
+result="$(_nu_run '
+$env.TERM = "dumb"
+print -n (title-escape "my title")')"
+assert_equal "nu title-escape empty on dumb terminal" "" "$result"
+
+result="$(_nu_run '
+$env.TERM = "rxvt-unicode"
+print -n (title-escape "hi")')"
+assert_contains "nu title-escape supports rxvt" "]0;hi" "$result"
+
+###############
+# TEST: flash-terminal returns the BEL char on xterm, empty elsewhere.
+result="$(_nu_run '
+$env.TERM = "xterm-256color"
+print -n (flash-terminal)
+print -n "END"')"
+# BEL is char 07 -- assert it appears before the END marker.
+case "$result" in
+    *$'\a'END) assert_true "nu flash-terminal rings bell on xterm" "true";;
+    *)         assert_true "nu flash-terminal rings bell on xterm" "false";;
+esac
+
+result="$(_nu_run '
+$env.TERM = "dumb"
+print -n (flash-terminal)')"
+assert_equal "nu flash-terminal empty on dumb terminal" "" "$result"
+
+###############
+# TEST: render-prompt includes the title escape and bell when TERM=xterm.
+result="$(_nu_run '
+$env.HOSTNAME = "mikel-laptop"
+$env.USERNAME = "mikel"
+$env.UID = 1000
+$env.TERM = "xterm-256color"
+hide-env --ignore-errors TMUX
+hide-env --ignore-errors SHPOOL_SESSION_NAME
+$env.PATH = []
+cd $env.HOME
+print -n (render-prompt)')"
+assert_contains "nu render-prompt sets xterm title" "]0;" "$result"
+
+# And the duration line when CMD_DURATION is populated.
+result="$(_nu_run '
+$env.HOSTNAME = "mikel-laptop"
+$env.USERNAME = "mikel"
+$env.UID = 1000
+$env.TERM = "dumb"
+$env.CMD_DURATION = 5sec
+hide-env --ignore-errors TMUX
+hide-env --ignore-errors SHPOOL_SESSION_NAME
+$env.PATH = []
+cd $env.HOME
+print -n (render-prompt)')"
+assert_contains "nu render-prompt includes duration line" "took 5 seconds" "$result"
+
+###############
+# TEST: pre_execution / pre_prompt hooks are installed and track timing.
+result="$(_nu_run 'print -n ($env.config.hooks.pre_execution | length)')"
+assert_equal "nu pre_execution hook list has one entry" "1" "$result"
+
+result="$(_nu_run 'print -n ($env.config.hooks.pre_prompt | length)')"
+assert_equal "nu pre_prompt hook list has one entry" "1" "$result"
+
+# Invoke the hook closures directly and verify CMD_DURATION gets set to
+# a non-zero duration when pre_execution has recorded a start time.
+# do --env propagates the closure's $env mutations back to the caller,
+# matching how nushell itself invokes hooks.
+result="$(_nu_run '
+do --env ($env.config.hooks.pre_execution | first)
+sleep 2100ms
+do --env ($env.config.hooks.pre_prompt | first)
+print -n (format-duration $env.CMD_DURATION)')"
+assert_contains "nu timing hooks populate CMD_DURATION" "seconds" "$result"
+
+# When pre_execution did not fire, pre_prompt zeroes CMD_DURATION.
+result="$(_nu_run '
+hide-env --ignore-errors CMD_START_TIME
+hide-env --ignore-errors CMD_DURATION
+do --env ($env.config.hooks.pre_prompt | first)
+print -n ($env.CMD_DURATION | into int)')"
+assert_equal "nu pre_prompt clears stale CMD_DURATION" "0" "$result"
+
+###############
+# TEST: auth helpers respond to ssh-add's exit status.
+_authstub_ok="$_testdir/auth_stub_ok"
+_authstub_fail="$_testdir/auth_stub_fail"
+mkdir -p "$_authstub_ok" "$_authstub_fail"
+cat > "$_authstub_ok/ssh-add" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+cat > "$_authstub_fail/ssh-add" <<'EOF'
+#!/bin/sh
+echo "no agent" >&2
+exit 2
+EOF
+chmod +x "$_authstub_ok/ssh-add" "$_authstub_fail/ssh-add"
+
+result="$(_nu_run "
+\$env.PATH = ['$_authstub_ok' '/usr/bin' '/bin']
+print -n (is-ssh-valid)")"
+assert_equal "nu is-ssh-valid true when ssh-add succeeds" "true" "$result"
+
+result="$(_nu_run "
+\$env.PATH = ['$_authstub_fail' '/usr/bin' '/bin']
+print -n (is-ssh-valid)")"
+assert_equal "nu is-ssh-valid false when ssh-add fails" "false" "$result"
+
+result="$(_nu_run "
+\$env.PATH = ['$_authstub_ok' '/usr/bin' '/bin']
+print -n (need-auth)")"
+assert_equal "nu need-auth false when ssh-add succeeds" "false" "$result"
+
+result="$(_nu_run "
+\$env.PATH = ['$_authstub_fail' '/usr/bin' '/bin']
+print -n (need-auth)")"
+assert_equal "nu need-auth true when ssh-add fails" "true" "$result"
+
+# auth-info should include the "SSH" token on failure (ANSI-wrapped).
+result="$(_nu_run "
+\$env.PATH = ['$_authstub_fail' '/usr/bin' '/bin']
+print -n (auth-info)")"
+assert_contains "nu auth-info reports SSH on failure" "SSH" "$result"
+
+# And be empty on success.
+result="$(_nu_run "
+\$env.PATH = ['$_authstub_ok' '/usr/bin' '/bin']
+print -n (auth-info)")"
+assert_equal "nu auth-info empty on success" "" "$result"
+
+###############
+# TEST: config.nu does not ship a manual `source` for local overrides;
+# users drop files in ~/.config/nushell/autoload/, which nushell
+# auto-sources. Missing directory is not an error -- covered implicitly
+# by every other test in this file (no autoload dir under the fake HOME).
+if grep -q '^source ' "$_config"; then
+    assert_true "nu config.nu has no manual source statement" "false"
+else
+    assert_true "nu config.nu has no manual source statement" "true"
+fi
 
 test_summary "nushell shrc_nushell_test"
