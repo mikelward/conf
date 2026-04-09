@@ -140,9 +140,19 @@ def need-auth [] {
 }
 
 # return true if the argument exists as an external command on $PATH,
-# bypassing aliases and builtins
+# bypassing aliases and builtins. A plain `path exists` check isn't
+# enough: a non-executable file in a PATH directory with the same name
+# would pass it, but shrc's `have_command` (built on `test -x`) would
+# correctly reject it. We shell out to /usr/bin/test here because nu
+# has no builtin access() check; the absolute path avoids depending on
+# the caller's $PATH (tests often scrub it). `any` short-circuits so
+# cost is bounded to the first match (or PATH length for true negatives).
 def have-command [name: string] {
-    $env.PATH | any {|dir| ([$dir $name] | path join | path exists) }
+    $env.PATH | any {|dir|
+        let p = ([$dir $name] | path join)
+        if not ($p | path exists) { return false }
+        (try { ^/usr/bin/test -x $p | complete } catch { {exit_code: 1} }).exit_code == 0
+    }
 }
 
 # return true if the argument is an alias, builtin, command, or function
@@ -473,12 +483,16 @@ def rmkey [line: int] {
 
 # run a command with the first argument moved to the end
 # e.g. first-arg-last grep ~/.history <args> runs grep <args> ~/.history
-# With 0 args it's a no-op; with 1 arg it runs the command as-is (nothing
-# to rearrange). Nushell's `get 1` errors on short lists, so the length
-# guard avoids a confusing `access_beyond_end` crash.
+# With 1 arg it runs the command as-is (nothing to rearrange). 0 args
+# is a usage error and surfaces as such rather than silently doing
+# nothing, which would hide bugs in callers. Nushell's `get 1` errors
+# on short lists, so the length guard avoids a confusing
+# `access_beyond_end` crash.
 def first-arg-last [...args: string] {
     match ($args | length) {
-        0 => { }
+        0 => {
+            error make {msg: "first-arg-last: usage: first-arg-last <command> [arg] [...]"}
+        }
         1 => { ^($args | first) }
         _ => {
             let cmd = ($args | first)
@@ -535,9 +549,26 @@ $env.with-agent = {|...cmd|
 }
 def with-agent [...cmd] { do $env.with-agent ...$cmd }
 
-# print the definition of the given command, alias, or function
+# print the definition of the given command, alias, or function.
+# Mirrors shrc's `what` (`whence -f` / `typeset -f`) and fish's `type`:
+# for custom defs and aliases, print the source; for externals, print
+# the absolute path; for nu built-ins and keywords, print the `which`
+# row so the caller still gets something useful. The explicit `print`
+# around `view source` is load-bearing: a bare `view source` at the
+# end of a function returns a string, and intermediate return values
+# get discarded when `what` is called from a longer pipeline/script.
 def what [name: string] {
-    which $name
+    let matches = (which $name)
+    if ($matches | is-empty) {
+        error $"($name) not found"
+        return
+    }
+    let info = ($matches | first)
+    match $info.type {
+        "custom" | "alias" => { print (view source $name) }
+        "external" => { print $info.path }
+        _ => { print $info }
+    }
 }
 
 # get a short version of the hostname for use in the prompt or window title
