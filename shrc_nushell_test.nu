@@ -1,7 +1,7 @@
 #!/usr/bin/env nu
 
-const srcdir = (path self | path dirname)
-const config_nu = ([ $srcdir "config" "nushell" "config.nu" ] | path join)
+const srcDir = (path self | path dirname)
+const configNu = ([$srcDir "config" "nushell" "config.nu"] | path join)
 
 def strip-trailing-newlines [text: string] {
     $text | str replace -r '\n+$' ''
@@ -94,7 +94,7 @@ def --env main [] {
     $env.TEST_PASSES = 0
     $env.TEST_FAILURES = 0
     $env.TESTDIR = (mktemp -d | str trim)
-    $env.CONFIG_NU = $config_nu
+    $env.CONFIG_NU = $configNu
 ###############
 # TEST: bar prints N separator characters
 let result = (nu-run r#'print -n (bar 5)'#)
@@ -430,6 +430,8 @@ print -n $start'#)
 # The new PWD should be different from the starting PWD and live under /tmp
 assert-true "nu mtd cds into a /tmp subdirectory" ($result | str starts-with "/tmp/")
 assert-true "nu mtd preserves the start-path separator" ($result | str contains "|")
+let result_parts = ($result | split row "|")
+assert-true "nu mtd changes to a different directory" (($result_parts | length) == 2 and (($result_parts | first) != ($result_parts | last)))
 
 ###############
 # TEST: cdfile / realdir resolve symlinks to the real containing directory
@@ -1216,7 +1218,11 @@ assert-equal "nu is-env-set false when missing from env" r#'n'# $result
 assert-true "nu config.nu has no manual source statement" (not ((open --raw $env.CONFIG_NU | lines) | any {|line| $line | str starts-with "source "}))
 
     let ok = (test-summary "nushell shrc_nushell_test")
-    ^rm -rf $env.TESTDIR
+    if $ok and not (($env.NU_TEST_PRESERVE_TMP? | default "") | str contains "1") {
+        ^rm -rf $env.TESTDIR
+    } else if not $ok {
+        print $"preserving test files in ($env.TESTDIR)"
+    }
     if not $ok {
         exit 1
     }
