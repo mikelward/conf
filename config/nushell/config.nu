@@ -985,58 +985,76 @@ if (have-command "yum") {
 
 #######################
 # VCS ALIASES
-# Short commands delegate to the `vcs` helper when available. These are
-# defined regardless of whether `vcs` is on PATH — the stub below fires a
-# helpful error otherwise.
+# Thin aliases over the `vcs` helper binary. These are aliases rather
+# than `def` wrappers for two reasons:
+#
+#   1. `alias X = ^vcs X` is a parse-time substitution, so flags pass
+#      through to ^vcs without nushell's flag parser catching them on
+#      the wrapper. With `def X [...args] { ^vcs X ...$args }` typing
+#      `ci -m "msg"` errors with `unknown flag -m` because the custom
+#      command's signature doesn't declare it. `def --wrapped` works
+#      too, but alias is shorter and expresses the intent better.
+#
+#   2. If `vcs` isn't on PATH, calling one of these surfaces a clear
+#      "command not found" error instead of silently doing nothing as
+#      the previous `if (have-command "vcs") { ... }` dispatcher did.
+#
+# TODO: this list is hand-maintained and drifts from shrc.vcs / the
+# `vcs` binary's actual command set. The `vcs` binary supports
+# `--list-commands` which prints every subcommand; we should generate
+# this file from that output. Options under consideration:
+#   (a) A nu generator script invoked from vcs/Makefile's install
+#       target, writing $nu.default-config-dir/vcs-aliases.nu, which
+#       config.nu then `source`s with a const path.
+#   (b) Run the generator from profile/xsession on login so machines
+#       that never `make install` still get the aliases in sync.
+# Whatever shape this takes, the canonical list should be the binary
+# itself, not a file in this repo. The list below is missing roughly
+# half of what the binary ships (blame, drop, evolve, rebase, resolve,
+# restore, squash, status, track, uncommit, undo, etc.).
 
-def vcs [...args: string] {
-    if (have-command "vcs") {
-        ^vcs ...$args
-    }
-}
+alias add         = ^vcs add
+alias amend       = ^vcs amend
+alias annotate    = ^vcs annotate
+alias base        = ^vcs base
+alias branch      = ^vcs branch
+alias branches    = ^vcs branches
+alias changed     = ^vcs changed
+alias changelog   = ^vcs changelog
+alias changes     = ^vcs changes
+alias checkout    = ^vcs checkout
+alias commit      = ^vcs commit
+alias commitforce = ^vcs commitforce
+alias diffs       = ^vcs diffs
+alias fix         = ^vcs fix
+alias graph       = ^vcs graph
+alias incoming    = ^vcs incoming
+alias lint        = ^vcs lint
+alias map         = ^vcs map
+alias outgoing    = ^vcs outgoing
+alias pending     = ^vcs pending
+alias precommit   = ^vcs precommit
+alias presubmit   = ^vcs presubmit
+alias pull        = ^vcs pull
+alias push        = ^vcs push
+alias recommit    = ^vcs recommit
+alias revert      = ^vcs revert
+alias review      = ^vcs review
+alias reword      = ^vcs reword
+alias submit      = ^vcs submit
+alias submitforce = ^vcs submitforce
+alias unknown     = ^vcs unknown
+alias upload      = ^vcs upload
+alias uploadchain = ^vcs uploadchain
 
-def add        [...args] { vcs "add" ...$args }
-def amend      [...args] { vcs "amend" ...$args }
-def annotate   [...args] { vcs "annotate" ...$args }
-def base       [...args] { vcs "base" ...$args }
-def branch     [...args] { vcs "branch" ...$args }
-def branches   [...args] { vcs "branches" ...$args }
-def changed    [...args] { vcs "changed" ...$args }
-def changelog  [...args] { vcs "changelog" ...$args }
-def changes    [...args] { vcs "changes" ...$args }
-def checkout   [...args] { vcs "checkout" ...$args }
-def commit     [...args] { vcs "commit" ...$args }
-def commitforce [...args] { vcs "commitforce" ...$args }
-def diffs      [...args] { vcs "diffs" ...$args }
-def fix        [...args] { vcs "fix" ...$args }
-def graph      [...args] { vcs "graph" ...$args }
-def incoming   [...args] { vcs "incoming" ...$args }
-def lint       [...args] { vcs "lint" ...$args }
-def map       [...args] { vcs "map" ...$args }
-def outgoing   [...args] { vcs "outgoing" ...$args }
-def pending    [...args] { vcs "pending" ...$args }
-def precommit  [...args] { vcs "precommit" ...$args }
-def presubmit  [...args] { vcs "presubmit" ...$args }
-def pull       [...args] { vcs "pull" ...$args }
-def push       [...args] { vcs "push" ...$args }
-def recommit   [...args] { vcs "recommit" ...$args }
-def revert     [...args] { vcs "revert" ...$args }
-def review     [...args] { vcs "review" ...$args }
-def reword     [...args] { vcs "reword" ...$args }
-def submit     [...args] { vcs "submit" ...$args }
-def submitforce [...args] { vcs "submitforce" ...$args }
-def unknown    [...args] { vcs "unknown" ...$args }
-def upload     [...args] { vcs "upload" ...$args }
-def uploadchain [...args] { vcs "uploadchain" ...$args }
-
-# short aliases
-def am [...args] { amend ...$args }
-def ci [...args] { commit ...$args }
-def di [...args] { diffs ...$args }
-def gr [...args] { graph ...$args }
-def lg [...args] { graph ...$args }
-def ma [...args] { review ...$args }
-def st [...args] { vcs "status" ...$args }
+# short aliases — hand-picked, not generated
+alias am = ^vcs amend
+alias ci = ^vcs commit
+alias di = ^vcs diffs
+alias gr = ^vcs graph
+alias lg = ^vcs graph
+alias ma = ^vcs review
+alias st = ^vcs status
 
 # clone a version control system repo based on the URL
 def clone [url: string, ...args: string] {
