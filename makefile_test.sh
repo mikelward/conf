@@ -20,4 +20,8 @@ _install_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^install:')
 assert_contains "install depends on install-dotfiles" "install-dotfiles" "$_install_deps"
 assert_contains "install depends on install-vcs" "install-vcs" "$_install_deps"
 
+_nushell_test_recipe=$(grep 'shrc_nushell_test' "$_srcdir/Makefile")
+assert_contains "test target runs nushell tests with nu" "nu shrc_nushell_test.nu" "$_nushell_test_recipe"
+assert_not_contains "test target no longer runs nushell tests via bash" "bash shrc_nushell_test.sh" "$_nushell_test_recipe"
+
 test_summary "makefile"
