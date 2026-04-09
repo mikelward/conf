@@ -101,11 +101,14 @@ def confirm [prompt: string] {
     ($reply == "") or ($reply | str starts-with "y")
 }
 
-# hook for authenticating (e.g. to ssh-agent). Override in local.nu for
-# site-specific flows.
-def auth [] {
-    ^ssh-add
-}
+# hook for authenticating (e.g. to ssh-agent). Overridable: set
+# $env.auth = {|| ... } in an autoload file for site-specific flows.
+# Other config.nu callers (the startup `if (need-auth) { auth }` block,
+# the `a` alias) dispatch through $env so the override takes effect.
+# See the comment at the bottom of this file for why a plain `def` in an
+# autoload file cannot override commands defined here.
+$env.auth = {|| ^ssh-add }
+def auth [] { do $env.auth }
 
 # short alias for auth
 def a [] { auth }
@@ -234,10 +237,15 @@ def on-dev-host [] {
     (($env.HOSTNAME? | default "") | str contains "dev")
 }
 
-# return true if this is a production machine
-def --env on-production-host [] {
+# return true if this is a production machine. Overridable: set
+# $env.on-production-host = {|| ... } in an autoload file if the default
+# (not-my-machine and not-test and not-dev) doesn't match your fleet. This
+# feeds the --production flag to `vcs prompt-line`, so overriding is the
+# only way to change that flag's behaviour from user config.
+$env.on-production-host = {||
     (not (on-my-machine)) and (not (on-test-host)) and (not (on-dev-host))
 }
+def --env on-production-host [] { do --env $env.on-production-host }
 
 # return true if it's already obvious which host I'm on
 def show-hostname-in-title [] {
@@ -332,10 +340,22 @@ def projectname [] {
     if ($root | is-empty) { "" } else { ($root | path basename) }
 }
 
-# print the root directory of the current project (hook; override locally)
-def projectroot [] {
-    ""
-}
+# print the root directory of the current project. Overridable: set
+# $env.projectroot = {|| ... } in an autoload file to plug in git/hg/jj
+# detection. Other config.nu callers (inside-project, buildroot,
+# projectname, want-shpool, maybe-start-shpool-and-exit, ...) dispatch
+# through $env so the override propagates through the whole chain.
+#
+# TODO: in shrc.vcs this function is literally `rootdir "$@"`, and
+# `rootdir` is in turn `command vcs rootdir "$@"`. We could drop the
+# $env.projectroot hook entirely and define projectroot as a thin
+# wrapper around `^vcs rootdir` (with an empty fallback when the vcs
+# binary is missing). That would also let buildroot/projectname/
+# inside-project lose their indirection. Deferred because (a) the vcs
+# submodule isn't always checked out in dev environments and (b) we'd
+# want to port shrc.vcs's .vcs_cache fallback or decide we don't care.
+$env.projectroot = {|| "" }
+def projectroot [] { do $env.projectroot }
 
 # cd to the real directory that the specified file is in, resolving symlinks
 def --env cdfile [file: path] {
@@ -482,10 +502,15 @@ def utc2 [spec: string] {
     ^date -d $'TZ="UTC" ($spec)'
 }
 
-# hook to run the given command under a custom ssh-agent
-def with-agent [...cmd] {
+# run a command under a custom ssh-agent. Overridable: set
+# $env.with-agent = {|...cmd| ... } in an autoload file to wrap calls in
+# `ssh-agent sh -c`, source a pinned $SSH_AUTH_SOCK, or whatever your
+# flow needs. Callers (wcp, wsh) dispatch through $env so the override
+# takes effect.
+$env.with-agent = {|...cmd|
     ^($cmd | first) ...($cmd | skip 1)
 }
+def with-agent [...cmd] { do $env.with-agent ...$cmd }
 
 # print the definition of the given command, alias, or function
 def what [name: string] {
@@ -1079,8 +1104,48 @@ if (is-interactive) and (not (in-shpool)) {
     if (need-auth) { auth }
 }
 
-# Local overrides (work vs home, per-host tweaks, etc.) go in the
-# user autoload directory: ~/.config/nushell/autoload/*.nu. Nushell
-# auto-sources every *.nu file there at startup and silently skips
-# the directory if it doesn't exist, so no conditional `source` line
-# is needed here. (Requires nushell 0.101+.)
+# Local overrides (work vs home, per-host tweaks, etc.) go in the user
+# autoload directory: ~/.config/nushell/autoload/*.nu. Nushell auto-sources
+# every *.nu file there at startup and silently skips the directory if it
+# doesn't exist, so no conditional `source` line is needed here. (Requires
+# nushell 0.101+.)
+#
+# Two kinds of override are possible in an autoload file:
+#
+#   1. Add a brand-new command, or `def` a command that you'll call from
+#      the REPL. These work because the REPL is parsed after the autoload
+#      file, so the new definition is what the parser sees.
+#
+#   2. Change what an existing config.nu hook returns: set one of the
+#      $env.* closures below. The helpers in this file dispatch through
+#      those closures with `do`, which is looked up at runtime, so the
+#      override propagates into every caller.
+#
+# You CANNOT redefine an arbitrary config.nu command (e.g. `short-pwd`,
+# `l`, `psgrep`) with a plain `def` in an autoload file and expect other
+# config.nu helpers to see the change. Nushell resolves `def`-to-`def`
+# calls at parse time, and config.nu is fully parsed before the autoload
+# file runs, so the internal callers stay frozen to the original
+# definitions. Direct REPL calls to the redefined name will pick up the
+# override, but code inside this file will not.
+#
+# The intentional hook points, which all use the $env.* pattern, are:
+#
+#   $env.projectroot         {|| ... } -> string
+#   $env.auth                {|| ... }
+#   $env.with-agent          {|...cmd| ... }
+#   $env.on-production-host  {|| ... } -> bool
+#
+# Example autoload file:
+#
+#   # ~/.config/nushell/autoload/local.nu
+#   $env.projectroot = {||
+#       mut d = $env.PWD
+#       loop {
+#           for m in [".git" ".jj" ".hg"] {
+#               if (([$d $m] | path join) | path exists) { return $d }
+#           }
+#           if $d == "/" { return "" }
+#           $d = ($d | path dirname)
+#       }
+#   }
