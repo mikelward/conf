@@ -358,21 +358,52 @@ def projectname [] {
     if ($root | is-empty) { "" } else { ($root | path basename) }
 }
 
-# print the root directory of the current project. Overridable: set
-# $env.projectroot = {|| ... } in an autoload file to plug in git/hg/jj
-# detection. Other config.nu callers (inside-project, buildroot,
-# projectname, want-shpool, maybe-start-shpool-and-exit, ...) dispatch
-# through $env so the override propagates through the whole chain.
+# Walk parent directories from $env.PWD looking for any of the given
+# marker names; return the absolute path of the first directory that
+# contains one, or "" if nothing is found before reaching "/". Used by
+# the projectroot fallback, and factored out so the closure body stays
+# a plain expression (no reliance on `return` inside a closure).
+def find-project-root [markers: list<string>] {
+    mut d = $env.PWD
+    loop {
+        for m in $markers {
+            if (([$d $m] | path join) | path exists) { return $d }
+        }
+        if $d == "/" { return "" }
+        $d = ($d | path dirname)
+    }
+}
+
+# print the root directory of the current project. The default dispatches
+# to `^vcs rootdir` when the helper binary is on PATH, since it knows
+# about all the backends (jj, git, hg, citc, p4) and keeps its own
+# cache. When the binary is missing, fall back to walking parents for
+# the common VCS markers, mirroring shrc.vcs's shell-only fallback.
+# The .vcs_cache half of that fallback is intentionally not ported:
+# the parent walk is fast enough in nu and sidesteps cache-invalidation
+# bugs.
 #
-# TODO: in shrc.vcs this function is literally `rootdir "$@"`, and
-# `rootdir` is in turn `command vcs rootdir "$@"`. We could drop the
-# $env.projectroot hook entirely and define projectroot as a thin
-# wrapper around `^vcs rootdir` (with an empty fallback when the vcs
-# binary is missing). That would also let buildroot/projectname/
-# inside-project lose their indirection. Deferred because (a) the vcs
-# submodule isn't always checked out in dev environments and (b) we'd
-# want to port shrc.vcs's .vcs_cache fallback or decide we don't care.
-$env.projectroot = {|| "" }
+# Overridable: set $env.projectroot = {|| ... } in an autoload file to
+# plug in custom detection (workspace markers, monorepo layouts, ...).
+# Other config.nu callers (inside-project, buildroot, projectname,
+# want-shpool, maybe-start-shpool-and-exit, ...) dispatch through $env
+# so the override propagates through the whole chain.
+$env.projectroot = {||
+    # Try `vcs rootdir` directly: it's the common case (vcs ships with
+    # this repo and users normally have it installed) and skipping a
+    # have-command pre-check halves the cost — one fork+exec instead
+    # of two. When vcs isn't on PATH `^vcs` raises command-not-found
+    # which the try catches; `null` is used as the sentinel because
+    # `complete` always returns a record on success.
+    let r = (try { ^vcs rootdir | complete } catch { null })
+    if $r == null {
+        find-project-root [".jj" ".hg" ".git" ".citc" ".p4config"]
+    } else if $r.exit_code == 0 {
+        $r.stdout | str trim
+    } else {
+        ""
+    }
+}
 def projectroot [] { do $env.projectroot }
 
 # cd to the real directory that the specified file is in, resolving symlinks
@@ -1208,15 +1239,14 @@ if (is-interactive) and (not (in-shpool)) {
 #   $env.with-agent          {|...cmd| ... }
 #   $env.on-production-host  {|| ... } -> bool
 #
-# Example autoload file:
+# Example autoload file — override $env.projectroot to recognise a
+# custom workspace marker in addition to the default .git/.jj/.hg walk:
 #
 #   # ~/.config/nushell/autoload/local.nu
 #   $env.projectroot = {||
 #       mut d = $env.PWD
 #       loop {
-#           for m in [".git" ".jj" ".hg"] {
-#               if (([$d $m] | path join) | path exists) { return $d }
-#           }
+#           if (([$d "WORKSPACE"] | path join) | path exists) { return $d }
 #           if $d == "/" { return "" }
 #           $d = ($d | path dirname)
 #       }
