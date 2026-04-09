@@ -338,6 +338,96 @@ mcd newdir
 print -n $env.PWD')"
 assert_contains "nu mcd enters the new directory" "newdir" "$result"
 
+# And if the target already exists, mcd prints a message and does not crash.
+result="$(_nu_run '
+let base = ($env.HOME | path expand)
+cd $base
+mkdir existing-dir
+mcd existing-dir')"
+assert_contains "nu mcd reports when target already exists" "already exists" "$result"
+
+###############
+# TEST: mtd creates a fresh temp dir and cds into it
+result="$(_nu_run '
+let start = $env.PWD
+mtd
+print -n $env.PWD
+print -n "|"
+print -n $start')"
+# The new PWD should be different from the starting PWD and live under /tmp
+case "$result" in
+    /tmp/*\|*) assert_true "nu mtd cds into a /tmp subdirectory" "true" ;;
+    *)         assert_true "nu mtd cds into a /tmp subdirectory (got: $result)" "false" ;;
+esac
+
+###############
+# TEST: cdfile / realdir resolve symlinks to the real containing directory
+result="$(_nu_run '
+let base = ($env.HOME | path expand)
+mkdir ([$base "target"] | path join)
+"hello" | save --force ([$base "target" "file.txt"] | path join)
+^ln -s ([$base "target"] | path join) ([$base "link"] | path join)
+# realdir on a file inside the symlink should resolve to the real target dir.
+print -n (realdir ([$base "link" "file.txt"] | path join))')"
+assert_contains "nu realdir resolves symlink to real dir" "/target" "$result"
+
+result="$(_nu_run '
+let base = ($env.HOME | path expand)
+mkdir ([$base "cdfile-target"] | path join)
+"x" | save --force ([$base "cdfile-target" "file.txt"] | path join)
+cdfile ([$base "cdfile-target" "file.txt"] | path join)
+print -n $env.PWD')"
+assert_contains "nu cdfile cds to the file's real directory" "cdfile-target" "$result"
+
+###############
+# TEST: gh-search greps $HOME/.history
+result="$(_nu_run '
+"one two three
+alpha beta gamma
+one four five" | save --force ([$env.HOME ".history"] | path join)
+gh-search "alpha"')"
+assert_contains "nu gh-search finds a matching line" "alpha beta gamma" "$result"
+
+# rh (gh-search | last 20) should return at most the last 20 matches.
+result="$(_nu_run '
+let lines = (1..25 | each {|i| $"match line ($i)" } | str join (char newline))
+$lines | save --force ([$env.HOME ".history"] | path join)
+rh "match" | length')"
+assert_equal "nu rh limits gh-search output to 20 lines" "20" "$result"
+
+###############
+# TEST: confirm reads a yes/no answer from stdin.
+# The prompt goes to stdout, and `^head -n 1` reads one line of stdin, so
+# assert_contains on the combined output catches both the prompt and the
+# boolean result. An empty reply (just a newline) should default to yes.
+result="$(_nu_run 'let r = (confirm "go"); print -n $" <($r)>"' 'y
+')"
+assert_contains "nu confirm yes on y" "<true>" "$result"
+
+result="$(_nu_run 'let r = (confirm "go"); print -n $" <($r)>"' 'Y
+')"
+assert_contains "nu confirm yes on Y (uppercase)" "<true>" "$result"
+
+result="$(_nu_run 'let r = (confirm "go"); print -n $" <($r)>"' 'yes
+')"
+assert_contains "nu confirm yes on yes" "<true>" "$result"
+
+result="$(_nu_run 'let r = (confirm "go"); print -n $" <($r)>"' 'n
+')"
+assert_contains "nu confirm no on n" "<false>" "$result"
+
+result="$(_nu_run 'let r = (confirm "go"); print -n $" <($r)>"' 'no
+')"
+assert_contains "nu confirm no on no" "<false>" "$result"
+
+result="$(_nu_run 'let r = (confirm "go"); print -n $" <($r)>"' '
+')"
+assert_contains "nu confirm defaults to yes on empty reply" "<true>" "$result"
+
+result="$(_nu_run 'let r = (confirm "go"); print -n $" <($r)>"' 'maybe
+')"
+assert_contains "nu confirm treats non-y reply as no" "<false>" "$result"
+
 ###############
 # TEST: clone dispatch
 # Stub jj/git/hg as scripts on PATH so we can verify which one was invoked.
@@ -753,6 +843,51 @@ result="$(_nu_run '
 def wrap [...args: string] { shift-options echo target ...$args }
 wrap "--" "-b" | str trim')"
 assert_equal "nu shift-options stops at --" "target -- -b" "$result"
+
+###############
+# TEST: first-arg-last guards against short arg lists.
+# Before the guard, `first-arg-last echo` errored with
+# nu::shell::access_beyond_end because `$args | get 1` on a 1-element
+# list is out of range. 0 args is a no-op; 1 arg runs the command as-is;
+# 2+ args rearrange first-to-last.
+result="$(_nu_run 'first-arg-last | default "" | str trim')"
+assert_equal "nu first-arg-last no crash on 0 args" "" "$result"
+
+result="$(_nu_run 'first-arg-last echo | str trim')"
+assert_equal "nu first-arg-last 1 arg runs the command" "" "$result"
+
+result="$(_nu_run 'first-arg-last echo only | str trim')"
+assert_equal "nu first-arg-last 2 args runs command with arg" "only" "$result"
+
+result="$(_nu_run 'first-arg-last echo history.file tail | str trim')"
+assert_equal "nu first-arg-last moves first positional to end" "tail history.file" "$result"
+
+###############
+# TEST: which-path handles empty `which` results without crashing.
+# Before the is-empty guard, `get 0.path?` on an empty list errored
+# with nu::shell::access_beyond_end (the `?` only makes the column
+# optional, not the row index).
+result="$(_nu_run 'which-path sh')"
+assert_contains "nu which-path prints path for a known command" "sh" "$result"
+
+# An unknown command should not crash; it reports via the error stream.
+result="$(_nu_run 'which-path zzzz-not-a-real-command-xyz' 2>&1)"
+assert_contains "nu which-path reports missing command" "not found" "$result"
+
+# And explicit regression: the command should no longer raise
+# nu::shell::access_beyond_end on a missing name.
+result="$(_nu_run 'which-path zzzz-not-a-real-command-xyz' 2>&1)"
+assert_not_contains "nu which-path does not raise access_beyond_end" "access_beyond_end" "$result"
+
+###############
+# TEST: rerc is defined and its body exec's a new nushell.
+# Can't actually call rerc in the test harness (exec would replace the
+# process), so verify structurally via `view source`.
+result="$(_nu_run '(which rerc | get 0.type)')"
+assert_equal "nu rerc is defined as a custom command" "custom" "$result"
+
+result="$(_nu_run 'print ((view source rerc) | str contains "exec nu")')"
+assert_equal "nu rerc body exec's nu" "true" "$result"
 
 ###############
 # TEST: delline removes the given line in place

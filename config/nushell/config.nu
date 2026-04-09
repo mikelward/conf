@@ -431,9 +431,15 @@ def isort [file: path] {
 }
 
 # print the full path to an executable, ignoring aliases and functions.
+# The explicit is-empty check avoids `get 0.path?` crashing on an empty
+# list; `?` only makes the column optional, not the row index.
 def which-path [name: string] {
-    let found = (which $name | where type == "external" | get 0.path? | default "")
-    if ($found | is-empty) { error $"($name) not found" } else { print $found }
+    let matches = (which $name | where type == "external")
+    if ($matches | is-empty) {
+        error $"($name) not found"
+    } else {
+        print ($matches | first | get path)
+    }
 }
 
 # show the most recently changed files
@@ -459,11 +465,20 @@ def rmkey [line: int] {
 
 # run a command with the first argument moved to the end
 # e.g. first-arg-last grep ~/.history <args> runs grep <args> ~/.history
-def first-arg-last [...args] {
-    let cmd = ($args | first)
-    let first = ($args | get 1)
-    let rest = ($args | skip 2)
-    ^$cmd ...$rest $first
+# With 0 args it's a no-op; with 1 arg it runs the command as-is (nothing
+# to rearrange). Nushell's `get 1` errors on short lists, so the length
+# guard avoids a confusing `access_beyond_end` crash.
+def first-arg-last [...args: string] {
+    match ($args | length) {
+        0 => { }
+        1 => { ^($args | first) }
+        _ => {
+            let cmd = ($args | first)
+            let first = ($args | get 1)
+            let rest = ($args | skip 2)
+            ^$cmd ...$rest $first
+        }
+    }
 }
 
 # pass leading -x options of a command to a different first positional arg.
