@@ -74,6 +74,9 @@ function auth
 end
 
 # hook for printing which things I need to authenticate to (ssh-agent, etc.)
+#
+# TODO: reconcile this with `vcs prompt-line` (same question for shrc's
+# auth_info and nushell's auth-info).
 function auth_info
     set problems ()
     is_ssh_valid; or set --append problems 'SSH'
@@ -85,7 +88,8 @@ function is_ssh_valid
     ssh-add -L >/dev/null 2>&1
 end
 
-# returns whether I need to authenticate
+# returns whether I need to authenticate.
+# TODO: see auth_info above (reconcile with `vcs prompt-line`).
 function need_auth
     set _info (auth_info | string collect)
     test -n "$_info"
