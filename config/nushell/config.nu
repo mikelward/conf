@@ -120,13 +120,21 @@ def is-ssh-valid [] {
 }
 
 # print a space-separated, yellow-colored list of auth problems, or ""
-# if everything is fine. Mirrors shrc's auth_info.
-def auth-info [] {
+# if everything is fine. Mirrors shrc's auth_info. Overridable: set
+# $env.auth-info = {|| ... } in an autoload file to report additional
+# auth problems (Kerberos, AWS SSO, ...); need-auth dispatches through
+# $env so the override propagates.
+#
+# TODO: reconcile this with `vcs prompt-line` (same question for shrc's
+# auth_info and fish's auth_info).
+$env.auth-info = {||
     let problems = (if (is-ssh-valid) { [] } else { ["SSH"] })
     if ($problems | is-empty) { "" } else { yellow ($problems | str join " ") }
 }
+def auth-info [] { do $env.auth-info }
 
-# return true if auth-info reports any problems
+# return true if auth-info reports any problems.
+# TODO: see auth-info above (reconcile with `vcs prompt-line`).
 def need-auth [] {
     (auth-info | is-not-empty)
 }

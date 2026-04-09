@@ -207,6 +207,9 @@ auth() {
 }
 
 # hook for printing which things I need to authenticate to (ssh-agent, etc.)
+#
+# TODO: reconcile this with `vcs prompt-line` (same question for fish's
+# auth_info and nushell's auth-info).
 auth_info() {
     local problems=""
     is_ssh_valid || problems="$problems SSH"
@@ -259,7 +262,8 @@ is_ssh_valid() {
     ssh-add -L >/dev/null 2>&1
 }
 
-# returns whether I need to authenticate
+# returns whether I need to authenticate.
+# TODO: see auth_info above (reconcile with `vcs prompt-line`).
 need_auth() {
     test -n "$(auth_info)"
 }
