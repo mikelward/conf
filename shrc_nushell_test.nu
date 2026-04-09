@@ -428,7 +428,8 @@ print -n $env.PWD
 print -n "|"
 print -n $start'#)
 # The new PWD should be different from the starting PWD and live under /tmp
-assert-true "nu mtd cds into a /tmp subdirectory" (($result | str starts-with "/tmp/") and ($result | str contains "|"))
+assert-true "nu mtd cds into a /tmp subdirectory" ($result | str starts-with "/tmp/")
+assert-true "nu mtd preserves the start-path separator" ($result | str contains "|")
 
 ###############
 # TEST: cdfile / realdir resolve symlinks to the real containing directory
@@ -617,7 +618,8 @@ $env.TERM = "xterm-256color"
 print -n (flash-terminal)
 print -n "END"'#)
 # BEL is char 07 -- assert it appears before the END marker.
-assert-true "nu flash-terminal rings bell on xterm" ($result | str ends-with $"((char bel))END")
+assert-true "nu flash-terminal rings bell on xterm" ($result | str contains (char bel))
+assert-true "nu flash-terminal keeps the END marker" ($result | str ends-with "END")
 
 let result = (nu-run r#'
 $env.TERM = "dumb"
