@@ -96,6 +96,25 @@ assert_equal "nu have-command bogus is false" "no" "$result"
 result="$(_nu_run 'if (is-runnable "bar") { print -n yes } else { print -n no }')"
 assert_equal "nu is-runnable custom command" "yes" "$result"
 
+# have-command must also reject a non-executable file that happens to sit
+# in a PATH directory with the right name. The earlier `path exists`-only
+# implementation returned true here, masking the fact that the file
+# isn't runnable.
+_hcdir="$_testdir/have_cmd_nonexec"
+mkdir -p "$_hcdir"
+: > "$_hcdir/fakecmd"
+chmod 644 "$_hcdir/fakecmd"
+result="$(_nu_run "
+\$env.PATH = ['$_hcdir']
+if (have-command 'fakecmd') { print -n yes } else { print -n no }")"
+assert_equal "nu have-command rejects non-executable file in PATH" "no" "$result"
+
+chmod +x "$_hcdir/fakecmd"
+result="$(_nu_run "
+\$env.PATH = ['$_hcdir']
+if (have-command 'fakecmd') { print -n yes } else { print -n no }")"
+assert_equal "nu have-command accepts executable file in PATH" "yes" "$result"
+
 ###############
 # TEST: inpath
 result="$(_nu_run '
@@ -848,10 +867,12 @@ assert_equal "nu shift-options stops at --" "target -- -b" "$result"
 # TEST: first-arg-last guards against short arg lists.
 # Before the guard, `first-arg-last echo` errored with
 # nu::shell::access_beyond_end because `$args | get 1` on a 1-element
-# list is out of range. 0 args is a no-op; 1 arg runs the command as-is;
+# list is out of range. 0 args is a usage error (previously a silent
+# no-op, which masked caller bugs); 1 arg runs the command as-is;
 # 2+ args rearrange first-to-last.
-result="$(_nu_run 'first-arg-last | default "" | str trim')"
-assert_equal "nu first-arg-last no crash on 0 args" "" "$result"
+result="$(_nu_run 'try { first-arg-last; print -n noerror } catch { |e| print -n $e.msg }')"
+assert_contains "nu first-arg-last 0 args raises usage error" "usage" "$result"
+assert_not_contains "nu first-arg-last 0 args does not silently pass" "noerror" "$result"
 
 result="$(_nu_run 'first-arg-last echo | str trim')"
 assert_equal "nu first-arg-last 1 arg runs the command" "" "$result"
@@ -878,6 +899,27 @@ assert_contains "nu which-path reports missing command" "not found" "$result"
 # nu::shell::access_beyond_end on a missing name.
 result="$(_nu_run 'which-path zzzz-not-a-real-command-xyz' 2>&1)"
 assert_not_contains "nu which-path does not raise access_beyond_end" "access_beyond_end" "$result"
+
+###############
+# TEST: `what` prints the definition of a command, mirroring shrc's
+# `whence -f` / fish's `type`. Before the fix it just delegated to
+# `which`, which prints the type/path but not the definition.
+
+# Custom def: body should appear in the output.
+result="$(_nu_run 'what have-command')"
+assert_contains "nu what prints body of a custom def" "path exists" "$result"
+
+# Alias: the alias target should appear in the output.
+result="$(_nu_run 'alias xecho = echo hello; what xecho')"
+assert_contains "nu what prints the target of an alias" "echo hello" "$result"
+
+# External: the absolute path should appear in the output.
+result="$(_nu_run 'what sh')"
+assert_contains "nu what prints path of an external command" "/sh" "$result"
+
+# Missing command: reports via the error helper (stderr), doesn't crash.
+result="$(_nu_run 'what zzzz-not-a-real-command-xyz' 2>&1)"
+assert_contains "nu what reports missing command" "not found" "$result"
 
 ###############
 # TEST: rerc is defined and its body exec's a new nushell.
