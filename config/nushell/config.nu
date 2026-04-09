@@ -91,6 +91,33 @@ def confirm [prompt: string] {
     ($reply == "") or ($reply | str starts-with "y")
 }
 
+# hook for authenticating (e.g. to ssh-agent). Override in local.nu for
+# site-specific flows.
+def auth [] {
+    ^ssh-add
+}
+
+# short alias for auth
+def a [] { auth }
+
+# return true if an SSH key is loaded into the agent
+def is-ssh-valid [] {
+    let r = (try { ^ssh-add -L | complete } catch { {exit_code: 1} })
+    $r.exit_code == 0
+}
+
+# print a space-separated, yellow-colored list of auth problems, or ""
+# if everything is fine. Mirrors shrc's auth_info.
+def auth-info [] {
+    let problems = (if (is-ssh-valid) { [] } else { ["SSH"] })
+    if ($problems | is-empty) { "" } else { yellow ($problems | str join " ") }
+}
+
+# return true if auth-info reports any problems
+def need-auth [] {
+    (auth-info | is-not-empty)
+}
+
 # return true if the argument exists as an external command on $PATH,
 # bypassing aliases and builtins
 def have-command [name: string] {
@@ -535,6 +562,18 @@ def format-duration [d: duration] {
     }
 }
 
+# print "took <duration>\n" for the previous command when $env.CMD_DURATION
+# is set by the pre_prompt hook; returns "" if no command just finished or
+# the duration is below format-duration's display threshold. Mirrors the
+# duration half of shrc's last_job_info.
+def last-job-info [] {
+    let dur = ($env.CMD_DURATION? | default 0sec)
+    let s = (format-duration $dur)
+    if ($s | is-empty) { "" } else {
+        (yellow $"took ($s)") + (char newline)
+    }
+}
+
 # print the first line of the preprompt: host + dir + auth.
 # Delegates to `vcs prompt-line` so the whole line renders in one process.
 def --env prompt-line [] {
@@ -559,28 +598,57 @@ def title [] {
     $parts | str join
 }
 
+# return the OSC escape sequence to set the terminal window title, or
+# "" for terminals that don't understand xterm-style titles. Mirrors
+# the common cases from shrc's init_title_sequences.
+def title-escape [t: string] {
+    let term = ($env.TERM? | default "")
+    let supported = (
+        ($term == "xterm") or ($term | str starts-with "xterm-") or
+        ($term == "rxvt")  or ($term | str starts-with "rxvt-")  or
+        ($term == "aixterm") or ($term == "dtterm") or
+        ($term == "putty")   or ($term | str starts-with "putty-") or
+        ($term == "kitty")
+    )
+    if $supported {
+        $"(char -u "1b")]0;($t)(char bel)"
+    } else {
+        ""
+    }
+}
+
 # print a character that should be the last part of the prompt
 def ps1-character [] {
     if (i-am-root) { "#" } else { ">" }
 }
 
-# get the user's attention (terminal bell in xterm)
+# return the bell character for xterm-family terminals so the caller
+# can inline it into the prompt; returns "" otherwise. Silent in other
+# terminals since the BEL byte would print literally.
 def flash-terminal [] {
     let t = ($env.TERM? | default "")
-    if ($t == "xterm") or ($t | str starts-with "xterm-") { bell }
+    if ($t == "xterm") or ($t | str starts-with "xterm-") {
+        (char bel)
+    } else {
+        ""
+    }
 }
 
 # the main Nushell PROMPT_COMMAND callback.
-# Outputs newline + separator bar + CR + prompt-line. The CR overwrites the
-# start of the bar, leaving the trailing bar chars visible after the prompt
-# line.
+# Outputs (optional) last-job-info line, sets the xterm title, optionally
+# rings the bell, then prints newline + separator bar + CR + prompt-line.
+# The CR overwrites the start of the bar, leaving the trailing bar chars
+# visible after the prompt line.
 def --env render-prompt [] {
+    let info = (last-job-info)
     let cols = (try { term size | get columns } catch { 80 })
     let sep = (bar $cols)
     let line = (prompt-line)
     let nl = (char newline)
     let cr = (char cr)
-    $"($nl)($sep)($cr)($line) ($nl)((ps1-character)) "
+    let title_seq = (title-escape (title))
+    let bell = (flash-terminal)
+    $"($bell)($info)($title_seq)($nl)($sep)($cr)($line) ($nl)((ps1-character)) "
 }
 
 def render-right-prompt [] { "" }
@@ -885,6 +953,22 @@ $env.config = ($env.config | upsert show_banner false)
 $env.config = ($env.config | upsert history.file_format "plaintext")
 $env.config = ($env.config | upsert history.max_size 100000)
 
+# Capture command timing so render-prompt can show the previous command's
+# duration via last-job-info. pre_execution fires just before the user's
+# command runs; pre_prompt fires just before the next prompt is drawn.
+$env.config = ($env.config | upsert hooks.pre_execution [{||
+    $env.CMD_START_TIME = (date now)
+}])
+$env.config = ($env.config | upsert hooks.pre_prompt [{||
+    let start = ($env.CMD_START_TIME? | default null)
+    if $start != null {
+        $env.CMD_DURATION = ((date now) - $start)
+    } else {
+        $env.CMD_DURATION = 0sec
+    }
+    $env.CMD_START_TIME = null
+}])
+
 # Trailing-slash autocd: no hook needed. Nushell's REPL already cds
 # when a path to an existing directory is entered bare, including
 # `foo/`, `./foo/`, `/abs/path/`, and `../`. Bare names without a path
@@ -894,8 +978,15 @@ $env.config = ($env.config | upsert history.max_size 100000)
 # suite only asserts that no overriding hook is installed and that an
 # explicit `cd ./foo/` still works.
 
-# source local overrides file (work vs home, etc.)
-# Nushell's `source` is a parse-time operation, so the file must exist at
-# parse time. Create an empty ~/.config/nushell/local.nu to enable per-host
-# overrides, then uncomment the line below.
-# source ~/.config/nushell/local.nu
+# authenticate on startup if needed, mirroring shrc's startup check.
+# Skipped when attached to a shpool session (credentials come from the
+# parent) and when non-interactive (so the nushell test suite is quiet).
+if (is-interactive) and (not (in-shpool)) {
+    if (need-auth) { auth }
+}
+
+# Local overrides (work vs home, per-host tweaks, etc.) go in the
+# user autoload directory: ~/.config/nushell/autoload/*.nu. Nushell
+# auto-sources every *.nu file there at startup and silently skips
+# the directory if it doesn't exist, so no conditional `source` line
+# is needed here. (Requires nushell 0.101+.)
