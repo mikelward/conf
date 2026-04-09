@@ -786,13 +786,17 @@ assert_equal "nu log-history no-op when HISTORY_FILE unset" "done" "$result"
 
 ###############
 # TEST: inside-project / want-shpool / maybe-start-shpool-and-exit
-# projectroot returns "" by default, so inside-project is false.
+# Override projectroot to "" so these tests are independent of whether
+# the `vcs` binary happens to be installed on the host or whether $PWD
+# happens to sit inside a repo.
 result="$(_nu_run '
+$env.projectroot = {|| "" }
 if (inside-project) { print -n yes } else { print -n no }')"
 assert_equal "nu inside-project false when projectroot is empty" "no" "$result"
 
 # want-shpool: false when neither remote nor inside project.
 result="$(_nu_run '
+$env.projectroot = {|| "" }
 hide-env --ignore-errors SSH_CONNECTION
 if (want-shpool) { print -n yes } else { print -n no }')"
 assert_equal "nu want-shpool false when not remote and not in project" "no" "$result"
@@ -838,6 +842,95 @@ hide-env --ignore-errors SHPOOL_SESSION_NAME
 maybe-start-shpool-and-exit
 print -n "returned"')"
 assert_equal "nu maybe-start-shpool-and-exit no-op without shpool" "returned" "$result"
+
+###############
+# TEST: projectroot default behavior
+# When the `vcs` helper binary is on PATH, projectroot shells out to
+# `vcs rootdir` and returns its stdout. Stub `vcs` so the test doesn't
+# depend on the real binary being checked out.
+_vcs_root_stub="$_testdir/vcs_root_stub"
+mkdir -p "$_vcs_root_stub"
+cat > "$_vcs_root_stub/vcs" <<'EOF'
+#!/bin/sh
+case "$1" in
+    rootdir) echo /fake/from/vcs/binary ;;
+    *) exit 1 ;;
+esac
+EOF
+chmod +x "$_vcs_root_stub/vcs"
+
+result="$(_nu_run "
+\$env.PATH = ['$_vcs_root_stub' '/usr/bin' '/bin']
+print -n (projectroot)")"
+assert_equal "nu projectroot shells out to vcs rootdir when binary present" "/fake/from/vcs/binary" "$result"
+
+# When `vcs rootdir` exits nonzero (not inside a project), projectroot
+# returns "" rather than surfacing the error.
+_vcs_fail_stub="$_testdir/vcs_fail_stub"
+mkdir -p "$_vcs_fail_stub"
+cat > "$_vcs_fail_stub/vcs" <<'EOF'
+#!/bin/sh
+exit 1
+EOF
+chmod +x "$_vcs_fail_stub/vcs"
+
+result="$(_nu_run "
+\$env.PATH = ['$_vcs_fail_stub' '/usr/bin' '/bin']
+print -n (projectroot)")"
+assert_equal "nu projectroot empty when vcs rootdir exits nonzero" "" "$result"
+
+# Fallback: when `vcs` is not on PATH, walk parent directories looking
+# for a VCS marker. .git in the current dir should be found.
+result="$(_nu_run '
+$env.PATH = []
+let base = ($env.HOME | path expand)
+let proj = ([$base "pr-git"] | path join)
+mkdir ([$proj ".git"] | path join)
+cd $proj
+print -n (projectroot)')"
+assert_contains "nu projectroot fallback finds .git in cwd" "pr-git" "$result"
+
+# And should walk up through subdirectories to find the marker.
+result="$(_nu_run '
+$env.PATH = []
+let base = ($env.HOME | path expand)
+let proj = ([$base "pr-jj"] | path join)
+mkdir ([$proj ".jj"] | path join)
+mkdir ([$proj "sub" "deeper"] | path join)
+cd ([$proj "sub" "deeper"] | path join)
+print -n (projectroot)')"
+assert_contains "nu projectroot fallback walks up to find .jj" "pr-jj" "$result"
+
+# Each of the five supported markers should be recognised.
+for _marker in .jj .hg .git .citc .p4config; do
+    result="$(_nu_run "
+\$env.PATH = []
+let base = (\$env.HOME | path expand)
+let proj = ([\$base 'pr-marker-$(printf '%s' "$_marker" | tr -d .)'] | path join)
+mkdir ([\$proj '$_marker'] | path join)
+cd \$proj
+print -n (projectroot)")"
+    assert_contains "nu projectroot fallback recognises $_marker" "pr-marker" "$result"
+done
+
+# inside-project, projectname, buildroot all propagate the fallback result.
+result="$(_nu_run '
+$env.PATH = []
+let base = ($env.HOME | path expand)
+let proj = ([$base "pr-chain"] | path join)
+mkdir ([$proj ".git"] | path join)
+cd $proj
+if (inside-project) { print -n yes } else { print -n no }')"
+assert_equal "nu inside-project true under fallback-detected repo" "yes" "$result"
+
+result="$(_nu_run '
+$env.PATH = []
+let base = ($env.HOME | path expand)
+let proj = ([$base "pr-name"] | path join)
+mkdir ([$proj ".git"] | path join)
+cd $proj
+print -n (projectname)')"
+assert_equal "nu projectname picks up fallback projectroot" "pr-name" "$result"
 
 ###############
 # TEST: shift-options rearranges leading flags to come before the target.
