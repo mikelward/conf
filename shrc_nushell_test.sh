@@ -572,6 +572,52 @@ print -n (auth-info)")"
 assert_equal "nu auth-info empty on success" "" "$result"
 
 ###############
+# TEST: overridable hook points.
+# config.nu exposes four hooks as closures in $env so that autoload files
+# can override them and have the change propagate through every caller
+# inside config.nu (nushell resolves def-to-def calls at parse time, so a
+# plain `def` redefinition in an autoload file would NOT propagate).
+# Each hook is smoke-tested here: override the closure and check that a
+# downstream caller sees the new value.
+
+# $env.auth: the `auth` wrapper should dispatch through it.
+result="$(_nu_run '
+$env.auth = {|| "custom-auth-called" }
+print -n (auth)')"
+assert_equal "nu auth wrapper dispatches through \$env.auth" "custom-auth-called" "$result"
+
+# $env.with-agent: wsh/wcp are defined in config.nu and should pick up
+# the override. Their bodies are `with-agent ssh ...` / `with-agent scp ...`.
+result="$(_nu_run '
+$env.with-agent = {|...cmd| print -n ($cmd | str join "|") }
+wsh host arg')"
+assert_equal "nu wsh dispatches through \$env.with-agent" "ssh|host|arg" "$result"
+
+result="$(_nu_run '
+$env.with-agent = {|...cmd| print -n ($cmd | str join "|") }
+wcp src dst')"
+assert_equal "nu wcp dispatches through \$env.with-agent" "scp|src|dst" "$result"
+
+# $env.on-production-host: overriding it must flip the result even on a
+# hostname that the default logic would classify as production.
+result="$(_nu_run '
+$env.HOSTNAME = "prodhost"
+$env.USERNAME = "mikel"
+hide-env --ignore-errors WORKSTATION
+$env.on-production-host = {|| false }
+if (on-production-host) { print -n yes } else { print -n no }')"
+assert_equal "nu on-production-host override wins over default" "no" "$result"
+
+# And the reverse: flip a workstation hostname to production via the hook.
+result="$(_nu_run '
+$env.HOSTNAME = "mikel-workstation"
+$env.USERNAME = "mikel"
+hide-env --ignore-errors WORKSTATION
+$env.on-production-host = {|| true }
+if (on-production-host) { print -n yes } else { print -n no }')"
+assert_equal "nu on-production-host override flips workstation to prod" "yes" "$result"
+
+###############
 # TEST: bak / unbak roundtrip. Clear any leftover files first since tests
 # share _fakehome.
 result="$(_nu_run '
@@ -648,12 +694,30 @@ $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
 if (want-shpool) { print -n yes } else { print -n no }')"
 assert_equal "nu want-shpool true when remote" "yes" "$result"
 
-# Note: the "inside project" positive case isn't tested here because
-# nushell resolves `projectroot` at def-time, so overriding it after
-# `source config.nu` doesn't affect `inside-project`. The default-empty
-# case above plus the SSH_CONNECTION case cover the main logic; users
-# overriding `projectroot` in an autoload/*.nu file will get the other
-# branch naturally.
+# Overriding `$env.projectroot` propagates through the whole
+# inside-project/want-shpool/projectname/buildroot chain because
+# config.nu defines `projectroot` as `do $env.projectroot` (see the
+# comment block at the bottom of config.nu for the full explanation).
+result="$(_nu_run '
+$env.projectroot = {|| "/fake/project" }
+if (inside-project) { print -n yes } else { print -n no }')"
+assert_equal "nu inside-project true when projectroot override returns non-empty" "yes" "$result"
+
+result="$(_nu_run '
+$env.projectroot = {|| "/fake/project" }
+hide-env --ignore-errors SSH_CONNECTION
+if (want-shpool) { print -n yes } else { print -n no }')"
+assert_equal "nu want-shpool true when projectroot override is non-empty" "yes" "$result"
+
+result="$(_nu_run '
+$env.projectroot = {|| "/srv/code/myrepo" }
+print -n (projectname)')"
+assert_equal "nu projectname picks up projectroot override" "myrepo" "$result"
+
+result="$(_nu_run '
+$env.projectroot = {|| "/srv/code/myrepo" }
+print -n (buildroot)')"
+assert_equal "nu buildroot picks up projectroot override" "/srv/code/myrepo" "$result"
 
 # maybe-start-shpool-and-exit is a no-op when shpool is not on PATH, even if
 # the other conditions would otherwise fire. The test simply asserts that
