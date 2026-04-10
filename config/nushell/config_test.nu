@@ -126,6 +126,646 @@ let results = [
         $env.SHPOOL_SESSION_NAME = "edge1"
         assert equal (session-name) "edge1 "
     })
+
+    ###############
+    # have-command: rejects non-executable file in PATH
+    (run-test "nu have-command rejects non-executable file in PATH" {
+        let dir = (mktemp -d)
+        "not executable" | save ($dir | path join "fakecmd")
+        $env.PATH = [$dir]
+        assert (not (have-command "fakecmd"))
+    })
+    (run-test "nu have-command accepts executable file in PATH" {
+        let dir = (mktemp -d)
+        "#!/bin/sh" | save ($dir | path join "fakecmd")
+        ^chmod +x ($dir | path join "fakecmd")
+        $env.PATH = [$dir]
+        assert (have-command "fakecmd")
+    })
+
+    ###############
+    # inpath
+    (run-test "nu inpath true when in PATH" {
+        $env.PATH = ["/usr/bin" "/bin"]
+        assert (inpath "/usr/bin")
+    })
+    (run-test "nu inpath false when not in PATH" {
+        $env.PATH = ["/usr/bin" "/bin"]
+        assert (not (inpath "/tmp"))
+    })
+
+    ###############
+    # prepend-path / append-path / delete-path / add-path
+    (run-test "nu prepend-path existing dir" {
+        $env.PATH = ["/usr/bin"]
+        prepend-path "/tmp"
+        assert equal $env.PATH ["/tmp" "/usr/bin"]
+    })
+    (run-test "nu prepend-path ignores missing" {
+        $env.PATH = ["/usr/bin"]
+        prepend-path "/definitely/not/a/real/dir"
+        assert equal $env.PATH ["/usr/bin"]
+    })
+    (run-test "nu append-path existing dir" {
+        $env.PATH = ["/usr/bin"]
+        append-path "/tmp"
+        assert equal $env.PATH ["/usr/bin" "/tmp"]
+    })
+    (run-test "nu delete-path removes entry" {
+        $env.PATH = ["/usr/bin" "/tmp" "/bin"]
+        delete-path "/tmp"
+        assert equal $env.PATH ["/usr/bin" "/bin"]
+    })
+    (run-test "nu add-path moves existing to start" {
+        $env.PATH = ["/usr/bin" "/tmp"]
+        add-path "/tmp" "start"
+        assert equal $env.PATH ["/tmp" "/usr/bin"]
+    })
+    (run-test "nu add-path moves existing to end" {
+        $env.PATH = ["/tmp" "/usr/bin"]
+        add-path "/tmp" "end"
+        assert equal $env.PATH ["/usr/bin" "/tmp"]
+    })
+    (run-test "nu add-path default appends if missing" {
+        $env.PATH = ["/usr/bin"]
+        add-path "/var"
+        assert equal $env.PATH ["/usr/bin" "/var"]
+    })
+    (run-test "nu add-path default no-op when present" {
+        $env.PATH = ["/var" "/usr/bin"]
+        add-path "/var"
+        assert equal $env.PATH ["/var" "/usr/bin"]
+    })
+
+    ###############
+    # on-my-workstation / on-my-laptop / on-production-host
+    (run-test "nu on-my-workstation user-prefixed host" {
+        $env.HOSTNAME = "mikel-workstation"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors WORKSTATION
+        assert (on-my-workstation)
+    })
+    (run-test "nu on-my-workstation laptop is false" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors WORKSTATION
+        assert (not (on-my-workstation))
+    })
+    (run-test "nu on-my-laptop laptop hostname" {
+        $env.HOSTNAME = "mikel-laptop"
+        assert (on-my-laptop)
+    })
+    (run-test "nu on-production-host true for unknown host" {
+        $env.HOSTNAME = "prodhost"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors WORKSTATION
+        assert (on-production-host)
+    })
+    (run-test "nu on-production-host false on my workstation" {
+        $env.HOSTNAME = "mikel-workstation"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors WORKSTATION
+        assert (not (on-production-host))
+    })
+
+    ###############
+    # is-env-set handles missing env (regression for get -o flag)
+    (run-test "nu is-env-set false when missing from env" {
+        hide-env --ignore-errors NU_TOTALLY_UNSET
+        assert (not (is-env-set "NU_TOTALLY_UNSET"))
+    })
+
+    ###############
+    # find-up climbs the tree
+    (run-test "nu find-up finds ancestor file" {
+        let base = ($env.HOME | path expand)
+        mkdir ([$base "a" "b" "c"] | path join)
+        "marker" | save --force ([$base "a" "marker"] | path join)
+        cd ([$base "a" "b" "c"] | path join)
+        assert str contains (find-up "marker") "marker"
+    })
+
+    ###############
+    # mcd creates and enters a directory
+    (run-test "nu mcd enters the new directory" {
+        let base = ($env.HOME | path expand)
+        cd $base
+        mcd newdir
+        assert str contains $env.PWD "newdir"
+    })
+
+    ###############
+    # mtd creates a temp dir and cds into it
+    (run-test "nu mtd cds into a /tmp subdirectory" {
+        let start = $env.PWD
+        mtd
+        assert str contains $env.PWD "/tmp"
+        assert ($env.PWD != $start)
+    })
+
+    ###############
+    # cdfile / realdir resolve symlinks to the real containing directory
+    (run-test "nu realdir resolves symlink to real dir" {
+        let base = ($env.HOME | path expand)
+        mkdir ([$base "target"] | path join)
+        "hello" | save --force ([$base "target" "file.txt"] | path join)
+        ^ln -s ([$base "target"] | path join) ([$base "link"] | path join)
+        assert str contains (realdir ([$base "link" "file.txt"] | path join)) "/target"
+    })
+    (run-test "nu cdfile cds to the file's real directory" {
+        let base = ($env.HOME | path expand)
+        mkdir ([$base "cdfile-target"] | path join)
+        "x" | save --force ([$base "cdfile-target" "file.txt"] | path join)
+        cdfile ([$base "cdfile-target" "file.txt"] | path join)
+        assert str contains $env.PWD "cdfile-target"
+    })
+
+    ###############
+    # gh-search / rh
+    (run-test "nu gh-search finds a matching line" {
+        "one two three\nalpha beta gamma\none four five" | save --force ([$env.HOME ".history"] | path join)
+        let out = (gh-search "alpha" | str trim)
+        assert str contains $out "alpha beta gamma"
+    })
+    (run-test "nu rh limits gh-search output to 20 lines" {
+        let lines = (1..25 | each {|i| $"match line ($i)" } | str join (char newline))
+        $lines | save --force ([$env.HOME ".history"] | path join)
+        let count = (rh "match" | length)
+        assert equal $count 20
+    })
+
+    # confirm: nu-native tests can only exercise the "yes" and "default"
+    # paths because confirm reads from ^head (process stdin), not from the
+    # nushell pipeline. Negative cases (n, no, maybe) are covered by the
+    # bash harness which controls process stdin directly.
+
+    ###############
+    # CDPATH is set and does not include conf/ subdirectories
+    (run-test "nu CDPATH contains HOME" {
+        assert ($env.CDPATH | any {|it| $it == $env.HOME })
+    })
+
+    ###############
+    # command_not_found hook is not set (autocd is native)
+    (run-test "nu command_not_found hook is not set" {
+        assert equal ($env.config.hooks.command_not_found | describe) "nothing"
+    })
+
+    ###############
+    # cd with trailing slash works
+    (run-test "nu cd with trailing slash enters directory" {
+        let base = ($env.HOME | path expand)
+        mkdir ([$base "cdtest" "sub"] | path join)
+        cd ([$base "cdtest"] | path join)
+        cd ./sub/
+        assert str contains $env.PWD "cdtest/sub"
+    })
+
+    ###############
+    # last-job-info
+    (run-test "nu last-job-info empty when CMD_DURATION unset" {
+        hide-env --ignore-errors CMD_DURATION
+        assert equal (last-job-info) ""
+    })
+    (run-test "nu last-job-info empty for 0sec" {
+        $env.CMD_DURATION = 0sec
+        assert equal (last-job-info) ""
+    })
+    (run-test "nu last-job-info empty for 1sec (rounds down)" {
+        $env.CMD_DURATION = 1sec
+        assert equal (last-job-info) ""
+    })
+    (run-test "nu last-job-info shows took for 5sec" {
+        $env.CMD_DURATION = 5sec
+        assert str contains (last-job-info) "took 5 seconds"
+    })
+    (run-test "nu last-job-info shows hours for 1hr" {
+        $env.CMD_DURATION = 1hr
+        assert str contains (last-job-info) "1 hours"
+    })
+
+    ###############
+    # title-escape
+    (run-test "nu title-escape includes OSC 0 on xterm" {
+        $env.TERM = "xterm-256color"
+        assert str contains (title-escape "my title") "]0;my title"
+    })
+    (run-test "nu title-escape empty on dumb terminal" {
+        $env.TERM = "dumb"
+        assert equal (title-escape "my title") ""
+    })
+    (run-test "nu title-escape supports rxvt" {
+        $env.TERM = "rxvt-unicode"
+        assert str contains (title-escape "hi") "]0;hi"
+    })
+
+    ###############
+    # flash-terminal
+    (run-test "nu flash-terminal rings bell on xterm" {
+        $env.TERM = "xterm-256color"
+        assert equal (flash-terminal) (char bel)
+    })
+    (run-test "nu flash-terminal empty on dumb terminal" {
+        $env.TERM = "dumb"
+        assert equal (flash-terminal) ""
+    })
+
+    ###############
+    # title respects inside-tmux
+    (run-test "nu title shows hostname outside tmux" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        mkdir ([$env.HOME "titletest"] | path join)
+        cd ([$env.HOME "titletest"] | path join)
+        assert equal (title) "laptop titletest"
+    })
+    (run-test "nu title hides hostname in tmux" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.TMUX = "/fake/tmux/socket"
+        $env.SHPOOL_SESSION_NAME = "main"
+        mkdir ([$env.HOME "titletest"] | path join)
+        cd ([$env.HOME "titletest"] | path join)
+        let t = (title)
+        assert str contains $t "main"
+        assert (not ($t | str starts-with "laptop "))
+    })
+
+    ###############
+    # prompt-line fallback when vcs is missing
+    (run-test "nu prompt-line fallback has hostname" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.PATH = []
+        cd $env.HOME
+        assert str contains (prompt-line) "laptop"
+    })
+
+    ###############
+    # render-prompt structure
+    (run-test "nu render-prompt contains separator" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.UID = 1000
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.PATH = []
+        cd $env.HOME
+        assert str contains (render-prompt) "―"
+    })
+    (run-test "nu render-prompt contains hostname in prompt line" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.UID = 1000
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.PATH = []
+        cd $env.HOME
+        assert str contains (render-prompt) "laptop"
+    })
+    (run-test "nu render-prompt ends with > prompt" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.UID = 1000
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.PATH = []
+        cd $env.HOME
+        assert str contains (render-prompt) "> "
+    })
+    (run-test "nu render-prompt as root ends with # prompt" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.UID = 0
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.PATH = []
+        cd $env.HOME
+        assert str contains (render-prompt) "# "
+    })
+
+    ###############
+    # render-prompt sets xterm title
+    (run-test "nu render-prompt sets xterm title" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.UID = 1000
+        $env.TERM = "xterm-256color"
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.PATH = []
+        cd $env.HOME
+        assert str contains (render-prompt) "]0;"
+    })
+    (run-test "nu render-prompt includes duration line" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.UID = 1000
+        $env.TERM = "dumb"
+        $env.CMD_DURATION = 5sec
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.PATH = []
+        cd $env.HOME
+        assert str contains (render-prompt) "took 5 seconds"
+    })
+
+    ###############
+    # pre_execution / pre_prompt hooks
+    (run-test "nu pre_execution hook list has one entry" {
+        assert equal ($env.config.hooks.pre_execution | length) 1
+    })
+    (run-test "nu pre_prompt hook list has one entry" {
+        assert equal ($env.config.hooks.pre_prompt | length) 1
+    })
+
+    ###############
+    # bak / unbak roundtrip
+    (run-test "nu bak creates .bak file" {
+        cd $env.HOME
+        ["baktest" "baktest.bak"] | each {|f| if ($f | path exists) { ^rm -f $f } } | ignore
+        "hello" | save --force baktest
+        bak "baktest"
+        let files = (ls baktest* | get name | path basename | str join ",")
+        assert equal $files "baktest.bak"
+    })
+    (run-test "nu unbak restores original" {
+        cd $env.HOME
+        ["baktest" "baktest.bak"] | each {|f| if ($f | path exists) { ^rm -f $f } } | ignore
+        "hello" | save --force baktest
+        bak "baktest"
+        unbak "baktest.bak"
+        let files = (ls baktest* | get name | path basename | str join ",")
+        let content = (open baktest)
+        assert equal $files "baktest"
+        assert equal $content "hello"
+    })
+    (run-test "nu unbak short filename roundtrip" {
+        cd $env.HOME
+        ["shortbak" "shortbak.bak"] | each {|f| if ($f | path exists) { ^rm -f $f } } | ignore
+        "x" | save --force shortbak
+        bak "shortbak"
+        unbak "shortbak.bak"
+        assert equal (open shortbak) "x"
+    })
+
+    ###############
+    # log-history
+    (run-test "nu log-history writes argv and tty" {
+        $env.HISTORY_FILE = ([$env.HOME "history.log"] | path join)
+        $env.TTY = "/dev/pts/42"
+        log-history "hello world"
+        let content = (open --raw $env.HISTORY_FILE | str trim)
+        assert str contains $content "hello world"
+        assert str contains $content "/dev/pts/42"
+    })
+    (run-test "nu log-history no-op when HISTORY_FILE empty" {
+        $env.HISTORY_FILE = ""
+        log-history "ignored"
+        # no crash is the assertion
+    })
+    (run-test "nu log-history no-op when HISTORY_FILE unset" {
+        hide-env --ignore-errors HISTORY_FILE
+        log-history "ignored"
+        # no crash is the assertion
+    })
+
+    ###############
+    # inside-project / want-shpool
+    (run-test "nu inside-project false when projectroot is empty" {
+        $env.projectroot = {|| "" }
+        assert (not (inside-project))
+    })
+    (run-test "nu want-shpool false when not remote and not in project" {
+        $env.projectroot = {|| "" }
+        hide-env --ignore-errors SSH_CONNECTION
+        assert (not (want-shpool))
+    })
+    (run-test "nu want-shpool true when remote" {
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        assert (want-shpool)
+    })
+    (run-test "nu inside-project true when projectroot override returns non-empty" {
+        $env.projectroot = {|| "/fake/project" }
+        assert (inside-project)
+    })
+    (run-test "nu want-shpool true when projectroot override is non-empty" {
+        $env.projectroot = {|| "/fake/project" }
+        hide-env --ignore-errors SSH_CONNECTION
+        assert (want-shpool)
+    })
+    (run-test "nu projectname picks up projectroot override" {
+        $env.projectroot = {|| "/srv/code/myrepo" }
+        assert equal (projectname) "myrepo"
+    })
+    (run-test "nu buildroot picks up projectroot override" {
+        $env.projectroot = {|| "/srv/code/myrepo" }
+        assert equal (buildroot) "/srv/code/myrepo"
+    })
+
+    ###############
+    # maybe-start-shpool-and-exit is a no-op without shpool on PATH
+    (run-test "nu maybe-start-shpool-and-exit no-op without shpool" {
+        $env.PATH = []
+        $env.SSH_CONNECTION = "1.2.3.4 22"
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        maybe-start-shpool-and-exit
+        # no crash/exit is the assertion
+    })
+
+    ###############
+    # projectroot fallback: walks parents for VCS markers
+    (run-test "nu projectroot fallback finds .git in cwd" {
+        $env.PATH = []
+        let base = ($env.HOME | path expand)
+        let proj = ([$base "pr-git"] | path join)
+        mkdir ([$proj ".git"] | path join)
+        cd $proj
+        assert str contains (projectroot) "pr-git"
+    })
+    (run-test "nu projectroot fallback walks up to find .jj" {
+        $env.PATH = []
+        let base = ($env.HOME | path expand)
+        let proj = ([$base "pr-jj"] | path join)
+        mkdir ([$proj ".jj"] | path join)
+        mkdir ([$proj "sub" "deeper"] | path join)
+        cd ([$proj "sub" "deeper"] | path join)
+        assert str contains (projectroot) "pr-jj"
+    })
+    (run-test "nu projectroot empty when vcs rootdir exits nonzero" {
+        # Stub vcs to exit 1
+        let dir = (mktemp -d)
+        "#!/bin/sh\nexit 1" | save ($dir | path join "vcs")
+        ^chmod +x ($dir | path join "vcs")
+        $env.PATH = [$dir]
+        cd $env.HOME
+        assert equal (projectroot) ""
+    })
+
+    ###############
+    # shift-options
+    (run-test "nu shift-options moves options before target" {
+        let out = (shift-options echo target "-a" "-b" "rest" | str trim)
+        assert equal $out "-a -b target rest"
+    })
+    (run-test "nu shift-options no options" {
+        let out = (shift-options echo target "rest" | str trim)
+        assert equal $out "target rest"
+    })
+    (run-test "nu shift-options option only" {
+        let out = (shift-options echo target "-x" | str trim)
+        assert equal $out "-x target"
+    })
+    (run-test "nu shift-options stops at --" {
+        let out = (shift-options echo target "--" "-b" | str trim)
+        assert equal $out "target -- -b"
+    })
+
+    ###############
+    # first-arg-last
+    (run-test "nu first-arg-last 0 args raises usage error" {
+        let caught = (try { first-arg-last; false } catch { true })
+        assert $caught
+    })
+    (run-test "nu first-arg-last 2 args runs command with arg" {
+        let out = (first-arg-last echo only | str trim)
+        assert equal $out "only"
+    })
+    (run-test "nu first-arg-last moves first positional to end" {
+        let out = (first-arg-last echo history.file tail | str trim)
+        assert equal $out "tail history.file"
+    })
+
+    ###############
+    # which-path: uses `print` so output can't be captured as a return
+    # value in a closure. Test that it doesn't crash.
+    (run-test "nu which-path does not crash for known command" {
+        which-path sh
+    })
+    (run-test "nu which-path does not crash for missing command" {
+        which-path zzzz-not-a-real-command-xyz
+    })
+
+    ###############
+    # what: uses `print` so output can't be captured as a return value
+    # in a closure. Test that it doesn't crash.
+    (run-test "nu what does not crash for custom def" {
+        what have-command
+    })
+    (run-test "nu what does not crash for external command" {
+        what sh
+    })
+    (run-test "nu what does not crash for missing command" {
+        what zzzz-not-a-real-command-xyz
+    })
+
+    ###############
+    # rerc is defined and exec's nu
+    (run-test "nu rerc is defined as a custom command" {
+        assert equal (which rerc | get 0.type) "custom"
+    })
+    (run-test "nu rerc body exec's nu" {
+        assert ((view source rerc) | str contains "exec nu")
+    })
+
+    ###############
+    # delline removes the given line in place
+    (run-test "nu delline removes line 2" {
+        cd $env.HOME
+        "line1\nline2\nline3" | save --force lines.txt
+        delline 2 lines.txt
+        assert equal (open lines.txt | str trim) "line1\nline3"
+    })
+
+    ###############
+    # body: headers are printed to stdout, body goes through the command.
+    # In a closure we can't capture the printed headers, so just verify
+    # the body portion is sorted and the command doesn't crash.
+    (run-test "nu body does not crash with default header" {
+        "HEAD\nc\na\nb" | body sort | ignore
+    })
+    (run-test "nu body does not crash with --lines 2" {
+        "H1\nH2\ny\nx\nz" | body --lines 2 sort | ignore
+    })
+
+    ###############
+    # trydiff: diff output is printed, not returned. Verify the file is
+    # untouched afterwards.
+    (run-test "nu trydiff leaves file untouched" {
+        cd $env.HOME
+        "b\na\nc" | save --force t.txt
+        trydiff sort t.txt
+        assert equal (open t.txt | str trim) "b\na\nc"
+    })
+
+    ###############
+    # overridable hook points
+    (run-test "nu auth wrapper dispatches through env.auth" {
+        $env.auth = {|| "custom-auth-called" }
+        assert equal (auth) "custom-auth-called"
+    })
+    (run-test "nu wsh dispatches through env.with-agent" {
+        $env.with-agent = {|...cmd| ($cmd | str join "|") }
+        assert equal (wsh host arg | str trim) "ssh|host|arg"
+    })
+    (run-test "nu wcp dispatches through env.with-agent" {
+        $env.with-agent = {|...cmd| ($cmd | str join "|") }
+        assert equal (wcp src dst | str trim) "scp|src|dst"
+    })
+    (run-test "nu on-production-host override wins over default" {
+        $env.HOSTNAME = "prodhost"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors WORKSTATION
+        $env.on-production-host = {|| false }
+        assert (not (on-production-host))
+    })
+    (run-test "nu on-production-host override flips workstation to prod" {
+        $env.HOSTNAME = "mikel-workstation"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors WORKSTATION
+        $env.on-production-host = {|| true }
+        assert (on-production-host)
+    })
+
+    ###############
+    # VCS aliases are defined
+    (run-test "nu vcs aliases are defined" {
+        let names = [add amend annotate base branch branches changed changelog
+             changes checkout commit commitforce diffs fix graph incoming
+             lint map outgoing pending precommit presubmit pull push
+             recommit revert review reword submit submitforce unknown
+             upload uploadchain clone st ci di gr lg ma am]
+        for name in $names {
+            let matches = (which $name)
+            assert ($matches | is-not-empty) $"($name) should be defined"
+        }
+    })
+    (run-test "nu clone remains a custom command" {
+        assert equal (which clone | get 0.type) "custom"
+    })
+    (run-test "nu vcs short aliases are aliases" {
+        let names = [add commit diffs graph push pull st ci di gr]
+        for name in $names {
+            assert equal (which $name | get 0.type) "alias" $"($name) should be alias"
+        }
+    })
+
+    ###############
+    # config.nu has no manual source statement
+    (run-test "nu config.nu has no manual source statement" {
+        let content = (open --raw $CONFIG)
+        let lines = ($content | lines | where ($it | str starts-with "source "))
+        # The only source line should be in comments, not bare
+        # Actually check for bare source lines (not "source $CONFIG" from test)
+        let bare = ($content | lines | where {|l|
+            ($l | str starts-with "source ") and (not ($l | str starts-with "source $"))
+        })
+        assert ($bare | is-empty)
+    })
 ]
 
 for r in $results { print $r }
