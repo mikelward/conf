@@ -6,6 +6,7 @@
 - Use `if test` rather than `if [`.
 - In `shrc` and `shrc.*`, use existing helper functions such as `error`, `warn`, `have_command`, `is_function`, `gets`, and `puts`.
 - When parsing options, support long flags in both `--option argument` and `--option=argument` formats.
+- Preserve feature parity between `shrc` (bash/zsh), `config/fish/config.fish`, and `config/nushell/config.nu`. When adding or changing functionality in one shell config, apply the equivalent change to the others (bash, zsh, fish, and nushell).
 
 ## Testing
 
@@ -16,3 +17,4 @@
 - When modifying VCS functions or prompt functions, run performance tests, include timing info, and warn of any regressions.
 - When touching `shrc.vcs*` files, install `jj` and `hg` locally before running tests so that all VCS test suites execute rather than being skipped.
 - When touching `config/nushell/*` files, install `nu` locally before running tests so that the nu-native tests (`config/nushell/config_test.nu`) execute rather than being skipped.
+- Do not use `apt-get` or `apt` to install tools. Use direct binary downloads (e.g. from GitHub releases) or `cargo install` instead.
