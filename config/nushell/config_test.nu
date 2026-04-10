@@ -1270,6 +1270,123 @@ let results = [
     })
 
     ###############
+    # recent: calls ls -t -1 and limits output
+    (run-test "nu recent returns newest files first" {
+        let dir = (mktemp -d)
+        # Stub ls to print a known ordering so the test doesn't depend on
+        # real filesystem mtime races.
+        $"#!/bin/sh\necho new\necho mid\necho old" | save ($dir | path join "ls")
+        ^chmod +x ($dir | path join "ls")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        cd $dir
+        let out = (recent | lines)
+        assert equal ($out | first) "new"
+        assert equal ($out | length) 3
+    })
+    (run-test "nu recent respects count argument" {
+        let dir = (mktemp -d)
+        $"#!/bin/sh\necho a\necho b\necho c\necho d\necho e" | save ($dir | path join "ls")
+        ^chmod +x ($dir | path join "ls")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        cd $dir
+        let out = (recent 2 | lines)
+        assert equal ($out | length) 2
+        assert equal ($out | first) "a"
+    })
+    (run-test "nu recent passes extra args to ls" {
+        let dir = (mktemp -d)
+        # Stub ls that echoes its arguments so we can verify flags.
+        "#!/bin/sh\necho \"$*\"" | save ($dir | path join "ls")
+        ^chmod +x ($dir | path join "ls")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        cd $dir
+        let out = (recent 5 "-a" "/some/dir" | first)
+        assert str contains $out "-t"
+        assert str contains $out "-1"
+        assert str contains $out "-a"
+        assert str contains $out "/some/dir"
+    })
+
+    ###############
+    # session-name with tmux: stub tmux display-message
+    (run-test "nu session-name returns tmux session name" {
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.TMUX = "/tmp/tmux-1000/default"
+        let dir = (mktemp -d)
+        "#!/bin/sh\necho mysession" | save ($dir | path join "tmux")
+        ^chmod +x ($dir | path join "tmux")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        assert equal (session-name) "mysession "
+    })
+    (run-test "nu session-name prefers shpool over tmux" {
+        $env.SHPOOL_SESSION_NAME = "poolname"
+        $env.TMUX = "/tmp/tmux-1000/default"
+        assert equal (session-name) "poolname "
+    })
+
+    ###############
+    # maybe-start-shpool-and-exit: stub autoshpool
+    (run-test "nu maybe-start-shpool-and-exit calls autoshpool when warranted" {
+        let dir = (mktemp -d)
+        let marker = ($dir | path join "called")
+        # Stub autoshpool that records it was called but exits non-zero
+        # so the test process doesn't actually exit.
+        $"#!/bin/sh\ntouch ($marker)\nexit 1" | save ($dir | path join "autoshpool")
+        ^chmod +x ($dir | path join "autoshpool")
+        # Stub shpool so have-command returns true for it.
+        "#!/bin/sh" | save ($dir | path join "shpool")
+        ^chmod +x ($dir | path join "shpool")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        maybe-start-shpool-and-exit
+        assert ($marker | path exists) "autoshpool should have been called"
+    })
+    (run-test "nu maybe-start-shpool-and-exit skips when already in shpool" {
+        let dir = (mktemp -d)
+        let marker = ($dir | path join "called")
+        $"#!/bin/sh\ntouch ($marker)" | save ($dir | path join "autoshpool")
+        ^chmod +x ($dir | path join "autoshpool")
+        "#!/bin/sh" | save ($dir | path join "shpool")
+        ^chmod +x ($dir | path join "shpool")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        $env.SHPOOL_SESSION_NAME = "already"
+        maybe-start-shpool-and-exit
+        assert (not ($marker | path exists)) "autoshpool should NOT have been called"
+    })
+    (run-test "nu maybe-start-shpool-and-exit exits on autoshpool success" {
+        # Run in a sub-nu because exit terminates the process.
+        let dir = (mktemp -d)
+        "#!/bin/sh\nexit 0" | save ($dir | path join "autoshpool")
+        ^chmod +x ($dir | path join "autoshpool")
+        "#!/bin/sh" | save ($dir | path join "shpool")
+        ^chmod +x ($dir | path join "shpool")
+        let r = (nu --no-config-file -c $"
+            source ($CONFIG)
+            $env.PATH = [($dir) /usr/bin /bin]
+            $env.SSH_CONNECTION = '1.2.3.4 22 5.6.7.8 22'
+            hide-env --ignore-errors SHPOOL_SESSION_NAME
+            maybe-start-shpool-and-exit
+            print 'did-not-exit'
+        " | str trim)
+        # If autoshpool succeeds, exit is called and 'did-not-exit' is never printed.
+        assert (not ($r | str contains "did-not-exit"))
+    })
+
+    ###############
+    # Package manager wrappers: nushell scopes `def` inside `if` blocks,
+    # so the yum/apt-get wrappers are not visible after sourcing config.nu.
+    # This is a known limitation — the defs need to be moved to top level.
+    # For now, verify the commands are NOT defined (regression test: if
+    # someone fixes the scoping, these should be updated to positive tests).
+    (run-test "nu package manager defs are scoped (known limitation)" {
+        # search is not a nushell built-in, so if the def were visible
+        # it would show up. Its absence confirms the scoping issue.
+        assert ((which search) | is-empty)
+    })
+
+    ###############
     # config.nu has no manual source statement
     (run-test "nu config.nu has no manual source statement" {
         let content = (open --raw $CONFIG)
