@@ -754,15 +754,33 @@ def format-duration [d: duration] {
     }
 }
 
-# print "took <duration>\n" for the previous command when $env.CMD_DURATION
-# is set by the pre_prompt hook; returns "" if no command just finished or
-# the duration is below format-duration's display threshold. Mirrors the
-# duration half of shrc's last_job_info.
+# print error status and/or "took <duration>" for the previous command.
+# Mirrors shrc's last_job_info: red error on non-zero exit, yellow
+# duration when above format-duration's display threshold. Both parts
+# appear on one line (space-separated) followed by a newline, matching
+# the bash/fish format. Returns "" when no command just finished.
 def last-job-info [] {
+    let exit_code = ($env.CMD_EXIT_CODE? | default 0)
     let dur = ($env.CMD_DURATION? | default 0sec)
-    let s = (format-duration $dur)
-    if ($s | is-empty) { "" } else {
-        (yellow $"took ($s)") + (char newline)
+    let error_part = if $exit_code == 130 {
+        (red "interrupted")
+    } else if $exit_code != 0 and $exit_code != 148 {
+        (red $"status ($exit_code)")
+    } else {
+        ""
+    }
+    let duration_str = (format-duration $dur)
+    let duration_part = if ($duration_str | is-empty) { "" } else {
+        (yellow $"took ($duration_str)")
+    }
+    if ($error_part | is-empty) and ($duration_part | is-empty) {
+        ""
+    } else if ($error_part | is-empty) {
+        $duration_part + (char newline)
+    } else if ($duration_part | is-empty) {
+        $error_part + (char newline)
+    } else {
+        $error_part + " " + $duration_part + (char newline)
     }
 }
 
@@ -1154,8 +1172,10 @@ $env.config = ($env.config | upsert hooks.pre_prompt [{||
     let start = ($env.CMD_START_TIME? | default null)
     if $start != null {
         $env.CMD_DURATION = ((date now) - $start)
+        $env.CMD_EXIT_CODE = ($env.LAST_EXIT_CODE? | default 0)
     } else {
         $env.CMD_DURATION = 0sec
+        $env.CMD_EXIT_CODE = 0
     }
     $env.CMD_START_TIME = null
 }])
