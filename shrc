@@ -800,13 +800,22 @@ recent() {
 
 # keep trying a command until it works
 # (e.g. retry ping -c 1 host)
+# (e.g. retry --sleep 1 ping -c 1 host)
 retry() {
+    local sleep=10
+    if test "$1" = "--sleep"; then
+        sleep=$2
+        shift 2
+    elif test "${1#--sleep=}" != "$1"; then
+        sleep=${1#--sleep=}
+        shift
+    fi
     while true; do
         if "$@"; then
             bell
             break
         else
-            sleep 10
+            sleep "$sleep"
         fi
     done
 }
