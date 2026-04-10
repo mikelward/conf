@@ -352,23 +352,60 @@ let results = [
     # last-job-info
     (run-test "nu last-job-info empty when CMD_DURATION unset" {
         hide-env --ignore-errors CMD_DURATION
+        hide-env --ignore-errors CMD_EXIT_CODE
         assert equal (last-job-info) ""
     })
     (run-test "nu last-job-info empty for 0sec" {
+        $env.CMD_EXIT_CODE = 0
         $env.CMD_DURATION = 0sec
         assert equal (last-job-info) ""
     })
     (run-test "nu last-job-info empty for 1sec (rounds down)" {
+        $env.CMD_EXIT_CODE = 0
         $env.CMD_DURATION = 1sec
         assert equal (last-job-info) ""
     })
     (run-test "nu last-job-info shows took for 5sec" {
+        $env.CMD_EXIT_CODE = 0
         $env.CMD_DURATION = 5sec
         assert str contains (last-job-info) "took 5 seconds"
     })
     (run-test "nu last-job-info shows hours for 1hr" {
+        $env.CMD_EXIT_CODE = 0
         $env.CMD_DURATION = 1hr
         assert str contains (last-job-info) "1 hours"
+    })
+    (run-test "nu last-job-info shows error status" {
+        $env.CMD_EXIT_CODE = 1
+        $env.CMD_DURATION = 0sec
+        assert str contains (last-job-info) "status 1"
+    })
+    (run-test "nu last-job-info shows interrupted for exit 130" {
+        $env.CMD_EXIT_CODE = 130
+        $env.CMD_DURATION = 0sec
+        assert str contains (last-job-info) "interrupted"
+    })
+    (run-test "nu last-job-info skips suspended exit 148" {
+        $env.CMD_EXIT_CODE = 148
+        $env.CMD_DURATION = 0sec
+        assert equal (last-job-info) ""
+    })
+    (run-test "nu last-job-info shows error and duration together" {
+        $env.CMD_EXIT_CODE = 1
+        $env.CMD_DURATION = 5sec
+        let out = (last-job-info)
+        assert str contains $out "status 1"
+        assert str contains $out "took 5 seconds"
+    })
+    (run-test "nu last-job-info error and duration on same line" {
+        $env.CMD_EXIT_CODE = 2
+        $env.CMD_DURATION = 125sec
+        let out = (last-job-info)
+        # Both parts should be on the same line (separated by space, ending in newline)
+        let lines = ($out | str trim | lines)
+        assert equal ($lines | length) 1
+        assert str contains ($lines | first) "status 2"
+        assert str contains ($lines | first) "took 2 minutes 5 seconds"
     })
 
     ###############
@@ -494,11 +531,25 @@ let results = [
         $env.UID = 1000
         $env.TERM = "dumb"
         $env.CMD_DURATION = 5sec
+        $env.CMD_EXIT_CODE = 0
         hide-env --ignore-errors TMUX
         hide-env --ignore-errors SHPOOL_SESSION_NAME
         $env.PATH = []
         cd $env.HOME
         assert str contains (render-prompt) "took 5 seconds"
+    })
+    (run-test "nu render-prompt includes error status" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.UID = 1000
+        $env.TERM = "dumb"
+        $env.CMD_DURATION = 0sec
+        $env.CMD_EXIT_CODE = 1
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.PATH = []
+        cd $env.HOME
+        assert str contains (render-prompt) "status 1"
     })
 
     ###############
@@ -522,6 +573,20 @@ let results = [
         hide-env --ignore-errors CMD_DURATION
         do --env ($env.config.hooks.pre_prompt | first)
         assert equal ($env.CMD_DURATION | into int) 0
+    })
+    # pre_prompt captures LAST_EXIT_CODE into CMD_EXIT_CODE.
+    (run-test "nu pre_prompt captures CMD_EXIT_CODE" {
+        $env.LAST_EXIT_CODE = 42
+        do --env ($env.config.hooks.pre_execution | first)
+        do --env ($env.config.hooks.pre_prompt | first)
+        assert equal $env.CMD_EXIT_CODE 42
+    })
+    # When no command ran, CMD_EXIT_CODE is zeroed.
+    (run-test "nu pre_prompt clears stale CMD_EXIT_CODE" {
+        hide-env --ignore-errors CMD_START_TIME
+        hide-env --ignore-errors CMD_EXIT_CODE
+        do --env ($env.config.hooks.pre_prompt | first)
+        assert equal $env.CMD_EXIT_CODE 0
     })
 
     ###############
@@ -1378,6 +1443,132 @@ let results = [
     # versions, upgrade, etc.) once the defs are moved out of `if` blocks.
     # Nushell scopes `def` inside `if`, so the current yum/apt-get
     # wrappers are invisible to callers.
+
+    ###############
+    # prompt-line flag passing: stub vcs to echo its arguments
+    (run-test "nu prompt-line passes --hostname flag" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\necho \"$*\"" | save ($dir | path join "vcs")
+        ^chmod +x ($dir | path join "vcs")
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors WORKSTATION
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        assert str contains (prompt-line) "--hostname=laptop"
+    })
+    (run-test "nu prompt-line passes --color=never when NO_COLOR set" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\necho \"$*\"" | save ($dir | path join "vcs")
+        ^chmod +x ($dir | path join "vcs")
+        $env.HOSTNAME = "host"
+        $env.USERNAME = "user"
+        hide-env --ignore-errors WORKSTATION
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.NO_COLOR = "1"
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        assert str contains (prompt-line) "--color=never"
+    })
+    (run-test "nu prompt-line passes --color=always when NO_COLOR unset" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\necho \"$*\"" | save ($dir | path join "vcs")
+        ^chmod +x ($dir | path join "vcs")
+        $env.HOSTNAME = "host"
+        $env.USERNAME = "user"
+        hide-env --ignore-errors WORKSTATION
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        hide-env --ignore-errors NO_COLOR
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        assert str contains (prompt-line) "--color=always"
+    })
+    (run-test "nu prompt-line passes --production on production host" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\necho \"$*\"" | save ($dir | path join "vcs")
+        ^chmod +x ($dir | path join "vcs")
+        $env.HOSTNAME = "prodhost"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors WORKSTATION
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.on-production-host = {|| true }
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        assert str contains (prompt-line) "--production"
+    })
+    (run-test "nu prompt-line omits --production on non-production host" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\necho \"$*\"" | save ($dir | path join "vcs")
+        ^chmod +x ($dir | path join "vcs")
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors WORKSTATION
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.on-production-host = {|| false }
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        assert (not ((prompt-line) | str contains "--production"))
+    })
+
+    ###############
+    # color helpers: verify ANSI escapes
+    (run-test "nu red wraps text in red ANSI escapes" {
+        let out = (red "error msg")
+        assert str contains $out "error msg"
+        # ansi red = ESC[31m, ansi reset = ESC[0m
+        assert str contains $out (ansi red)
+        assert str contains $out (ansi reset)
+    })
+    (run-test "nu green wraps text in green ANSI escapes" {
+        let out = (green "ok")
+        assert str contains $out "ok"
+        assert str contains $out (ansi green)
+        assert str contains $out (ansi reset)
+    })
+    (run-test "nu yellow wraps text in yellow ANSI escapes" {
+        let out = (yellow "warn")
+        assert str contains $out "warn"
+        assert str contains $out (ansi yellow)
+        assert str contains $out (ansi reset)
+    })
+    (run-test "nu blue wraps text in blue ANSI escapes" {
+        let out = (blue "info")
+        assert str contains $out "info"
+        assert str contains $out (ansi blue)
+        assert str contains $out (ansi reset)
+    })
+    (run-test "nu color helpers join multiple args with space" {
+        let out = (red "hello" "world")
+        assert str contains $out "hello world"
+    })
+
+    ###############
+    # prompt-line fallback includes session-name and project-or-pwd
+    (run-test "nu prompt-line fallback includes session name" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors TMUX
+        $env.SHPOOL_SESSION_NAME = "main"
+        $env.PATH = []
+        cd $env.HOME
+        assert str contains (prompt-line) "main"
+    })
+    (run-test "nu prompt-line fallback includes project-or-pwd" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.PATH = []
+        $env.projectroot = {|| "/fake/myproject" }
+        assert str contains (prompt-line) "myproject"
+    })
+
+    ###############
+    # PROMPT_MULTILINE_INDICATOR
+    (run-test "nu PROMPT_MULTILINE_INDICATOR is set to underscore-space" {
+        assert equal $env.PROMPT_MULTILINE_INDICATOR "_ "
+    })
 
     ###############
     # config.nu has no manual source statement
