@@ -348,10 +348,6 @@ clone() {
     esac
 }
 
-cr() {
-    cd "$(rootdir)"
-}
-
 rd() {
     cd "$(rootdir)"
 }

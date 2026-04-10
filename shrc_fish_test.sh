@@ -267,4 +267,18 @@ result="$(HOME=$_testdir/fakehome fish --no-config -c '
 assert_contains "fish re-sourcing preserves system hook idempotently" \
     "SYSTEM:xyz" "$result"
 
+###############
+# TEST: rd cds to project root
+
+_rd_proj="$_testdir/rd_proj"
+mkdir -p "$_rd_proj/.git" "$_rd_proj/src/lib"
+
+result="$(_fish_run '
+    function projectroot; echo '"$_rd_proj"'; end
+    cd '"$_rd_proj/src/lib"'
+    rd
+    pwd
+')"
+assert_equal "fish rd cds to project root" "$_rd_proj" "$result"
+
 test_summary "fish shrc_fish_test"

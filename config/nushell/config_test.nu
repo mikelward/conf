@@ -1761,6 +1761,19 @@ let results = [
     (run-test "nu TRANSIENT_PROMPT_INDICATOR is empty" {
         assert equal $env.TRANSIENT_PROMPT_INDICATOR ""
     })
+
+    ###############
+    # rd: cd to project root
+    (run-test "nu rd cds to project root" {
+        let base = ($env.HOME | path expand)
+        let proj = ([$base "rd-proj"] | path join)
+        mkdir ([$proj ".git"] | path join)
+        mkdir ([$proj "src" "lib"] | path join)
+        $env.projectroot = {|| $proj }
+        cd ([$proj "src" "lib"] | path join)
+        rd
+        assert equal $env.PWD $proj
+    })
 ]
 
 for r in $results { print $r }
