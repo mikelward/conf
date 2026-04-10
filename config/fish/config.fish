@@ -964,22 +964,20 @@ if is_interactive
     # aliases to abstract away differences between package managers
     # delegates to the `package` script, which dispatches to dnf, yum,
     # or apt-get depending on what's available
-    if have_command package
-        alias update='package update'
-        alias search='package search'
-        alias install='package install'
-        alias installed='package installed'
-        alias uninstall='package uninstall'
-        alias reinstall='package reinstall'
-        alias autoremove='package autoremove'
-        alias upgrade='package upgrade'
-        alias versions='package versions'
-        alias info='package info'
-        alias files='package files'
-        alias listfiles='package listfiles'
-        alias depends='package depends'
-        alias rdepends='package rdepends'
-    end
+    alias update='package update'
+    alias search='package search'
+    alias install='package install'
+    alias installed='package installed'
+    alias uninstall='package uninstall'
+    alias reinstall='package reinstall'
+    alias autoremove='package autoremove'
+    alias upgrade='package upgrade'
+    alias versions='package versions'
+    alias info='package info'
+    alias files='package files'
+    alias listfiles='package listfiles'
+    alias depends='package depends'
+    alias rdepends='package rdepends'
 
     # make %<num> resume jobs
     # this matches the first column in the prompt output
