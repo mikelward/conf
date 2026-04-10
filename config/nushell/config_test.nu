@@ -937,6 +937,308 @@ let results = [
     })
 
     ###############
+    # error / warn / puts: output helpers
+    (run-test "nu puts prints to stdout" {
+        # puts uses `print` which writes to terminal, not pipeline. Spawn a
+        # sub-nu and capture its combined stdout.
+        let out = (nu --no-config-file -c $"source ($CONFIG); puts 'hello world'" | str trim)
+        assert equal $out "hello world"
+    })
+    (run-test "nu error prints to stderr" {
+        # error writes to stderr; capture via a sub-nu so we can read stderr
+        let r = (nu --no-config-file -c $"source ($CONFIG); error 'oops'" | complete)
+        assert str contains $r.stderr "oops"
+    })
+    (run-test "nu warn prints to stderr" {
+        let r = (nu --no-config-file -c $"source ($CONFIG); warn 'heads up'" | complete)
+        assert str contains $r.stderr "heads up"
+    })
+
+    ###############
+    # quiet: silences output
+    (run-test "nu quiet does not crash on valid command" {
+        quiet echo hi
+    })
+    (run-test "nu quiet does not crash on failing command" {
+        quiet false
+    })
+
+    ###############
+    # connected-via-ssh / connected-remotely
+    (run-test "nu connected-via-ssh true when SSH_CONNECTION set" {
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        assert (connected-via-ssh)
+    })
+    (run-test "nu connected-via-ssh false when SSH_CONNECTION unset" {
+        hide-env --ignore-errors SSH_CONNECTION
+        assert (not (connected-via-ssh))
+    })
+    (run-test "nu connected-remotely delegates to connected-via-ssh" {
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        assert (connected-remotely)
+    })
+
+    ###############
+    # inside-tmux
+    (run-test "nu inside-tmux true when TMUX set" {
+        $env.TMUX = "/tmp/tmux-1000/default"
+        assert (inside-tmux)
+    })
+    (run-test "nu inside-tmux false when TMUX unset" {
+        hide-env --ignore-errors TMUX
+        assert (not (inside-tmux))
+    })
+
+    ###############
+    # i-am-root
+    (run-test "nu i-am-root true when UID is 0" {
+        $env.UID = 0
+        assert (i-am-root)
+    })
+    (run-test "nu i-am-root false when UID is 1000" {
+        $env.UID = 1000
+        assert (not (i-am-root))
+    })
+
+    ###############
+    # workstation: reads ~/.workstation file, caches in $env.WORKSTATION
+    (run-test "nu workstation returns file contents" {
+        hide-env --ignore-errors WORKSTATION
+        "myhost" | save --force ([$env.HOME ".workstation"] | path join)
+        assert equal (workstation) "myhost"
+    })
+    (run-test "nu workstation returns empty when file missing" {
+        hide-env --ignore-errors WORKSTATION
+        let ws_file = ([$env.HOME ".workstation"] | path join)
+        if ($ws_file | path exists) { ^rm $ws_file }
+        assert equal (workstation) ""
+    })
+    (run-test "nu workstation caches in WORKSTATION env var" {
+        hide-env --ignore-errors WORKSTATION
+        "cached" | save --force ([$env.HOME ".workstation"] | path join)
+        workstation | ignore
+        assert equal $env.WORKSTATION "cached"
+    })
+
+    ###############
+    # on-my-machine: true when workstation or laptop
+    (run-test "nu on-my-machine true on workstation" {
+        $env.HOSTNAME = "mikel-workstation"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors WORKSTATION
+        assert (on-my-machine)
+    })
+    (run-test "nu on-my-machine true on laptop" {
+        $env.HOSTNAME = "mikel-laptop"
+        assert (on-my-machine)
+    })
+    (run-test "nu on-my-machine false on unknown host" {
+        $env.HOSTNAME = "prodserver"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors WORKSTATION
+        let ws_file = ([$env.HOME ".workstation"] | path join)
+        if ($ws_file | path exists) { ^rm $ws_file }
+        let lp_file = ([$env.HOME ".laptop"] | path join)
+        if ($lp_file | path exists) { ^rm $lp_file }
+        assert (not (on-my-machine))
+    })
+
+    ###############
+    # on-test-host / on-dev-host
+    (run-test "nu on-test-host true when hostname contains test" {
+        $env.HOSTNAME = "test-server-01"
+        assert (on-test-host)
+    })
+    (run-test "nu on-test-host false for prod host" {
+        $env.HOSTNAME = "prodhost"
+        assert (not (on-test-host))
+    })
+    (run-test "nu on-dev-host true when hostname contains dev" {
+        $env.HOSTNAME = "dev-vm-03"
+        assert (on-dev-host)
+    })
+    (run-test "nu on-dev-host false for prod host" {
+        $env.HOSTNAME = "prodhost"
+        assert (not (on-dev-host))
+    })
+
+    ###############
+    # show-hostname-in-title: true outside tmux, false inside
+    (run-test "nu show-hostname-in-title true outside tmux" {
+        hide-env --ignore-errors TMUX
+        assert (show-hostname-in-title)
+    })
+    (run-test "nu show-hostname-in-title false inside tmux" {
+        $env.TMUX = "/tmp/tmux-1000/default"
+        assert (not (show-hostname-in-title))
+    })
+
+    ###############
+    # short-pwd / project-or-pwd
+    (run-test "nu short-pwd returns projectname when in project" {
+        $env.projectroot = {|| "/fake/myproject" }
+        assert equal (short-pwd) "myproject"
+    })
+    (run-test "nu short-pwd returns basename when no project" {
+        $env.projectroot = {|| "" }
+        let base = ($env.HOME | path expand)
+        mkdir ([$base "somedir"] | path join)
+        cd ([$base "somedir"] | path join)
+        assert equal (short-pwd) "somedir"
+    })
+    (run-test "nu project-or-pwd returns projectname when in project" {
+        $env.projectroot = {|| "/fake/myrepo" }
+        assert equal (project-or-pwd) "myrepo"
+    })
+    (run-test "nu project-or-pwd returns basename when no project" {
+        $env.projectroot = {|| "" }
+        let base = ($env.HOME | path expand)
+        mkdir ([$base "adir"] | path join)
+        cd ([$base "adir"] | path join)
+        assert equal (project-or-pwd) "adir"
+    })
+
+    ###############
+    # render-transient-prompt / render-right-prompt
+    (run-test "nu render-transient-prompt shows > for non-root" {
+        $env.UID = 1000
+        assert equal (render-transient-prompt) "> "
+    })
+    (run-test "nu render-transient-prompt shows # for root" {
+        $env.UID = 0
+        assert equal (render-transient-prompt) "# "
+    })
+    (run-test "nu render-right-prompt is empty" {
+        assert equal (render-right-prompt) ""
+    })
+
+    ###############
+    # builddir: path from buildroot to PWD
+    (run-test "nu builddir returns dot at project root" {
+        let base = ($env.HOME | path expand)
+        let proj = ([$base "bd-proj"] | path join)
+        mkdir $proj
+        $env.projectroot = {|| $proj }
+        cd $proj
+        assert equal (builddir) "."
+    })
+    (run-test "nu builddir returns relative path in subdir" {
+        let base = ($env.HOME | path expand)
+        let proj = ([$base "bd-proj2"] | path join)
+        mkdir ([$proj "src" "lib"] | path join)
+        $env.projectroot = {|| $proj }
+        cd ([$proj "src" "lib"] | path join)
+        assert equal (builddir) "src/lib"
+    })
+
+    ###############
+    # isort: sort a file in place
+    (run-test "nu isort sorts file contents" {
+        cd $env.HOME
+        "cherry\napple\nbanana" | save --force sortme.txt
+        isort sortme.txt
+        assert equal (open sortme.txt | str trim) "apple\nbanana\ncherry"
+    })
+
+    ###############
+    # projectroot: with working vcs binary
+    (run-test "nu projectroot uses vcs rootdir when available" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\necho /vcs/reported/root" | save ($dir | path join "vcs")
+        ^chmod +x ($dir | path join "vcs")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        assert equal (projectroot) "/vcs/reported/root"
+    })
+
+    ###############
+    # clone: URL matching neither .git nor /hg/
+    (run-test "nu clone does nothing for unrecognized URL" {
+        let dir = (mktemp -d)
+        for cmd in [jj git hg] {
+            $"#!/bin/sh\necho ($cmd) $*" | save ($dir | path join $cmd)
+            ^chmod +x ($dir | path join $cmd)
+        }
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        let out = (clone "https://example.com/plain-repo")
+        assert equal $out null
+    })
+
+    ###############
+    # auth-info override via $env.auth-info
+    (run-test "nu auth-info override dispatches through env" {
+        $env.auth-info = {|| "KERBEROS" }
+        assert equal (auth-info) "KERBEROS"
+    })
+    (run-test "nu need-auth picks up auth-info override" {
+        $env.auth-info = {|| "EXPIRED" }
+        assert (need-auth)
+    })
+    (run-test "nu need-auth false when auth-info override returns empty" {
+        $env.auth-info = {|| "" }
+        assert (not (need-auth))
+    })
+
+    ###############
+    # config settings
+    (run-test "nu edit_mode is emacs" {
+        assert equal $env.config.edit_mode "emacs"
+    })
+    (run-test "nu show_banner is false" {
+        assert equal $env.config.show_banner false
+    })
+    (run-test "nu history file_format is plaintext" {
+        assert equal $env.config.history.file_format "plaintext"
+    })
+    (run-test "nu history max_size is 100000" {
+        assert equal $env.config.history.max_size 100000
+    })
+
+    ###############
+    # PROMPT_COMMAND and related env closures are set
+    (run-test "nu PROMPT_COMMAND is set" {
+        assert (($env.PROMPT_COMMAND | describe) == "closure")
+    })
+    (run-test "nu PROMPT_INDICATOR is empty string" {
+        assert equal $env.PROMPT_INDICATOR ""
+    })
+    (run-test "nu TRANSIENT_PROMPT_COMMAND is set" {
+        assert (($env.TRANSIENT_PROMPT_COMMAND | describe) == "closure")
+    })
+
+    ###############
+    # on-my-workstation via .workstation file
+    (run-test "nu on-my-workstation true via .workstation file" {
+        hide-env --ignore-errors WORKSTATION
+        $env.HOSTNAME = "specialbox"
+        $env.USERNAME = "someone"
+        "specialbox" | save --force ([$env.HOME ".workstation"] | path join)
+        assert (on-my-workstation)
+    })
+
+    ###############
+    # on-my-laptop via .laptop file
+    (run-test "nu on-my-laptop true via .laptop file" {
+        $env.HOSTNAME = "specialbox"
+        "yes" | save --force ([$env.HOME ".laptop"] | path join)
+        assert (on-my-laptop)
+    })
+
+    ###############
+    # find-project-root
+    (run-test "nu find-project-root finds .hg marker" {
+        let base = ($env.HOME | path expand)
+        let proj = ([$base "hg-proj"] | path join)
+        mkdir ([$proj ".hg"] | path join)
+        mkdir ([$proj "sub"] | path join)
+        cd ([$proj "sub"] | path join)
+        assert str contains (find-project-root [".hg"]) "hg-proj"
+    })
+    (run-test "nu find-project-root returns empty at root" {
+        cd /
+        assert equal (find-project-root [".nonexistent-marker"]) ""
+    })
+
+    ###############
     # config.nu has no manual source statement
     (run-test "nu config.nu has no manual source statement" {
         let content = (open --raw $CONFIG)
