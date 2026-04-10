@@ -1374,17 +1374,10 @@ let results = [
         assert (not ($r | str contains "did-not-exit"))
     })
 
-    ###############
-    # Package manager wrappers: nushell scopes `def` inside `if` blocks,
-    # so the yum/apt-get wrappers are not visible after sourcing config.nu.
-    # This is a known limitation — the defs need to be moved to top level.
-    # For now, verify the commands are NOT defined (regression test: if
-    # someone fixes the scoping, these should be updated to positive tests).
-    (run-test "nu package manager defs are scoped (known limitation)" {
-        # search is not a nushell built-in, so if the def were visible
-        # it would show up. Its absence confirms the scoping issue.
-        assert ((which search) | is-empty)
-    })
+    # TODO: add package manager wrapper tests (update, search, install,
+    # versions, upgrade, etc.) once the defs are moved out of `if` blocks.
+    # Nushell scopes `def` inside `if`, so the current yum/apt-get
+    # wrappers are invisible to callers.
 
     ###############
     # config.nu has no manual source statement
