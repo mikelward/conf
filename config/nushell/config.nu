@@ -334,7 +334,7 @@ def unbak [...files: path] {
 
 # ring the terminal's bell
 def bell [] {
-    print -n (char -u 7)
+    print -n (char bel)
 }
 
 # print the path from buildroot to PWD
@@ -498,11 +498,11 @@ def recent [count?: int, ...args: string] {
 }
 
 # keep trying a command until it works
-def retry [...cmd: string] {
+def retry [--sleep (-s): duration = 10sec, ...cmd: string] {
     loop {
         let ok = (try { ^($cmd | first) ...($cmd | skip 1); true } catch { false })
         if $ok { bell; break }
-        sleep 10sec
+        sleep $sleep
     }
 }
 
