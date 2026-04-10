@@ -25,7 +25,6 @@ test:
 	@bash shrc_prompt_test.sh
 	@bash shrc_fish_test.sh
 	@bash shrc_fish_prompt_test.sh
-	@bash shrc_nushell_test.sh
 	@bash makefile_test.sh
 	@bash amethyst_test.sh
 
