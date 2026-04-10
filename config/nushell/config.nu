@@ -475,7 +475,7 @@ def trydiff [cmd: string, file: path] {
 # replace a file with a sorted version of itself
 def isort [file: path] {
     let tmp = (($file | into string) + ".bak")
-    open --raw $file | lines | sort | str join (char newline) | save --force $tmp
+    open --raw $file | lines | sort | str join (char newline) | $in + (char newline) | save --force $tmp
     ^mv $tmp $file
 }
 
