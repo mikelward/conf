@@ -730,6 +730,69 @@ unset _root_log
 unset -f root_cmd myfunc root
 
 ###############
+# RETRY
+
+extract_func bell
+extract_func retry
+
+# Test retry succeeds immediately when command passes
+_retry_dir=$(mktemp -d)
+_retry_counter="$_retry_dir/count"
+cat > "$_retry_dir/retrystub" << STUB
+#!/bin/sh
+c=\$(cat "$_retry_counter" 2>/dev/null || echo 0)
+c=\$((c + 1))
+echo \$c > "$_retry_counter"
+exit 0
+STUB
+chmod +x "$_retry_dir/retrystub"
+PATH="$_retry_dir:$PATH" retry --sleep 0 "$_retry_dir/retrystub"
+result=$(cat "$_retry_counter")
+assert_equal "retry calls command once on immediate success" "1" "$result"
+
+# Test retry retries after failure then stops on success
+rm -f "$_retry_counter"
+cat > "$_retry_dir/retrystub" << STUB
+#!/bin/sh
+c=\$(cat "$_retry_counter" 2>/dev/null || echo 0)
+c=\$((c + 1))
+echo \$c > "$_retry_counter"
+if [ \$c -lt 2 ]; then exit 1; fi
+exit 0
+STUB
+chmod +x "$_retry_dir/retrystub"
+PATH="$_retry_dir:$PATH" retry --sleep 0 "$_retry_dir/retrystub"
+result=$(cat "$_retry_counter")
+assert_equal "retry calls command twice when first attempt fails" "2" "$result"
+
+# Test retry --sleep=N form
+rm -f "$_retry_counter"
+cat > "$_retry_dir/retrystub" << STUB
+#!/bin/sh
+c=\$(cat "$_retry_counter" 2>/dev/null || echo 0)
+c=\$((c + 1))
+echo \$c > "$_retry_counter"
+if [ \$c -lt 2 ]; then exit 1; fi
+exit 0
+STUB
+chmod +x "$_retry_dir/retrystub"
+PATH="$_retry_dir:$PATH" retry --sleep=0 "$_retry_dir/retrystub"
+result=$(cat "$_retry_counter")
+assert_equal "retry --sleep=0 calls command twice" "2" "$result"
+
+# Test retry without --sleep flag defaults (just verify it parses)
+rm -f "$_retry_counter"
+cat > "$_retry_dir/retrystub" << 'STUB'
+#!/bin/sh
+exit 0
+STUB
+chmod +x "$_retry_dir/retrystub"
+PATH="$_retry_dir:$PATH" retry "$_retry_dir/retrystub"
+assert_equal "retry without --sleep succeeds" "0" "$?"
+
+rm -rf "$_retry_dir"
+
+###############
 # CDPATH
 # Verify CDPATH contains HOME but not the conf/config subdirectories, which
 # would surprisingly shadow directory names when `cd`ing from anywhere.
