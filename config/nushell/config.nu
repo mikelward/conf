@@ -877,6 +877,7 @@ def render-transient-prompt [] {
 
 def c  [...args] { ^less --quit-if-one-screen --no-init ...$args }
 def --env cdf [file: path] { cdfile $file }
+
 def ct [...args]  { ^ctags -R ...$args }
 def cx [...args]  { ^chmod +x ...$args }
 def diga [...args] { ^dig +noall +answer +search ...$args }
@@ -959,6 +960,7 @@ def pr [] { projectroot }
 def py  [...args] { ^python ...$args }
 def py2 [...args] { ^python2 ...$args }
 def py3 [...args] { ^python3 ...$args }
+def --env rd [] { cd (projectroot) }
 def rg [...args] { g "--recursive" "--exclude-dir=.*" ...$args }
 def rh [...args] { gh-search ...$args | last 20 }
 def s [...args] { ^subl ...$args }

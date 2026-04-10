@@ -800,6 +800,7 @@ if is_interactive
     set code_includes "--include="$code_patterns
     alias c='less -FX'
     alias cdf='cdfile'
+    function rd; cd (projectroot); end
     alias cg='rg "$code_includes"'
     alias ct='ctags -R'
     alias cx='chmod +x'
