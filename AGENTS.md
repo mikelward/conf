@@ -15,4 +15,4 @@
 - Run `make test` after making any changes.
 - When modifying VCS functions or prompt functions, run performance tests, include timing info, and warn of any regressions.
 - When touching `shrc.vcs*` files, install `jj` and `hg` locally before running tests so that all VCS test suites execute rather than being skipped.
-- When touching `config/nushell/*` files, install `nu` locally before running tests so that both the bash-harness nushell tests and the nu-native tests (`config/nushell/config_test.nu`) execute rather than being skipped.
+- When touching `config/nushell/*` files, install `nu` locally before running tests so that the nu-native tests (`config/nushell/config_test.nu`) execute rather than being skipped.
