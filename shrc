@@ -1803,22 +1803,20 @@ if is_interactive; then
     # functions to abstract away differences between package managers
     # delegates to the `package` script, which dispatches to dnf, yum,
     # or apt-get depending on what's available
-    if have_command package; then
-        update()     { package update "$@"; }
-        search()     { package search "$@"; }
-        install()    { package install "$@"; }
-        installed()  { package installed "$@"; }
-        uninstall()  { package uninstall "$@"; }
-        reinstall()  { package reinstall "$@"; }
-        autoremove() { package autoremove "$@"; }
-        upgrade()    { package upgrade "$@"; }
-        versions()   { package versions "$@"; }
-        info()       { package info "$@"; }
-        files()      { package files "$@"; }
-        listfiles()  { package listfiles "$@"; }
-        depends()    { package depends "$@"; }
-        rdepends()   { package rdepends "$@"; }
-    fi
+    update()     { package update "$@"; }
+    search()     { package search "$@"; }
+    install()    { package install "$@"; }
+    installed()  { package installed "$@"; }
+    uninstall()  { package uninstall "$@"; }
+    reinstall()  { package reinstall "$@"; }
+    autoremove() { package autoremove "$@"; }
+    upgrade()    { package upgrade "$@"; }
+    versions()   { package versions "$@"; }
+    info()       { package info "$@"; }
+    files()      { package files "$@"; }
+    listfiles()  { package listfiles "$@"; }
+    depends()    { package depends "$@"; }
+    rdepends()   { package rdepends "$@"; }
 
     # make +<num> change directories and %<num> resume jobs
     # this matches the first column in the prompt output
