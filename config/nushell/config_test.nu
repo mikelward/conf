@@ -1,12 +1,10 @@
 #!/usr/bin/env nu
 #
-# Prototype nu-native tests for config/nushell/config.nu.
-# Run with:    nu --no-config-file shrc_nushell_test.nu
+# Nu-native tests for config/nushell/config.nu.
+# Run with:    nu --no-config-file config/nushell/config_test.nu
 #
-# This is a SUBSET of shrc_nushell_test.sh -- just the cases that don't
-# need filesystem stubs on $PATH -- to compare ergonomics against the
-# bash harness before committing to a full port. Each case runs inside a
-# `do { ... }` block so env mutations are isolated from later cases.
+# Each case runs inside a `do { ... }` block so env mutations are
+# isolated from later cases.
 #
 
 use std/assert
@@ -23,9 +21,8 @@ hide-env --ignore-errors TMUX
 hide-env --ignore-errors SSH_CONNECTION
 hide-env --ignore-errors DISPLAY
 
-# `path self <rel>` resolves relative to THIS script's directory, so the
-# test file can live next to shrc_nushell_test.sh and still find config.nu.
-const CONFIG = path self "config/nushell/config.nu"
+# `path self <rel>` resolves relative to THIS script's directory.
+const CONFIG = path self "config.nu"
 source $CONFIG
 
 # Run one test case in an isolated env. Plain `do { ... }` does NOT
@@ -136,9 +133,9 @@ for r in $results { print $r }
 let fails = ($results | where ($it | str starts-with "FAIL:"))
 print ""
 if ($fails | is-empty) {
-    print $"nu shrc_nushell_test: all ($results | length) tests passed."
+    print $"nu config_test: all ($results | length) tests passed."
 } else {
     let passed = (($results | length) - ($fails | length))
-    print $"nu shrc_nushell_test: ($fails | length) test\(s\) failed, ($passed) passed."
+    print $"nu config_test: ($fails | length) test\(s\) failed, ($passed) passed."
     exit 1
 }

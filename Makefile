@@ -17,6 +17,7 @@ test:
 	@dash -n exitrc
 	@fish -n config/fish/config.fish
 	@if command -v nu >/dev/null 2>&1; then nu --no-config-file --commands 'source config/nushell/config.nu'; else echo "nushell not installed, skipping parse check"; fi
+	@if command -v nu >/dev/null 2>&1; then nu --no-config-file config/nushell/config_test.nu; else echo "nushell not installed, skipping nu-native tests"; fi
 	@dash shrc_test.sh
 	@bash shrc_test.sh
 	@bash shrc_vcs_test.sh
