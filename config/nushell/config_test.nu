@@ -294,10 +294,37 @@ let results = [
         assert equal $count 20
     })
 
-    # confirm: nu-native tests can only exercise the "yes" and "default"
-    # paths because confirm reads from ^head (process stdin), not from the
-    # nushell pipeline. Negative cases (n, no, maybe) are covered by the
-    # bash harness which controls process stdin directly.
+    ###############
+    # confirm: reads from ^head (process stdin), so we spawn a sub-nu
+    # process with controlled stdin to test all paths.
+    (run-test "nu confirm yes on y" {
+        let out = ("y" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        assert str contains $out "true"
+    })
+    (run-test "nu confirm yes on Y (uppercase)" {
+        let out = ("Y" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        assert str contains $out "true"
+    })
+    (run-test "nu confirm yes on yes" {
+        let out = ("yes" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        assert str contains $out "true"
+    })
+    (run-test "nu confirm no on n" {
+        let out = ("n" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        assert str contains $out "false"
+    })
+    (run-test "nu confirm no on no" {
+        let out = ("no" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        assert str contains $out "false"
+    })
+    (run-test "nu confirm defaults to yes on empty reply" {
+        let out = ("" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        assert str contains $out "true"
+    })
+    (run-test "nu confirm treats non-y reply as no" {
+        let out = ("maybe" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        assert str contains $out "false"
+    })
 
     ###############
     # CDPATH is set and does not include conf/ subdirectories
@@ -811,6 +838,102 @@ let results = [
         for name in $names {
             assert equal (which $name | get 0.type) "alias" $"($name) should be alias"
         }
+    })
+
+    ###############
+    # VCS aliases pass flags through to ^vcs (regression: old def wrappers
+    # rejected unknown flags like -m; aliases are parse-time substitutions
+    # so flags flow through to the external command).
+    (run-test "nu commit alias passes -m through to ^vcs" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nprintf 'vcs-stub:'; for a; do printf ' %s' \"$a\"; done; printf '\\n'" | save ($dir | path join "vcs")
+        ^chmod +x ($dir | path join "vcs")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        let out = (commit -m fix | str trim)
+        assert str contains $out "vcs-stub: commit -m fix"
+    })
+    (run-test "nu ci alias passes -m through to ^vcs" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nprintf 'vcs-stub:'; for a; do printf ' %s' \"$a\"; done; printf '\\n'" | save ($dir | path join "vcs")
+        ^chmod +x ($dir | path join "vcs")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        let out = (ci -m fix | str trim)
+        assert str contains $out "vcs-stub: commit -m fix"
+    })
+    (run-test "nu di alias passes --stat through to ^vcs" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nprintf 'vcs-stub:'; for a; do printf ' %s' \"$a\"; done; printf '\\n'" | save ($dir | path join "vcs")
+        ^chmod +x ($dir | path join "vcs")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        let out = (di --stat | str trim)
+        assert str contains $out "vcs-stub: diffs --stat"
+    })
+    (run-test "nu gr alias passes --limit N through to ^vcs" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nprintf 'vcs-stub:'; for a; do printf ' %s' \"$a\"; done; printf '\\n'" | save ($dir | path join "vcs")
+        ^chmod +x ($dir | path join "vcs")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        let out = (gr --limit 10 | str trim)
+        assert str contains $out "vcs-stub: graph --limit 10"
+    })
+    (run-test "nu bare vcs resolves to ^vcs via PATH" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nprintf 'vcs-stub:'; for a; do printf ' %s' \"$a\"; done; printf '\\n'" | save ($dir | path join "vcs")
+        ^chmod +x ($dir | path join "vcs")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        let out = (^vcs detect some/arg | str trim)
+        assert str contains $out "vcs-stub: detect some/arg"
+    })
+
+    ###############
+    # clone dispatch: stub jj/git/hg to verify which command is invoked
+    (run-test "nu clone .git uses jj git clone when jj available" {
+        let dir = (mktemp -d)
+        for cmd in [jj git hg] {
+            $"#!/bin/sh\necho ($cmd) $*" | save ($dir | path join $cmd)
+            ^chmod +x ($dir | path join $cmd)
+        }
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        let out = (clone "https://github.com/foo/bar.git" | str trim)
+        assert equal $out "jj git clone https://github.com/foo/bar.git"
+    })
+    (run-test "nu clone /hg/ uses hg clone" {
+        let dir = (mktemp -d)
+        for cmd in [jj git hg] {
+            $"#!/bin/sh\necho ($cmd) $*" | save ($dir | path join $cmd)
+            ^chmod +x ($dir | path join $cmd)
+        }
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        let out = (clone "https://hg.example.com/hg/repo" | str trim)
+        assert equal $out "hg clone https://hg.example.com/hg/repo"
+    })
+    # clone fallback when jj is missing requires confirm (process stdin),
+    # so we spawn a sub-nu process.
+    (run-test "nu clone falls back to git when jj missing and user says yes" {
+        let dir = (mktemp -d)
+        for cmd in [git hg] {
+            $"#!/bin/sh\necho ($cmd) $*" | save ($dir | path join $cmd)
+            ^chmod +x ($dir | path join $cmd)
+        }
+        let out = ("y" | nu --no-config-file -c $"
+            source ($CONFIG)
+            $env.PATH = [($dir) /usr/bin /bin]
+            clone https://github.com/foo/bar.git
+        " | str trim)
+        assert str contains $out "git clone https://github.com/foo/bar.git"
+    })
+    (run-test "nu clone aborts when user declines git fallback" {
+        let dir = (mktemp -d)
+        for cmd in [git hg] {
+            $"#!/bin/sh\necho ($cmd) $*" | save ($dir | path join $cmd)
+            ^chmod +x ($dir | path join $cmd)
+        }
+        let out = ("n" | nu --no-config-file -c $"
+            source ($CONFIG)
+            $env.PATH = [($dir) /usr/bin /bin]
+            clone https://github.com/foo/bar.git
+        " | str trim)
+        assert (not ($out | str contains "git clone"))
     })
 
     ###############
