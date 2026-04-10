@@ -1239,6 +1239,37 @@ let results = [
     })
 
     ###############
+    # retry: calls the command again after failure
+    (run-test "nu retry succeeds immediately when command passes" {
+        let dir = (mktemp -d)
+        let counter = ($dir | path join "count")
+        # Stub that always succeeds and records each call.
+        $"#!/bin/sh\nc=$\(cat ($counter) 2>/dev/null || echo 0\)\nc=$\(\(c + 1\)\)\necho $c > ($counter)\nexit 0" | save ($dir | path join "retrystub")
+        ^chmod +x ($dir | path join "retrystub")
+        nu --no-config-file -c $"
+            source ($CONFIG)
+            $env.TERM = 'dumb'
+            $env.PATH = [($dir) /usr/bin /bin]
+            retry --sleep 0sec retrystub
+        "
+        assert equal (open ($counter) | str trim) "1"
+    })
+    (run-test "nu retry retries after failure then stops on success" {
+        let dir = (mktemp -d)
+        let counter = ($dir | path join "count")
+        # Stub that fails on the first call, succeeds on the second.
+        $"#!/bin/sh\nc=$\(cat ($counter) 2>/dev/null || echo 0\)\nc=$\(\(c + 1\)\)\necho $c > ($counter)\nif [ $c -lt 2 ]; then exit 1; fi\nexit 0" | save ($dir | path join "retrystub")
+        ^chmod +x ($dir | path join "retrystub")
+        nu --no-config-file -c $"
+            source ($CONFIG)
+            $env.TERM = 'dumb'
+            $env.PATH = [($dir) /usr/bin /bin]
+            retry --sleep 0sec retrystub
+        "
+        assert equal (open ($counter) | str trim) "2"
+    })
+
+    ###############
     # config.nu has no manual source statement
     (run-test "nu config.nu has no manual source statement" {
         let content = (open --raw $CONFIG)
