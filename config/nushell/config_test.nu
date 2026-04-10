@@ -1204,6 +1204,12 @@ let results = [
         isort sortme.txt
         assert equal (open sortme.txt | str trim) "apple\nbanana\ncherry"
     })
+    (run-test "nu isort preserves trailing newline" {
+        cd $env.HOME
+        "cherry\napple\nbanana\n" | save --force sortme2.txt
+        isort sortme2.txt
+        assert (open --raw sortme2.txt | str ends-with (char newline))
+    })
 
     ###############
     # projectroot: with working vcs binary
@@ -1581,6 +1587,179 @@ let results = [
             ($l | str starts-with "source ") and (not ($l | str starts-with "source $"))
         })
         assert ($bare | is-empty)
+    })
+
+    ###############
+    # find-up: returns empty when file not found
+    (run-test "nu find-up returns empty when file not found" {
+        cd /
+        assert equal (find-up "this_file_does_not_exist_anywhere") ""
+    })
+
+    ###############
+    # mcd: when directory already exists, does not cd
+    (run-test "nu mcd prints message when directory exists" {
+        let base = ($env.HOME | path expand)
+        mkdir ([$base "existing-dir"] | path join)
+        let start = $env.PWD
+        cd $base
+        mcd "existing-dir"
+        # mcd should NOT cd into the existing directory (matches shrc/fish)
+        assert (not ($env.PWD | str ends-with "existing-dir"))
+    })
+
+    ###############
+    # short-hostname: bare hostname without domain
+    (run-test "nu short-hostname with bare hostname" {
+        $env.HOSTNAME = "myhost"
+        $env.USERNAME = "mikel"
+        assert equal (short-hostname) "myhost"
+    })
+    (run-test "nu short-hostname with empty hostname" {
+        $env.HOSTNAME = ""
+        $env.USERNAME = "mikel"
+        assert equal (short-hostname) ""
+    })
+
+    ###############
+    # format-duration: boundary values
+    (run-test "nu format-duration 2s shows seconds" {
+        assert equal (format-duration 2sec) "2 seconds"
+    })
+    (run-test "nu format-duration 60s shows 1 minutes 0 seconds" {
+        assert equal (format-duration 60sec) "1 minutes 0 seconds"
+    })
+    (run-test "nu format-duration 3600s shows 1 hours 0 minutes 0 seconds" {
+        assert equal (format-duration 3600sec) "1 hours 0 minutes 0 seconds"
+    })
+    (run-test "nu format-duration 61s shows 1 minutes 1 seconds" {
+        assert equal (format-duration 61sec) "1 minutes 1 seconds"
+    })
+
+    ###############
+    # projectname: when not in a project
+    (run-test "nu projectname returns empty when no project" {
+        $env.projectroot = {|| "" }
+        assert equal (projectname) ""
+    })
+
+    ###############
+    # unbak: when .bak file doesn't exist, silent no-op
+    (run-test "nu unbak no-op when .bak file does not exist" {
+        cd $env.HOME
+        "content" | save --force unbaktest
+        let before = (open unbaktest)
+        if ("unbaktest.bak" | path exists) { ^rm unbaktest.bak }
+        unbak "unbaktest"
+        # File should be unchanged since no .bak existed
+        assert equal (open unbaktest) $before
+    })
+
+    ###############
+    # unbak: called with .bak name when source .bak doesn't exist
+    (run-test "nu unbak with .bak name when file missing" {
+        cd $env.HOME
+        if ("ghost.bak" | path exists) { ^rm ghost.bak }
+        if ("ghost" | path exists) { ^rm ghost }
+        unbak "ghost.bak"
+        # No crash and no file created
+        assert (not ("ghost" | path exists))
+    })
+
+    ###############
+    # on-my-workstation: with empty username
+    (run-test "nu on-my-workstation false with empty username" {
+        $env.HOSTNAME = "somehost"
+        $env.USERNAME = ""
+        hide-env --ignore-errors WORKSTATION
+        assert (not (on-my-workstation))
+    })
+
+    ###############
+    # bell: just verify it doesn't crash
+    (run-test "nu bell does not crash" {
+        bell
+    })
+
+    ###############
+    # package manager aliases are defined
+    (run-test "nu package manager aliases are defined" {
+        let names = [update search install installed uninstall reinstall
+             autoremove upgrade versions info files listfiles depends rdepends]
+        for name in $names {
+            let matches = (which $name)
+            assert ($matches | is-not-empty) $"($name) should be defined"
+            assert equal ($matches | get 0.type) "alias" $"($name) should be alias"
+        }
+    })
+
+    ###############
+    # what: for alias type
+    (run-test "nu what does not crash for alias" {
+        what st
+    })
+
+    ###############
+    # age: verify it returns a non-negative number
+    (run-test "nu age returns non-negative seconds" {
+        cd $env.HOME
+        "test" | save --force agefile
+        let a = (age agefile)
+        assert ($a >= 0) "age should be non-negative"
+    })
+
+    ###############
+    # rmkey: verify it removes a line from known_hosts
+    (run-test "nu rmkey removes line from known_hosts" {
+        mkdir ([$env.HOME ".ssh"] | path join)
+        "host1 key1\nhost2 key2\nhost3 key3" | save --force ([$env.HOME ".ssh" "known_hosts"] | path join)
+        rmkey 2
+        let content = (open ([$env.HOME ".ssh" "known_hosts"] | path join) | str trim)
+        assert equal $content "host1 key1\nhost3 key3"
+    })
+
+    ###############
+    # first-arg-last: single arg (command with no positionals)
+    (run-test "nu first-arg-last single arg runs command bare" {
+        let out = (first-arg-last echo | str trim)
+        assert equal $out ""
+    })
+
+    ###############
+    # shift-options: stops at bare - (dash)
+    (run-test "nu shift-options stops at bare dash" {
+        let out = (shift-options echo target "-a" "-" "rest" | str trim)
+        assert equal $out "-a target - rest"
+    })
+
+    ###############
+    # GOPATH is set
+    (run-test "nu GOPATH is set to HOME" {
+        assert equal $env.GOPATH $env.HOME
+    })
+
+    ###############
+    # LESS is set
+    (run-test "nu LESS is set to -R" {
+        assert equal $env.LESS "-R"
+    })
+
+    ###############
+    # BLOCKSIZE is set
+    (run-test "nu BLOCKSIZE is set to 1024" {
+        assert equal $env.BLOCKSIZE "1024"
+    })
+
+    ###############
+    # prompt env vars: vi indicators
+    (run-test "nu PROMPT_INDICATOR_VI_INSERT is empty" {
+        assert equal $env.PROMPT_INDICATOR_VI_INSERT ""
+    })
+    (run-test "nu PROMPT_INDICATOR_VI_NORMAL is empty" {
+        assert equal $env.PROMPT_INDICATOR_VI_NORMAL ""
+    })
+    (run-test "nu TRANSIENT_PROMPT_INDICATOR is empty" {
+        assert equal $env.TRANSIENT_PROMPT_INDICATOR ""
     })
 ]
 
