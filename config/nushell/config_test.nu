@@ -482,6 +482,20 @@ let results = [
     (run-test "nu pre_prompt hook list has one entry" {
         assert equal ($env.config.hooks.pre_prompt | length) 1
     })
+    # Invoke the hook closures directly and verify CMD_DURATION gets set.
+    (run-test "nu timing hooks populate CMD_DURATION" {
+        do --env ($env.config.hooks.pre_execution | first)
+        sleep 2100ms
+        do --env ($env.config.hooks.pre_prompt | first)
+        assert str contains (format-duration $env.CMD_DURATION) "seconds"
+    })
+    # When pre_execution did not fire, pre_prompt zeroes CMD_DURATION.
+    (run-test "nu pre_prompt clears stale CMD_DURATION" {
+        hide-env --ignore-errors CMD_START_TIME
+        hide-env --ignore-errors CMD_DURATION
+        do --env ($env.config.hooks.pre_prompt | first)
+        assert equal ($env.CMD_DURATION | into int) 0
+    })
 
     ###############
     # bak / unbak roundtrip
@@ -729,6 +743,51 @@ let results = [
         hide-env --ignore-errors WORKSTATION
         $env.on-production-host = {|| true }
         assert (on-production-host)
+    })
+
+    ###############
+    # auth helpers: stub ssh-add to control exit status
+    (run-test "nu is-ssh-valid true when ssh-add succeeds" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nexit 0" | save ($dir | path join "ssh-add")
+        ^chmod +x ($dir | path join "ssh-add")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        assert (is-ssh-valid)
+    })
+    (run-test "nu is-ssh-valid false when ssh-add fails" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nexit 2" | save ($dir | path join "ssh-add")
+        ^chmod +x ($dir | path join "ssh-add")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        assert (not (is-ssh-valid))
+    })
+    (run-test "nu need-auth false when ssh-add succeeds" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nexit 0" | save ($dir | path join "ssh-add")
+        ^chmod +x ($dir | path join "ssh-add")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        assert (not (need-auth))
+    })
+    (run-test "nu need-auth true when ssh-add fails" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nexit 2" | save ($dir | path join "ssh-add")
+        ^chmod +x ($dir | path join "ssh-add")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        assert (need-auth)
+    })
+    (run-test "nu auth-info reports SSH on failure" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nexit 2" | save ($dir | path join "ssh-add")
+        ^chmod +x ($dir | path join "ssh-add")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        assert str contains (auth-info) "SSH"
+    })
+    (run-test "nu auth-info empty on success" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nexit 0" | save ($dir | path join "ssh-add")
+        ^chmod +x ($dir | path join "ssh-add")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        assert equal (auth-info) ""
     })
 
     ###############
