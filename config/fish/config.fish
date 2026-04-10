@@ -962,33 +962,23 @@ if is_interactive
     # TODO
     #alias ginfo='(path info)'
     # aliases to abstract away differences between package managers
-    if have_command yum
-        alias yum='root yum --cacheonly'
-        alias update='root yum makecache'
-        alias search='yum search'
-        alias show='yum info'
-        alias install='root yum install'
-        alias installed='rpm -qa'
-        alias uninstall='root yum erase'
-        alias reinstall='root yum reinstall'
-        alias autoremove='root yum autoremove'
-        alias upgrade='root yum upgrade'
-        alias versions='yum list'
-        alias files='repoquery --file'
-    else if have_command apt-get
-        alias update='root apt-get update'
-        alias search='apt-cache search --names-only'
-        alias show='apt-cache show'
-        alias install='root apt-get install'
-        alias installed="dpkg-query --show --showformat='\${binary:Package;-36} \${Version;-32} \${Status;-10}\n'"
-        alias uninstall='root apt-get remove'
-        alias reinstall='root apt-get install --reinstall'
-        alias autoremove='root apt-get autoremove'
-        alias upgrade='root apt-get upgrade'
-        alias versions='apt-cache policy'
-        alias files='apt-file search'
-    else
-        error "No supported package manager found"
+    # delegates to the `package` script, which dispatches to dnf, yum,
+    # or apt-get depending on what's available
+    if have_command package
+        alias update='package update'
+        alias search='package search'
+        alias install='package install'
+        alias installed='package installed'
+        alias uninstall='package uninstall'
+        alias reinstall='package reinstall'
+        alias autoremove='package autoremove'
+        alias upgrade='package upgrade'
+        alias versions='package versions'
+        alias info='package info'
+        alias files='package files'
+        alias listfiles='package listfiles'
+        alias depends='package depends'
+        alias rdepends='package rdepends'
     end
 
     # make %<num> resume jobs

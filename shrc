@@ -1801,31 +1801,23 @@ if is_interactive; then
 
     have_command info && ginfo() { command info "$@"; }
     # functions to abstract away differences between package managers
-    if have_command yum; then
-        yum() { command root --nohome yum --cacheonly "$@"; }
-        update() { command root --nohome yum makecache "$@"; }
-        search() { yum search "$@"; }
-        install() { command root --nohome yum install "$@"; }
-        installed() { rpm -qa "$@"; }
-        uninstall() { command root --nohome yum erase "$@"; }
-        reinstall() { command root --nohome yum reinstall "$@"; }
-        autoremove() { command root --nohome yum autoremove "$@"; }
-        upgrade() { command root --nohome yum upgrade "$@"; }
-        versions() { yum list "$@"; }
-        files() { repoquery --file "$@"; }
-    elif have_command apt-get; then
-        update() { root apt-get update "$@"; }
-        search() { apt-cache search --names-only "$@"; }
-        install() { root apt-get install "$@"; }
-        installed() { dpkg-query --show --showformat='${binary:Package;-36} ${Version;-32} ${Status;-10}\n' "$@"; }
-        uninstall() { root apt-get remove "$@"; }
-        reinstall() { root apt-get install --reinstall "$@"; }
-        autoremove() { root apt-get autoremove "$@"; }
-        upgrade() { root apt-get upgrade "$@"; }
-        versions() { apt-cache policy "$@"; }
-        files() { apt-file search "$@"; }
-    else
-        error "No supported package manager found"
+    # delegates to the `package` script, which dispatches to dnf, yum,
+    # or apt-get depending on what's available
+    if have_command package; then
+        update()     { package update "$@"; }
+        search()     { package search "$@"; }
+        install()    { package install "$@"; }
+        installed()  { package installed "$@"; }
+        uninstall()  { package uninstall "$@"; }
+        reinstall()  { package reinstall "$@"; }
+        autoremove() { package autoremove "$@"; }
+        upgrade()    { package upgrade "$@"; }
+        versions()   { package versions "$@"; }
+        info()       { package info "$@"; }
+        files()      { package files "$@"; }
+        listfiles()  { package listfiles "$@"; }
+        depends()    { package depends "$@"; }
+        rdepends()   { package rdepends "$@"; }
     fi
 
     # make +<num> change directories and %<num> resume jobs

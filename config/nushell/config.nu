@@ -1014,44 +1014,25 @@ def rerc [] {
 
 ###############################
 # PACKAGE MANAGER ABSTRACTIONS
-# Install/update/search/etc. map to apt-get or yum depending on what's
-# available.
+# Thin aliases over the `package` helper script, which dispatches to
+# dnf, yum, or apt-get depending on what's available.  Aliases rather
+# than `def` wrappers so flags pass through without nushell's parser
+# catching them (same rationale as the VCS aliases below).
 
-def root [...args] {
-    if (have-command "root") {
-        ^root --nohome ...$args
-    } else {
-        ^sudo ...$args
-    }
-}
-
-if (have-command "yum") {
-    def update  [...args] { root "yum" "makecache" ...$args }
-    def search  [...args] { ^yum search ...$args }
-    def install [...args] { root "yum" "install" ...$args }
-    def installed [...args] { ^rpm -qa ...$args }
-    def uninstall [...args] { root "yum" "erase" ...$args }
-    def reinstall [...args] { root "yum" "reinstall" ...$args }
-    def autoremove [...args] { root "yum" "autoremove" ...$args }
-    def upgrade [...args] { root "yum" "upgrade" ...$args }
-    def versions [...args] { ^yum list ...$args }
-    def files [...args] { ^repoquery --file ...$args }
-} else if (have-command "apt-get") {
-    def update  [...args] { root "apt-get" "update" ...$args }
-    def search  [...args] { ^apt-cache search --names-only ...$args }
-    def install [...args] { root "apt-get" "install" ...$args }
-    def installed [...args] { ^dpkg-query --show --showformat '${binary:Package;-36} ${Version;-32} ${Status;-10}\n' ...$args }
-    def uninstall [...args] { root "apt-get" "remove" ...$args }
-    def reinstall [...args] { root "apt-get" "install" "--reinstall" ...$args }
-    def autoremove [...args] { root "apt-get" "autoremove" ...$args }
-    def upgrade [...args] { root "apt-get" "upgrade" ...$args }
-    def versions [...args] { ^apt-cache policy ...$args }
-    def files [...args] { ^apt-file search ...$args }
-} else {
-    # No supported package manager; define stubs so calling them is harmless.
-    def update  [] { error "No supported package manager found" }
-    def install [...args] { error "No supported package manager found" }
-}
+alias update     = ^package update
+alias search     = ^package search
+alias install    = ^package install
+alias installed  = ^package installed
+alias uninstall  = ^package uninstall
+alias reinstall  = ^package reinstall
+alias autoremove = ^package autoremove
+alias upgrade    = ^package upgrade
+alias versions   = ^package versions
+alias info       = ^package info
+alias files      = ^package files
+alias listfiles  = ^package listfiles
+alias depends    = ^package depends
+alias rdepends   = ^package rdepends
 
 #######################
 # VCS ALIASES
