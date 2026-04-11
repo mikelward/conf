@@ -329,6 +329,7 @@ extract_func realdir
 extract_func isort
 extract_func age
 extract_func find_up
+extract_func tz2tz
 extract_func what
 extract_func trydiff
 extract_func applydiff
@@ -535,6 +536,17 @@ result=$(cd "$_tmpdir" && recent -1)
 line_count=$(echo "$result" | wc -l)
 assert_equal "recent -1 shows one file" "1" "$line_count"
 rm -rf "$_tmpdir"
+
+###############
+# TZ2TZ
+
+# Test that tz2tz converts between timezones
+result=$(tz2tz UTC America/New_York "2024-01-15 12:00:00")
+assert_contains "tz2tz converts timezone" "2024" "$result"
+
+# Test that tz2tz handles multi-word date specs
+result=$(tz2tz UTC UTC "2024-01-15 12:00:00")
+assert_contains "tz2tz with multi-word date spec" "12:00:00" "$result"
 
 ###############
 # ENVIRONMENT DETECTION

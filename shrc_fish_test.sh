@@ -281,4 +281,31 @@ result="$(_fish_run '
 ')"
 assert_equal "fish rd cds to project root" "$_rd_proj" "$result"
 
+###############
+# TEST: find_up finds file in ancestor directory
+
+_find_up_dir="$_testdir/find_up_proj"
+mkdir -p "$_find_up_dir/a/b/c"
+touch "$_find_up_dir/a/marker.txt"
+
+result="$(_fish_run '
+    cd '"$_find_up_dir/a/b/c"'
+    find_up marker.txt '"$_find_up_dir/a/b/c"'
+')"
+assert_equal "fish find_up finds file in ancestor" "$_find_up_dir/a/marker.txt" "$result"
+
+result="$(_fish_run '
+    cd '"$_find_up_dir/a"'
+    find_up marker.txt '"$_find_up_dir/a"'
+')"
+assert_equal "fish find_up finds file in current dir" "$_find_up_dir/a/marker.txt" "$result"
+
+_fish_run '
+    cd '"$_find_up_dir/a/b/c"'
+    find_up nonexistent_file_xyz '"$_find_up_dir/a/b/c"'
+'
+assert_equal "fish find_up returns 1 for missing file" "1" "$?"
+
+rm -rf "$_find_up_dir"
+
 test_summary "fish shrc_fish_test"

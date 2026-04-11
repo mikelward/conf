@@ -188,7 +188,7 @@ git_graph() {
 }
 
 git_histedit() {
-    git rebase --interactive
+    git rebase --interactive "$@"
 }
 
 git_ignore() {

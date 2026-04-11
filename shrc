@@ -795,7 +795,7 @@ recent() {
         shift
         ;;
     esac
-    ls -t -1 "$@" | head -n $lines
+    ls -t -1 "$@" | head -n "$lines"
 }
 
 # keep trying a command until it works
@@ -1725,8 +1725,8 @@ if is_interactive; then
     nv() { nvim "$@"; }
     # function rather than an alias so it looks better in the xterm title.
     p() { "${PAGER:-more}" "$@"; }
-    pgrep,() { pgrep -d , -f "$@"; }
-    pg,() { pgrep "$@"; }
+    alias 'pgrep,=pgrep -d , -f'
+    alias 'pg,=pgrep'
     phup() { pkill -HUP "$@"; }
     popd() { builtin popd "$@" >/dev/null; }
     psg() { psgrep "$@"; }
