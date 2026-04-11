@@ -220,14 +220,12 @@ function get_ptr_records
 end
 
 function with_address_records
-    local hostname
     while read -r hostname
         echo $hostname (join " " (addr $hostname))
     end
 end
 
 function with_hostnames
-    local ip
     while read -r ip
         echo $ip (join " " (ptr $ip))
     end
@@ -388,7 +386,7 @@ function find_up
     test $dir = .; and set dir $PWD
 
     if test -f $dir/$file
-        printf '%s/%s' $dir %file
+        printf '%s/%s' $dir $file
         cd $start_pwd
         return 0
     end
@@ -396,7 +394,7 @@ function find_up
         cd $start_pwd
         return 1
     end
-    find_up $file (basedir $dir)
+    find_up $file (dirname $dir)
 end
 
 # replace a file with a sorted version of itself
@@ -846,7 +844,7 @@ if is_interactive
         alias l='l -Kv -e -x'
         alias ll='l -pTBV -h --time-style=relative'
         alias lt='l -Tt'
-    else if quiet ls set --color auto -v -d /
+    else if quiet ls --color=auto -v -d /
         alias l='ls --color=auto -v -b -x'
         alias ll='l -l'
         alias lt='ll -t'
@@ -957,7 +955,7 @@ if is_interactive
 
     # enable colors in commands that support it
     # (ls is done above)
-    quiet grep -q set --color auto "" /etc/hosts; and alias grep='grep --color=auto'
+    quiet grep -q --color=auto "" /etc/hosts; and alias grep='grep --color=auto'
     set --export CLICOLOR true
 
     # TODO
@@ -1314,7 +1312,7 @@ if is_interactive
         # pass options to ssh/scp
         for arg in $argv
             string match --regex '^-' $arg; or break
-            string match --regex '^--$'; and break
+            string match --regex '^--$' $arg; and break
             set --append ssh_opts $arg
             set --erase argv[1]
         end
@@ -1330,7 +1328,7 @@ exec bash --rcfile "$BASHRC" -i'
         # pass options to ssh/scp
         for arg in $argv
             string match --regex '^-' $arg; or break
-            string match --regex '^--$'; and break
+            string match --regex '^--$' $arg; and break
             set --append ssh_opts $arg
             set --erase argv[1]
         end

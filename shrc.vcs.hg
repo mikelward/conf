@@ -155,7 +155,7 @@ hg_graph() {
 }
 
 hg_histedit() {
-    hg histedit
+    hg histedit "$@"
 }
 
 hg_ignore() {

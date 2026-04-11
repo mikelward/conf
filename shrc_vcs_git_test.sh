@@ -760,4 +760,27 @@ PATH="${PATH#$_gh_stub_dir:}"
 unset -f git vcs_hosting git_branch have_command
 rm -f "$_git_cmd_log" "$_gh_cmd_log"
 
+###############
+# Test git_histedit passes arguments
+
+# Make a second commit to have something to rebase onto
+(
+    cd "$_git_local"
+    echo "change" > file.txt
+    git add file.txt
+    git commit -m "second commit" >/dev/null 2>&1
+)
+
+# git_histedit with a commit argument should pass it through
+_histedit_log="$_testdir/histedit.log"
+git() {
+    echo "git $*" >> "$_histedit_log"
+}
+: > "$_histedit_log"
+(cd "$_git_local" && git_histedit HEAD~1)
+result=$(cat "$_histedit_log")
+assert_contains "git_histedit passes args" "rebase --interactive HEAD~1" "$result"
+unset -f git
+rm -f "$_histedit_log"
+
 test_summary "git"

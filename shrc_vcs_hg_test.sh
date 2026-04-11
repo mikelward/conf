@@ -474,4 +474,18 @@ else
     echo "SKIP: hg absorb not available (absorb extension not installed)"
 fi
 
+###############
+# Test hg_histedit passes arguments
+
+_histedit_log="$_testdir/histedit.log"
+hg() {
+    echo "hg $*" >> "$_histedit_log"
+}
+: > "$_histedit_log"
+(cd "$_hg_local" && hg_histedit --commands myfile)
+result=$(cat "$_histedit_log")
+assert_contains "hg_histedit passes args" "histedit --commands myfile" "$result"
+unset -f hg
+rm -f "$_histedit_log"
+
 test_summary "hg"
