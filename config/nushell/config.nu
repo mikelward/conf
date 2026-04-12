@@ -194,8 +194,8 @@ def want-shpool [] {
 # Mirrors shrc's maybe_start_shpool_and_exit.
 def maybe-start-shpool-and-exit [] {
     if (not (in-shpool)) and (want-shpool) and (have-command "shpool") {
-        let r = (^autoshpool | complete)
-        if $r.exit_code == 0 { exit }
+        let ok = (try { ^autoshpool; true } catch { false })
+        if $ok { exit }
     }
 }
 

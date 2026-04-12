@@ -1444,6 +1444,81 @@ let results = [
         # If autoshpool succeeds, exit is called and 'did-not-exit' is never printed.
         assert (not ($r | str contains "did-not-exit"))
     })
+    (run-test "nu maybe-start-shpool-and-exit does not exit on autoshpool failure" {
+        # Non-zero exit from autoshpool must not kill the shell, so the
+        # user can see the error and fix it.
+        let dir = (mktemp -d)
+        "#!/bin/sh\nexit 1" | save ($dir | path join "autoshpool")
+        ^chmod +x ($dir | path join "autoshpool")
+        "#!/bin/sh" | save ($dir | path join "shpool")
+        ^chmod +x ($dir | path join "shpool")
+        let r = (nu --no-config-file -c $"
+            source ($CONFIG)
+            $env.PATH = [($dir) /usr/bin /bin]
+            $env.SSH_CONNECTION = '1.2.3.4 22 5.6.7.8 22'
+            hide-env --ignore-errors SHPOOL_SESSION_NAME
+            maybe-start-shpool-and-exit
+            print 'did-not-exit'
+        " | str trim)
+        assert ($r | str contains "did-not-exit") $"autoshpool failure must not exit the shell: got ($r)"
+    })
+    (run-test "nu maybe-start-shpool-and-exit inherits stdout to autoshpool" {
+        # Regression: previously used `^autoshpool | complete`, which
+        # captured stdout/stderr and broke interactive `shpool attach`
+        # (it would hang waiting to use the terminal).
+        let dir = (mktemp -d)
+        # Stub prints a unique marker to stdout. If stdio is inherited,
+        # the marker reaches the sub-nu's stdout; if it's piped/captured,
+        # it's swallowed inside maybe-start-shpool-and-exit.
+        "#!/bin/sh\necho MARKER_STDOUT_XYZ\nexit 1" | save ($dir | path join "autoshpool")
+        ^chmod +x ($dir | path join "autoshpool")
+        "#!/bin/sh" | save ($dir | path join "shpool")
+        ^chmod +x ($dir | path join "shpool")
+        let r = (nu --no-config-file -c $"
+            source ($CONFIG)
+            $env.PATH = [($dir) /usr/bin /bin]
+            $env.SSH_CONNECTION = '1.2.3.4 22 5.6.7.8 22'
+            hide-env --ignore-errors SHPOOL_SESSION_NAME
+            maybe-start-shpool-and-exit
+        " | complete)
+        assert ($r.stdout | str contains "MARKER_STDOUT_XYZ") $"stub stdout should pass through: ($r.stdout)"
+    })
+    (run-test "nu maybe-start-shpool-and-exit inherits stderr to autoshpool" {
+        # stderr inheritance matters too: shpool prints status and errors
+        # to stderr; capturing it would hide them from the user.
+        let dir = (mktemp -d)
+        "#!/bin/sh\necho MARKER_STDERR_XYZ >&2\nexit 1" | save ($dir | path join "autoshpool")
+        ^chmod +x ($dir | path join "autoshpool")
+        "#!/bin/sh" | save ($dir | path join "shpool")
+        ^chmod +x ($dir | path join "shpool")
+        let r = (nu --no-config-file -c $"
+            source ($CONFIG)
+            $env.PATH = [($dir) /usr/bin /bin]
+            $env.SSH_CONNECTION = '1.2.3.4 22 5.6.7.8 22'
+            hide-env --ignore-errors SHPOOL_SESSION_NAME
+            maybe-start-shpool-and-exit
+        " | complete)
+        assert ($r.stderr | str contains "MARKER_STDERR_XYZ") $"stub stderr should pass through: ($r.stderr)"
+    })
+    (run-test "nu maybe-start-shpool-and-exit inherits a tty to autoshpool when one is present" {
+        # Real regression: with `| complete`, autoshpool's stdout was a
+        # pipe, so shpool attach saw no tty and hung. Spawn sub-nu under
+        # `script` (pty) and have the stub record whether its stdout is
+        # a tty.
+        if (not (have-command "script")) {
+            return
+        }
+        let dir = (mktemp -d)
+        let marker = ($dir | path join "tty-status")
+        $"#!/bin/sh\nif [ -t 1 ]; then echo tty > ($marker); else echo pipe > ($marker); fi\nexit 1" | save ($dir | path join "autoshpool")
+        ^chmod +x ($dir | path join "autoshpool")
+        "#!/bin/sh" | save ($dir | path join "shpool")
+        ^chmod +x ($dir | path join "shpool")
+        let cmd = $"nu --no-config-file -c 'source ($CONFIG); $env.PATH = [\"($dir)\" /usr/bin /bin]; $env.SSH_CONNECTION = \"1.2.3.4 22 5.6.7.8 22\"; hide-env --ignore-errors SHPOOL_SESSION_NAME; maybe-start-shpool-and-exit'"
+        ^script -qc $cmd /dev/null out+err> (["/dev/null"] | path join)
+        let status = (open $marker | str trim)
+        assert equal $status "tty" $"autoshpool stdout should be a tty when nu runs under a pty, got: ($status)"
+    })
 
     # TODO: add package manager wrapper tests (update, search, install,
     # versions, upgrade, etc.) once the defs are moved out of `if` blocks.
