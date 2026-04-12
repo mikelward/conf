@@ -199,6 +199,84 @@ def maybe-start-shpool-and-exit [] {
     }
 }
 
+# Resolve $arg to an existing directory the way `cd` does, honoring
+# $env.CDPATH. Returns the resolved absolute path, or "" if no match.
+# Absolute paths and paths starting with ./ or ../ bypass CDPATH,
+# matching cd(1) semantics. Mirrors shrc's resolve_cdpath_dir and
+# config.fish's resolve_cdpath_dir.
+def resolve-cdpath-dir [arg: string] {
+    if ($arg | is-empty) { return "" }
+    let is_explicit = (
+        ($arg | str starts-with "/") or
+        ($arg | str starts-with "./") or
+        ($arg | str starts-with "../")
+    )
+    if $is_explicit {
+        if (($arg | path exists) and (($arg | path type) == "dir")) {
+            return ($arg | path expand)
+        }
+        return ""
+    }
+    if (($arg | path exists) and (($arg | path type) == "dir")) {
+        return ($arg | path expand)
+    }
+    for p in ($env.CDPATH? | default []) {
+        let base = if ($p | is-empty) { "." } else { $p }
+        let candidate = ([$base $arg] | path join)
+        if (($candidate | path exists) and (($candidate | path type) == "dir")) {
+            return ($candidate | path expand)
+        }
+    }
+    ""
+}
+
+# CDPATH-aware `cd`. Nushell's built-in `cd` ignores $env.CDPATH, so
+# `cd scripts` from ~/conf fails even when $HOME/scripts exists.
+# Resolve via CDPATH first; if no match, pass the original arg
+# through to built-in `cd` so its error messages and edge cases
+# (cd -, cd with no arg -> HOME) are preserved. The `alias cd =
+# cd-with-cdpath` below redirects REPL and post-definition `cd`
+# calls through this wrapper; the `cd $target` line inside is
+# parsed before the alias exists, so it still resolves to the
+# built-in. Mirrors shrc's and config.fish's CDPATH handling, which
+# is provided natively by bash/zsh/fish.
+def --env cd-with-cdpath [dir?: string] {
+    let target = if ($dir | is-empty) {
+        # no arg -> $env.HOME, matching bash/zsh/fish. (Nushell's
+        # built-in `cd` with no arg uses the OS home dir from the
+        # passwd database, ignoring $env.HOME.)
+        $env.HOME
+    } else if $dir == "-" {
+        # pass `-` through; nu's built-in handles OLDPWD.
+        $dir
+    } else {
+        let resolved = (resolve-cdpath-dir $dir)
+        if ($resolved | is-not-empty) { $resolved } else { $dir }
+    }
+    cd $target
+}
+alias cd = cd-with-cdpath
+
+# REPL trailing-slash autocd. Invoked by the Enter keybinding
+# below. If the current commandline buffer is a single word ending
+# in `/`, rewrite it to `cd -- <buf>` so the follow-up `send: enter`
+# runs it through `cd-with-cdpath` (which handles both PWD-relative
+# and CDPATH lookup, plus the error if neither matches). Mirrors
+# shrc's zsh _autocd_accept_line widget and fish's
+# fish_command_not_found, minus the existence check -- here we
+# always rewrite trailing-slash buffers and let `cd` produce a
+# clearer "no such directory" error than "command not found" for
+# typos like `srcipts/`.
+def try-autocd-rewrite [] {
+    let line = (commandline)
+    if not ($line | str ends-with "/") { return }
+    # reject multi-word buffers like `foo/ bar` (any whitespace).
+    for c in ($line | split chars) {
+        if $c in [" " "\t" "\n"] { return }
+    }
+    commandline edit --replace $"cd -- ($line)"
+}
+
 # return true if inside tmux
 def inside-tmux [] {
     is-env-set "TMUX"
@@ -1182,14 +1260,28 @@ $env.config = ($env.config | upsert hooks.pre_prompt [{||
     $env.CMD_START_TIME = null
 }])
 
-# Trailing-slash autocd: no hook needed. Nushell's REPL already cds
-# when a path to an existing directory is entered bare, including
-# `foo/`, `./foo/`, `/abs/path/`, and `../`. Bare names without a path
-# separator (`foo`) still go through command lookup and error if not
-# found, which matches shrc's maybe_autocd_trailing_slash. This is a
-# REPL-only behavior -- `nu -c './foo/'` errors -- so the nushell test
-# suite only asserts that no overriding hook is installed and that an
-# explicit `cd ./foo/` still works.
+# Trailing-slash autocd with CDPATH. Nushell's REPL already cds when
+# a path to an existing PWD-relative directory is entered bare
+# (`foo/`, `./foo/`, `/abs/`, `../`), but its `cd` ignores $env.CDPATH
+# entirely. To get full parity with shrc/fish -- where `scripts/` in
+# any directory jumps to $HOME/scripts -- override Enter with a
+# keybinding that rewrites the buffer to `cd -- foo/` when foo
+# resolves via CDPATH. See try-autocd-rewrite / resolve-cdpath-dir
+# for the lookup and shrc's _autocd_accept_line widget for the zsh
+# equivalent. Bare names without a trailing slash (`foo`) still go
+# through command lookup, matching shrc. The keybinding is installed
+# unconditionally so the test suite can verify it; it only fires in
+# an interactive REPL anyway.
+$env.config.keybindings = ($env.config.keybindings | append {
+    name: autocd_trailing_slash
+    modifier: none
+    keycode: enter
+    mode: [emacs, vi_insert, vi_normal]
+    event: [
+        { send: executehostcommand, cmd: "try-autocd-rewrite" }
+        { send: enter }
+    ]
+})
 
 # Maybe attach to shpool instead of running a bare nu interactively.
 # Skipped in non-interactive mode so the test suite stays quiet. Mirrors
