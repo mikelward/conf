@@ -257,26 +257,6 @@ def --env cd-with-cdpath [dir?: string] {
 }
 alias cd = cd-with-cdpath
 
-# REPL trailing-slash autocd. Invoked by the Enter keybinding
-# below. If the current commandline buffer is a single word ending
-# in `/`, rewrite it to `cd -- <buf>` so the follow-up `send: enter`
-# runs it through `cd-with-cdpath` (which handles both PWD-relative
-# and CDPATH lookup, plus the error if neither matches). Mirrors
-# shrc's zsh _autocd_accept_line widget and fish's
-# fish_command_not_found, minus the existence check -- here we
-# always rewrite trailing-slash buffers and let `cd` produce a
-# clearer "no such directory" error than "command not found" for
-# typos like `srcipts/`.
-def try-autocd-rewrite [] {
-    let line = (commandline)
-    if not ($line | str ends-with "/") { return }
-    # reject multi-word buffers like `foo/ bar` (any whitespace).
-    for c in ($line | split chars) {
-        if $c in [" " "\t" "\n"] { return }
-    }
-    commandline edit --replace $"cd -- ($line)"
-}
-
 # return true if inside tmux
 def inside-tmux [] {
     is-env-set "TMUX"
@@ -1269,28 +1249,16 @@ $env.config = ($env.config | upsert hooks.pre_prompt [{||
     $env.CMD_START_TIME = null
 }])
 
-# Trailing-slash autocd with CDPATH. Nushell's REPL already cds when
-# a path to an existing PWD-relative directory is entered bare
-# (`foo/`, `./foo/`, `/abs/`, `../`), but its `cd` ignores $env.CDPATH
-# entirely. To get full parity with shrc/fish -- where `scripts/` in
-# any directory jumps to $HOME/scripts -- override Enter with a
-# keybinding that rewrites the buffer to `cd -- foo/` when foo
-# resolves via CDPATH. See try-autocd-rewrite / resolve-cdpath-dir
-# for the lookup and shrc's _autocd_accept_line widget for the zsh
-# equivalent. Bare names without a trailing slash (`foo`) still go
-# through command lookup, matching shrc. The keybinding is installed
-# unconditionally so the test suite can verify it; it only fires in
-# an interactive REPL anyway.
-$env.config.keybindings = ($env.config.keybindings | append {
-    name: autocd_trailing_slash
-    modifier: none
-    keycode: enter
-    mode: [emacs, vi_insert, vi_normal]
-    event: [
-        { send: executehostcommand, cmd: "try-autocd-rewrite" }
-        { send: enter }
-    ]
-})
+# Trailing-slash autocd at the REPL is PWD-only in nushell: typing
+# `foo/` only cds when foo exists in $PWD. Unlike shrc's zsh
+# accept-line widget and fish's fish_command_not_found (which
+# rewrite `foo/` to `cd foo/` and so pick up CDPATH via the shell's
+# cd), nushell has no clean extension point here. Overriding Enter
+# via reedline's ExecuteHostCommand loses the user's buffer (the
+# event exits reedline before the original buffer can be read), and
+# the command_not_found hook runs in a sub-scope so it can't mutate
+# $env.PWD. For CDPATH parity, use `cd scripts` or `cd scripts/`
+# explicitly -- cd-with-cdpath handles the lookup.
 
 # Maybe attach to shpool instead of running a bare nu interactively.
 # Skipped in non-interactive mode so the test suite stays quiet. Mirrors

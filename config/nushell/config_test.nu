@@ -492,12 +492,79 @@ let results = [
     })
 
     ###############
-    # autocd Enter keybinding is installed (cannot test behavior without a REPL)
-    (run-test "nu autocd_trailing_slash keybinding installed on Enter" {
-        let kb = ($env.config.keybindings | where name == "autocd_trailing_slash")
-        assert equal ($kb | length) 1 "expected exactly one autocd_trailing_slash keybinding"
-        assert equal $kb.0.keycode "enter"
-        assert ($kb.0.event | to nuon | str contains "try-autocd-rewrite") $"keybinding must invoke try-autocd-rewrite: ($kb.0.event | to nuon)"
+    # No Enter keybinding: we must NOT override Enter, because
+    # ExecuteHostCommand loses the user's buffer (see config.nu
+    # comment by cd-with-cdpath). Regressing that would break every
+    # command submission.
+    (run-test "nu does not override Enter" {
+        let overrides = ($env.config.keybindings | where keycode == "enter")
+        assert equal ($overrides | length) 0 $"Enter must not be overridden, found: ($overrides | to nuon)"
+    })
+
+    ###############
+    # End-to-end: a command typed at the REPL and submitted with
+    # Enter actually runs. Drives a real nu REPL under a Python pty
+    # (script+expect aren't allowed/installed) and checks a marker
+    # file that the submitted command should touch.
+    #
+    # Regression guard: we once installed an ExecuteHostCommand
+    # Enter keybinding trying to add CDPATH-aware trailing-slash
+    # autocd. ExecuteHostCommand exits reedline and discards the
+    # user's buffer, so `ls<Enter>` did nothing. This test catches
+    # that class of regression.
+    (run-test "nu REPL runs a command submitted via Enter" {
+        if not (have-command "python3") { return }
+        let marker = (^mktemp -u --suffix=.nutest | str trim)
+        let driver = (^mktemp --suffix=.py | str trim)
+        # Minimal pty driver: fork a child, send lines after idle
+        # pauses, answer DSR-6 cursor queries so reedline doesn't
+        # block on terminal negotiation.
+        'import os, pty, select, sys, time
+timeout = float(sys.argv[1])
+sep = sys.argv.index("--")
+cmd = sys.argv[2:sep]
+lines = [l + "\r" for l in sys.argv[sep+1:]]
+pid, fd = pty.fork()
+if pid == 0:
+    os.execvp(cmd[0], cmd)
+buf = b""
+sent = 0
+start = time.time()
+last_send = 0
+while time.time() - start < timeout:
+    r, _, _ = select.select([fd], [], [], 0.2)
+    if r:
+        try: data = os.read(fd, 4096)
+        except OSError: break
+        if not data: break
+        buf += data
+        while b"\x1b[6n" in buf:
+            buf = buf.replace(b"\x1b[6n", b"", 1)
+            try: os.write(fd, b"\x1b[24;1R")
+            except OSError: pass
+    else:
+        now = time.time()
+        if sent < len(lines) and now - last_send > 0.4:
+            try: os.write(fd, lines[sent].encode())
+            except OSError: break
+            sent += 1
+            last_send = now
+try: os.close(fd)
+except OSError: pass
+' | save --force $driver
+        # Run nu with the real config loaded. Force SHPOOL_SESSION_NAME
+        # so maybe-start-shpool-and-exit is skipped (in-shpool returns
+        # true). Use COLUMNS/LINES so term size doesn't block. Send
+        # the command, then exit.
+        with-env {
+            SHPOOL_SESSION_NAME: fake
+            COLUMNS: "80"
+            LINES: "24"
+            TERM: "xterm-256color"
+        } {
+            (^python3 $driver "12" "nu" "--config" $CONFIG "--env-config" "/dev/null" "--" $"touch ($marker)" "exit") | ignore
+        }
+        assert ($marker | path exists) $"REPL did not execute the submitted command; expected marker ($marker) to be created"
     })
 
     ###############
