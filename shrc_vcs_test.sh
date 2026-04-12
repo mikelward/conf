@@ -66,106 +66,58 @@ assert_equal "vcs_backend returns empty for hg repo" "" "$result"
 _cache_line1=$(head -1 "$_testdir/hgrepo/.vcs_cache")
 assert_contains "hg cache uses - sentinel for backend" " - " "$_cache_line1"
 
-# jj repo with git backend
-mkdir -p "$_testdir/jjrepo/.jj/repo/store/git"
-echo "git" > "$_testdir/jjrepo/.jj/repo/store/type"
-rm -f "$_testdir/jjrepo/.vcs_cache"
-# Stub git to return a github remote URL
-git() {
-    if test "$1" = "-C" && test "$3" = "remote"; then
-        echo "https://github.com/user/repo.git"
-        return 0
+# Helper: write a git config with a given origin URL into a jj repo's
+# embedded git store. The vcs binary reads this config directly.
+_write_jj_origin() {
+    local _dir="$1"
+    local _url="$2"
+    mkdir -p "$_dir/.jj/repo/store/git"
+    echo "git" > "$_dir/.jj/repo/store/type"
+    if test -n "$_url"; then
+        cat > "$_dir/.jj/repo/store/git/config" <<EOF
+[remote "origin"]
+	url = $_url
+EOF
     fi
-    command git "$@"
 }
+
+# jj repo with git backend + github remote
+_write_jj_origin "$_testdir/jjrepo" "https://github.com/user/repo.git"
+rm -f "$_testdir/jjrepo/.vcs_cache"
 result=$(cd "$_testdir/jjrepo" && vcs_backend)
 assert_equal "vcs_backend returns git for jj-git repo" "git" "$result"
 result=$(cd "$_testdir/jjrepo" && vcs_hosting)
 assert_equal "vcs_hosting returns github for github remote" "github" "$result"
-unset -f git
 
 # jj repo with gerrit remote
-mkdir -p "$_testdir/jjrepo_gerrit/.jj/repo/store/git"
-echo "git" > "$_testdir/jjrepo_gerrit/.jj/repo/store/type"
-git() {
-    if test "$1" = "-C" && test "$3" = "remote"; then
-        echo "https://chromium.googlesource.com/foo/bar"
-        return 0
-    fi
-    command git "$@"
-}
+_write_jj_origin "$_testdir/jjrepo_gerrit" "https://chromium.googlesource.com/foo/bar"
 result=$(cd "$_testdir/jjrepo_gerrit" && vcs_hosting)
 assert_equal "vcs_hosting returns gerrit for googlesource remote" "gerrit" "$result"
-unset -f git
 
 # jj repo with gitlab remote
-mkdir -p "$_testdir/jjrepo_gitlab/.jj/repo/store/git"
-echo "git" > "$_testdir/jjrepo_gitlab/.jj/repo/store/type"
-git() {
-    if test "$1" = "-C" && test "$3" = "remote"; then
-        echo "https://gitlab.com/user/repo.git"
-        return 0
-    fi
-    command git "$@"
-}
+_write_jj_origin "$_testdir/jjrepo_gitlab" "https://gitlab.com/user/repo.git"
 result=$(cd "$_testdir/jjrepo_gitlab" && vcs_hosting)
 assert_equal "vcs_hosting returns gitlab for gitlab.com remote" "gitlab" "$result"
-unset -f git
 
 # self-hosted gitlab
-mkdir -p "$_testdir/jjrepo_gitlab_self/.jj/repo/store/git"
-echo "git" > "$_testdir/jjrepo_gitlab_self/.jj/repo/store/type"
-git() {
-    if test "$1" = "-C" && test "$3" = "remote"; then
-        echo "https://gitlab.mycompany.com/group/repo.git"
-        return 0
-    fi
-    command git "$@"
-}
+_write_jj_origin "$_testdir/jjrepo_gitlab_self" "https://gitlab.mycompany.com/group/repo.git"
 result=$(cd "$_testdir/jjrepo_gitlab_self" && vcs_hosting)
 assert_equal "vcs_hosting returns gitlab for self-hosted gitlab" "gitlab" "$result"
-unset -f git
 
 # jj repo with bitbucket remote
-mkdir -p "$_testdir/jjrepo_bitbucket/.jj/repo/store/git"
-echo "git" > "$_testdir/jjrepo_bitbucket/.jj/repo/store/type"
-git() {
-    if test "$1" = "-C" && test "$3" = "remote"; then
-        echo "https://bitbucket.org/user/repo.git"
-        return 0
-    fi
-    command git "$@"
-}
+_write_jj_origin "$_testdir/jjrepo_bitbucket" "https://bitbucket.org/user/repo.git"
 result=$(cd "$_testdir/jjrepo_bitbucket" && vcs_hosting)
 assert_equal "vcs_hosting returns bitbucket for bitbucket remote" "bitbucket" "$result"
-unset -f git
 
 # jj repo with sourcehut remote
-mkdir -p "$_testdir/jjrepo_srht/.jj/repo/store/git"
-echo "git" > "$_testdir/jjrepo_srht/.jj/repo/store/type"
-git() {
-    if test "$1" = "-C" && test "$3" = "remote"; then
-        echo "https://git.sr.ht/~user/repo"
-        return 0
-    fi
-    command git "$@"
-}
+_write_jj_origin "$_testdir/jjrepo_srht" "https://git.sr.ht/~user/repo"
 result=$(cd "$_testdir/jjrepo_srht" && vcs_hosting)
 assert_equal "vcs_hosting returns sourcehut for sr.ht remote" "sourcehut" "$result"
-unset -f git
 
 # jj repo with no origin remote
-mkdir -p "$_testdir/jjrepo_noremote/.jj/repo/store/git"
-echo "git" > "$_testdir/jjrepo_noremote/.jj/repo/store/type"
-git() {
-    if test "$1" = "-C" && test "$3" = "remote"; then
-        return 2
-    fi
-    command git "$@"
-}
+_write_jj_origin "$_testdir/jjrepo_noremote" ""
 result=$(cd "$_testdir/jjrepo_noremote" && vcs_hosting)
 assert_equal "vcs_hosting returns empty for no remote" "" "$result"
-unset -f git
 
 # jj repo with non-git backend
 mkdir -p "$_testdir/jjrepo_piper/.jj/repo/store"
@@ -177,13 +129,6 @@ assert_equal "vcs_hosting returns empty for non-git backend" "" "$result"
 
 # Verify cache format: line 1 has 3 fields, line 2 has rootdir
 rm -f "$_testdir/jjrepo/.vcs_cache"
-git() {
-    if test "$1" = "-C" && test "$3" = "remote"; then
-        echo "https://github.com/user/repo.git"
-        return 0
-    fi
-    command git "$@"
-}
 (cd "$_testdir/jjrepo" && vcs >/dev/null)
 _cache_line1=$(head -1 "$_testdir/jjrepo/.vcs_cache")
 _cache_line2=$(sed -n '2p' "$_testdir/jjrepo/.vcs_cache")
@@ -192,7 +137,6 @@ assert_contains "vcs_cache line 1 contains hosting" "github" "$_cache_line1"
 _field_count=$(echo "$_cache_line1" | awk '{print NF}')
 assert_equal "vcs_cache line 1 has 3 fields (all set)" "3" "$_field_count"
 assert_equal "vcs_cache line 2 is rootdir" "$_testdir/jjrepo" "$_cache_line2"
-unset -f git
 
 # Verify cache has 3 fields on line 1 even when backend and hosting are empty
 rm -f "$_testdir/hgrepo/.vcs_cache"
@@ -204,18 +148,11 @@ assert_contains "hg cache line 1 ends with - -" "- -" "$_cache_line1"
 
 # Verify cache has 3 fields on line 1 when only hosting is empty
 rm -f "$_testdir/jjrepo_noremote/.vcs_cache"
-git() {
-    if test "$1" = "-C" && test "$3" = "remote"; then
-        return 2
-    fi
-    command git "$@"
-}
 (cd "$_testdir/jjrepo_noremote" && vcs >/dev/null)
 _cache_line1=$(head -1 "$_testdir/jjrepo_noremote/.vcs_cache")
 _field_count=$(echo "$_cache_line1" | awk '{print NF}')
 assert_equal "vcs_cache line 1 has 3 fields (hosting sentinel)" "3" "$_field_count"
 assert_contains "git backend with no hosting ends with -" "git -" "$_cache_line1"
-unset -f git
 
 # Test paths with spaces
 mkdir -p "$_testdir/path with spaces/subdir"
