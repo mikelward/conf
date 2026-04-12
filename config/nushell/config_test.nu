@@ -1990,6 +1990,11 @@ let results = [
     })
 
     ###############
+    # x / xa: exit the shell (match zsh's `x` alias)
+    (run-test "nu x is defined" { assert (which x | is-not-empty) })
+    (run-test "nu xa is defined" { assert (which xa | is-not-empty) })
+
+    ###############
     # rd: cd to project root
     (run-test "nu rd cds to project root" {
         let base = ($env.HOME | path expand)

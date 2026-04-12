@@ -1057,6 +1057,8 @@ def v    [...args] { view ...$args }
 def vl [] { view /var/log/syslog }
 def wcp [...args] { with-agent "scp" ...$args }
 def wsh [...args] { with-agent "ssh" ...$args }
+def x  [code: int = 0] { xa $code }
+def xa [code: int = 0] { exit $code }
 def xevkey [...args] { ^xev -event keyboard ...$args }
 def xr [...args] { with-env { DISPLAY: ":0.0" } { ^xrandr ...$args } }
 
