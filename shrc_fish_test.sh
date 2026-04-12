@@ -227,19 +227,21 @@ result="$(_fish_run '
 assert_equal "fish fish_command_not_found cds on trailing slash" \
     "$_fish_autocd/sub" "$result"
 
-# fish_command_not_found without a trailing slash falls through
+# fish_command_not_found without a trailing slash falls through.
+# Matches either our own fallback ("Unknown command") or a system handler
+# that fish copied to system_fish_command_not_found ("command not found").
 result="$(_fish_run '
     fish_command_not_found someweirdcmd 2>&1
 ' 2>&1)"
-assert_contains "fish fish_command_not_found no slash falls through" \
-    "Unknown command" "$result"
+assert_true "fish fish_command_not_found no slash falls through" \
+    sh -c "echo \"\$1\" | grep -qE 'Unknown command|command not found'" _ "$result"
 
 # fish_command_not_found with non-existent trailing slash falls through
 result="$(_fish_run '
     fish_command_not_found ./no_such_dir_xyz/ 2>&1
 ' 2>&1)"
-assert_contains "fish fish_command_not_found non-existent falls through" \
-    "Unknown command" "$result"
+assert_true "fish fish_command_not_found non-existent falls through" \
+    sh -c "echo \"\$1\" | grep -qE 'Unknown command|command not found'" _ "$result"
 
 # When a system_fish_command_not_found is defined ahead of sourcing,
 # it is preserved and called for non-slash commands.
