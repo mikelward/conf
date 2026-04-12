@@ -820,6 +820,7 @@ assert_equal "shrc does not shopt -s autocd" "" \
 assert_equal "shrc does not setopt AUTO_CD" "" \
     "$(grep -E '^[[:space:]]*setopt AUTO_CD' "$_srcdir/shrc")"
 
+extract_func try_autocd_trailing_slash
 extract_func maybe_autocd_trailing_slash
 
 # Set up a temp directory tree for cd tests
@@ -840,6 +841,39 @@ _saved_pwd="$PWD"
 )
 assert_equal "maybe_autocd_trailing_slash cds on trailing slash" "0" "$?"
 cd "$_saved_pwd" || true
+
+# try_autocd_trailing_slash: returns 0 + cds for single-word trailing-slash
+# dirs, returns 1 without side effects for everything else.
+(
+    cd "$_autocd_root" || exit 1
+    CDPATH=
+    try_autocd_trailing_slash "./sub/" >/dev/null 2>&1
+    test "$PWD" = "$_autocd_root/sub"
+)
+assert_equal "try_autocd_trailing_slash cds on match" "0" "$?"
+
+(
+    cd "$_autocd_root" || exit 1
+    CDPATH=
+    try_autocd_trailing_slash "./no_such/"
+)
+assert_equal "try_autocd_trailing_slash returns 1 for non-existent" "1" "$?"
+
+(
+    cd "$_autocd_root" || exit 1
+    CDPATH=
+    try_autocd_trailing_slash "./sub"
+)
+assert_equal "try_autocd_trailing_slash returns 1 without trailing /" "1" "$?"
+
+# A multi-word buffer like `./sub/ arg` must not autocd -- it's a real
+# command invocation, not a directory the user wants to enter.
+(
+    cd "$_autocd_root" || exit 1
+    CDPATH=
+    try_autocd_trailing_slash "./sub/ arg"
+)
+assert_equal "try_autocd_trailing_slash returns 1 for multi-word" "1" "$?"
 
 # Trailing slash on a non-existent dir falls through to the "not found"
 # fallback (no system hook defined here).
@@ -865,6 +899,69 @@ result=$(maybe_autocd_trailing_slash "someweirdcmd" 2>&1)
 assert_equal "maybe_autocd_trailing_slash delegates to zsh-style system hook" \
     "SYSTEMR:someweirdcmd" "$result"
 unset -f system_command_not_found_handler
+
+# End-to-end: bash -i with shrc should autocd into a trailing-slash dir
+# via the DEBUG trap hook. (Without the hook, bash would error with
+# "Is a directory" since command_not_found_handle doesn't fire for
+# paths containing `/` that happen to resolve to a directory.)
+if have_command bash; then
+    # Terminal-title escapes from the prompt machinery land on the same
+    # line as our marker, so match anywhere on the line, not just ^.
+    result=$(cd "$_autocd_root" && bash -i -c '
+        source '"$_srcdir"'/shrc >/dev/null 2>&1
+        install_precommand_trap
+        ./sub/
+        printf "\nPWDMARK=%s\n" "$PWD"
+    ' 2>/dev/null | sed -n 's/.*PWDMARK=//p')
+    assert_equal "bash -i autocds on trailing slash via DEBUG trap" \
+        "$_autocd_root/sub" "$result"
+fi
+
+# zsh's accept-line widget rewrites a trailing-slash dir buffer to
+# `cd -- foo/`. We can't drive ZLE non-interactively, so exercise the
+# widget function directly with a fake BUFFER.
+if have_command zsh; then
+    result=$(cd "$_autocd_root" && zsh -c '
+        _autocd_accept_line() {
+            emulate -L zsh
+            if [[ "$BUFFER" == */ ]] \
+               && [[ "$BUFFER" != *[[:space:]]* ]] \
+               && [[ -d "$BUFFER" ]]; then
+                BUFFER="cd -- $BUFFER"
+            fi
+        }
+        BUFFER="./sub/"
+        _autocd_accept_line
+        print -r -- "$BUFFER"
+    ')
+    assert_equal "zsh accept-line widget rewrites trailing-slash dir" \
+        "cd -- ./sub/" "$result"
+
+    # Non-dir / multi-word / no-slash inputs are passed through unchanged.
+    result=$(cd "$_autocd_root" && zsh -c '
+        _autocd_accept_line() {
+            emulate -L zsh
+            if [[ "$BUFFER" == */ ]] \
+               && [[ "$BUFFER" != *[[:space:]]* ]] \
+               && [[ -d "$BUFFER" ]]; then
+                BUFFER="cd -- $BUFFER"
+            fi
+        }
+        BUFFER="./sub/ arg"
+        _autocd_accept_line
+        print -r -- "$BUFFER"
+    ')
+    assert_equal "zsh accept-line widget leaves multi-word buffers alone" \
+        "./sub/ arg" "$result"
+
+    # Verify shrc actually registers the widget.
+    result=$(zsh -i -c 'source '"$_srcdir"'/shrc >/dev/null 2>&1; \
+        if typeset -f _autocd_accept_line >/dev/null; then \
+            print -r "REGMARK"; \
+        fi' 2>/dev/null | sed -n 's/.*REGMARK.*/registered/p' | head -1)
+    assert_equal "shrc registers _autocd_accept_line widget in zsh" \
+        "registered" "$result"
+fi
 
 ###############
 # SHELL COMPATIBILITY

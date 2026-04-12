@@ -934,15 +934,30 @@ uc() { systemctl --user "$@"; }
 # aggressive and easy to trigger by accident (e.g. a typo that happens
 # to name a directory). Requiring a trailing `/` makes the intent
 # explicit.
-maybe_autocd_trailing_slash() {
+# If $1 looks like a trailing-slash autocd trigger -- a single word
+# ending in `/` that names an existing directory -- cd into it and
+# return 0. Otherwise return 1 without side effects. Shared by the
+# zsh accept-line widget and the bash DEBUG-trap hook below so that
+# `foo/` reliably becomes `cd foo/` even when the shell would have
+# tried (and failed) to exec the directory directly.
+try_autocd_trailing_slash() {
     case "$1" in
     */)
+        # reject multi-word buffers like `foo/ bar`
+        case "$1" in *[[:space:]]*) return 1 ;; esac
         if test -d "$1"; then
             cd -- "$1"
-            return
+            return 0
         fi
         ;;
     esac
+    return 1
+}
+
+maybe_autocd_trailing_slash() {
+    if try_autocd_trailing_slash "$1"; then
+        return 0
+    fi
     if is_function system_command_not_found_handle; then
         system_command_not_found_handle "$@"
     elif is_function system_command_not_found_handler; then
@@ -1881,6 +1896,22 @@ if is_interactive; then
             maybe_autocd_trailing_slash "$@"
         }
 
+        # zsh calls command_not_found_handler only when PATH lookup
+        # fails. `src/vcs/` doesn't fail lookup -- zsh tries to exec
+        # the directory and dies with "permission denied" before the
+        # handler runs. Intercept at the line-editor level instead:
+        # rewrite the buffer to `cd -- foo/` right before accepting.
+        _autocd_accept_line() {
+            emulate -L zsh
+            if [[ "$BUFFER" == */ ]] \
+               && [[ "$BUFFER" != *[[:space:]]* ]] \
+               && [[ -d "$BUFFER" ]]; then
+                BUFFER="cd -- $BUFFER"
+            fi
+            zle .accept-line
+        }
+        zle -N accept-line _autocd_accept_line
+
         # complete both commands and files for the first word
         compctl -C -c -f
         # fall back to case-insensitive completion then fuzzy completion
@@ -2119,14 +2150,41 @@ if is_interactive; then
             maybe_autocd_trailing_slash "$@"
         }
 
+        # Same trailing-slash autocd trick as the zsh widget above,
+        # but bash has no ZLE. Piggy-back on the DEBUG trap
+        # (installed per-prompt by install_precommand_trap) and use
+        # `shopt -s extdebug` so a non-zero trap return cancels the
+        # would-be exec of the directory. extdebug also enables
+        # functrace (DEBUG inherits into functions), which would make
+        # the trap fire for set_title inside install_precommand_trap
+        # and self-remove too early -- so we gate on FUNCNAME depth
+        # to only act for top-level commands.
+        shopt -s extdebug
+
         escape_start='\['
         escape_end='\]'
 
         # install preprompt and precommand functions
         # the DEBUG trap is disabled during running of preprompt to avoid lots
         # of extra processing and several pointless title changes
+        _bash_debug_trap() {
+            # Only fire for top-level commands. Inside any function
+            # (e.g. install_precommand_trap itself, a user function, a
+            # command substitution), FUNCNAME has more than just this
+            # hook on the stack -- skip without removing the trap.
+            if test "${#FUNCNAME[@]}" -ne 1; then
+                return 0
+            fi
+            if try_autocd_trailing_slash "$1"; then
+                remove_precommand_trap
+                return 1
+            fi
+            precommand "$1"
+            remove_precommand_trap
+            return 0
+        }
         install_precommand_trap() {
-            trap 'precommand "$BASH_COMMAND"; remove_precommand_trap' DEBUG
+            trap '_bash_debug_trap "$BASH_COMMAND"' DEBUG
             set_title "$(title)"
         }
         remove_precommand_trap() {
