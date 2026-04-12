@@ -940,12 +940,41 @@ uc() { systemctl --user "$@"; }
 # zsh accept-line widget and the bash DEBUG-trap hook below so that
 # `foo/` reliably becomes `cd foo/` even when the shell would have
 # tried (and failed) to exec the directory directly.
+# Resolve $1 to an existing directory the way `cd` does, honoring
+# CDPATH. Returns 0 if found, 1 otherwise. Absolute paths and paths
+# starting with ./ or ../ bypass CDPATH, matching cd(1) semantics.
+resolve_cdpath_dir() {
+    case "$1" in
+    /*|./*|../*)
+        test -d "$1"
+        return
+        ;;
+    esac
+    if test -d "$1"; then
+        return 0
+    fi
+    # Walk CDPATH entries; an empty entry means `.` per POSIX.
+    _oldifs="$IFS"
+    IFS=:
+    for _p in $CDPATH; do
+        test -z "$_p" && _p=.
+        if test -d "$_p/$1"; then
+            IFS="$_oldifs"
+            unset _oldifs _p
+            return 0
+        fi
+    done
+    IFS="$_oldifs"
+    unset _oldifs _p
+    return 1
+}
+
 try_autocd_trailing_slash() {
     case "$1" in
     */)
         # reject multi-word buffers like `foo/ bar`
         case "$1" in *[[:space:]]*) return 1 ;; esac
-        if test -d "$1"; then
+        if resolve_cdpath_dir "$1"; then
             cd -- "$1"
             return 0
         fi
@@ -1905,7 +1934,7 @@ if is_interactive; then
             emulate -L zsh
             if [[ "$BUFFER" == */ ]] \
                && [[ "$BUFFER" != *[[:space:]]* ]] \
-               && [[ -d "$BUFFER" ]]; then
+               && resolve_cdpath_dir "$BUFFER"; then
                 BUFFER="cd -- $BUFFER"
             fi
             zle .accept-line

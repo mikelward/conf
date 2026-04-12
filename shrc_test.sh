@@ -820,6 +820,7 @@ assert_equal "shrc does not shopt -s autocd" "" \
 assert_equal "shrc does not setopt AUTO_CD" "" \
     "$(grep -E '^[[:space:]]*setopt AUTO_CD' "$_srcdir/shrc")"
 
+extract_func resolve_cdpath_dir
 extract_func try_autocd_trailing_slash
 extract_func maybe_autocd_trailing_slash
 
@@ -875,6 +876,45 @@ assert_equal "try_autocd_trailing_slash returns 1 without trailing /" "1" "$?"
 )
 assert_equal "try_autocd_trailing_slash returns 1 for multi-word" "1" "$?"
 
+# resolve_cdpath_dir honors CDPATH for relative names, matching `cd`.
+# Mirror the real-world bug: from $_autocd_root (no local `peer`), but
+# with CDPATH pointing at a parent that *does* contain `peer`, both
+# resolve_cdpath_dir and try_autocd_trailing_slash must succeed.
+mkdir -p "$_autocd_root/peer"
+_cdpath_parent="$_testdir/autocd_cdpath"
+mkdir -p "$_cdpath_parent/elsewhere"
+(
+    cd "$_autocd_root/sub" || exit 1
+    CDPATH="$_cdpath_parent"
+    resolve_cdpath_dir "elsewhere/"
+)
+assert_equal "resolve_cdpath_dir finds via CDPATH" "0" "$?"
+
+(
+    cd "$_autocd_root/sub" || exit 1
+    CDPATH="$_cdpath_parent"
+    resolve_cdpath_dir "no_such_peer/"
+)
+assert_equal "resolve_cdpath_dir returns 1 when missing everywhere" "1" "$?"
+
+# Absolute / ./ / ../ paths bypass CDPATH.
+(
+    cd "$_autocd_root/sub" || exit 1
+    CDPATH="$_cdpath_parent"
+    # `elsewhere` is in CDPATH but we pass `./elsewhere/` -- must NOT find it.
+    resolve_cdpath_dir "./elsewhere/"
+)
+assert_equal "resolve_cdpath_dir ./ bypasses CDPATH" "1" "$?"
+
+# try_autocd_trailing_slash now uses CDPATH too.
+(
+    cd "$_autocd_root/sub" || exit 1
+    CDPATH="$_cdpath_parent"
+    try_autocd_trailing_slash "elsewhere/" >/dev/null 2>&1
+    test "$PWD" = "$_cdpath_parent/elsewhere"
+)
+assert_equal "try_autocd_trailing_slash cds via CDPATH" "0" "$?"
+
 # Trailing slash on a non-existent dir falls through to the "not found"
 # fallback (no system hook defined here).
 result=$(CDPATH= maybe_autocd_trailing_slash "./no_such_dir_xyz/" 2>&1)
@@ -922,11 +962,23 @@ fi
 # widget function directly with a fake BUFFER.
 if have_command zsh; then
     result=$(cd "$_autocd_root" && zsh -c '
+        resolve_cdpath_dir() {
+            case "$1" in
+            /*|./*|../*) [[ -d "$1" ]]; return ;;
+            esac
+            [[ -d "$1" ]] && return 0
+            local _p
+            for _p in ${(s.:.)CDPATH}; do
+                [[ -z "$_p" ]] && _p=.
+                [[ -d "$_p/$1" ]] && return 0
+            done
+            return 1
+        }
         _autocd_accept_line() {
             emulate -L zsh
             if [[ "$BUFFER" == */ ]] \
                && [[ "$BUFFER" != *[[:space:]]* ]] \
-               && [[ -d "$BUFFER" ]]; then
+               && resolve_cdpath_dir "$BUFFER"; then
                 BUFFER="cd -- $BUFFER"
             fi
         }
@@ -939,11 +991,23 @@ if have_command zsh; then
 
     # Non-dir / multi-word / no-slash inputs are passed through unchanged.
     result=$(cd "$_autocd_root" && zsh -c '
+        resolve_cdpath_dir() {
+            case "$1" in
+            /*|./*|../*) [[ -d "$1" ]]; return ;;
+            esac
+            [[ -d "$1" ]] && return 0
+            local _p
+            for _p in ${(s.:.)CDPATH}; do
+                [[ -z "$_p" ]] && _p=.
+                [[ -d "$_p/$1" ]] && return 0
+            done
+            return 1
+        }
         _autocd_accept_line() {
             emulate -L zsh
             if [[ "$BUFFER" == */ ]] \
                && [[ "$BUFFER" != *[[:space:]]* ]] \
-               && [[ -d "$BUFFER" ]]; then
+               && resolve_cdpath_dir "$BUFFER"; then
                 BUFFER="cd -- $BUFFER"
             fi
         }

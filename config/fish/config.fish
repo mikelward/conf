@@ -593,9 +593,33 @@ if functions -q fish_command_not_found
     functions -c fish_command_not_found system_fish_command_not_found
 end
 
+# Resolve $argv[1] to an existing directory the way `cd` does, honoring
+# CDPATH. Returns 0 if found, 1 otherwise. Absolute paths and paths
+# starting with ./ or ../ bypass CDPATH, matching cd(1) semantics.
+function resolve_cdpath_dir
+    set -l arg $argv[1]
+    switch $arg
+        case '/*' './*' '../*'
+            test -d $arg
+            return
+    end
+    if test -d $arg
+        return 0
+    end
+    for p in $CDPATH
+        if test -z "$p"
+            set p .
+        end
+        if test -d "$p/$arg"
+            return 0
+        end
+    end
+    return 1
+end
+
 function fish_command_not_found
     if string match -q -- '*/' $argv[1]
-        if test -d $argv[1]
+        if resolve_cdpath_dir $argv[1]
             cd -- $argv[1]
             return
         end
