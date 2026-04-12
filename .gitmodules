@@ -4,3 +4,4 @@
 [submodule "vcs"]
 	path = vcs
 	url = https://github.com/mikelward/vcs.git
+	branch = main
