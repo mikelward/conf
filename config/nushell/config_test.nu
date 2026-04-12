@@ -1319,11 +1319,27 @@ let results = [
     # render-transient-prompt / render-right-prompt
     (run-test "nu render-transient-prompt shows > for non-root" {
         $env.UID = 1000
-        assert equal (render-transient-prompt) "> "
+        assert equal (render-transient-prompt) $"(ansi reset)> "
     })
     (run-test "nu render-transient-prompt shows # for root" {
         $env.UID = 0
-        assert equal (render-transient-prompt) "# "
+        assert equal (render-transient-prompt) $"(ansi reset)# "
+    })
+    (run-test "nu render-transient-prompt starts with ansi reset" {
+        # Reedline wraps PROMPT_COMMAND output in a default green
+        # SGR; the leading reset defeats that so the prompt picks up
+        # whatever color the user set (or terminal default).
+        $env.UID = 1000
+        assert str contains (render-transient-prompt) (ansi reset)
+    })
+    (run-test "nu render-prompt contains ansi reset to defeat reedline default color" {
+        # Without a reset, the hostname and separator bar come out
+        # green (reedline's DEFAULT_PROMPT_COLOR).
+        $env.HOME = (mktemp -d)
+        $env.UID = 1000
+        hide-env --ignore-errors CMD_DURATION
+        hide-env --ignore-errors CMD_EXIT_CODE
+        assert str contains (render-prompt) (ansi reset)
     })
     (run-test "nu render-right-prompt is empty" {
         assert equal (render-right-prompt) ""

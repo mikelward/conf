@@ -927,6 +927,13 @@ def flash-terminal [] {
 # rings the bell, then prints newline + separator bar + CR + prompt-line.
 # The CR overwrites the start of the bar, leaving the trailing bar chars
 # visible after the prompt line.
+#
+# The leading (ansi reset) is the documented workaround for reedline's
+# hardcoded DEFAULT_PROMPT_COLOR (green): anything in PROMPT_COMMAND
+# output without its own SGR code gets wrapped in green. Without the
+# reset, the hostname and separator bar render green because
+# `vcs prompt-line` doesn't color those parts itself.
+# See https://www.nushell.sh/book/coloring_and_theming.html
 def --env render-prompt [] {
     let info = (last-job-info)
     let cols = (try { term size | get columns } catch { 80 })
@@ -936,7 +943,7 @@ def --env render-prompt [] {
     let cr = (char cr)
     let title_seq = (title-escape (title))
     let bell = (flash-terminal)
-    $"($bell)($info)($title_seq)($nl)($sep)($cr)($line) ($nl)((ps1-character)) "
+    $"(ansi reset)($bell)($info)($title_seq)($nl)($sep)($cr)($line) ($nl)((ps1-character)) "
 }
 
 def render-right-prompt [] { "" }
@@ -944,7 +951,7 @@ def render-right-prompt [] { "" }
 # used by Nushell's transient prompt (shown for previous prompts) so the
 # separator bar and VCS line aren't repeated in scrollback.
 def render-transient-prompt [] {
-    $"((ps1-character)) "
+    $"(ansi reset)((ps1-character)) "
 }
 
 #########################
