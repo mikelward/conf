@@ -1025,6 +1025,29 @@ if have_command zsh; then
         fi' 2>/dev/null | sed -n 's/.*REGMARK.*/registered/p' | head -1)
     assert_equal "shrc registers _autocd_accept_line widget in zsh" \
         "registered" "$result"
+
+    # Regression: resolve_cdpath_dir sourced from the real shrc must
+    # split CDPATH correctly under `emulate -L zsh` (the widget's
+    # mode). zsh does not honor IFS=: for unquoted param splitting, so
+    # a naive POSIX implementation iterates once with the whole
+    # colon-joined string and fails to find anything in CDPATH.
+    result=$(zsh -c '
+        source '"$_srcdir"'/shrc >/dev/null 2>&1
+        # shrc sets CDPATH=".:$HOME", so override after sourcing.
+        CDPATH=".:'"$_cdpath_parent"'"
+        cd '"$_autocd_root/sub"' || exit 1
+        widget_probe() {
+            emulate -L zsh
+            if resolve_cdpath_dir "elsewhere/"; then
+                print -r "FOUND"
+            else
+                print -r "MISSING"
+            fi
+        }
+        widget_probe
+    ' 2>/dev/null | tail -1)
+    assert_equal "resolve_cdpath_dir walks CDPATH under emulate -L zsh" \
+        "FOUND" "$result"
 fi
 
 ###############

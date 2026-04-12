@@ -943,6 +943,12 @@ uc() { systemctl --user "$@"; }
 # Resolve $1 to an existing directory the way `cd` does, honoring
 # CDPATH. Returns 0 if found, 1 otherwise. Absolute paths and paths
 # starting with ./ or ../ bypass CDPATH, matching cd(1) semantics.
+#
+# zsh does not word-split unquoted `$CDPATH` on `:` even when IFS=: --
+# splitting requires SH_WORD_SPLIT, which is off under `emulate -L
+# zsh` (the _autocd_accept_line widget's mode). Use zsh's native
+# `$cdpath` array form there; everything else uses POSIX IFS
+# splitting.
 resolve_cdpath_dir() {
     case "$1" in
     /*|./*|../*)
@@ -952,6 +958,17 @@ resolve_cdpath_dir() {
     esac
     if test -d "$1"; then
         return 0
+    fi
+    if test -n "${ZSH_VERSION:-}"; then
+        for _p in $cdpath; do
+            test -z "$_p" && _p=.
+            if test -d "$_p/$1"; then
+                unset _p
+                return 0
+            fi
+        done
+        unset _p
+        return 1
     fi
     # Walk CDPATH entries; an empty entry means `.` per POSIX.
     _oldifs="$IFS"
