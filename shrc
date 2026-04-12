@@ -874,7 +874,9 @@ tz2tz() {
     local from="$1"
     local to="$2"
     shift 2
-    TZ="$to" date -d 'TZ="'"$from"'"'" $*"
+    local epoch
+    epoch=$(TZ="$from" date -d "$*" +%s) || return 1
+    TZ="$to" date -d "@$epoch"
 }
 
 # convert from Unix timestamp in micros to a human-readable datetime string
