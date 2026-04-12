@@ -54,6 +54,11 @@ assert_equal "vcs returns false for no repo via binary" "1" "$?"
 result=$(cd "$_testdir/gitrepo/subdir" && rootdir)
 assert_equal "rootdir returns repo root via binary" "$_testdir/gitrepo" "$result"
 
+# Outside a repo, rootdir must stay silent on stderr so the preprompt
+# doesn't leak "vcs: no version control system detected" every prompt.
+_stderr=$(cd "$_testdir/norepo" && rootdir 2>&1 >/dev/null)
+assert_equal "rootdir silent on stderr outside repo" "" "$_stderr"
+
 ###############
 # Test vcs_backend via binary
 

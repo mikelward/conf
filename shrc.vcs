@@ -18,7 +18,7 @@ cv() {
 }
 
 rootdir() {
-    command vcs rootdir "$@"
+    command vcs rootdir "$@" 2>/dev/null
 }
 
 vcs_backend() {
