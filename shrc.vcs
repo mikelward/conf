@@ -1,9 +1,10 @@
 #!/bin/bash
 # Version control additions to .shrc.
 
-# When the vcs binary is available, use it for detection and commands.
-# Otherwise fall back to the shell implementation.
-if have_command vcs; then
+# Self-contained so this file doesn't depend on .shrc sourcing order.
+have_command() {
+    command -v "$1" >/dev/null 2>&1
+}
 
 vcs() {
     if test $# -eq 0; then
@@ -57,167 +58,6 @@ rm() {
     command rm "$@"
 }
 
-else
-# Fallback: shell-only VCS implementation (no vcs binary).
-
-# print the name of the version control system in use in $PWD
-# TODO: implement in terms of rootdir
-vcs() {
-    (
-        IFS=' '
-        if test $# -gt 0; then
-            local vcs="$(vcs)"
-            test -z "$vcs" && return 1
-            local command=$1
-            shift
-            "${vcs}_${command}" "$@"
-            return
-        fi
-
-        # If it's not writable, assume we don't care about vcs here.
-        test -w "$PWD" || return 1
-
-        # Cache format (2 lines):
-        #   line 1: <vcs> <backend> <hosting>  (- for empty fields)
-        #   line 2: <rootdir>                  (whole line, may contain spaces)
-        local _vcs _rootdir _backend _hosting
-        if test -f .vcs_cache; then
-            { gets _vcs _backend _hosting && gets _rootdir; } <.vcs_cache
-            # Sentinels for empty fields.
-            test "$_backend" = "-" && _backend=""
-            test "$_hosting" = "-" && _hosting=""
-        elif test -w .; then
-            _rootdir="$(
-                while test "$PWD" != "/"; do
-                    test -e ".jj" && printf '%s\n' "jj" "$PWD" && break
-                    test -e ".hg" && printf '%s\n' "hg" "$PWD" && break
-                    test -e ".git" && printf '%s\n' "git" "$PWD" && break
-                    test -e ".citc" && printf '%s\n' "g4" "$PWD" && break
-                    test -e ".p4config" && printf '%s\n' "g4" "$PWD" && break
-                    cd ..
-                done
-            )"
-            if test -n "$_rootdir"; then
-                _vcs="${_rootdir%%
-*}"
-                _rootdir="${_rootdir#*
-}"
-            fi
-            # Detect backend
-            if test "$_vcs" = "jj" && test -f "$_rootdir/.jj/repo/store/type"; then
-                gets _backend <"$_rootdir/.jj/repo/store/type"
-            elif test "$_vcs" = "git"; then
-                _backend="git"
-            fi
-            # Detect hosting
-            if test "$_backend" = "git"; then
-                local _git_dir _origin_url
-                if test "$_vcs" = "jj"; then
-                    _git_dir="$_rootdir/.jj/repo/store/git"
-                else
-                    _git_dir="$_rootdir/.git"
-                fi
-                _origin_url="$(git -C "$_git_dir" remote get-url origin 2>/dev/null)"
-                case "$_origin_url" in
-                    *github.com*) _hosting="github" ;;
-                    *gitlab.com*|*gitlab.*) _hosting="gitlab" ;;
-                    *bitbucket.org*) _hosting="bitbucket" ;;
-                    *sr.ht*) _hosting="sourcehut" ;;
-                    *googlesource.com*) _hosting="gerrit" ;;
-                esac
-            fi
-            # This can fail if the filesystem is read-only.
-            # Ignore errors.
-            # Use - as sentinel for empty fields so cache always has 4 tokens.
-            if test -n "$_vcs"; then
-                { puts "$_vcs ${_backend:--} ${_hosting:--}"; puts "$_rootdir"; } >.vcs_cache 2>/dev/null
-            fi
-        fi
-        if test -z "$_vcs" || test -z "$_rootdir"; then
-            return 1
-        fi
-        puts "$_vcs"
-        test -n "$_vcs"
-    )
-}
-
-cv() {
-    find . -type f -name .vcs_cache -delete
-}
-
-rootdir() {
-    (
-        if ! test -f .vcs_cache; then
-            vcs >/dev/null 2>&1 || return 1
-        fi
-        local _vcs _rootdir _backend _hosting
-        { gets _vcs _backend _hosting && gets _rootdir; } <.vcs_cache
-        if test $# -gt 0; then
-          local _arg
-          for _arg; do
-            puts "$_rootdir/$_arg"
-          done
-        else
-          puts "$_rootdir"
-        fi
-        test -n "$_rootdir"
-    )
-}
-
-vcs_backend() {
-    (
-        if ! test -f .vcs_cache; then
-            vcs >/dev/null 2>&1 || return 1
-        fi
-        local _vcs _backend _hosting
-        gets _vcs _backend _hosting <.vcs_cache
-        test "$_backend" = "-" && _backend=""
-        puts "$_backend"
-        test -n "$_backend"
-    )
-}
-
-vcs_hosting() {
-    (
-        if ! test -f .vcs_cache; then
-            vcs >/dev/null 2>&1 || return 1
-        fi
-        local _vcs _backend _hosting
-        gets _vcs _backend _hosting <.vcs_cache
-        test "$_hosting" = "-" && _hosting=""
-        puts "$_hosting"
-        test -n "$_hosting"
-    )
-}
-
-cp() {
-    local _vcs="$(vcs)"
-    if test -n "$_vcs" && type "${_vcs}_copy" >/dev/null 2>&1; then
-        "${_vcs}_copy" "$@"
-    else
-        command cp "$@"
-    fi
-}
-
-mv() {
-    local _vcs="$(vcs)"
-    if test -n "$_vcs" && type "${_vcs}_mv" >/dev/null 2>&1; then
-        "${_vcs}_mv" "$@"
-    else
-        command mv "$@"
-    fi
-}
-
-rm() {
-    local _vcs="$(vcs)"
-    if test -n "$_vcs" && type "${_vcs}_rm" >/dev/null 2>&1; then
-        "${_vcs}_rm" "$@" 2>/dev/null && return
-    fi
-    command rm "$@"
-}
-
-fi
-# End of binary vs. shell-fallback split.
 
 subdir() {
     local _subdir="$(trim_prefix "$(rootdir)" "${1:-$PWD}")"
@@ -421,14 +261,3 @@ _github_review() (
 
     command gh pr create "${_flags[@]}"
 )
-
-# Only source shell VCS implementations when the vcs binary is not available.
-if ! have_command vcs; then
-    for f in "$HOME"/.shrc.vcs.*; do
-        if ! test -f "$f"; then
-            warn "$f is not readable"
-            continue
-        fi
-        source "$f"
-    done
-fi
