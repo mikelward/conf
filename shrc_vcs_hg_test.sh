@@ -116,9 +116,10 @@ assert_equal "hg_at_tip not at head returns 1" "1" "$?"
 ###############
 # Test hg map
 
-# hg_map at head shows base (no graph markers)
+# hg_map at head shows outgoing (draft) commits, no graph markers
 result=$(cd "$_hg_local" && hg_map)
-assert_true "hg_map at head shows commit" grep -q 'hg base test commit' <<< "$result"
+assert_true "hg_map at head shows draft commit" grep -q 'hg base test commit' <<< "$result"
+assert_false "hg_map at head shows no public commits" grep -q 'initial commit' <<< "$result"
 assert_false "hg_map at head has no graph markers" grep -q '^[@o]' <<< "$result"
 
 # hg_map not at head shows graph (outgoing/draft commits, with graph markers)

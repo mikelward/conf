@@ -55,7 +55,7 @@ git_at_tip() {
 
 git_map() {
     if git_at_tip; then
-        git_base "$@"
+        git_outgoing "$@"
     else
         git_graph
     fi

@@ -136,9 +136,21 @@ assert_equal "git_at_tip detached returns 1" "1" "$?"
 ###############
 # Test git map
 
-# git_map on a branch shows base (no graph markers)
+# Create an unpushed commit so outgoing has something to show.
+(
+    cd "$_git_local" || exit 1
+    echo map-outgoing > _git_map_outgoing.txt
+    git add _git_map_outgoing.txt >/dev/null 2>&1
+    git commit -m "map outgoing commit" >/dev/null 2>&1
+)
+
+# git_map at tip shows outgoing (unpushed) commits, no graph markers,
+# and excludes commits already pushed to the upstream.
 result=$(cd "$_git_local" && git_map)
-assert_true "git_map on branch shows commit" grep -q 'initial commit' <<< "$result"
+assert_true "git_map on branch shows outgoing commit" \
+    grep -q 'map outgoing commit' <<< "$result"
+assert_false "git_map on branch omits pushed initial commit" \
+    grep -q 'initial commit' <<< "$result"
 assert_false "git_map on branch has no graph markers" grep -q '^\*' <<< "$result"
 
 # git_map when HEAD is detached shows graph
@@ -148,6 +160,7 @@ result=$(cd "$_git_local" && git_map)
 assert_true "git_map detached shows commit" grep -q 'initial commit' <<< "$result"
 assert_true "git_map detached has graph markers" grep -q '^\*' <<< "$result"
 (cd "$_git_local" && git checkout "$_initial_branch" >/dev/null 2>&1)
+(cd "$_git_local" && git reset --hard HEAD~ >/dev/null 2>&1)
 
 ###############
 # Test git outgoing and incoming

@@ -30,7 +30,7 @@ hg_at_tip() {
 
 hg_map() {
     if hg_at_tip; then
-        hg_base "$@"
+        hg_outgoing "$@"
     else
         hg_graph
     fi

@@ -14,7 +14,7 @@ jj_at_tip() {
 
 jj_map() {
     if jj_at_tip; then
-        jj_base "$@"
+        jj_outgoing "$@"
     else
         jj_graph
     fi

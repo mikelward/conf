@@ -588,7 +588,7 @@ assert_equal "jj_at_tip described wc at tip returns 0" "0" "$?"
 ###############
 # Test jj map
 
-# jj_map at tip shows base (no graph markers)
+# jj_map at tip shows outgoing (no graph markers)
 result=$(cd "$_jj_repo" && jj_map)
 assert_true "jj_map at tip produces output" test -n "$result"
 assert_false "jj_map at tip has no graph markers" grep -qE '^[@○◆]' <<< "$result"
