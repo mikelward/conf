@@ -10,15 +10,36 @@ _srcdir="$(cd "$(dirname "$0")" && pwd)"
 # Test that expected targets exist
 _targets=$(make -C "$_srcdir" -pRrq 2>/dev/null | sed -n '/^# Files/,$ s/^\([a-z][-a-z]*\):.*/\1/p' | sort -u)
 
+assert_contains "all target exists" "all" "$_targets"
 assert_contains "install target exists" "install" "$_targets"
 assert_contains "install-dotfiles target exists" "install-dotfiles" "$_targets"
 assert_contains "install-vcs target exists" "install-vcs" "$_targets"
+assert_contains "vcs-build target exists" "vcs-build" "$_targets"
 assert_contains "test target exists" "test" "$_targets"
+
+# Bare `make` (no target) must build, not install. Verify the default
+# target is `all`, that `all` depends on vcs-build, and that its recipe
+# does NOT invoke the install-* targets.
+_default_target=$(make -C "$_srcdir" -pRrq 2>/dev/null |
+    sed -n 's/^\.DEFAULT_GOAL := //p')
+assert_equal "default target is all" "all" "$_default_target"
+_all_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^all:')
+assert_contains "all depends on vcs-build" "vcs-build" "$_all_deps"
+_default_recipe=$(make -C "$_srcdir" -n 2>/dev/null)
+assert_not_contains "bare make does not run confinst" "confinst" "$_default_recipe"
+assert_not_contains "bare make does not run install-vcs" "install-vcs" "$_default_recipe"
 
 # Test that install depends on install-dotfiles and install-vcs
 _install_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^install:')
 assert_contains "install depends on install-dotfiles" "install-dotfiles" "$_install_deps"
 assert_contains "install depends on install-vcs" "install-vcs" "$_install_deps"
+
+# Test that the VCS test targets depend on vcs-build so the submodule
+# binaries are built before tests that require them.
+_vcs_test_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^test-shrc-vcs:')
+assert_contains "test-shrc-vcs depends on vcs-build" "vcs-build" "$_vcs_test_deps"
+_vcs_bin_test_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^test-shrc-vcs-binary:')
+assert_contains "test-shrc-vcs-binary depends on vcs-build" "vcs-build" "$_vcs_bin_test_deps"
 
 # Test that per-test sub-targets exist so `make -j` can schedule them in
 # parallel. Each test script gets its own make target; `test-all` aggregates

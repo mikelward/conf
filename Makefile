@@ -1,11 +1,23 @@
+# Default target: build everything locally (no install). Running `make`
+# with no args builds the vcs submodule binaries in-place so subsequent
+# `make test` runs pick them up; it does not touch $HOME or $PREFIX.
+all: vcs-build
+
 install: install-dotfiles install-vcs
 
 install-dotfiles:
 	confinst
 
-install-vcs:
-	git submodule update --init vcs
+install-vcs: vcs-build
 	$(MAKE) -C vcs install
+
+# Build the vcs submodule binaries in-place (no install). Tests that
+# depend on the `vcs` binary prepend $(CURDIR)/vcs to PATH so they use
+# these instead of requiring a prior `make install`. vcs/Makefile uses
+# real file targets, so this is a no-op when sources are unchanged.
+vcs-build:
+	git submodule update --init vcs
+	$(MAKE) -C vcs
 
 # Number of parallel jobs to use for `make test`. Defaults to the CPU count
 # (falling back to 8 if nproc isn't available). Override with e.g.
@@ -66,11 +78,11 @@ test-shrc-dash:
 test-shrc-bash:
 	@bash shrc_test.sh
 
-test-shrc-vcs:
-	@bash shrc_vcs_test.sh
+test-shrc-vcs: vcs-build
+	@PATH="$(CURDIR)/vcs:$$PATH" bash shrc_vcs_test.sh
 
-test-shrc-vcs-binary:
-	@bash shrc_vcs_binary_test.sh
+test-shrc-vcs-binary: vcs-build
+	@PATH="$(CURDIR)/vcs:$$PATH" bash shrc_vcs_binary_test.sh
 
 test-shrc-prompt:
 	@bash shrc_prompt_test.sh
@@ -87,7 +99,7 @@ test-makefile:
 test-amethyst:
 	@bash amethyst_test.sh
 
-.PHONY: install install-dotfiles install-vcs \
+.PHONY: all install install-dotfiles install-vcs vcs-build \
 	test test-all test-lint \
 	test-nu-parse test-nu-config \
 	test-shrc-dash test-shrc-bash \
