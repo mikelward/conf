@@ -27,6 +27,9 @@ shell="bash"
 extract_func basic_prompt
 extract_func preprompt
 extract_func prompt_line
+extract_func host_info
+extract_func dir_info
+extract_func tilde_pwd
 extract_func maybe_space
 extract_func bar
 extract_func last_job_info
@@ -53,7 +56,11 @@ extract_func show_hostname_in_title
 extract_func i_am_root
 extract_func on_production_host
 extract_func auth_info
+extract_func need_auth
 extract_func is_ssh_valid
+extract_func inside_project
+extract_func in_shpool
+extract_func is_function
 extract_func bash_last_error
 
 # Stub VCS functions (no VCS by default). prompt_line calls
@@ -160,50 +167,94 @@ assert_equal "auth_info warns when ssh invalid" "SSH" "$result"
 is_ssh_valid() { true; }
 
 ###############
-# TEST: prompt_line delegates to `vcs prompt-line`
+# TEST: tilde_pwd replaces $HOME with ~
 
 HOME="$_testdir/fakehome"
 mkdir -p "$HOME/documents"
+PWD="$HOME"
+assert_equal "tilde_pwd at \$HOME" "~" "$(tilde_pwd)"
 PWD="$HOME/documents"
-# Capture the flags the binary is called with by echoing them from the
-# stub, so $(prompt_line) returns the arg list and we can assert on it.
-vcs() {
-    case "$1" in
-        prompt-line)
-            shift
-            echo "called-with: $*"
-            ;;
-        *) return 1 ;;
-    esac
-}
+assert_equal "tilde_pwd inside \$HOME" "~/documents" "$(tilde_pwd)"
+PWD="/usr/local"
+assert_equal "tilde_pwd outside \$HOME" "/usr/local" "$(tilde_pwd)"
+
+###############
+# TEST: host_info composes hostname and shpool tag
+
 HOSTNAME="mikel-laptop"
 USERNAME="mikel"
 on_production_host() { false; }
-result="$(prompt_line)"
-assert_contains "prompt_line delegates to vcs prompt-line" "called-with:" "$result"
-assert_contains "prompt_line passes --hostname=<short_hostname>" "--hostname=laptop" "$result"
-assert_contains "prompt_line passes --color=never when color disabled" "--color=never" "$result"
-assert_not_contains "prompt_line omits --production off production" "--production" "$result"
+in_shpool() { false; }
+result="$(host_info)"
+assert_equal "host_info off shpool off prod" "laptop shpool" "$result"
+
+in_shpool() { true; }
+SHPOOL_SESSION_NAME="mysession"
+result="$(host_info)"
+assert_equal "host_info in shpool" "laptop [mysession]" "$result"
+in_shpool() { false; }
+unset SHPOOL_SESSION_NAME
 
 ###############
-# TEST: prompt_line passes --production for production hosts
+# TEST: dir_info uses vcs prompt-info inside a project
 
-on_production_host() { true; }
-result="$(prompt_line)"
-assert_contains "prompt_line passes --production on production host" "--production" "$result"
+# prompt_info is defined in shrc.vcs; stub it here.
+prompt_info() { echo "myproject main"; }
+inside_project() { true; }
+result="$(dir_info)"
+assert_equal "dir_info delegates to prompt_info inside project" \
+    "myproject main" "$result"
+
+###############
+# TEST: dir_info falls back to tilde_pwd outside a project
+
+inside_project() { false; }
+PWD="$HOME/documents"
+result="$(dir_info)"
+assert_equal "dir_info uses tilde pwd outside project" "~/documents" "$result"
+
+###############
+# TEST: dir_info falls back to tilde_pwd when prompt_info outputs nothing
+
+inside_project() { true; }
+prompt_info() { :; }
+PWD="$HOME"
+result="$(dir_info)"
+assert_equal "dir_info falls back when prompt_info empty" "~" "$result"
+
+# Reset project stubs
+inside_project() { false; }
+prompt_info() { :; }
+PWD="$HOME/documents"
+
+###############
+# TEST: prompt_line composes host_info, dir_info, auth_info
+
 on_production_host() { false; }
+in_shpool() { false; }
+is_ssh_valid() { true; }
+inside_project() { false; }
+PWD="$HOME"
+result="$(prompt_line)"
+assert_equal "prompt_line without auth warning" \
+    "laptop shpool ~" "$result"
+
+is_ssh_valid() { false; }
+result="$(prompt_line)"
+assert_equal "prompt_line with auth warning" \
+    "laptop shpool ~ SSH" "$result"
+is_ssh_valid() { true; }
 
 ###############
-# TEST: prompt_line passes --color=always when color enabled
+# TEST: prompt_line inside a project delegates dir info to prompt_info
 
-_saved_color="$color"
-color=true
+prompt_info() { echo "conf main"; }
+inside_project() { true; }
 result="$(prompt_line)"
-assert_contains "prompt_line passes --color=always when color enabled" "--color=always" "$result"
-color="$_saved_color"
-
-# Reset stubs
-vcs() { return 1; }
+assert_equal "prompt_line inside project shows vcs info" \
+    "laptop shpool conf main" "$result"
+inside_project() { false; }
+prompt_info() { :; }
 
 ###############
 # TEST: last_job_info with exit status 1
@@ -279,14 +330,9 @@ HOSTNAME="testhost"
 in_shpool() { false; }
 on_production_host() { false; }
 is_ssh_valid() { true; }
+inside_project() { false; }
 projectroot() { :; }
-# Stub vcs prompt-line to return the composed line the binary would emit.
-vcs() {
-    case "$1" in
-        prompt-line) echo "testhost shpool ~" ;;
-        *) return 1 ;;
-    esac
-}
+prompt_info() { :; }
 outgoing() { return 1; }
 current_command=
 SECONDS=0
@@ -303,18 +349,11 @@ assert_contains "preprompt contains dir" "~" "$result"
 is_ssh_valid() { false; }
 current_command=
 SECONDS=0
-vcs() {
-    case "$1" in
-        prompt-line) echo "testhost shpool ~ SSH" ;;
-        *) return 1 ;;
-    esac
-}
 result="$(preprompt)"
 assert_contains "preprompt contains SSH warning" "SSH" "$result"
 
 # Restore
 is_ssh_valid() { true; }
-vcs() { return 1; }
 
 ###############
 # TEST: preprompt sets PS1
@@ -388,16 +427,9 @@ bash_last_error() { :; }
 is_ssh_valid() { false; }
 in_shpool() { false; }
 on_production_host() { false; }
+inside_project() { false; }
 projectroot() { :; }
-# `vcs prompt-line` is what the binary would render; stub it with the
-# expected pre-composed first line so the test still exercises the
-# bar/CR framing in preprompt.
-vcs() {
-    case "$1" in
-        prompt-line) echo "laptop shpool ~ SSH" ;;
-        *) return 1 ;;
-    esac
-}
+prompt_info() { :; }
 outgoing() { return 1; }
 
 result="$(_resolve_cr "$(preprompt)")"
@@ -419,13 +451,9 @@ bash_last_error() { echo "status 1"; }
 is_ssh_valid() { true; }
 in_shpool() { false; }
 on_production_host() { false; }
+inside_project() { false; }
 projectroot() { :; }
-vcs() {
-    case "$1" in
-        prompt-line) echo "laptop shpool /usr" ;;
-        *) return 1 ;;
-    esac
-}
+prompt_info() { :; }
 outgoing() { return 1; }
 
 result="$(_resolve_cr "$(preprompt)")"
@@ -449,12 +477,8 @@ bash_last_error() { :; }
 is_ssh_valid() { true; }
 in_shpool() { false; }
 on_production_host() { false; }
-vcs() {
-    case "$1" in
-        prompt-line) echo "workstation shpool conf main" ;;
-        *) return 1 ;;
-    esac
-}
+inside_project() { true; }
+prompt_info() { echo "conf main"; }
 outgoing() { return 1; }
 base() { :; }
 
@@ -475,12 +499,8 @@ current_command=
 SECONDS=0
 in_shpool() { true; }
 SHPOOL_SESSION_NAME="edge1"
-vcs() {
-    case "$1" in
-        prompt-line) echo "workstation [edge1] edge1 ui somebranch * fetch" ;;
-        *) return 1 ;;
-    esac
-}
+inside_project() { true; }
+prompt_info() { echo "edge1 ui somebranch * fetch"; }
 # `map` is what preprompt actually calls (since commit 426dcda replaced
 # the direct `base` call). It's defined in shrc.vcs's command dispatch
 # loop and not extracted by this test, so stub it directly.
@@ -503,6 +523,8 @@ bash_last_error() { :; }
 is_ssh_valid() { true; }
 in_shpool() { false; }
 on_production_host() { false; }
+inside_project() { false; }
+prompt_info() { :; }
 vcs() { return 1; }
 outgoing() { return 1; }
 base() { :; }
@@ -655,16 +677,13 @@ HOSTNAME="testhost"
 ###############
 # PERFORMANCE
 # prompt_line runs on every prompt, so its cost matters. Time 50 calls
-# with `vcs prompt-line` stubbed to echo a fixed line — this measures
-# the wrapper overhead (short_hostname, flag assembly, $() capture)
-# without forking a Go binary.
+# with `vcs prompt-info` stubbed to echo a fixed line — this measures
+# the shell-composition cost (host_info, dir_info, auth_info, color
+# wrapping, subshell captures) without forking the Go binary.
 
-vcs() {
-    case "$1" in
-        prompt-line) echo "testhost shpool ~" ;;
-        *) return 1 ;;
-    esac
-}
+inside_project() { true; }
+prompt_info() { echo "proj main"; }
+is_ssh_valid() { true; }
 _start=$(date +%s%N 2>/dev/null || echo "0")
 _i=0
 while test $_i -lt 50; do
@@ -672,14 +691,16 @@ while test $_i -lt 50; do
     _i=$((_i + 1))
 done
 _end=$(date +%s%N 2>/dev/null || echo "0")
-# Budget: 50 prompt_line calls with the binary stubbed should be well
-# under 500ms even on slow CI (~30ms is typical). A regression past
-# this fails the test rather than silently slowing every prompt.
+# Budget: 50 prompt_line calls with prompt_info stubbed should stay
+# under 1s even on slow CI. The shell-composition path forks several
+# subshells per prompt, so it's noticeably slower than the old single
+# `vcs prompt-line` call. A regression past the budget fails the test
+# rather than silently slowing every prompt.
 # PROMPT_PERF_BUDGET_MS=0 disables the check for manual profiling.
-_prompt_perf_budget_ms="${PROMPT_PERF_BUDGET_MS:-500}"
+_prompt_perf_budget_ms="${PROMPT_PERF_BUDGET_MS:-1000}"
 if test "$_start" != "0" && test "$_end" != "0"; then
     _elapsed_ms=$(( (_end - _start) / 1000000 ))
-    echo "  50 x prompt_line (binary stub): ${_elapsed_ms}ms (budget ${_prompt_perf_budget_ms}ms)"
+    echo "  50 x prompt_line (shell compose): ${_elapsed_ms}ms (budget ${_prompt_perf_budget_ms}ms)"
     if test "$_prompt_perf_budget_ms" -gt 0; then
         assert_true "prompt_line within ${_prompt_perf_budget_ms}ms budget" \
             test "$_elapsed_ms" -le "$_prompt_perf_budget_ms"
@@ -689,7 +710,8 @@ else
 fi
 
 # Reset
-vcs() { return 1; }
+inside_project() { false; }
+prompt_info() { :; }
 
 _shell="$(basename "$(readlink -f /proc/$$/exe)" 2>/dev/null || echo "bash")"
 
