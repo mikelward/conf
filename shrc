@@ -1663,6 +1663,21 @@ disable_bracketed_paste() {
 # INTERACTIVE SHELL SETUP
 # Set up the prompt, title, key bindings, etc.
 
+# Drop any inherited aliases so our function definitions below parse
+# cleanly. Bash expands aliases at parse time, so e.g. a distro default
+# `alias l='ls -CF'` (from /etc/bash.bashrc or the user's pre-shrc
+# chain) would turn `l() { ... }` into `ls -CF() { ... }` and fail with
+# a syntax error -- breaking shrc entirely. Must be at top-level (not
+# inside the `if is_interactive; then` compound) so it executes before
+# that block is parsed and alias expansion has already taken effect on
+# its body. shrc is the full interactive config, so inherited aliases
+# aren't meant to survive into it in the first place.
+case "$shell" in
+bash|zsh)
+    unalias -a
+    ;;
+esac
+
 if is_interactive; then
     if in_shpool; then
         # Prevent shpool from clearing the screen during startup.

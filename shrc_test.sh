@@ -947,7 +947,11 @@ unset -f system_command_not_found_handler
 if have_command bash; then
     # Terminal-title escapes from the prompt machinery land on the same
     # line as our marker, so match anywhere on the line, not just ^.
-    result=$(cd "$_autocd_root" && bash -i -c '
+    # `--norc --noprofile` skips the invoking user's rc files (e.g. a
+    # distro default `alias l='ls -CF'` that would clash with shrc's
+    # `l() { ... }` function definition via bash parse-time alias
+    # expansion); we only want to exercise shrc itself here.
+    result=$(cd "$_autocd_root" && bash --norc --noprofile -i -c '
         source '"$_srcdir"'/shrc >/dev/null 2>&1
         install_precommand_trap
         ./sub/
@@ -955,6 +959,27 @@ if have_command bash; then
     ' 2>/dev/null | sed -n 's/.*PWDMARK=//p')
     assert_equal "bash -i autocds on trailing slash via DEBUG trap" \
         "$_autocd_root/sub" "$result"
+
+    # Regression: sourcing shrc under an interactive bash that inherits
+    # aliases with the same names as shrc's function definitions (e.g.
+    # Ubuntu's default `alias l='ls -CF'` from /etc/bash.bashrc or
+    # ~/.bashrc) must not break parsing. Bash expands aliases at parse
+    # time, so without the pre-block `unalias -a`, `l() { ... }` would
+    # parse as `ls -CF() { ... }` and raise a syntax error, leaving
+    # install_precommand_trap undefined.
+    result=$(bash --norc --noprofile -i -c '
+        alias l="ls -CF"
+        alias ll="ls -alF"
+        alias la="ls -A"
+        source '"$_srcdir"'/shrc >/dev/null 2>&1
+        if type install_precommand_trap >/dev/null 2>&1; then
+            printf "OK"
+        else
+            printf "MISSING"
+        fi
+    ' 2>/dev/null)
+    assert_equal "shrc sources cleanly despite inherited l/ll/la aliases" \
+        "OK" "$result"
 fi
 
 # zsh's accept-line widget rewrites a trailing-slash dir buffer to
