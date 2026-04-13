@@ -1780,70 +1780,107 @@ except OSError: pass
     # wrappers are invisible to callers.
 
     ###############
-    # prompt-line flag passing: stub vcs to echo its arguments
-    (run-test "nu prompt-line passes --hostname flag" {
-        let dir = (mktemp -d)
-        "#!/bin/sh\necho \"$*\"" | save ($dir | path join "vcs")
-        ^chmod +x ($dir | path join "vcs")
+    # host-info / dir-info / prompt-line composition
+    (run-test "nu host-info includes short hostname" {
         $env.HOSTNAME = "mikel-laptop"
         $env.USERNAME = "mikel"
-        hide-env --ignore-errors WORKSTATION
-        hide-env --ignore-errors TMUX
-        hide-env --ignore-errors SHPOOL_SESSION_NAME
-        $env.PATH = [$dir "/usr/bin" "/bin"]
-        assert str contains (prompt-line) "--hostname=laptop"
-    })
-    (run-test "nu prompt-line passes --color=never when NO_COLOR set" {
-        let dir = (mktemp -d)
-        "#!/bin/sh\necho \"$*\"" | save ($dir | path join "vcs")
-        ^chmod +x ($dir | path join "vcs")
-        $env.HOSTNAME = "host"
-        $env.USERNAME = "user"
-        hide-env --ignore-errors WORKSTATION
-        hide-env --ignore-errors TMUX
-        hide-env --ignore-errors SHPOOL_SESSION_NAME
-        $env.NO_COLOR = "1"
-        $env.PATH = [$dir "/usr/bin" "/bin"]
-        assert str contains (prompt-line) "--color=never"
-    })
-    (run-test "nu prompt-line passes --color=always when NO_COLOR unset" {
-        let dir = (mktemp -d)
-        "#!/bin/sh\necho \"$*\"" | save ($dir | path join "vcs")
-        ^chmod +x ($dir | path join "vcs")
-        $env.HOSTNAME = "host"
-        $env.USERNAME = "user"
-        hide-env --ignore-errors WORKSTATION
-        hide-env --ignore-errors TMUX
-        hide-env --ignore-errors SHPOOL_SESSION_NAME
-        hide-env --ignore-errors NO_COLOR
-        $env.PATH = [$dir "/usr/bin" "/bin"]
-        assert str contains (prompt-line) "--color=always"
-    })
-    (run-test "nu prompt-line passes --production on production host" {
-        let dir = (mktemp -d)
-        "#!/bin/sh\necho \"$*\"" | save ($dir | path join "vcs")
-        ^chmod +x ($dir | path join "vcs")
-        $env.HOSTNAME = "prodhost"
-        $env.USERNAME = "mikel"
-        hide-env --ignore-errors WORKSTATION
-        hide-env --ignore-errors TMUX
-        hide-env --ignore-errors SHPOOL_SESSION_NAME
-        $env.on-production-host = {|| true }
-        $env.PATH = [$dir "/usr/bin" "/bin"]
-        assert str contains (prompt-line) "--production"
-    })
-    (run-test "nu prompt-line omits --production on non-production host" {
-        let dir = (mktemp -d)
-        "#!/bin/sh\necho \"$*\"" | save ($dir | path join "vcs")
-        ^chmod +x ($dir | path join "vcs")
-        $env.HOSTNAME = "mikel-laptop"
-        $env.USERNAME = "mikel"
-        hide-env --ignore-errors WORKSTATION
-        hide-env --ignore-errors TMUX
         hide-env --ignore-errors SHPOOL_SESSION_NAME
         $env.on-production-host = {|| false }
-        $env.PATH = [$dir "/usr/bin" "/bin"]
-        assert (not ((prompt-line) | str contains "--production"))
+        assert str contains (host-info) "laptop"
+    })
+    (run-test "nu host-info paints hostname red on production" {
+        $env.HOSTNAME = "prodhost"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.on-production-host = {|| true }
+        let out = (host-info)
+        assert str contains $out "prodhost"
+        assert str contains $out (ansi red)
+    })
+    (run-test "nu host-info shows yellow shpool warning off shpool" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.on-production-host = {|| false }
+        let out = (host-info)
+        assert str contains $out "shpool"
+        assert str contains $out (ansi yellow)
+    })
+    (run-test "nu host-info shows [session] in shpool" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.SHPOOL_SESSION_NAME = "edge1"
+        $env.on-production-host = {|| false }
+        let out = (host-info)
+        assert str contains $out $"[(ansi green)edge1(ansi reset)]"
+    })
+    (run-test "nu tilde-pwd at \$HOME" {
+        let d = (mktemp -d)
+        $env.HOME = $d
+        cd $d
+        assert equal (tilde-pwd) "~"
+    })
+    (run-test "nu tilde-pwd inside \$HOME" {
+        let d = (mktemp -d)
+        mkdir ([$d "documents"] | path join)
+        $env.HOME = $d
+        cd ([$d "documents"] | path join)
+        assert equal (tilde-pwd) "~/documents"
+    })
+    (run-test "nu tilde-pwd outside \$HOME" {
+        let d = (mktemp -d)
+        $env.HOME = "/nonexistent/home/mikel"
+        cd $d
+        assert equal (tilde-pwd) $d
+    })
+    (run-test "nu dir-info uses prompt-info when non-empty" {
+        $env.prompt-info = {|flags| "myproject main" }
+        assert str contains (dir-info) "myproject main"
+    })
+    (run-test "nu dir-info falls back to tilde-pwd when prompt-info empty" {
+        let d = (mktemp -d)
+        $env.HOME = $d
+        cd $d
+        $env.prompt-info = {|flags| "" }
+        assert str contains (dir-info) "~"
+    })
+    (run-test "nu dir-info passes --color=never when NO_COLOR set" {
+        $env.prompt-info = {|flags| ($flags | str join " ") }
+        $env.NO_COLOR = "1"
+        assert str contains (dir-info) "--color=never"
+    })
+    (run-test "nu dir-info passes --color=always when NO_COLOR unset" {
+        $env.prompt-info = {|flags| ($flags | str join " ") }
+        hide-env --ignore-errors NO_COLOR
+        assert str contains (dir-info) "--color=always"
+    })
+    (run-test "nu prompt-line composes host + dir + auth" {
+        let d = (mktemp -d)
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.HOME = $d
+        cd $d
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.on-production-host = {|| false }
+        $env.prompt-info = {|flags| "" }
+        $env.auth-info = {|| "SSH" }
+        let out = (prompt-line)
+        assert str contains $out "laptop"
+        assert str contains $out "shpool"
+        assert str contains $out "~"
+        assert str contains $out "SSH"
+    })
+    (run-test "nu prompt-line omits auth suffix when no auth needed" {
+        let d = (mktemp -d)
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.HOME = $d
+        cd $d
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.on-production-host = {|| false }
+        $env.prompt-info = {|flags| "" }
+        $env.auth-info = {|| "" }
+        assert (not ((prompt-line) | str contains "SSH"))
     })
 
     ###############
@@ -1879,23 +1916,28 @@ except OSError: pass
     })
 
     ###############
-    # prompt-line fallback includes session-name and project-or-pwd
-    (run-test "nu prompt-line fallback includes session name" {
+    # prompt-line shows session in shpool tag; otherwise uses yellow warning
+    (run-test "nu prompt-line includes session name in shpool tag" {
+        let d = (mktemp -d)
         $env.HOSTNAME = "mikel-laptop"
         $env.USERNAME = "mikel"
         hide-env --ignore-errors TMUX
         $env.SHPOOL_SESSION_NAME = "main"
-        $env.PATH = []
-        cd $env.HOME
+        $env.HOME = $d
+        cd $d
+        $env.on-production-host = {|| false }
+        $env.prompt-info = {|flags| "" }
+        $env.auth-info = {|| "" }
         assert str contains (prompt-line) "main"
     })
-    (run-test "nu prompt-line fallback includes project-or-pwd" {
+    (run-test "nu prompt-line uses prompt-info output in-project" {
         $env.HOSTNAME = "mikel-laptop"
         $env.USERNAME = "mikel"
         hide-env --ignore-errors TMUX
         hide-env --ignore-errors SHPOOL_SESSION_NAME
-        $env.PATH = []
-        $env.projectroot = {|| "/fake/myproject" }
+        $env.on-production-host = {|| false }
+        $env.prompt-info = {|flags| "myproject main" }
+        $env.auth-info = {|| "" }
         assert str contains (prompt-line) "myproject"
     })
 
