@@ -257,6 +257,13 @@ assert_equal "path finds sh" "/usr/bin/sh" "$result"
 path nonexistent_command_xyz >/dev/null 2>&1
 assert_equal "path returns false for missing command" "1" "$?"
 
+# Restore PATH so later `have_command <shell>` gates find zsh/bash/fish
+# wherever they live (Homebrew, ~/.cargo/bin, etc.). Without this, the
+# narrowed PATH above leaks through the rest of the file and the zsh
+# autocd widget tests at the bottom silently skip on any machine where
+# zsh isn't in /usr/bin.
+PATH="$_saved_path"
+
 # Test get_address_records
 input="example.com.		300	IN	A	93.184.216.34
 example.com.		300	IN	AAAA	2606:2800:220:1:248:1893:25c8:1946"
