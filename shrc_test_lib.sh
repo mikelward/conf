@@ -251,6 +251,12 @@ _srcdir="$(cd "$(dirname "$0")" && pwd)"
 # filepath defaults to $_srcdir/shrc
 # Fails loudly if the function is not found, so a rename in shrc
 # doesn't silently fall through to a system command (or nothing).
+# Also fails if the extracted block doesn't end with a column-0 `}`,
+# which would mean sed ran to EOF without finding the closing brace
+# (e.g. the function ends with `}` indented, or the file was truncated
+# mid-function). Without that check we'd eval a syntactically invalid
+# fragment and the first assertion against the missing function would
+# be the failure signal, far from the real cause.
 extract_func() {
     local _fn="$1"
     local _file="${2:-$_srcdir/shrc}"
@@ -261,6 +267,16 @@ extract_func() {
         failures=$((failures + 1))
         return 1
     fi
+    # `sed '/pattern/,/end/p'` prints through EOF if /end/ never matches.
+    # Require the extracted block's last line to be a column-0 `}` so we
+    # don't eval a half-function that silently stops matching the real
+    # body.
+    _last=$(printf '%s\n' "$_def" | tail -n 1)
+    if test "$_last" != "}"; then
+        echo "FAIL: extract_func found '$_fn' in $_file but block does not end with a column-0 '}'" >&2
+        failures=$((failures + 1))
+        return 1
+    fi
     eval "$_def"
 }
 
@@ -268,7 +284,8 @@ extract_func() {
 # body before eval'ing it. Useful for testing branches that key off
 # readonly shell variables (e.g. $UID). Example:
 #   extract_func_subst ps1_character 's/\$UID/$_test_uid/g'
-# Fails loudly if the function is not found.
+# Fails loudly if the function is not found or the extracted block does
+# not end with a column-0 `}` (see extract_func above).
 extract_func_subst() {
     local _fn="$1"
     local _sed="$2"
@@ -277,6 +294,12 @@ extract_func_subst() {
     _def=$(sed -n "/^$_fn()/,/^}/p" "$_file" | sed "$_sed")
     if test -z "$_def"; then
         echo "FAIL: extract_func_subst could not find '$_fn' in $_file" >&2
+        failures=$((failures + 1))
+        return 1
+    fi
+    _last=$(printf '%s\n' "$_def" | tail -n 1)
+    if test "$_last" != "}"; then
+        echo "FAIL: extract_func_subst found '$_fn' in $_file but block does not end with a column-0 '}'" >&2
         failures=$((failures + 1))
         return 1
     fi

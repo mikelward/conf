@@ -78,4 +78,25 @@ assert_contains "test recipe targets test-all" "test-all" "$_test_recipe"
 _recipe_j1=$(make -C "$_srcdir" -n test TEST_JOBS=1 2>/dev/null)
 assert_contains "TEST_JOBS=1 uses -j 1" "-j 1" "$_recipe_j1"
 
+# test-lint must gracefully skip fish when it's not installed (fish is
+# optional, unlike shellcheck/dash/bash which are required). Verify by
+# running test-lint under a PATH that hides fish and checking that a
+# SKIP line appears instead of the recipe erroring out.
+_bare_path="$_testdir/bare_bin"
+mkdir -p "$_bare_path"
+# Populate the stub directory with everything test-lint's required tools
+# need (shellcheck, dash, bash, plus the shell builtins/coreutils the
+# recipe itself calls). Omit `fish` so we exercise the skip branch.
+for _tool in bash dash shellcheck make awk sed grep sh env cat command test nproc; do
+    if _real=$(command -v "$_tool" 2>/dev/null); then
+        ln -sf "$_real" "$_bare_path/$_tool"
+    fi
+done
+_lint_out=$(PATH="$_bare_path" make -C "$_srcdir" test-lint 2>&1)
+_lint_rc=$?
+assert_equal "test-lint succeeds when fish is missing" "0" "$_lint_rc"
+assert_contains "test-lint skips fish -n when missing" \
+    "SKIP: fish" "$_lint_out"
+rm -rf "$_bare_path"
+
 test_summary "makefile"

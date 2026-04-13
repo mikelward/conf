@@ -47,16 +47,23 @@ test-all: \
 	test-amethyst
 
 # Static lint/parse checks are sub-second each, so we bundle them into one
-# target rather than spawning a make job per syntax check.
+# target rather than spawning a make job per syntax check. shellcheck,
+# dash, and bash are required; fish is optional (skips gracefully when
+# not installed, matching the test-nu-parse pattern) since not every
+# box has fish.
 test-lint:
 	@shellcheck -s bash -S error shrc
-	@dash -n shrc
-	@bash -n shrc
 	@shellcheck -s bash -S error shrc.vcs
-	@bash -n shrc.vcs
+	@dash -n shrc
 	@dash -n profile
 	@dash -n exitrc
-	@fish -n config/fish/config.fish
+	@bash -n shrc
+	@bash -n shrc.vcs
+	@if command -v fish >/dev/null 2>&1; then \
+		fish -n config/fish/config.fish; \
+	else \
+		echo "SKIP: fish -n config/fish/config.fish (fish not installed)"; \
+	fi
 
 test-nu-parse:
 	@if command -v nu >/dev/null 2>&1; then \
