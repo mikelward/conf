@@ -409,6 +409,20 @@ assert_equal "run executes command" "hello" "$result"
 result=$(SIMULATE=true run echo "hello")
 assert_equal "run simulates command" "Would run echo hello" "$result"
 
+# Test that SIMULATE=true does NOT actually execute the command.
+# Checking stdout alone can't distinguish "logged but also ran" from
+# "logged only"; give run a command with an observable side effect
+# (creating a file) and assert the side effect did not happen.
+_simrun_dir=$(mktemp -d)
+SIMULATE=true run touch "$_simrun_dir/marker" >/dev/null 2>&1
+assert_false "run SIMULATE=true does not execute command" \
+    test -e "$_simrun_dir/marker"
+# And the default path (SIMULATE=false) really does execute it.
+SIMULATE=false run touch "$_simrun_dir/marker" >/dev/null 2>&1
+assert_true "run SIMULATE=false executes command" \
+    test -e "$_simrun_dir/marker"
+rm -rf "$_simrun_dir"
+
 ###############
 # FILE OPERATIONS
 
@@ -810,7 +824,11 @@ rm -rf "$_retry_dir"
 # CDPATH
 # Verify CDPATH contains HOME but not the conf/config subdirectories, which
 # would surprisingly shadow directory names when `cd`ing from anywhere.
-_cdpath_line=$(sed -n 's/^CDPATH=//p' "$_srcdir/shrc")
+# Accept both `CDPATH=...` and `export CDPATH=...` so a future reformat
+# doesn't silently make $_cdpath_line empty (which would make the
+# assert_not_contains below trivially pass).
+_cdpath_line=$(sed -n 's/^[[:space:]]*\(export[[:space:]]\{1,\}\)\{0,1\}CDPATH=//p' "$_srcdir/shrc")
+assert_true "shrc CDPATH assignment found" test -n "$_cdpath_line"
 assert_contains "shrc CDPATH contains HOME" "\$HOME" "$_cdpath_line"
 assert_not_contains "shrc CDPATH does not contain \$HOME/conf" "\$HOME/conf" "$_cdpath_line"
 
@@ -1131,6 +1149,46 @@ if have_command dash; then
 else
     skip_block "dash .shrc.vcs guard end-to-end test: dash not installed"
 fi
+
+###############
+# ASSERTION HELPER SELF-TESTS
+# assert_contains / assert_not_contains with an empty needle used to
+# silently pass (or silently fail) because the case pattern *""* matches
+# any haystack. That masked wiring bugs where a variable was unset and
+# expanded to "". Verify the helpers now reject an empty needle outright.
+# Runs a helper in a subshell against a dummy `failures` counter so the
+# expected-FAIL output doesn't pollute the real test summary.
+_helper_selftest() {
+    # stdout: "pass" or "fail" depending on whether the helper incremented
+    # $failures. Runs in a subshell so the counter mutations don't leak.
+    local _expect="$1"
+    shift
+    (
+        failures=0
+        passes=0
+        "$@" >/dev/null 2>&1
+        if test "$failures" -gt 0; then
+            echo fail
+        else
+            echo pass
+        fi
+    )
+}
+
+result=$(_helper_selftest fail assert_contains "dummy" "" "haystack")
+assert_equal "assert_contains rejects empty needle" "fail" "$result"
+
+result=$(_helper_selftest fail assert_not_contains "dummy" "" "haystack")
+assert_equal "assert_not_contains rejects empty needle" "fail" "$result"
+
+# Sanity: non-empty needles on an empty haystack still behave correctly.
+result=$(_helper_selftest fail assert_contains "dummy" "x" "")
+assert_equal "assert_contains fails on empty haystack with non-empty needle" "fail" "$result"
+
+result=$(_helper_selftest pass assert_not_contains "dummy" "x" "")
+assert_equal "assert_not_contains passes on empty haystack with non-empty needle" "pass" "$result"
+
+unset -f _helper_selftest
 
 _shell="$(basename "$(readlink -f /proc/$$/exe)" 2>/dev/null || echo "sh")"
 

@@ -298,8 +298,12 @@ assert_equal "fish sets fish_key_bindings to my_vi_key_bindings" "my_vi_key_bind
 # PERFORMANCE
 # prompt_line runs on every prompt, so its cost matters. Time 50 calls
 # inside a single fish process so we're measuring wrapper overhead, not
-# fish startup.
-_fish_run '
+# fish startup. The budget catches ~10x regressions without flaking on
+# slow CI; FISH_PROMPT_PERF_BUDGET_MS=0 disables the check for manual
+# profiling. We emit a single line with the elapsed ms so the bash
+# harness can both report it and assert on it.
+_fish_perf_budget_ms="${FISH_PROMPT_PERF_BUDGET_MS:-500}"
+_fish_perf_line=$(_fish_run '
     set -g HOSTNAME mikel-workstation
     set -g USERNAME mikel
     function vcs
@@ -314,7 +318,17 @@ _fish_run '
     end
     set _end (date +%s%N)
     set _elapsed_ms (math "($_end - $_start) / 1000000")
-    echo "  50 x fish prompt_line (binary stub): $_elapsed_ms""ms"
-'
+    echo "PERF_MS=$_elapsed_ms"
+')
+_fish_perf_ms=$(printf '%s\n' "$_fish_perf_line" | sed -n 's/^PERF_MS=//p' | head -1)
+if test -n "$_fish_perf_ms"; then
+    echo "  50 x fish prompt_line (binary stub): ${_fish_perf_ms}ms (budget ${_fish_perf_budget_ms}ms)"
+    if test "$_fish_perf_budget_ms" -gt 0; then
+        assert_true "fish prompt_line within ${_fish_perf_budget_ms}ms budget" \
+            test "$_fish_perf_ms" -le "$_fish_perf_budget_ms"
+    fi
+else
+    skip_block "fish prompt_line perf check: could not parse elapsed time"
+fi
 
 test_summary "fish shrc_fish_prompt_test"

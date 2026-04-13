@@ -96,6 +96,14 @@ assert_contains() {
         failures=$((failures + 1))
         return 1
     fi
+    # Reject an empty needle: the case pattern *""* matches any
+    # haystack, so `assert_contains "label" "$unset" "$actual"` would
+    # silently pass. That's a wiring-bug trap, not a useful assertion.
+    if test -z "$needle"; then
+        echo "FAIL: $label (assert_contains: empty needle; use assert_equal for empty-string checks)" >&2
+        failures=$((failures + 1))
+        return 1
+    fi
     case "$haystack" in
     *"$needle"*)
         passes=$((passes + 1))
@@ -115,6 +123,14 @@ assert_not_contains() {
     local haystack="${3?assert_not_contains: missing haystack}"
     if test $# -ne 3; then
         echo "FAIL: $label (assert_not_contains: expected 3 args, got $#)" >&2
+        failures=$((failures + 1))
+        return 1
+    fi
+    # Reject an empty needle: *""* matches any haystack, so
+    # `assert_not_contains "label" "$unset" "$actual"` would always
+    # fail -- making the test look red for the wrong reason.
+    if test -z "$needle"; then
+        echo "FAIL: $label (assert_not_contains: empty needle; use assert_equal for empty-string checks)" >&2
         failures=$((failures + 1))
         return 1
     fi
