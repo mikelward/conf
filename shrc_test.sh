@@ -1190,6 +1190,51 @@ assert_equal "assert_not_contains passes on empty haystack with non-empty needle
 
 unset -f _helper_selftest
 
+# extract_func / extract_func_subst must fail loudly when the function is
+# absent AND when the extracted block doesn't end with a column-0 `}` (a
+# truncated body caused by a renamed/removed function would otherwise be
+# eval'd as a half-valid fragment).
+_extract_selftest_dir=$(mktemp -d)
+cat > "$_extract_selftest_dir/good" <<'GOOD'
+good_fn() {
+    echo ok
+}
+GOOD
+cat > "$_extract_selftest_dir/truncated" <<'TRUNC'
+good_fn() {
+    echo ok
+TRUNC
+
+_extract_selftest() {
+    local _expect="$1"
+    shift
+    (
+        failures=0
+        passes=0
+        "$@" >/dev/null 2>&1
+        if test "$failures" -gt 0; then
+            echo fail
+        else
+            echo pass
+        fi
+    )
+}
+
+result=$(_extract_selftest pass extract_func good_fn "$_extract_selftest_dir/good")
+assert_equal "extract_func accepts well-formed function" "pass" "$result"
+
+result=$(_extract_selftest fail extract_func missing_fn "$_extract_selftest_dir/good")
+assert_equal "extract_func rejects missing function" "fail" "$result"
+
+result=$(_extract_selftest fail extract_func good_fn "$_extract_selftest_dir/truncated")
+assert_equal "extract_func rejects block without column-0 closing brace" "fail" "$result"
+
+result=$(_extract_selftest fail extract_func_subst good_fn 's/ok/OK/' "$_extract_selftest_dir/truncated")
+assert_equal "extract_func_subst rejects block without column-0 closing brace" "fail" "$result"
+
+rm -rf "$_extract_selftest_dir"
+unset -f _extract_selftest
+
 _shell="$(basename "$(readlink -f /proc/$$/exe)" 2>/dev/null || echo "sh")"
 
 test_summary "$_shell shrc_test"

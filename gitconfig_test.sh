@@ -35,6 +35,43 @@ assert_equal "diff.algorithm is patience" \
     "patience" "$(git config --file "$_gitconfig" diff.algorithm)"
 assert_equal "merge.conflictstyle is zdiff3" \
     "zdiff3" "$(git config --file "$_gitconfig" merge.conflictstyle)"
+assert_equal "diff.renames is true" \
+    "true" "$(git config --file "$_gitconfig" diff.renames)"
+# init.templatedir wires our commit-msg / pre-commit hook scaffolding
+# into every newly created repo. Losing this silently drops hooks.
+assert_equal "init.templatedir points at gittemplates" \
+    "~/.gittemplates" "$(git config --file "$_gitconfig" init.templatedir)"
+# branch.autoSetupMerge/Rebase make newly created branches track upstream
+# and rebase-pull by default; regressions here silently change pull/push
+# semantics across every repo.
+assert_equal "branch.autoSetupMerge is always" \
+    "always" "$(git config --file "$_gitconfig" branch.autoSetupMerge)"
+assert_equal "branch.autoSetupRebase is always" \
+    "always" "$(git config --file "$_gitconfig" branch.autoSetupRebase)"
+# color.ui=auto is what makes git commands colorize stdout in terminals;
+# "false"/"never" would silently strip colors from the entire workflow.
+assert_equal "color.ui is auto" \
+    "auto" "$(git config --file "$_gitconfig" color.ui)"
+# log.date sets the format used by history aliases. A regression would
+# silently reformat the `history` alias output.
+assert_contains "log.date is format-local with YYYY-MM-DD HH:MM:SS" \
+    "format-local:%Y-%m-%d %H:%M:%S" \
+    "$(git config --file "$_gitconfig" log.date)"
+# difftool.prompt=no keeps `git difftool` from asking before every file.
+assert_equal "difftool.prompt is no" \
+    "no" "$(git config --file "$_gitconfig" difftool.prompt)"
+# user.name/email must be non-empty -- otherwise every first commit on a
+# new machine would either prompt or (worse) be attributed to the shell
+# user's default identity.
+_user_name=$(git config --file "$_gitconfig" user.name)
+_user_email=$(git config --file "$_gitconfig" user.email)
+assert_true "user.name is set" test -n "$_user_name"
+assert_true "user.email is set" test -n "$_user_email"
+# The local-override include is what lets per-host tweaks live outside
+# the checked-in config. Without it, corporate overrides silently fall
+# back to the upstream defaults.
+assert_equal "include.path points at local overrides" \
+    "~/.gitconfig.local" "$(git config --file "$_gitconfig" include.path)"
 
 # A sampling of aliases used by the shrc wrappers and muscle memory.
 # These are the ones whose absence would quietly break daily workflow.
