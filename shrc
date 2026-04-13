@@ -940,8 +940,19 @@ uc() { systemctl --user "$@"; }
 # `foo/` reliably becomes `cd foo/` even when the shell would have
 # tried (and failed) to exec the directory directly.
 # Resolve $1 to an existing directory the way `cd` does, honoring
-# CDPATH. Returns 0 if found, 1 otherwise. Absolute paths and paths
-# starting with ./ or ../ bypass CDPATH, matching cd(1) semantics.
+# CDPATH. On success, prints the resolved path ($1 itself for
+# absolute or ./ / ../ paths, or $entry/$1 for a CDPATH hit) and
+# returns 0; on failure, prints nothing and returns 1. Absolute paths
+# and paths starting with ./ or ../ bypass CDPATH, matching cd(1)
+# semantics. A leading `~` or `~/` is expanded manually, since
+# test(1) does not do tilde expansion -- without this, `~/scripts/`
+# would miss even when $HOME/scripts exists, and the zsh widget
+# below would fall through to .accept-line, which then tilde-expands
+# and tries to exec the directory.
+#
+# Callers use the printed path directly (see try_autocd_trailing_slash
+# and _autocd_accept_line) instead of passing the original arg to cd,
+# so cd doesn't re-do the CDPATH walk.
 #
 # zsh does not word-split unquoted `$CDPATH` on `:` even when IFS=: --
 # splitting requires SH_WORD_SPLIT, which is off under `emulate -L
@@ -950,18 +961,27 @@ uc() { systemctl --user "$@"; }
 # splitting.
 resolve_cdpath_dir() {
     case "$1" in
+    "~") set -- "$HOME" ;;
+    "~/"*) set -- "$HOME/${1#"~/"}" ;;
+    esac
+    case "$1" in
     /*|./*|../*)
-        test -d "$1"
-        return
+        if test -d "$1"; then
+            printf '%s\n' "$1"
+            return 0
+        fi
+        return 1
         ;;
     esac
     if test -d "$1"; then
+        printf '%s\n' "$1"
         return 0
     fi
-    if test -n "${ZSH_VERSION:-}"; then
+    if is_zsh; then
         for _p in $cdpath; do
             test -z "$_p" && _p=.
             if test -d "$_p/$1"; then
+                printf '%s\n' "$_p/$1"
                 unset _p
                 return 0
             fi
@@ -976,6 +996,7 @@ resolve_cdpath_dir() {
         test -z "$_p" && _p=.
         if test -d "$_p/$1"; then
             IFS="$_oldifs"
+            printf '%s\n' "$_p/$1"
             unset _oldifs _p
             return 0
         fi
@@ -990,10 +1011,14 @@ try_autocd_trailing_slash() {
     */)
         # reject multi-word buffers like `foo/ bar`
         case "$1" in *[[:space:]]*) return 1 ;; esac
-        if resolve_cdpath_dir "$1"; then
-            cd -- "$1"
-            return 0
+        _resolved=$(resolve_cdpath_dir "$1") || return 1
+        if test -z "$_resolved"; then
+            unset _resolved
+            return 1
         fi
+        cd -- "$_resolved" || { unset _resolved; return 1; }
+        unset _resolved
+        return 0
         ;;
     esac
     return 1
@@ -2005,10 +2030,12 @@ if is_interactive; then
         # rewrite the buffer to `cd -- foo/` right before accepting.
         _autocd_accept_line() {
             emulate -L zsh
+            local _resolved
             if [[ "$BUFFER" == */ ]] \
                && [[ "$BUFFER" != *[[:space:]]* ]] \
-               && resolve_cdpath_dir "$BUFFER"; then
-                BUFFER="cd -- $BUFFER"
+               && _resolved=$(resolve_cdpath_dir "$BUFFER") \
+               && [[ -n "$_resolved" ]]; then
+                BUFFER="cd -- $_resolved"
             fi
             zle .accept-line
         }

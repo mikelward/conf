@@ -429,6 +429,22 @@ let results = [
         $env.CDPATH = [""]
         assert equal (resolve-cdpath-dir "sub") ([$base "sub"] | path join | path expand)
     })
+    (run-test "nu resolve-cdpath-dir expands ~/foo to $HOME/foo" {
+        let base = (mktemp -d)
+        mkdir ([$base "sub"] | path join)
+        $env.HOME = $base
+        $env.CDPATH = []
+        # `path exists` does not tilde-expand, so without explicit
+        # handling `~/sub` would miss even when $HOME/sub exists.
+        # Mirrors the fix in shrc and config.fish for `~/scripts/`.
+        assert equal (resolve-cdpath-dir "~/sub") ([$base "sub"] | path join | path expand)
+    })
+    (run-test "nu resolve-cdpath-dir expands bare ~ to \$HOME" {
+        let base = (mktemp -d)
+        $env.HOME = $base
+        $env.CDPATH = []
+        assert equal (resolve-cdpath-dir "~") ($base | path expand)
+    })
 
     ###############
     # cd honors CDPATH

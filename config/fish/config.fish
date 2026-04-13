@@ -592,16 +592,31 @@ if functions -q fish_command_not_found
 end
 
 # Resolve $argv[1] to an existing directory the way `cd` does, honoring
-# CDPATH. Returns 0 if found, 1 otherwise. Absolute paths and paths
-# starting with ./ or ../ bypass CDPATH, matching cd(1) semantics.
+# CDPATH. On success, prints the resolved path ($argv[1] itself for
+# absolute or ./ / ../ paths, or $entry/$arg for a CDPATH hit) and
+# returns 0; on failure, prints nothing and returns 1. Absolute paths
+# and paths starting with ./ or ../ bypass CDPATH, matching cd(1)
+# semantics. A leading `~` or `~/` is expanded manually, since test
+# doesn't do tilde expansion -- without this, `~/scripts/` would miss
+# even when $HOME/scripts exists. Mirrors shrc's resolve_cdpath_dir.
 function resolve_cdpath_dir
     set -l arg $argv[1]
     switch $arg
+        case '~'
+            set arg $HOME
+        case '~/*'
+            set arg "$HOME/"(string sub --start 3 -- $arg)
+    end
+    switch $arg
         case '/*' './*' '../*'
-            test -d $arg
-            return
+            if test -d $arg
+                echo $arg
+                return 0
+            end
+            return 1
     end
     if test -d $arg
+        echo $arg
         return 0
     end
     for p in $CDPATH
@@ -609,6 +624,7 @@ function resolve_cdpath_dir
             set p .
         end
         if test -d "$p/$arg"
+            echo "$p/$arg"
             return 0
         end
     end
@@ -617,8 +633,9 @@ end
 
 function fish_command_not_found
     if string match -q -- '*/' $argv[1]
-        if resolve_cdpath_dir $argv[1]
-            cd -- $argv[1]
+        set -l resolved (resolve_cdpath_dir $argv[1])
+        if test -n "$resolved"
+            cd -- $resolved
             return
         end
     end

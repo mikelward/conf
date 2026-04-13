@@ -198,10 +198,22 @@ def maybe-start-shpool-and-exit [] {
 # Resolve $arg to an existing directory the way `cd` does, honoring
 # $env.CDPATH. Returns the resolved absolute path, or "" if no match.
 # Absolute paths and paths starting with ./ or ../ bypass CDPATH,
-# matching cd(1) semantics. Mirrors shrc's resolve_cdpath_dir and
-# config.fish's resolve_cdpath_dir.
-def resolve-cdpath-dir [arg: string] {
-    if ($arg | is-empty) { return "" }
+# matching cd(1) semantics. A leading `~` or `~/` is expanded manually
+# via `path expand` before the lookup, mirroring shrc's and
+# config.fish's tilde handling so `~/scripts/` resolves even though
+# `path exists` treats the literal `~` as a missing file.
+def resolve-cdpath-dir [arg_in: string] {
+    if ($arg_in | is-empty) { return "" }
+    # Expand a leading `~` or `~/` manually off $env.HOME rather than
+    # `path expand`, which uses the OS passwd home and so ignores
+    # HOME overrides (the tests rely on the override).
+    let arg = if $arg_in == "~" {
+        $env.HOME
+    } else if ($arg_in | str starts-with "~/") {
+        [$env.HOME ($arg_in | str substring 2..)] | path join
+    } else {
+        $arg_in
+    }
     let is_explicit = (
         ($arg | str starts-with "/") or
         ($arg | str starts-with "./") or

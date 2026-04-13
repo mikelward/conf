@@ -243,6 +243,27 @@ result="$(_fish_run '
 assert_true "fish fish_command_not_found non-existent falls through" \
     sh -c "echo \"\$1\" | grep -qE 'Unknown command|command not found'" _ "$result"
 
+# Tilde expansion: ~/sub/ must resolve to $HOME/sub. `test -d` does
+# not tilde-expand, so without manual expansion in resolve_cdpath_dir
+# this would miss even when $HOME/sub exists -- mirrors the zsh
+# ~/scripts/ bug this fix addresses.
+result="$(HOME=$_fish_autocd fish --no-config -c '
+    source '"$_config"'
+    set -e CDPATH
+    fish_command_not_found ~/sub/ >/dev/null 2>&1
+    pwd
+' 2>/dev/null)"
+assert_equal "fish fish_command_not_found cds on ~/foo/" \
+    "$_fish_autocd/sub" "$result"
+
+result="$(HOME=$_fish_autocd fish --no-config -c '
+    source '"$_config"'
+    set -e CDPATH
+    resolve_cdpath_dir ~/sub/
+' 2>/dev/null)"
+assert_equal "fish resolve_cdpath_dir prints tilde-expanded path" \
+    "$_fish_autocd/sub/" "$result"
+
 # When a system_fish_command_not_found is defined ahead of sourcing,
 # it is preserved and called for non-slash commands.
 result="$(HOME=$_testdir/fakehome fish --no-config -c '
