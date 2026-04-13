@@ -207,9 +207,9 @@ auth() {
 }
 
 # hook for printing which things I need to authenticate to (ssh-agent, etc.)
-#
-# TODO: reconcile this with `vcs prompt-line` (same question for fish's
-# auth_info and nushell's auth-info).
+# Called by prompt_line; should emit a short pre-colored warning when the
+# user needs to re-auth (e.g. ssh-agent has no identities) and nothing
+# otherwise.
 auth_info() {
     local problems=""
     is_ssh_valid || problems="$problems SSH"
@@ -263,7 +263,6 @@ is_ssh_valid() {
 }
 
 # returns whether I need to authenticate.
-# TODO: see auth_info above (reconcile with `vcs prompt-line`).
 need_auth() {
     test -n "$(auth_info)"
 }
@@ -1246,23 +1245,62 @@ preprompt() {
     flash_terminal
 }
 
-# print the first line of the preprompt: host + dir + auth.
-# Delegates to `vcs prompt-line` so the whole line renders in one process.
-# Policy (short hostname, production-host coloring) stays in the shell and
-# is passed via flags.
-prompt_line() {
-    local _color_flag=--color=never
-    if $color; then
-        _color_flag=--color=always
-    fi
-    local _production=
+# print the hostname and shpool session tag for the preprompt line.
+# Hostname is red on production hosts. Shpool tag is a green [session] when
+# attached, or a yellow "shpool" warning when not.
+host_info() {
+    local _host="$(short_hostname)"
     if on_production_host; then
-        _production=--production
+        _host="$(red "$_host")"
     fi
-    vcs prompt-line \
-        --hostname="$(short_hostname)" \
-        $_production \
-        "$_color_flag"
+    local _tag
+    if in_shpool; then
+        _tag=" [$(green "$SHPOOL_SESSION_NAME")]"
+    else
+        _tag=" $(yellow shpool)"
+    fi
+    printf '%s%s' "$_host" "$_tag"
+}
+
+# replace a leading $HOME in $PWD with "~"
+tilde_pwd() {
+    case "$PWD" in
+        "$HOME")    puts "~" ;;
+        "$HOME"/*)  puts "~${PWD#"$HOME"}" ;;
+        *)          puts "$PWD" ;;
+    esac
+}
+
+# print the directory info for the preprompt line. Inside a project we call
+# `vcs prompt-info` (one fork); outside, we fall back to a tilde-expanded
+# $PWD. The whole thing is wrapped in blue.
+dir_info() {
+    local _info=
+    if inside_project && is_function prompt_info; then
+        local _color_flag=--color=never
+        if $color; then
+            _color_flag=--color=always
+        fi
+        _info="$(prompt_info "$_color_flag")"
+    fi
+    if test -z "$_info"; then
+        _info="$(tilde_pwd)"
+    fi
+    blue "$_info"
+}
+
+# print the first line of the preprompt: host + dir + auth.
+# Composed in-shell from host_info, dir_info, and auth_info. The VCS part
+# is delegated to `vcs prompt-info`; the rest is pure shell. auth_info is
+# captured once so ssh-add -L (via is_ssh_valid) only runs one time per
+# prompt — calling need_auth and auth_info separately would double that.
+prompt_line() {
+    local _auth="$(auth_info)"
+    local _out="$(host_info) $(dir_info)"
+    if test -n "$_auth"; then
+        _out="$_out $_auth"
+    fi
+    puts "$_out"
 }
 
 maybe_space() {
