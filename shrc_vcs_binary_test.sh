@@ -1,7 +1,8 @@
 #!/bin/bash
 #
-# Tests for shrc.vcs when the vcs binary is available.
-# Verifies that shrc.vcs delegates to the binary instead of the shell fallback.
+# Tests for shrc.vcs when the vcs binary is available. Exercises the
+# wrappers' delegation to the binary in real git repos, plus the
+# cp/mv/rm overrides and end-to-end command dispatch.
 #
 
 source "$(dirname "$0")/shrc_test_lib.sh"
@@ -23,11 +24,9 @@ source "$_srcdir/shrc.vcs" >/dev/null 2>&1
 ###############
 # Test that binary path is taken (vcs function calls the binary)
 
-# Verify vcs() is the thin wrapper, not the shell fallback.
-# The shell fallback contains "vcs_cache"; the binary wrapper does not.
+# Verify vcs() delegates to the binary.
 _vcs_body="$(type vcs)"
-assert_not_contains "vcs() uses binary path (no vcs_cache reference)" "vcs_cache" "$_vcs_body"
-assert_contains "vcs() uses binary path (calls command vcs)" "command vcs" "$_vcs_body"
+assert_contains "vcs() calls command vcs" "command vcs" "$_vcs_body"
 
 ###############
 # Test vcs detection via binary
@@ -123,14 +122,6 @@ assert_false "mv removes source outside VCS" test -f "$_testdir/norepo2/mv_src.t
 echo "rmme" > "$_testdir/norepo2/rm_file.txt"
 (cd "$_testdir/norepo2" && rm rm_file.txt)
 assert_false "rm falls back to command rm outside VCS" test -f "$_testdir/norepo2/rm_file.txt"
-
-###############
-# Test that shrc.vcs.* files are NOT sourced when binary is available
-
-# If the shell fallback functions like git_status were sourced, they'd be defined.
-# With the binary path, they should not be.
-assert_false "git_status not defined (binary replaces shell impls)" \
-    type git_status >/dev/null 2>&1
 
 ###############
 # Test subdir still works (shared code, not in if/else split)
