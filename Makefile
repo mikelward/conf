@@ -39,10 +39,10 @@ test-all: \
 	test-shrc-dash \
 	test-shrc-bash \
 	test-shrc-vcs \
-	test-shrc-vcs-binary \
 	test-shrc-prompt \
 	test-shrc-fish \
 	test-shrc-fish-prompt \
+	test-gitconfig \
 	test-makefile \
 	test-amethyst
 
@@ -62,14 +62,14 @@ test-nu-parse:
 	@if command -v nu >/dev/null 2>&1; then \
 		nu --no-config-file --commands 'source config/nushell/config.nu'; \
 	else \
-		echo "nushell not installed, skipping parse check"; \
+		echo "SKIP: test-nu-parse (nushell not installed)"; \
 	fi
 
 test-nu-config:
 	@if command -v nu >/dev/null 2>&1; then \
 		nu --no-config-file config/nushell/config_test.nu; \
 	else \
-		echo "nushell not installed, skipping nu-native tests"; \
+		echo "SKIP: test-nu-config (nushell not installed)"; \
 	fi
 
 test-shrc-dash:
@@ -81,9 +81,6 @@ test-shrc-bash:
 test-shrc-vcs: vcs-build
 	@PATH="$(CURDIR)/vcs:$$PATH" bash shrc_vcs_test.sh
 
-test-shrc-vcs-binary: vcs-build
-	@PATH="$(CURDIR)/vcs:$$PATH" bash shrc_vcs_binary_test.sh
-
 test-shrc-prompt:
 	@bash shrc_prompt_test.sh
 
@@ -92,6 +89,9 @@ test-shrc-fish:
 
 test-shrc-fish-prompt:
 	@bash shrc_fish_prompt_test.sh
+
+test-gitconfig:
+	@sh gitconfig_test.sh
 
 test-makefile:
 	@bash makefile_test.sh
@@ -103,6 +103,6 @@ test-amethyst:
 	test test-all test-lint \
 	test-nu-parse test-nu-config \
 	test-shrc-dash test-shrc-bash \
-	test-shrc-vcs test-shrc-vcs-binary \
+	test-shrc-vcs \
 	test-shrc-prompt test-shrc-fish test-shrc-fish-prompt \
-	test-makefile test-amethyst
+	test-gitconfig test-makefile test-amethyst

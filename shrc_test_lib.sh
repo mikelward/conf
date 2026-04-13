@@ -7,6 +7,7 @@
 
 failures=0
 passes=0
+_skipped=0
 
 assert_equal() {
     local label="$1"
@@ -80,15 +81,53 @@ assert_not_contains() {
     esac
 }
 
-# Print summary and exit with appropriate code
+# Mark the current test script as wholly skipped (e.g. required tool is
+# missing). test_summary then reports SKIP rather than a misleading
+# "all 0 tests passed." Callers should typically `exit 0` after the
+# final test_summary, which returns 0 in this case.
+skip_all() {
+    _skipped=1
+    local _reason="${1:-}"
+    if test -n "$_reason"; then
+        echo "SKIP: $_reason"
+    fi
+}
+
+# Record that a conditional block inside a test script was skipped.
+# The summary line tallies these so a reader can tell at a glance
+# that not every code path ran.
+skip_block() {
+    _skipped=$((_skipped + 1))
+    local _reason="${1:-}"
+    if test -n "$_reason"; then
+        echo "SKIP: $_reason"
+    fi
+}
+
+# Print summary and exit with appropriate code.
+# Fails (exit 1) when:
+#   - any assertion failed, OR
+#   - no assertions ran AND nothing was explicitly skipped (catches
+#     "silently green 0-pass" outputs caused by typos / wiring bugs).
 test_summary() {
     local name="${1:-tests}"
     echo
-    if test "$failures" -eq 0; then
-        echo "$name: all $passes tests passed."
-    else
+    if test "$failures" -gt 0; then
         echo "$name: $failures test(s) failed, $passes passed."
         exit 1
+    fi
+    if test "$passes" -eq 0 && test "$_skipped" -eq 0; then
+        echo "$name: FAIL - no tests ran and none were explicitly skipped"
+        exit 1
+    fi
+    if test "$passes" -eq 0; then
+        echo "$name: SKIPPED"
+        return 0
+    fi
+    if test "$_skipped" -gt 0; then
+        echo "$name: all $passes tests passed ($_skipped skipped)."
+    else
+        echo "$name: all $passes tests passed."
     fi
 }
 
@@ -144,6 +183,36 @@ _srcdir="$(cd "$(dirname "$0")" && pwd)"
 # Assumes the function starts at column 0 and ends with } at column 0.
 # Usage: extract_func funcname [filepath]
 # filepath defaults to $_srcdir/shrc
+# Fails loudly if the function is not found, so a rename in shrc
+# doesn't silently fall through to a system command (or nothing).
 extract_func() {
-    eval "$(sed -n "/^$1()/,/^}/p" "${2:-$_srcdir/shrc}")"
+    local _fn="$1"
+    local _file="${2:-$_srcdir/shrc}"
+    local _def
+    _def=$(sed -n "/^$_fn()/,/^}/p" "$_file")
+    if test -z "$_def"; then
+        echo "FAIL: extract_func could not find '$_fn' in $_file" >&2
+        failures=$((failures + 1))
+        return 1
+    fi
+    eval "$_def"
+}
+
+# Like extract_func, but applies a sed substitution to the extracted
+# body before eval'ing it. Useful for testing branches that key off
+# readonly shell variables (e.g. $UID). Example:
+#   extract_func_subst ps1_character 's/\$UID/$_test_uid/g'
+# Fails loudly if the function is not found.
+extract_func_subst() {
+    local _fn="$1"
+    local _sed="$2"
+    local _file="${3:-$_srcdir/shrc}"
+    local _def
+    _def=$(sed -n "/^$_fn()/,/^}/p" "$_file" | sed "$_sed")
+    if test -z "$_def"; then
+        echo "FAIL: extract_func_subst could not find '$_fn' in $_file" >&2
+        failures=$((failures + 1))
+        return 1
+    fi
+    eval "$_def"
 }

@@ -91,21 +91,30 @@ assert_equal "basic_prompt sets PS3" '#? ' "$PS3"
 
 ###############
 # TEST: ps1_character
+# $UID is readonly in bash, so we can't toggle it at runtime. Instead
+# re-extract ps1_character with $UID replaced by a settable $_test_uid
+# so both branches are exercised on every run (regardless of the user
+# the test runs as).
 
-# UID is readonly in bash, so test based on actual UID
-if test "$UID" -eq 0; then
-    result="$(ps1_character)"
-    assert_equal "ps1_character for root" '#' "$result"
+extract_func_subst ps1_character 's/\$UID/$_test_uid/g'
+_test_uid=0
+assert_equal "ps1_character for root" '#' "$(ps1_character)"
+_test_uid=1000
+assert_equal "ps1_character for non-root" '$' "$(ps1_character)"
 
-    result="$(ps1)"
-    assert_equal "ps1 output for root" '# ' "$result"
-else
-    result="$(ps1_character)"
-    assert_equal "ps1_character for non-root" '$' "$result"
+# Likewise re-extract ps1 with the same substitution so its output can
+# be tested under both UIDs. ps1 calls keymap_character (stubbed by
+# returning early when no keymap is active) and ps1_character.
+extract_func_subst ps1 's/\$UID/$_test_uid/g'
+_test_uid=0
+assert_equal "ps1 output for root" '# ' "$(ps1)"
+_test_uid=1000
+assert_equal "ps1 output for non-root" '$ ' "$(ps1)"
 
-    result="$(ps1)"
-    assert_equal "ps1 output for non-root" '$ ' "$result"
-fi
+# Re-extract the real ps1/ps1_character for the rest of the tests so
+# subsequent assertions see shrc's actual UID binding.
+extract_func ps1_character
+extract_func ps1
 
 ###############
 # TEST: short_hostname
@@ -285,8 +294,8 @@ PWD="$HOME"
 bash_last_error() { :; }
 
 result="$(preprompt)"
-assert_true "preprompt contains hostname" echo "$result" | grep -q "testhost"
-assert_true "preprompt contains dir" echo "$result" | grep -q "~"
+assert_contains "preprompt contains hostname" "testhost" "$result"
+assert_contains "preprompt contains dir" "~" "$result"
 
 ###############
 # TEST: preprompt with auth warning
@@ -301,7 +310,7 @@ vcs() {
     esac
 }
 result="$(preprompt)"
-assert_true "preprompt contains SSH warning" echo "$result" | grep -q "SSH"
+assert_contains "preprompt contains SSH warning" "SSH" "$result"
 
 # Restore
 is_ssh_valid() { true; }
@@ -663,9 +672,20 @@ while test $_i -lt 50; do
     _i=$((_i + 1))
 done
 _end=$(date +%s%N 2>/dev/null || echo "0")
+# Budget: 50 prompt_line calls with the binary stubbed should be well
+# under 500ms even on slow CI (~30ms is typical). A regression past
+# this fails the test rather than silently slowing every prompt.
+# PROMPT_PERF_BUDGET_MS=0 disables the check for manual profiling.
+_prompt_perf_budget_ms="${PROMPT_PERF_BUDGET_MS:-500}"
 if test "$_start" != "0" && test "$_end" != "0"; then
     _elapsed_ms=$(( (_end - _start) / 1000000 ))
-    echo "  50 x prompt_line (binary stub): ${_elapsed_ms}ms"
+    echo "  50 x prompt_line (binary stub): ${_elapsed_ms}ms (budget ${_prompt_perf_budget_ms}ms)"
+    if test "$_prompt_perf_budget_ms" -gt 0; then
+        assert_true "prompt_line within ${_prompt_perf_budget_ms}ms budget" \
+            test "$_elapsed_ms" -le "$_prompt_perf_budget_ms"
+    fi
+else
+    skip_block "prompt_line perf check: date +%s%N unavailable"
 fi
 
 # Reset
