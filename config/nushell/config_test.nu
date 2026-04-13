@@ -1102,6 +1102,25 @@ except OSError: pass
     })
 
     ###############
+    # Sourcing config.nu under an interactive tty (via `script`) runs the
+    # startup `if (need-auth) { auth }` block. If ssh-add isn't on PATH
+    # (a minimal container, a BSD without OpenSSH client tools, ...),
+    # that call would raise and abort the whole shell startup unless
+    # wrapped in `try`. Matches shrc semantics where a missing ssh-add
+    # just prints "command not found" and continues.
+    (run-test "nu startup tolerates missing ssh-add under interactive tty" {
+        if (not (have-command "script")) {
+            return
+        }
+        let dir = (mktemp -d)
+        # PATH with no ssh-add, no shpool, no autoshpool -- isolates the
+        # auth failure from the other interactive-startup branches.
+        let cmd = $"nu --no-config-file -c 'with-env {PATH: [(char dq)($dir)(char dq) (char dq)/usr/bin(char dq) (char dq)/bin(char dq)]} { source ($CONFIG); print READY }'"
+        let r = (^script -qc $cmd /dev/null | complete)
+        assert ($r.stdout | str contains "READY") $"startup should finish despite missing ssh-add: ($r.stdout) stderr=($r.stderr)"
+    })
+
+    ###############
     # VCS aliases are defined
     (run-test "nu vcs aliases are defined" {
         let names = [add amend annotate base branch branches changed changelog

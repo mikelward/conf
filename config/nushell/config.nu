@@ -1275,8 +1275,10 @@ if (is-interactive) {
 # authenticate on startup if needed, mirroring shrc's startup check.
 # Skipped when attached to a shpool session (credentials come from the
 # parent) and when non-interactive (so the nushell test suite is quiet).
+# `try` matches shrc semantics: a failing `ssh-add` (e.g. because it
+# isn't installed, or the agent is down) should not abort shell startup.
 if (is-interactive) and (not (in-shpool)) {
-    if (need-auth) { auth }
+    try { if (need-auth) { auth } }
 }
 
 # Local overrides (work vs home, per-host tweaks, etc.) go in the user

@@ -135,8 +135,10 @@ trap 'rm -rf "$_testdir"' EXIT
 _nohooks="$_testdir/nohooks"
 mkdir "$_nohooks"
 
-# Source directory (where the test file lives)
-_srcdir="$(dirname "$0")"
+# Source directory (where the test file lives). Absolute so tests that
+# spawn subshells with a different cwd (e.g. the bash -i autocd test)
+# can still refer to $_srcdir/shrc reliably.
+_srcdir="$(cd "$(dirname "$0")" && pwd)"
 
 # Extract a shell function definition from a file and eval it.
 # Assumes the function starts at column 0 and ends with } at column 0.
