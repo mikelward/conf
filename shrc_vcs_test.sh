@@ -1,7 +1,8 @@
 #!/bin/bash
 #
-# Tests for shrc.vcs core functions and cross-VCS consistency.
-# Implementation-specific tests are in shrc_vcs_{git,hg,jj}_test.sh.
+# Tests for shrc.vcs core functions. The per-VCS subcommand behaviour
+# lives in the `vcs` Go binary (the mikelward/vcs submodule) and is
+# tested there.
 # Requires bash or zsh (uses here-strings).
 #
 
@@ -358,59 +359,4 @@ echo "cp-me" > "$_testdir/norepo2/cpfile.txt"
 assert_true "cp falls back to command cp outside VCS" test -f "$_testdir/norepo2/cpd.txt"
 assert_true "cp keeps original outside VCS" test -f "$_testdir/norepo2/cpfile.txt"
 
-###############
-# Test cross-VCS consistency: every command in shrc.vcs dispatch loop
-# must have a corresponding function in each implementation.
-
-# Source all implementations for the consistency check
-source "$_srcdir/shrc.vcs.git"
-source "$_srcdir/shrc.vcs.hg"
-source "$_srcdir/shrc.vcs.jj"
-
-# Extract the command list from the dispatch loop in shrc.vcs
-_commands=$(
-    sed -n '/^for command in/,/; do$/p' "$_srcdir/shrc.vcs" |
-    tr ' \\\n' '\n' |
-    sed 's/[;]//g' |
-    grep -v '^for$\|^command$\|^in$\|^do$\|^$'
-)
-
-for _impl in git hg jj; do
-    _impl_file="$_srcdir/shrc.vcs.$_impl"
-    for _cmd in $_commands; do
-        assert_true "${_impl}_${_cmd} defined" \
-            grep -q "^${_impl}_${_cmd}()" "$_impl_file"
-    done
-done
-
-unset _commands _impl _impl_file _cmd
-
-###############
-# Run implementation tests in parallel
-
-_outdir="$_testdir/test_output"
-mkdir -p "$_outdir"
-
-bash "$_srcdir/shrc_vcs_git_test.sh" > "$_outdir/git" 2>&1 &
-_pid_git=$!
-bash "$_srcdir/shrc_vcs_hg_test.sh"  > "$_outdir/hg"  2>&1 &
-_pid_hg=$!
-bash "$_srcdir/shrc_vcs_jj_test.sh"  > "$_outdir/jj"  2>&1 &
-_pid_jj=$!
-
-_impl_failures=0
-for _impl in git hg jj; do
-    eval "wait \$_pid_$_impl"
-    _rc=$?
-    cat "$_outdir/$_impl"
-    if test "$_rc" -ne 0; then
-        _impl_failures=$((_impl_failures + 1))
-    fi
-done
-
 test_summary "core"
-
-if test "$_impl_failures" -gt 0; then
-    echo "$_impl_failures implementation suite(s) failed."
-    exit 1
-fi

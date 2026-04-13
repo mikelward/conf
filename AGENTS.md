@@ -15,6 +15,6 @@
 - Do not consider a task complete until tests are included.
 - Run `make test` after making any changes.
 - When modifying VCS functions or prompt functions, run performance tests, include timing info, and warn of any regressions.
-- When touching `shrc.vcs*` files, install `jj` and `hg` locally before running tests so that all VCS test suites execute rather than being skipped.
+- Per-VCS subcommand behaviour (git/hg/jj) lives in the `vcs` Go binary in the `vcs/` submodule (https://github.com/mikelward/vcs); add tests there for changes to subcommand semantics. `make test` builds the submodule binaries automatically.
 - When touching `config/nushell/*` files, install `nu` locally before running tests so that the nu-native tests (`config/nushell/config_test.nu`) execute rather than being skipped.
 - Do not use `apt-get` or `apt` to install tools. Use direct binary downloads (e.g. from GitHub releases) or `cargo install` instead.
