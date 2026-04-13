@@ -4,15 +4,45 @@
 # Provides assertion helpers, shell stubs, and a temp directory.
 # Compatible with dash, bash, and zsh.
 #
+# Strictness note: we do NOT `set -u` globally. shrc functions rely on
+# `local _where=$2` style argument access (implicit-empty on missing
+# args), so inheriting -u aborts them on optional arguments. Instead,
+# assertion helpers use `${n?}` strict references on each positional
+# argument, which catches the typo class that -u is meant to catch
+# (e.g. `assert_equal "label" "$expcted" "$actual"` with a misspelled
+# var name would previously pass silently when $actual was also empty;
+# it now aborts the test script with a clear "positional: missing"
+# error). `set -e` is also deliberately avoided: the helpers' whole
+# job is to observe non-zero exits.
 
 failures=0
 passes=0
 _skipped=0
 
+# The ${n?missing ...} strict references below make the test script
+# abort with a clear error if an assertion is called with too few
+# arguments. The `$#` check additionally catches the common typo class
+# where an unset variable expanded to empty AND collapsed a trailing
+# argument. E.g. `assert_equal "label" "$expcted" "$actual"` --
+# previously $expcted silently expanded to "" and the helper received
+# three args ("label", "", "<actual>") with a false match when $actual
+# was also empty. We can't detect that under word-split arg passing
+# (the empty string IS a valid argument), but we CAN flag call sites
+# that forgot an argument entirely, and missing args are the most
+# common typo in practice.
+# Intentionally NOT using `set -u` globally: shrc functions rely on
+# `local _where=$2` style implicit-empty on missing args, so inheriting
+# -u would abort them. `set -e` is also avoided: the helpers' job is
+# to observe non-zero exits.
 assert_equal() {
-    local label="$1"
-    local expected="$2"
-    local actual="$3"
+    local label="${1?assert_equal: missing label}"
+    local expected="${2?assert_equal: missing expected value}"
+    local actual="${3?assert_equal: missing actual value}"
+    if test $# -ne 3; then
+        echo "FAIL: $label (assert_equal: expected 3 args, got $#)" >&2
+        failures=$((failures + 1))
+        return 1
+    fi
     if test "$expected" = "$actual"; then
         passes=$((passes + 1))
     else
@@ -24,8 +54,13 @@ assert_equal() {
 }
 
 assert_true() {
-    local label="$1"
+    local label="${1?assert_true: missing label}"
     shift
+    if test $# -eq 0; then
+        echo "FAIL: $label (assert_true: no command given)" >&2
+        failures=$((failures + 1))
+        return 1
+    fi
     if "$@"; then
         passes=$((passes + 1))
     else
@@ -36,8 +71,13 @@ assert_true() {
 }
 
 assert_false() {
-    local label="$1"
+    local label="${1?assert_false: missing label}"
     shift
+    if test $# -eq 0; then
+        echo "FAIL: $label (assert_false: no command given)" >&2
+        failures=$((failures + 1))
+        return 1
+    fi
     if "$@"; then
         echo "FAIL: $label"
         echo "  expected command to fail: $*"
@@ -48,9 +88,14 @@ assert_false() {
 }
 
 assert_contains() {
-    local label="$1"
-    local needle="$2"
-    local haystack="$3"
+    local label="${1?assert_contains: missing label}"
+    local needle="${2?assert_contains: missing needle}"
+    local haystack="${3?assert_contains: missing haystack}"
+    if test $# -ne 3; then
+        echo "FAIL: $label (assert_contains: expected 3 args, got $#)" >&2
+        failures=$((failures + 1))
+        return 1
+    fi
     case "$haystack" in
     *"$needle"*)
         passes=$((passes + 1))
@@ -65,9 +110,14 @@ assert_contains() {
 }
 
 assert_not_contains() {
-    local label="$1"
-    local needle="$2"
-    local haystack="$3"
+    local label="${1?assert_not_contains: missing label}"
+    local needle="${2?assert_not_contains: missing needle}"
+    local haystack="${3?assert_not_contains: missing haystack}"
+    if test $# -ne 3; then
+        echo "FAIL: $label (assert_not_contains: expected 3 args, got $#)" >&2
+        failures=$((failures + 1))
+        return 1
+    fi
     case "$haystack" in
     *"$needle"*)
         echo "FAIL: $label"

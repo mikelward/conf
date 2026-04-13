@@ -1100,6 +1100,38 @@ _unguarded_source=$(
 )
 assert_equal "no unguarded source commands in shrc" "" "$_unguarded_source"
 
+# shrc.vcs uses bash/zsh-only syntax (declare -a, array +=, etc.), so
+# shrc must only source it under bash/zsh. Catching this as a test
+# prevents regressions that would break dash startup with a syntax
+# error in the middle of sourcing. Grep the `if`-line plus the body so
+# we can assert the bash/zsh guard appears alongside the `source`/`.`.
+_shrc_vcs_guard=$(awk '
+    /\.shrc\.vcs/ && !/^[[:space:]]*#/ {
+        # print preceding if-line + this line
+        print prev
+        print
+    }
+    { prev = $0 }
+' "$_srcdir/shrc")
+assert_contains "shrc gates .shrc.vcs sourcing on bash/zsh" \
+    "is_bash" "$_shrc_vcs_guard"
+
+# Sanity-check the guard end-to-end: running shrc under dash must not
+# emit a syntax error from .shrc.vcs. Drop a symlink at $HOME/.shrc.vcs
+# pointing at the repo's shrc.vcs and source shrc in a dash subshell.
+# Without the guard this aborts with "Syntax error: '(' unexpected"
+# on the declare/array syntax in _github_review.
+if have_command dash; then
+    _vcsguard_home="$_testdir/vcsguard_home"
+    mkdir -p "$_vcsguard_home"
+    ln -sf "$_srcdir/shrc.vcs" "$_vcsguard_home/.shrc.vcs"
+    _vcsguard_stderr=$(HOME="$_vcsguard_home" dash -c '. "$1"' _ "$_srcdir/shrc" 2>&1 >/dev/null)
+    assert_not_contains "shrc sources cleanly under dash despite .shrc.vcs present" \
+        "Syntax error" "$_vcsguard_stderr"
+else
+    skip_block "dash .shrc.vcs guard end-to-end test: dash not installed"
+fi
+
 _shell="$(basename "$(readlink -f /proc/$$/exe)" 2>/dev/null || echo "sh")"
 
 test_summary "$_shell shrc_test"
