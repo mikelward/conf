@@ -159,43 +159,102 @@ _resolve_cr() {
 _ps1char='>'
 
 ###############
-# TEST: prompt_line delegates to `vcs prompt-line` when binary available
+# TEST: host_info composes short hostname and shpool tag
 
 result="$(_fish_run '
     set -g HOSTNAME mikel-laptop
     set -g USERNAME mikel
     function on_production_host; return 1; end
-    function vcs
-        switch $argv[1]
-            case prompt-line
-                echo "called-with: $argv[2..]"
-            case "*"; return 1
-        end
-    end
-    prompt_line
+    function in_shpool; return 1; end
+    host_info
 ')"
-assert_contains "fish prompt_line delegates to vcs prompt-line" "called-with:" "$result"
-assert_contains "fish prompt_line passes --hostname=<short_hostname>" "--hostname=laptop" "$result"
-assert_contains "fish prompt_line passes --color=never when color disabled" "--color=never" "$result"
-assert_not_contains "fish prompt_line omits --production off production" "--production" "$result"
-
-###############
-# TEST: prompt_line passes --production on production hosts
+assert_equal "fish host_info off shpool off prod" "laptop shpool" "$result"
 
 result="$(_fish_run '
-    set -g HOSTNAME prodhost
+    set -g HOSTNAME mikel-laptop
     set -g USERNAME mikel
-    function on_production_host; return 0; end
-    function vcs
-        switch $argv[1]
-            case prompt-line
-                echo "called-with: $argv[2..]"
-            case "*"; return 1
-        end
-    end
+    set -g SHPOOL_SESSION_NAME edge1
+    function on_production_host; return 1; end
+    function in_shpool; return 0; end
+    host_info
+')"
+assert_equal "fish host_info in shpool" "laptop [edge1]" "$result"
+
+###############
+# TEST: tilde_pwd replaces $HOME with ~
+
+result="$(_fish_run 'cd $HOME; tilde_pwd')"
+assert_equal "fish tilde_pwd at \$HOME" "~" "$result"
+
+result="$(_fish_run 'mkdir -p $HOME/documents; cd $HOME/documents; tilde_pwd')"
+assert_equal "fish tilde_pwd inside \$HOME" "~/documents" "$result"
+
+result="$(_fish_run 'cd /usr; tilde_pwd')"
+assert_equal "fish tilde_pwd outside \$HOME" "/usr" "$result"
+
+###############
+# TEST: dir_info delegates to prompt_info inside a project
+
+result="$(_fish_run '
+    function prompt_info; echo "myproject main"; end
+    dir_info
+')"
+assert_equal "fish dir_info uses prompt_info inside project" \
+    "myproject main" "$result"
+
+###############
+# TEST: dir_info falls back to tilde_pwd when prompt_info returns empty
+
+result="$(_fish_run '
+    function prompt_info; return 1; end
+    cd $HOME
+    dir_info
+')"
+assert_equal "fish dir_info falls back to tilde_pwd" "~" "$result"
+
+###############
+# TEST: prompt_line composes host_info + dir_info + auth_info
+
+result="$(_fish_run '
+    set -g HOSTNAME mikel-laptop
+    set -g USERNAME mikel
+    function on_production_host; return 1; end
+    function in_shpool; return 1; end
+    function is_ssh_valid; return 0; end
+    function prompt_info; return 1; end
+    cd $HOME
     prompt_line
 ')"
-assert_contains "fish prompt_line passes --production on production host" "--production" "$result"
+assert_equal "fish prompt_line without auth warning" \
+    "laptop shpool ~" "$result"
+
+result="$(_fish_run '
+    set -g HOSTNAME mikel-laptop
+    set -g USERNAME mikel
+    function on_production_host; return 1; end
+    function in_shpool; return 1; end
+    function is_ssh_valid; return 1; end
+    function prompt_info; return 1; end
+    cd $HOME
+    prompt_line
+')"
+assert_equal "fish prompt_line with auth warning" \
+    "laptop shpool ~ SSH" "$result"
+
+###############
+# TEST: prompt_line inside a project shows vcs prompt-info output
+
+result="$(_fish_run '
+    set -g HOSTNAME mikel-laptop
+    set -g USERNAME mikel
+    function on_production_host; return 1; end
+    function in_shpool; return 1; end
+    function is_ssh_valid; return 0; end
+    function prompt_info; echo "conf main"; end
+    prompt_line
+')"
+assert_equal "fish prompt_line inside project shows vcs info" \
+    "laptop shpool conf main" "$result"
 
 ###############
 # WHOLE PROMPT: laptop, home directory, need to auth
@@ -207,9 +266,10 @@ result="$(_fish_run '
     mkdir -p $HOME
     cd $HOME
     function is_ssh_valid; return 1; end
+    function prompt_info; return 1; end
     function vcs
         switch $argv[1]
-            case prompt-line; echo "laptop shpool ~ SSH"
+            case map; return 0
             case "*"; return 1
         end
     end
@@ -228,9 +288,10 @@ result="$(_fish_run '
     set -g HOSTNAME mikel-workstation
     set -g USERNAME mikel
     set -g COLUMNS 80
+    function prompt_info; echo "conf main"; end
     function vcs
         switch $argv[1]
-            case prompt-line; echo "workstation shpool conf main"
+            case map; return 0
             case "*"; return 1
         end
     end
@@ -250,9 +311,10 @@ result="$(_fish_run '
     set -g USERNAME mikel
     set -g COLUMNS 80
     set -g SHPOOL_SESSION_NAME edge1
+    function prompt_info; echo "edge1 ui somebranch * fetch"; end
     function vcs
         switch $argv[1]
-            case prompt-line; echo "workstation [edge1] edge1 ui somebranch * fetch"
+            case map; return 0
             case "*"; return 1
         end
     end
@@ -297,27 +359,23 @@ assert_equal "fish sets fish_key_bindings to my_vi_key_bindings" "my_vi_key_bind
 ###############
 # PERFORMANCE
 # prompt_line runs on every prompt, so its cost matters. Time 50 calls
-# inside a single fish process so we're measuring wrapper overhead, not
-# fish startup. The budget catches ~10x regressions without flaking on
-# slow CI; FISH_PROMPT_PERF_BUDGET_MS=0 disables the check for manual
-# profiling. We emit a single line with the elapsed ms so the bash
-# harness can both report it and assert on it.
-_fish_perf_budget_ms="${FISH_PROMPT_PERF_BUDGET_MS:-500}"
+# inside a single fish process so we're measuring shell-composition
+# overhead (host_info, dir_info, auth_info, subshell captures) rather
+# than fish startup. `prompt_info` is stubbed so we don't fork the real
+# Go binary here. The budget catches ~10x regressions without flaking on
+# slow CI; FISH_PROMPT_PERF_BUDGET_MS=0 disables the check.
+_fish_perf_budget_ms="${FISH_PROMPT_PERF_BUDGET_MS:-1000}"
 _fish_perf_line=$(_fish_run '
     set -g HOSTNAME mikel-workstation
     set -g USERNAME mikel
-    function vcs
-        switch $argv[1]
-            case prompt-line; echo "testhost shpool ~"
-            case "*"; return 1
-        end
-    end
+    function prompt_info; echo "proj main"; end
+    function is_ssh_valid; return 0; end
     set _start (date +%s%N)
     for i in (seq 1 50)
         prompt_line >/dev/null 2>&1
     end
     set _end (date +%s%N)
-    set _elapsed_ms (math "($_end - $_start) / 1000000")
+    set _elapsed_ms (math --scale=0 "($_end - $_start) / 1000000")
     echo "PERF_MS=$_elapsed_ms"
 ')
 _fish_perf_ms=$(printf '%s\n' "$_fish_perf_line" | sed -n 's/^PERF_MS=//p' | head -1)

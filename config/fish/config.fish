@@ -74,9 +74,8 @@ function auth
 end
 
 # hook for printing which things I need to authenticate to (ssh-agent, etc.)
-#
-# TODO: reconcile this with `vcs prompt-line` (same question for shrc's
-# auth_info and nushell's auth-info).
+# Called by prompt_line; should emit a short pre-colored warning when the
+# user needs to re-auth and nothing otherwise.
 function auth_info
     set problems ()
     is_ssh_valid; or set --append problems 'SSH'
@@ -89,7 +88,6 @@ function is_ssh_valid
 end
 
 # returns whether I need to authenticate.
-# TODO: see auth_info above (reconcile with `vcs prompt-line`).
 function need_auth
     set _info (auth_info | string collect)
     test -n "$_info"
@@ -1047,20 +1045,69 @@ if is_interactive
         flash_terminal
     end
 
-    # print the first line of the preprompt: host + dir + auth.
-    # Delegates to `vcs prompt-line` so the whole line renders in one
-    # process. Policy (short hostname, production-host coloring) stays in
-    # fish and is passed via flags.
-    function prompt_line
+    # wrapper around `vcs prompt-info` so dir_info (and anything else that
+    # wants VCS prompt data) can stub it out cheaply in tests.
+    function prompt_info
+        command vcs prompt-info $argv
+    end
+
+    # print the hostname and shpool session tag for the preprompt line.
+    # Hostname is red on production hosts. Shpool tag is a green [session]
+    # when attached, or a yellow "shpool" warning when not.
+    function host_info
+        set _host (short_hostname | string collect)
+        if on_production_host
+            set _host (red $_host | string collect)
+        end
+        set _tag
+        if in_shpool
+            set _tag " ["(green $SHPOOL_SESSION_NAME | string collect)"]"
+        else
+            set _tag " "(yellow shpool | string collect)
+        end
+        printf '%s%s' $_host $_tag
+    end
+
+    # replace a leading $HOME in $PWD with "~"
+    function tilde_pwd
+        set _cwd $PWD
+        if test "$_cwd" = "$HOME"
+            echo '~'
+        else if string match --quiet "$HOME/*" $_cwd
+            echo '~'(string sub --start=(math --scale=0 (string length $HOME) + 1) $_cwd)
+        else
+            echo $_cwd
+        end
+    end
+
+    # print the directory info for the preprompt line. Try `vcs prompt-info`
+    # (one fork); outside a repo the binary prints nothing and exits
+    # non-zero, so we fall back to a tilde-expanded $PWD. The whole thing
+    # is wrapped in blue.
+    function dir_info
         set _color_flag --color=never
         if $color
             set _color_flag --color=always
         end
-        set _flags --hostname=(short_hostname | string collect) $_color_flag
-        if on_production_host
-            set _flags --production $_flags
+        set _info (prompt_info $_color_flag 2>/dev/null | string collect)
+        if test -z "$_info"
+            set _info (tilde_pwd | string collect)
         end
-        vcs prompt-line $_flags
+        blue $_info
+    end
+
+    # print the first line of the preprompt: host + dir + auth.
+    # Composed in-shell from host_info, dir_info, and auth_info. The VCS
+    # part is delegated to `vcs prompt-info`; the rest is pure fish.
+    # auth_info is captured once so ssh-add -L runs a single time per
+    # prompt (need_auth would double that).
+    function prompt_line
+        set _auth (auth_info | string collect)
+        set _out (host_info | string collect)" "(dir_info | string collect)
+        if test -n "$_auth"
+            set _out "$_out $_auth"
+        end
+        echo $_out
     end
 
     function last_job_info

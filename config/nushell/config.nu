@@ -120,13 +120,10 @@ def is-ssh-valid [] {
 }
 
 # print a space-separated, yellow-colored list of auth problems, or ""
-# if everything is fine. Mirrors shrc's auth_info. Overridable: set
-# $env.auth-info = {|| ... } in an autoload file to report additional
-# auth problems (Kerberos, AWS SSO, ...); need-auth dispatches through
-# $env so the override propagates.
-#
-# TODO: reconcile this with `vcs prompt-line` (same question for shrc's
-# auth_info and fish's auth_info).
+# if everything is fine. Mirrors shrc's auth_info. Called by prompt-line.
+# Overridable: set $env.auth-info = {|| ... } in an autoload file to
+# report additional auth problems (Kerberos, AWS SSO, ...); need-auth
+# dispatches through $env so the override propagates.
 $env.auth-info = {||
     let problems = (if (is-ssh-valid) { [] } else { ["SSH"] })
     if ($problems | is-empty) { "" } else { yellow ($problems | str join " ") }
@@ -134,7 +131,6 @@ $env.auth-info = {||
 def auth-info [] { do $env.auth-info }
 
 # return true if auth-info reports any problems.
-# TODO: see auth-info above (reconcile with `vcs prompt-line`).
 def need-auth [] {
     (auth-info | is-not-empty)
 }
@@ -315,9 +311,10 @@ def on-dev-host [] {
 
 # return true if this is a production machine. Overridable: set
 # $env.on-production-host = {|| ... } in an autoload file if the default
-# (not-my-machine and not-test and not-dev) doesn't match your fleet. This
-# feeds the --production flag to `vcs prompt-line`, so overriding is the
-# only way to change that flag's behaviour from user config.
+# (not-my-machine and not-test and not-dev) doesn't match your fleet.
+# host-info consults this to decide whether to paint the hostname red in
+# the prompt, so overriding is the only way to change that from user
+# config.
 $env.on-production-host = {||
     (not (on-my-machine)) and (not (on-test-host)) and (not (on-dev-host))
 }
@@ -771,8 +768,9 @@ if ($_term in ["linux" "putty" "vt220"]) {
 ##############################
 # PROMPT / TERMINAL FUNCTIONS
 # A first line showing host/dir/auth, a separator bar, and a simple prompt
-# character. VCS info is delegated to `vcs prompt-line` when the helper
-# binary is available.
+# character. VCS info is delegated to `vcs prompt-info` when the helper
+# binary is available; the rest is composed in nu from host-info,
+# dir-info, and auth-info.
 
 # Print the argument wrapped in ANSI color escapes. Nushell prints the ANSI
 # sequences unconditionally; callers that don't want color should set
@@ -842,18 +840,61 @@ def last-job-info [] {
     }
 }
 
-# print the first line of the preprompt: host + dir + auth.
-# Delegates to `vcs prompt-line` so the whole line renders in one process.
-def --env prompt-line [] {
-    let color_flag = if (($env.NO_COLOR? | default "") | is-empty) { "--color=always" } else { "--color=never" }
-    let production = if (on-production-host) { ["--production"] } else { [] }
-    let host = (short-hostname)
-    try {
-        ^vcs prompt-line $"--hostname=($host)" $color_flag ...$production | str trim
-    } catch {
-        # fallback if vcs binary is unavailable
-        $"($host) ((session-name))((project-or-pwd))"
+# wrapper around `vcs prompt-info` so dir-info (and anything else that
+# wants VCS prompt data) has a single override point. Overridable: set
+# $env.prompt-info = {|flags| ... } in an autoload file.
+$env.prompt-info = {|flags: list<string>|
+    try { ^vcs prompt-info ...$flags | str trim } catch { "" }
+}
+def prompt-info [...flags: string] { do $env.prompt-info $flags }
+
+# print the hostname and shpool session tag for the preprompt line.
+# Hostname is red on production hosts. Shpool tag is a green [session]
+# when attached, or a yellow "shpool" warning when not.
+def host-info [] {
+    let h = (short-hostname)
+    let host = if (on-production-host) { red $h } else { $h }
+    let tag = if (in-shpool) {
+        $" [(green ($env.SHPOOL_SESSION_NAME? | default ""))]"
+    } else {
+        $" (yellow "shpool")"
     }
+    $host + $tag
+}
+
+# replace a leading $HOME in $PWD with "~"
+def tilde-pwd [] {
+    let home = ($env.HOME? | default "")
+    let pwd = $env.PWD
+    if ($home | is-empty) { return $pwd }
+    if $pwd == $home {
+        "~"
+    } else if ($pwd | str starts-with $"($home)/") {
+        $"~($pwd | str substring ($home | str length)..)"
+    } else {
+        $pwd
+    }
+}
+
+# print the directory info for the preprompt line. Try `vcs prompt-info`
+# (one fork); outside a repo the binary prints nothing, so we fall back
+# to a tilde-expanded $PWD. The whole thing is wrapped in blue.
+def dir-info [] {
+    let color_flag = if (($env.NO_COLOR? | default "") | is-empty) { "--color=always" } else { "--color=never" }
+    let info = (prompt-info $color_flag)
+    let text = if ($info | is-empty) { (tilde-pwd) } else { $info }
+    blue $text
+}
+
+# print the first line of the preprompt: host + dir + auth.
+# Composed in nu from host-info, dir-info, and auth-info. The VCS part
+# is delegated to `vcs prompt-info`; the rest is pure nu. auth-info is
+# captured once so ssh-add -L runs a single time per prompt (need-auth
+# would double that).
+def --env prompt-line [] {
+    let authpart = (auth-info)
+    let base = $"(host-info) (dir-info)"
+    if ($authpart | is-empty) { $base } else { $"($base) ($authpart)" }
 }
 
 # print the string that should be used as the xterm title
@@ -911,8 +952,7 @@ def flash-terminal [] {
 # The leading (ansi reset) is the documented workaround for reedline's
 # hardcoded DEFAULT_PROMPT_COLOR (green): anything in PROMPT_COMMAND
 # output without its own SGR code gets wrapped in green. Without the
-# reset, the hostname and separator bar render green because
-# `vcs prompt-line` doesn't color those parts itself.
+# reset, the uncolored hostname and separator bar would render green.
 # See https://www.nushell.sh/book/coloring_and_theming.html
 def --env render-prompt [] {
     let info = (last-job-info)
