@@ -20,4 +20,43 @@ _install_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^install:')
 assert_contains "install depends on install-dotfiles" "install-dotfiles" "$_install_deps"
 assert_contains "install depends on install-vcs" "install-vcs" "$_install_deps"
 
+# Test that per-test sub-targets exist so `make -j` can schedule them in
+# parallel. Each test script gets its own make target; `test-all` aggregates
+# them and `test` dispatches to `test-all` with -j.
+assert_contains "test-all target exists" "test-all" "$_targets"
+assert_contains "test-lint target exists" "test-lint" "$_targets"
+assert_contains "test-nu-parse target exists" "test-nu-parse" "$_targets"
+assert_contains "test-nu-config target exists" "test-nu-config" "$_targets"
+assert_contains "test-shrc-dash target exists" "test-shrc-dash" "$_targets"
+assert_contains "test-shrc-bash target exists" "test-shrc-bash" "$_targets"
+assert_contains "test-shrc-vcs target exists" "test-shrc-vcs" "$_targets"
+assert_contains "test-shrc-vcs-binary target exists" "test-shrc-vcs-binary" "$_targets"
+assert_contains "test-shrc-prompt target exists" "test-shrc-prompt" "$_targets"
+assert_contains "test-shrc-fish target exists" "test-shrc-fish" "$_targets"
+assert_contains "test-shrc-fish-prompt target exists" "test-shrc-fish-prompt" "$_targets"
+assert_contains "test-makefile target exists" "test-makefile" "$_targets"
+assert_contains "test-amethyst target exists" "test-amethyst" "$_targets"
+
+# Test that test-all depends on every per-test sub-target so that a single
+# `make test-all` invocation covers the full test suite.
+_test_all_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^test-all:')
+for _sub in test-lint test-nu-parse test-nu-config \
+            test-shrc-dash test-shrc-bash \
+            test-shrc-vcs test-shrc-vcs-binary \
+            test-shrc-prompt test-shrc-fish test-shrc-fish-prompt \
+            test-makefile test-amethyst; do
+    assert_contains "test-all depends on $_sub" "$_sub" "$_test_all_deps"
+done
+unset _sub
+
+# Test that `make test` dispatches to the parallel build. We check the recipe
+# rather than running it to avoid recursion and to keep the test fast.
+_test_recipe=$(make -C "$_srcdir" -n test 2>/dev/null)
+assert_contains "test recipe invokes parallel make" "-j" "$_test_recipe"
+assert_contains "test recipe targets test-all" "test-all" "$_test_recipe"
+
+# Test that TEST_JOBS is overridable (setting it should change the recipe).
+_recipe_j1=$(make -C "$_srcdir" -n test TEST_JOBS=1 2>/dev/null)
+assert_contains "TEST_JOBS=1 uses -j 1" "-j 1" "$_recipe_j1"
+
 test_summary "makefile"
