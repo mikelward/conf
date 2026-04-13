@@ -8,7 +8,7 @@
 . "$(dirname "$0")/shrc_test_lib.sh"
 
 if ! command -v fish >/dev/null 2>&1; then
-    echo "fish not installed, skipping fish tests"
+    skip_all "fish not installed"
     test_summary "fish shrc_fish_test"
     exit 0
 fi

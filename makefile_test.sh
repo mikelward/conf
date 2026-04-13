@@ -34,12 +34,10 @@ _install_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^install:')
 assert_contains "install depends on install-dotfiles" "install-dotfiles" "$_install_deps"
 assert_contains "install depends on install-vcs" "install-vcs" "$_install_deps"
 
-# Test that the VCS test targets depend on vcs-build so the submodule
-# binaries are built before tests that require them.
+# Test that the VCS test target depends on vcs-build so the submodule
+# binary is built before tests that require it.
 _vcs_test_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^test-shrc-vcs:')
 assert_contains "test-shrc-vcs depends on vcs-build" "vcs-build" "$_vcs_test_deps"
-_vcs_bin_test_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^test-shrc-vcs-binary:')
-assert_contains "test-shrc-vcs-binary depends on vcs-build" "vcs-build" "$_vcs_bin_test_deps"
 
 # Test that per-test sub-targets exist so `make -j` can schedule them in
 # parallel. Each test script gets its own make target; `test-all` aggregates
@@ -51,10 +49,10 @@ assert_contains "test-nu-config target exists" "test-nu-config" "$_targets"
 assert_contains "test-shrc-dash target exists" "test-shrc-dash" "$_targets"
 assert_contains "test-shrc-bash target exists" "test-shrc-bash" "$_targets"
 assert_contains "test-shrc-vcs target exists" "test-shrc-vcs" "$_targets"
-assert_contains "test-shrc-vcs-binary target exists" "test-shrc-vcs-binary" "$_targets"
 assert_contains "test-shrc-prompt target exists" "test-shrc-prompt" "$_targets"
 assert_contains "test-shrc-fish target exists" "test-shrc-fish" "$_targets"
 assert_contains "test-shrc-fish-prompt target exists" "test-shrc-fish-prompt" "$_targets"
+assert_contains "test-gitconfig target exists" "test-gitconfig" "$_targets"
 assert_contains "test-makefile target exists" "test-makefile" "$_targets"
 assert_contains "test-amethyst target exists" "test-amethyst" "$_targets"
 
@@ -63,9 +61,9 @@ assert_contains "test-amethyst target exists" "test-amethyst" "$_targets"
 _test_all_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^test-all:')
 for _sub in test-lint test-nu-parse test-nu-config \
             test-shrc-dash test-shrc-bash \
-            test-shrc-vcs test-shrc-vcs-binary \
+            test-shrc-vcs \
             test-shrc-prompt test-shrc-fish test-shrc-fish-prompt \
-            test-makefile test-amethyst; do
+            test-gitconfig test-makefile test-amethyst; do
     assert_contains "test-all depends on $_sub" "$_sub" "$_test_all_deps"
 done
 unset _sub

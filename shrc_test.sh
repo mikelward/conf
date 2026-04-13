@@ -700,6 +700,8 @@ if test -n "${BASH_VERSION:-}" && test "$BASH_VERSION" != "fake"; then
 item: b
 item: c"
     assert_equal "each0 runs command on null-delimited input" "$expected" "$result"
+else
+    skip_block "each0 tests: requires bash (uses read -d '')"
 fi
 
 # Test root wrapper function
@@ -769,7 +771,7 @@ cat > "$_retry_dir/retrystub" << STUB
 c=\$(cat "$_retry_counter" 2>/dev/null || echo 0)
 c=\$((c + 1))
 echo \$c > "$_retry_counter"
-if [ \$c -lt 2 ]; then exit 1; fi
+if test \$c -lt 2; then exit 1; fi
 exit 0
 STUB
 chmod +x "$_retry_dir/retrystub"
@@ -784,7 +786,7 @@ cat > "$_retry_dir/retrystub" << STUB
 c=\$(cat "$_retry_counter" 2>/dev/null || echo 0)
 c=\$((c + 1))
 echo \$c > "$_retry_counter"
-if [ \$c -lt 2 ]; then exit 1; fi
+if test \$c -lt 2; then exit 1; fi
 exit 0
 STUB
 chmod +x "$_retry_dir/retrystub"
@@ -980,6 +982,8 @@ if have_command bash; then
     ' 2>/dev/null)
     assert_equal "shrc sources cleanly despite inherited l/ll/la aliases" \
         "OK" "$result"
+else
+    skip_block "bash -i autocd + alias tests: bash not installed"
 fi
 
 # zsh's accept-line widget rewrites a trailing-slash dir buffer to
@@ -1073,6 +1077,8 @@ if have_command zsh; then
     ' 2>/dev/null | tail -1)
     assert_equal "resolve_cdpath_dir walks CDPATH under emulate -L zsh" \
         "FOUND" "$result"
+else
+    skip_block "zsh autocd widget tests: zsh not installed"
 fi
 
 ###############
