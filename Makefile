@@ -7,7 +7,36 @@ install-vcs:
 	git submodule update --init vcs
 	$(MAKE) -C vcs install
 
+# Number of parallel jobs to use for `make test`. Defaults to the CPU count
+# (falling back to 8 if nproc isn't available). Override with e.g.
+# `make test TEST_JOBS=1` to run tests sequentially.
+TEST_JOBS ?= $(shell nproc 2>/dev/null || echo 8)
+
+# `make test` runs every test target in parallel via a recursive make. Each
+# test is its own target so GNU make can schedule them concurrently; they are
+# independent (each test script creates its own temp dir via mktemp).
+# --output-sync=target keeps each target's output grouped instead of
+# interleaved (requires GNU make >= 4.0; older versions will warn and ignore).
 test:
+	@$(MAKE) --no-print-directory --output-sync=target -j $(TEST_JOBS) test-all
+
+test-all: \
+	test-lint \
+	test-nu-parse \
+	test-nu-config \
+	test-shrc-dash \
+	test-shrc-bash \
+	test-shrc-vcs \
+	test-shrc-vcs-binary \
+	test-shrc-prompt \
+	test-shrc-fish \
+	test-shrc-fish-prompt \
+	test-makefile \
+	test-amethyst
+
+# Static lint/parse checks are sub-second each, so we bundle them into one
+# target rather than spawning a make job per syntax check.
+test-lint:
 	@shellcheck -s bash -S error shrc
 	@dash -n shrc
 	@bash -n shrc
@@ -16,16 +45,52 @@ test:
 	@dash -n profile
 	@dash -n exitrc
 	@fish -n config/fish/config.fish
-	@if command -v nu >/dev/null 2>&1; then nu --no-config-file --commands 'source config/nushell/config.nu'; else echo "nushell not installed, skipping parse check"; fi
-	@if command -v nu >/dev/null 2>&1; then nu --no-config-file config/nushell/config_test.nu; else echo "nushell not installed, skipping nu-native tests"; fi
+
+test-nu-parse:
+	@if command -v nu >/dev/null 2>&1; then \
+		nu --no-config-file --commands 'source config/nushell/config.nu'; \
+	else \
+		echo "nushell not installed, skipping parse check"; \
+	fi
+
+test-nu-config:
+	@if command -v nu >/dev/null 2>&1; then \
+		nu --no-config-file config/nushell/config_test.nu; \
+	else \
+		echo "nushell not installed, skipping nu-native tests"; \
+	fi
+
+test-shrc-dash:
 	@dash shrc_test.sh
+
+test-shrc-bash:
 	@bash shrc_test.sh
+
+test-shrc-vcs:
 	@bash shrc_vcs_test.sh
+
+test-shrc-vcs-binary:
 	@bash shrc_vcs_binary_test.sh
+
+test-shrc-prompt:
 	@bash shrc_prompt_test.sh
+
+test-shrc-fish:
 	@bash shrc_fish_test.sh
+
+test-shrc-fish-prompt:
 	@bash shrc_fish_prompt_test.sh
+
+test-makefile:
 	@bash makefile_test.sh
+
+test-amethyst:
 	@bash amethyst_test.sh
 
-.PHONY: install install-dotfiles install-vcs test
+.PHONY: install install-dotfiles install-vcs \
+	test test-all test-lint \
+	test-nu-parse test-nu-config \
+	test-shrc-dash test-shrc-bash \
+	test-shrc-vcs test-shrc-vcs-binary \
+	test-shrc-prompt test-shrc-fish test-shrc-fish-prompt \
+	test-makefile test-amethyst
