@@ -903,17 +903,18 @@ assert_equal "try_autocd_trailing_slash returns 1 for multi-word" "1" "$?"
 mkdir -p "$_autocd_root/peer"
 _cdpath_parent="$_testdir/autocd_cdpath"
 mkdir -p "$_cdpath_parent/elsewhere"
-(
+result=$(
     cd "$_autocd_root/sub" || exit 1
     CDPATH="$_cdpath_parent"
     resolve_cdpath_dir "elsewhere/"
 )
-assert_equal "resolve_cdpath_dir finds via CDPATH" "0" "$?"
+assert_equal "resolve_cdpath_dir prints CDPATH-resolved path" \
+    "$_cdpath_parent/elsewhere/" "$result"
 
 (
     cd "$_autocd_root/sub" || exit 1
     CDPATH="$_cdpath_parent"
-    resolve_cdpath_dir "no_such_peer/"
+    resolve_cdpath_dir "no_such_peer/" >/dev/null
 )
 assert_equal "resolve_cdpath_dir returns 1 when missing everywhere" "1" "$?"
 
@@ -922,9 +923,33 @@ assert_equal "resolve_cdpath_dir returns 1 when missing everywhere" "1" "$?"
     cd "$_autocd_root/sub" || exit 1
     CDPATH="$_cdpath_parent"
     # `elsewhere` is in CDPATH but we pass `./elsewhere/` -- must NOT find it.
-    resolve_cdpath_dir "./elsewhere/"
+    resolve_cdpath_dir "./elsewhere/" >/dev/null
 )
 assert_equal "resolve_cdpath_dir ./ bypasses CDPATH" "1" "$?"
+
+# resolve_cdpath_dir expands a leading ~ / ~/ manually. test(1) does
+# not tilde-expand, so without this `~/scripts/` would miss even when
+# $HOME/scripts exists -- the original bug behind this fix.
+result=$(HOME="$_autocd_root" CDPATH= resolve_cdpath_dir "~/sub/")
+assert_equal "resolve_cdpath_dir expands ~/foo/" \
+    "$_autocd_root/sub/" "$result"
+
+result=$(HOME="$_autocd_root" CDPATH= resolve_cdpath_dir "~")
+assert_equal "resolve_cdpath_dir expands bare ~" \
+    "$_autocd_root" "$result"
+
+# Echo the resolved path for direct / ./ forms too.
+result=$(cd "$_autocd_root" && CDPATH= resolve_cdpath_dir "./sub/")
+assert_equal "resolve_cdpath_dir prints ./-relative path as-is" \
+    "./sub/" "$result"
+
+# try_autocd_trailing_slash cds via the tilde-expanded path.
+(
+    HOME="$_autocd_root" CDPATH= \
+        try_autocd_trailing_slash "~/sub/" >/dev/null 2>&1
+    test "$PWD" = "$_autocd_root/sub"
+)
+assert_equal "try_autocd_trailing_slash cds via ~/foo/" "0" "$?"
 
 # try_autocd_trailing_slash now uses CDPATH too.
 (
@@ -980,6 +1005,18 @@ if have_command bash; then
     assert_equal "bash -i autocds on trailing slash via DEBUG trap" \
         "$_autocd_root/sub" "$result"
 
+    # Tilde-expanded form: user types `~/sub/` and expects to land in
+    # $HOME/sub, not see "Is a directory". Mirrors the zsh ~/scripts/
+    # regression this fix addresses.
+    result=$(HOME="$_autocd_root" bash --norc --noprofile -i -c '
+        source '"$_srcdir"'/shrc >/dev/null 2>&1
+        install_precommand_trap
+        ~/sub/
+        printf "\nPWDMARK=%s\n" "$PWD"
+    ' 2>/dev/null | sed -n 's/.*PWDMARK=//p')
+    assert_equal "bash -i autocds on ~/foo/ via DEBUG trap" \
+        "$_autocd_root/sub" "$result"
+
     # Regression: sourcing shrc under an interactive bash that inherits
     # aliases with the same names as shrc's function definitions (e.g.
     # Ubuntu's default `alias l='ls -CF'` from /etc/bash.bashrc or
@@ -1011,22 +1048,27 @@ if have_command zsh; then
     result=$(cd "$_autocd_root" && zsh -c '
         resolve_cdpath_dir() {
             case "$1" in
-            /*|./*|../*) [[ -d "$1" ]]; return ;;
+            /*|./*|../*)
+                [[ -d "$1" ]] && { print -r -- "$1"; return 0; }
+                return 1
+                ;;
             esac
-            [[ -d "$1" ]] && return 0
+            [[ -d "$1" ]] && { print -r -- "$1"; return 0; }
             local _p
             for _p in ${(s.:.)CDPATH}; do
                 [[ -z "$_p" ]] && _p=.
-                [[ -d "$_p/$1" ]] && return 0
+                [[ -d "$_p/$1" ]] && { print -r -- "$_p/$1"; return 0; }
             done
             return 1
         }
         _autocd_accept_line() {
             emulate -L zsh
+            local _resolved
             if [[ "$BUFFER" == */ ]] \
                && [[ "$BUFFER" != *[[:space:]]* ]] \
-               && resolve_cdpath_dir "$BUFFER"; then
-                BUFFER="cd -- $BUFFER"
+               && _resolved=$(resolve_cdpath_dir "$BUFFER") \
+               && [[ -n "$_resolved" ]]; then
+                BUFFER="cd -- $_resolved"
             fi
         }
         BUFFER="./sub/"
@@ -1040,22 +1082,27 @@ if have_command zsh; then
     result=$(cd "$_autocd_root" && zsh -c '
         resolve_cdpath_dir() {
             case "$1" in
-            /*|./*|../*) [[ -d "$1" ]]; return ;;
+            /*|./*|../*)
+                [[ -d "$1" ]] && { print -r -- "$1"; return 0; }
+                return 1
+                ;;
             esac
-            [[ -d "$1" ]] && return 0
+            [[ -d "$1" ]] && { print -r -- "$1"; return 0; }
             local _p
             for _p in ${(s.:.)CDPATH}; do
                 [[ -z "$_p" ]] && _p=.
-                [[ -d "$_p/$1" ]] && return 0
+                [[ -d "$_p/$1" ]] && { print -r -- "$_p/$1"; return 0; }
             done
             return 1
         }
         _autocd_accept_line() {
             emulate -L zsh
+            local _resolved
             if [[ "$BUFFER" == */ ]] \
                && [[ "$BUFFER" != *[[:space:]]* ]] \
-               && resolve_cdpath_dir "$BUFFER"; then
-                BUFFER="cd -- $BUFFER"
+               && _resolved=$(resolve_cdpath_dir "$BUFFER") \
+               && [[ -n "$_resolved" ]]; then
+                BUFFER="cd -- $_resolved"
             fi
         }
         BUFFER="./sub/ arg"
@@ -1064,6 +1111,29 @@ if have_command zsh; then
     ')
     assert_equal "zsh accept-line widget leaves multi-word buffers alone" \
         "./sub/ arg" "$result"
+
+    # End-to-end: under the real shrc, a `~/foo/` buffer must rewrite
+    # to the tilde-expanded absolute path so .accept-line cd`s into it
+    # instead of trying to exec $HOME/foo/ and dying on permission
+    # denied. This is the bug users hit with `~/scripts/`.
+    result=$(HOME="$_autocd_root" zsh -c '
+        source '"$_srcdir"'/shrc >/dev/null 2>&1
+        BUFFER="~/sub/"
+        _autocd_accept_line() {
+            emulate -L zsh
+            local _resolved
+            if [[ "$BUFFER" == */ ]] \
+               && [[ "$BUFFER" != *[[:space:]]* ]] \
+               && _resolved=$(resolve_cdpath_dir "$BUFFER") \
+               && [[ -n "$_resolved" ]]; then
+                BUFFER="cd -- $_resolved"
+            fi
+        }
+        _autocd_accept_line
+        print -r -- "$BUFFER"
+    ' 2>/dev/null)
+    assert_equal "zsh accept-line widget expands ~/foo/ to absolute cd" \
+        "cd -- $_autocd_root/sub/" "$result"
 
     # Verify shrc actually registers the widget.
     result=$(zsh -i -c 'source '"$_srcdir"'/shrc >/dev/null 2>&1; \
