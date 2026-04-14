@@ -19,7 +19,7 @@ mkdir -p "$_cdpath_parent/elsewhere"
 # zsh's accept-line widget rewrites a trailing-slash dir buffer to
 # `cd -- foo/`. We can't drive ZLE non-interactively, so exercise the
 # widget function directly with a fake BUFFER.
-result=$(cd "$_autocd_root" && run_with_timeout 10 zsh -c '
+result=$(cd "$_autocd_root" && run_interactive_with_timeout 10 zsh -c '
     resolve_cdpath_dir() {
         case "$1" in
         /*|./*|../*)
@@ -53,7 +53,7 @@ assert_equal "zsh accept-line widget rewrites trailing-slash dir" \
     "cd -- ./sub/" "$result"
 
 # Non-dir / multi-word / no-slash inputs are passed through unchanged.
-result=$(cd "$_autocd_root" && run_with_timeout 10 zsh -c '
+result=$(cd "$_autocd_root" && run_interactive_with_timeout 10 zsh -c '
     resolve_cdpath_dir() {
         case "$1" in
         /*|./*|../*)
@@ -90,7 +90,7 @@ assert_equal "zsh accept-line widget leaves multi-word buffers alone" \
 # to the tilde-expanded absolute path so .accept-line cd`s into it
 # instead of trying to exec $HOME/foo/ and dying on permission
 # denied. This is the bug users hit with `~/scripts/`.
-result=$(HOME="$_autocd_root" run_with_timeout 10 zsh -c '
+result=$(HOME="$_autocd_root" run_interactive_with_timeout 10 zsh -c '
     source '"$_srcdir"'/shrc >/dev/null 2>&1
     BUFFER="~/sub/"
     _autocd_accept_line() {
@@ -110,7 +110,7 @@ assert_equal "zsh accept-line widget expands ~/foo/ to absolute cd" \
     "cd -- $_autocd_root/sub/" "$result"
 
 # Verify shrc actually registers the widget.
-result=$(run_with_timeout 10 zsh -i -c 'source '"$_srcdir"'/shrc >/dev/null 2>&1; \
+result=$(run_interactive_with_timeout 10 zsh -i -c 'source '"$_srcdir"'/shrc >/dev/null 2>&1; \
     if typeset -f _autocd_accept_line >/dev/null; then \
         print -r "REGMARK"; \
     fi' </dev/null 2>/dev/null | sed -n 's/.*REGMARK.*/registered/p' | head -1)
@@ -122,7 +122,7 @@ assert_equal "shrc registers _autocd_accept_line widget in zsh" \
 # mode). zsh does not honor IFS=: for unquoted param splitting, so
 # a naive POSIX implementation iterates once with the whole
 # colon-joined string and fails to find anything in CDPATH.
-result=$(run_with_timeout 10 zsh -c '
+result=$(run_interactive_with_timeout 10 zsh -c '
     source '"$_srcdir"'/shrc >/dev/null 2>&1
     # shrc sets CDPATH=".:$HOME", so override after sourcing.
     CDPATH=".:'"$_cdpath_parent"'"
