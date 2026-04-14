@@ -37,18 +37,16 @@ prompt_info() {
 # Use vcs binary for cp/mv/rm overrides.
 cp() {
     if command vcs detect >/dev/null 2>&1; then
-        command vcs copy "$@"
-    else
-        command cp "$@"
+        command vcs copy "$@" 2>/dev/null && return
     fi
+    command cp "$@"
 }
 
 mv() {
     if command vcs detect >/dev/null 2>&1; then
-        command vcs move "$@"
-    else
-        command mv "$@"
+        command vcs move "$@" 2>/dev/null && return
     fi
+    command mv "$@"
 }
 
 rm() {
