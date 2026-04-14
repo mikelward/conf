@@ -1059,8 +1059,19 @@ if have_command bash; then
     # test` hung forever. A `test -t 0` guard around stty makes this
     # safe. Use a short `timeout` so a regression surfaces as a test
     # failure, not a hung CI run.
+    #
+    # `timeout --foreground` is required here: without it, GNU timeout
+    # puts bash in its own process group. bash -i then sees itself as
+    # a non-foreground pgrp on the controlling tty and loops sending
+    # SIGTTIN to its own pgrp to wait for `fg` -- suspending forever
+    # ("Suspended (tty input)"). --foreground keeps bash in timeout's
+    # parent pgrp so its job-control handshake succeeds immediately.
+    # --kill-after=2 escalates to SIGKILL if bash ignores SIGTERM (a
+    # stopped process can't handle SIGTERM until resumed), so a future
+    # regression can't wedge the suite indefinitely.
     if have_command timeout; then
-        result=$(timeout 10 bash --norc --noprofile -i -c '
+        result=$(timeout --foreground --kill-after=2 10 \
+            bash --norc --noprofile -i -c '
             source '"$_srcdir"'/shrc >/dev/null 2>&1
             printf "DONE"
         ' </dev/null 2>/dev/null)
