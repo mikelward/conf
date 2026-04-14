@@ -197,10 +197,13 @@ gr() { graph "$@"; }
 ig() { ignore "$@"; }
 lg() { graph "$@"; }
 ma() { review "$@"; }
-pr() { presubmit "$@"; }
+# `pr` and `sa` deliberately omitted: shrc's interactive-shortcut
+# block (matched by config/fish and config/nushell) binds them to
+# `projectroot` and `shpool attach`. Defining them here to something
+# else (presubmit / save) was dead code -- always overridden in the
+# only context shrc.vcs is sourced from -- and caused confusion.
 re() { review "$@"; }
 ro() { rootdir "$@"; }
-sa() { save "$@"; }
 st() { status "$@"; }
 un() { undo "$@"; }
 up() { upload "$@"; }
