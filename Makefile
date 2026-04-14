@@ -95,10 +95,14 @@ test-shrc-bash:
 	@bash shrc_bash_test.sh
 
 # zsh is optional; skip gracefully when it isn't installed (same pattern
-# as fish in test-lint / nu in test-nu-parse).
+# as fish in test-lint / nu in test-nu-parse). Runs the sh-portable
+# shrc_test.sh driver under zsh too -- shrc is sourced by zsh users in
+# the wild, so zsh-runtime coverage of the extracted shrc helpers
+# (word splitting, `local` scoping, empty-string semantics) shakes out
+# portability issues that neither dash nor bash would catch.
 test-shrc-zsh:
 	@if command -v zsh >/dev/null 2>&1; then \
-		zsh shrc_zsh_test.sh; \
+		zsh shrc_test.sh && zsh shrc_zsh_test.sh; \
 	else \
 		echo "SKIP: test-shrc-zsh (zsh not installed)"; \
 	fi

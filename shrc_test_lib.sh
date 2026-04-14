@@ -239,6 +239,12 @@ export JJ_EDITOR="$EDITOR"
 # surfaces as a test failure with a non-zero exit (124 on timeout),
 # not an infinite wait.
 #
+# Uses `timeout -k 2 N` (SIGKILL fallback 2s after SIGTERM): a subshell
+# that SIGTTOU-stopped won't respond to SIGTERM (queued while T-stopped
+# but not delivered until SIGCONT), so without -k the stopped process
+# sits forever and timeout(1) waits with it. -k guarantees a SIGKILL
+# fires after the grace period and the test terminates.
+#
 # Usage: run_with_timeout SECONDS command [args...]
 # The default timeout is intentionally short-ish (10s is plenty for any
 # real shrc sourcing); override per call when a test is known to do
@@ -247,9 +253,33 @@ run_with_timeout() {
     local _secs="${1?run_with_timeout: missing seconds}"
     shift
     if command -v timeout >/dev/null 2>&1; then
-        timeout "$_secs" "$@"
+        timeout -k 2 "$_secs" "$@"
     else
         "$@"
+    fi
+}
+
+# Run an interactive shell (bash -i, zsh -i, fish -i, etc.) detached
+# from the controlling terminal, with a timeout fence. Interactive
+# shells call tcsetattr to configure the tty (prompt rendering,
+# readline init, shrc's `stty start undef stop undef` guard, etc.).
+# When the caller is not in the foreground process group of its
+# controlling tty -- which is the common case under `make -j`,
+# `script -c`, or any shell test harness whose pty isn't directly
+# owned by the test -- tcsetattr fires SIGTTOU at the subshell,
+# stopping it ("Suspended (tty output)") and taking the whole pipeline
+# with it. `setsid` places the subshell in a brand-new session with no
+# controlling tty, so there is nothing to SIGTTOU from. Falls back to
+# plain run_with_timeout when setsid isn't installed.
+#
+# Usage: run_interactive_with_timeout SECONDS command [args...]
+run_interactive_with_timeout() {
+    local _secs="${1?run_interactive_with_timeout: missing seconds}"
+    shift
+    if command -v setsid >/dev/null 2>&1; then
+        run_with_timeout "$_secs" setsid "$@"
+    else
+        run_with_timeout "$_secs" "$@"
     fi
 }
 

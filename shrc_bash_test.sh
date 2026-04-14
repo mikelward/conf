@@ -24,14 +24,16 @@ mkdir -p "$_autocd_root/sub"
 # distro default `alias l='ls -CF'` that would clash with shrc's
 # `l() { ... }` function definition via bash parse-time alias
 # expansion); we only want to exercise shrc itself here.
-# </dev/null is critical under `make -j`: without it, bash -i inherits
-# the controlling terminal, enables job control, creates its own
-# process group, and then shrc's `stty start undef stop undef` hits
-# tcsetattr from a non-foreground pgrp -- SIGTTOU suspends the
-# process and `make test` hangs forever ("Suspended (tty output)").
-# With stdin=/dev/null bash can't do job control and stty fails
-# harmlessly with "Inappropriate ioctl for device".
-result=$(cd "$_autocd_root" && run_with_timeout 10 bash --norc --noprofile -i -c '
+# run_interactive_with_timeout prefixes `setsid` so bash -i starts in
+# a new session with no controlling tty; without that, tcsetattr calls
+# from the prompt / readline / shrc's `stty start undef stop undef`
+# guard fire SIGTTOU against a non-foreground pgrp and suspend the
+# subshell ("Suspended (tty output)"), hanging `make test` whenever it
+# is run under a real pty (CI terminal, `script -c`, etc.). </dev/null
+# is kept for the same reason against older toolchains that lack
+# setsid -- and the timeout -k fallback in run_with_timeout bounds any
+# residual hang to ~N+2s.
+result=$(cd "$_autocd_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     source '"$_srcdir"'/shrc >/dev/null 2>&1
     install_precommand_trap
     ./sub/
@@ -43,7 +45,7 @@ assert_equal "bash -i autocds on trailing slash via DEBUG trap" \
 # Tilde-expanded form: user types `~/sub/` and expects to land in
 # $HOME/sub, not see "Is a directory". Mirrors the zsh ~/scripts/
 # regression this fix addresses.
-result=$(HOME="$_autocd_root" run_with_timeout 10 bash --norc --noprofile -i -c '
+result=$(HOME="$_autocd_root" run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     source '"$_srcdir"'/shrc >/dev/null 2>&1
     install_precommand_trap
     ~/sub/
@@ -59,7 +61,7 @@ assert_equal "bash -i autocds on ~/foo/ via DEBUG trap" \
 # time, so without the pre-block `unalias -a`, `l() { ... }` would
 # parse as `ls -CF() { ... }` and raise a syntax error, leaving
 # install_precommand_trap undefined.
-result=$(run_with_timeout 10 bash --norc --noprofile -i -c '
+result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     alias l="ls -CF"
     alias ll="ls -alF"
     alias la="ls -A"
@@ -83,7 +85,7 @@ assert_equal "shrc sources cleanly despite inherited l/ll/la aliases" \
 # hung CI run. When timeout(1) isn't installed the wrapper runs
 # the command unfenced; this matches the prior skip-with-timeout
 # behaviour while still giving coverage on boxes with timeout.
-result=$(run_with_timeout 10 bash --norc --noprofile -i -c '
+result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     source '"$_srcdir"'/shrc >/dev/null 2>&1
     printf "DONE"
 ' </dev/null 2>/dev/null)
