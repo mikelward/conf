@@ -1152,7 +1152,7 @@ if is_interactive
             if $printed
                 printf ' '
             end
-            yellow "Took $duration"
+            yellow "took $duration"
             set printed true
         end
         if $printed
@@ -1171,7 +1171,7 @@ if is_interactive
             echo "$hours hours $minutes minutes $seconds seconds"
         else if test $minutes -gt 0
             echo "$minutes minutes $seconds seconds"
-        else if test $seconds -gt 0
+        else if test $seconds -gt 1
             echo "$seconds seconds"
         end
     end

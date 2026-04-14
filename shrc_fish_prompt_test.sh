@@ -105,6 +105,101 @@ result="$(_fish_run 'set -g SHPOOL_SESSION_NAME edge1; session_name')"
 assert_equal "fish session_name returns shpool session" "edge1 " "$result"
 
 ###############
+# TEST: format_duration (parity with bash last_job_info duration format)
+
+result="$(_fish_run 'format_duration 0')"
+assert_equal "fish format_duration 0ms -> empty" "" "$result"
+
+result="$(_fish_run 'format_duration 1000')"
+assert_equal "fish format_duration 1s -> empty (below threshold)" "" "$result"
+
+result="$(_fish_run 'format_duration 5000')"
+assert_equal "fish format_duration 5s" "5 seconds" "$result"
+
+result="$(_fish_run 'format_duration 65000')"
+assert_equal "fish format_duration 1m5s" "1 minutes 5 seconds" "$result"
+
+result="$(_fish_run 'format_duration 3661000')"
+assert_equal "fish format_duration 1h1m1s" "1 hours 1 minutes 1 seconds" "$result"
+
+###############
+# TEST: last_job_info (parity with bash). Same behaviour contract:
+# - prints nothing when current_command is unset
+# - prints red error status when fish_last_error is non-empty
+# - prints "took <duration>" (lowercase, matches bash/nushell) when
+#   CMD_DURATION is above the format_duration threshold
+# - joins error + duration with a single space
+# - emits a trailing newline only when something was printed
+
+result="$(_fish_run '
+    function fish_last_error; echo "status 1"; end
+    set -g current_command false
+    set -g CMD_DURATION 0
+    last_job_info
+')"
+assert_equal "fish last_job_info shows error status" "status 1" "$result"
+
+result="$(_fish_run '
+    function fish_last_error; end
+    set -g current_command true
+    set -g CMD_DURATION 0
+    last_job_info
+')"
+assert_equal "fish last_job_info no output on success" "" "$result"
+
+result="$(_fish_run '
+    function fish_last_error; end
+    set -g current_command sleep
+    set -g CMD_DURATION 5000
+    last_job_info
+')"
+assert_equal "fish last_job_info shows duration (lowercase took)" \
+    "took 5 seconds" "$result"
+
+result="$(_fish_run '
+    function fish_last_error; echo "status 1"; end
+    set -g current_command failing_command
+    set -g CMD_DURATION 65000
+    last_job_info
+')"
+assert_equal "fish last_job_info shows error and duration" \
+    "status 1 took 1 minutes 5 seconds" "$result"
+
+result="$(_fish_run '
+    function fish_last_error; echo "status 1"; end
+    set -e current_command
+    set -g CMD_DURATION 0
+    last_job_info
+')"
+assert_equal "fish last_job_info skipped without current_command" "" "$result"
+
+result="$(_fish_run '
+    function fish_last_error; end
+    set -g current_command long_command
+    set -g CMD_DURATION 3661000
+    last_job_info
+')"
+assert_equal "fish last_job_info shows hours" \
+    "took 1 hours 1 minutes 1 seconds" "$result"
+
+result="$(_fish_run '
+    function fish_last_error; echo "interrupted"; end
+    set -g current_command interrupted_cmd
+    set -g CMD_DURATION 0
+    last_job_info
+')"
+assert_equal "fish last_job_info shows interrupted" "interrupted" "$result"
+
+# Sub-threshold durations must not print, matching bash's `seconds -gt 1`.
+result="$(_fish_run '
+    function fish_last_error; end
+    set -g current_command quick
+    set -g CMD_DURATION 1000
+    last_job_info
+')"
+assert_equal "fish last_job_info suppresses 1s duration" "" "$result"
+
+###############
 # TEST: fish_prompt integrates prompt_line and bar
 
 # Use a fixed COLUMNS so the bar width is predictable.
@@ -346,6 +441,11 @@ _fish_perf_line=$(_fish_run '
     set -g USERNAME mikel
     function prompt_info; echo "proj main"; end
     function is_ssh_valid; return 0; end
+    # Warmup: exclude first-call disk/icache variance (module resolution,
+    # function lookups, etc.) from the timed loop. Mirrors the warmup in
+    # shrc_prompt_test.sh so fish and bash perf tests measure the same
+    # thing.
+    prompt_line >/dev/null 2>&1
     set _start (date +%s%N)
     for i in (seq 1 50)
         prompt_line >/dev/null 2>&1
