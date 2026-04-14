@@ -243,13 +243,58 @@ _now_ns() {
     esac
 }
 
-# Stub out shell detection
-BASH_VERSION="${BASH_VERSION:-fake}"
-ZSH_VERSION=
-is_zsh() { false; }
-is_bash() { true; }
-is_dash() { false; }
-is_sh() { false; }
+# Shell-detection helpers matching the real shell.
+#
+# Previously this forced is_bash=true and is_zsh=false regardless of
+# the real interpreter, which broke under zsh: extracted functions like
+# `what` took the is_bash branch and ran `type -t`, which zsh doesn't
+# support. Now the helpers report the truth so extracted functions
+# select the branch that actually works in the current shell. dash/sh
+# still pretend to be bash because the dash test run is really a
+# portability cross-check of shrc's bash-ish code paths.
+#
+# Under zsh we also replay shrc's setup_shell_compat function so
+# `emulate sh` and friends take effect before any extracted function
+# runs. Without that, `IFS=:; for dir in $PATH` doesn't word-split
+# (zsh doesn't split unquoted vars by default) and path / inpath /
+# shift_options / have_command all fail.
+case "$_real_shell" in
+zsh)
+    is_zsh() { true; }
+    is_bash() { false; }
+    is_dash() { false; }
+    is_sh() { false; }
+    shell=zsh
+    # Pull shrc's setup_shell_compat out with a direct sed so we can
+    # invoke it before extract_func itself is defined further down.
+    eval "$(sed -n '/^setup_shell_compat()/,/^}/p' \
+        "$(cd "$(dirname "$0")" && pwd)/shrc")"
+    if type setup_shell_compat >/dev/null 2>&1; then
+        setup_shell_compat
+    fi
+    ;;
+bash)
+    is_zsh() { false; }
+    is_bash() { true; }
+    is_dash() { false; }
+    is_sh() { false; }
+    shell=bash
+    ;;
+*)
+    # dash / sh / ksh: pretend to be bash so extracted functions take
+    # their bash-branch code paths (which are the unit under test on
+    # this run). BASH_VERSION is stubbed so shrc's own `is_bash`
+    # (which checks ${BASH_VERSION:-}) also reports true if any
+    # extracted code calls it.
+    BASH_VERSION="${BASH_VERSION:-fake}"
+    ZSH_VERSION=
+    is_zsh() { false; }
+    is_bash() { true; }
+    is_dash() { false; }
+    is_sh() { false; }
+    shell=bash
+    ;;
+esac
 
 # We need puts, gets, warn, and trim_prefix for shrc.vcs and prompt functions
 puts() {

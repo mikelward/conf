@@ -713,10 +713,12 @@ extract_func connected_remotely
 extract_func inside_project
 
 ###############
-# BASH-ONLY TESTS
+# each0 uses `read -d ''`, which is supported by both bash and zsh but
+# not by dash / ash. Run on either real shell; skip only on dash/sh.
+# _real_shell is set by shrc_test_lib.sh to the actual interpreter
+# (not the bash-masquerading stub).
 
-if test -n "${BASH_VERSION:-}" && test "$BASH_VERSION" != "fake"; then
-    # Test each0 (uses read -d '' which is bash-only)
+if test "$_real_shell" = bash || test "$_real_shell" = zsh; then
     extract_func each0
 
     result=$(printf 'a\0b\0c\0' | each0 echo "item:")
@@ -725,7 +727,7 @@ item: b
 item: c"
     assert_equal "each0 runs command on null-delimited input" "$expected" "$result"
 else
-    skip_block "each0 tests: requires bash (uses read -d '')"
+    skip_block "each0 tests: requires read -d (bash / zsh only)"
 fi
 
 # Test root wrapper function
