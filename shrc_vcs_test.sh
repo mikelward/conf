@@ -461,29 +461,48 @@ assert_true "rm: target survives when vcs remove fails inside repo" \
 command rm -f "$_testdir/gitrepo/vcs_err_rm.txt"
 
 ###############
-# Flag handling: the operand probe must skip options. `mv -v src dst`
-# should route by `src`, not `-v`. Without flag-skipping, -v would be
-# picked as "first positional", _vcs_cwd_tracks would fail on it, and
-# the wrapper would always take the system-command branch regardless
-# of whether src is tracked -- hiding the bug behind always-works
-# plain mv. Here we mirror the errors-surface test: -v followed by an
-# in-repo source inside the fake gitrepo must still reach vcs move,
-# which fails, which leaves src in place. If flag-skipping is broken,
-# plain mv runs and the source disappears.
+# Flag handling: any argument starting with `-` makes the wrapper
+# defer to the system command. The tests below check the CORRECTNESS
+# invariant (flagged invocations don't silently misbehave) rather
+# than the routing policy (plain vs vcs) -- whether `rm -r tracked/`
+# or `cp -r tracked/` route through vcs is a judgement call that may
+# change as the backends evolve, and locking it in here would produce
+# a pure-policy regression on a future reconsideration.
+#
+# The load-bearing case is flag-value separation like `mv -t DESTDIR
+# SRC`: an earlier heuristic-parser revision picked DESTDIR as the
+# "first positional" and invoked `vcs move -t DESTDIR SRC`, which on
+# a real git repo fails with "unknown option -t" and on the fake
+# gitrepo here also fails -- leaving SRC in place instead of moving
+# it. The bail-on-flags rule sidesteps the whole class of errors by
+# letting the system command handle its own flags.
 
-echo "flag-test" > "$_testdir/gitrepo/flag_src.txt"
-(cd "$_testdir/gitrepo" && mv -v flag_src.txt flag_dst.txt) >/dev/null 2>&1
-assert_true "mv -v: flag skipped; operand check still routes via vcs" \
-    test -f "$_testdir/gitrepo/flag_src.txt"
-command rm -f "$_testdir/gitrepo/flag_src.txt"
+# DESTDIR placed inside the fake gitrepo so a heuristic parser that
+# picked DESTDIR as "first positional" would route via `vcs move -t
+# DESTDIR SRC`, which git mv rejects (no -t option). Under
+# bail-on-flags the wrapper just runs `command mv -t DEST SRC`, which
+# works regardless of whether DESTDIR is tracked.
+mkdir -p "$_testdir/gitrepo/flag_mv_dest"
+echo "move-me" > "$_testdir/flag_mv_src.txt"
+(cd "$_testdir/gitrepo" && mv -t "$_testdir/gitrepo/flag_mv_dest" "$_testdir/flag_mv_src.txt") >/dev/null 2>&1
+assert_true "mv -t DEST SRC: SRC lands in DEST" \
+    test -f "$_testdir/gitrepo/flag_mv_dest/flag_mv_src.txt"
+assert_false "mv -t DEST SRC: SRC gone from original location" \
+    test -f "$_testdir/flag_mv_src.txt"
 
-# `--` terminator: everything after it is positional, even if it
-# starts with `-`. The first positional here is `--weird`, which is
-# outside any repo and must route to plain rm.
+# Combined short flags: `rm -rf` must not fail on the stacked form
+# and must actually remove the target (whether via vcs or plain).
+mkdir -p "$_testdir/flag_rm_dir/sub"
+echo "delete-me" > "$_testdir/flag_rm_dir/sub/file.txt"
+(cd "$_testdir/gitrepo" && rm -rf "$_testdir/flag_rm_dir") >/dev/null 2>&1
+assert_false "rm -rf on dir: target gone" test -d "$_testdir/flag_rm_dir"
+
+# `--` counts as a dash-prefixed arg under the bail-on-flags rule, so
+# `rm -- FILE` is simply `command rm -- FILE`. Still removes the file.
 mkdir -p "$_testdir/rm_dashes"
 echo "x" > "$_testdir/rm_dashes/--weird"
 (cd "$_testdir/gitrepo" && rm -- "$_testdir/rm_dashes/--weird")
-assert_false "rm --: post-terminator operand routed by its own path" \
+assert_false "rm -- FILE still removes FILE" \
     test -f "$_testdir/rm_dashes/--weird"
 
 ###############
