@@ -60,59 +60,70 @@ else
     shell=sh
 fi
 
-case "$shell" in
-zsh)
-    # make zsh as similar to bash as possible
-    emulate sh
-    setopt BRACE_EXPAND
-    setopt BANG_HIST
-    setopt CSH_JUNKIE_HISTORY
-    setopt INTERACTIVE_COMMENTS
-    setopt KSH_TYPESET
-    # so aliases like + and - work
-    unsetopt POSIX_ALIASES >/dev/null 2>&1
-    # so we can display jobs in the prompt
-    unsetopt POSIX_JOBS >/dev/null 2>&1
+# Per-shell compatibility options. Defined as a function (rather than
+# inline) so the test harness can replay the same setup -- especially
+# `emulate sh` under zsh -- before exercising functions extracted from
+# this file in isolation. Without that replay, extracted functions that
+# rely on POSIX word-splitting (path, inpath, shift_options, ...) fail
+# under zsh because unquoted `$PATH` doesn't split. `emulate sh` without
+# -L persists to the caller's scope, so calling this function here has
+# the same effect as the previous top-level case block.
+setup_shell_compat() {
+    case "$shell" in
+    zsh)
+        # make zsh as similar to bash as possible
+        emulate sh
+        setopt BRACE_EXPAND
+        setopt BANG_HIST
+        setopt CSH_JUNKIE_HISTORY
+        setopt INTERACTIVE_COMMENTS
+        setopt KSH_TYPESET
+        # so aliases like + and - work
+        unsetopt POSIX_ALIASES >/dev/null 2>&1
+        # so we can display jobs in the prompt
+        unsetopt POSIX_JOBS >/dev/null 2>&1
 
-    # share history between shells
-    # particularly useful for zsh-autocomplete
-    setopt SHARE_HISTORY
-    HISTFILE=~/.zsh_history
-    HISTSIZE=100000
-    SAVEHIST=100000
+        # share history between shells
+        # particularly useful for zsh-autocomplete
+        setopt SHARE_HISTORY
+        HISTFILE=~/.zsh_history
+        HISTSIZE=100000
+        SAVEHIST=100000
 
-    # make tab completion do what it says
-    # e.g. in conf/config, i3s<TAB> completes to i3status/, it should
-    # autocd to i3status/, not strip the slash and run i3status
-    unsetopt AUTO_REMOVE_SLASH
+        # make tab completion do what it says
+        # e.g. in conf/config, i3s<TAB> completes to i3status/, it should
+        # autocd to i3status/, not strip the slash and run i3status
+        unsetopt AUTO_REMOVE_SLASH
 
-    # set_prompt sets PS1 to a string likely including '$', don't expand it
-    unsetopt PROMPT_SUBST
+        # set_prompt sets PS1 to a string likely including '$', don't expand it
+        unsetopt PROMPT_SUBST
 
-    # enable ksh default features
-    setopt KSH_GLOB         # !(pattern) etc. like in ksh
-    unsetopt BARE_GLOB_QUAL # otherwise !(pattern) breaks
+        # enable ksh default features
+        setopt KSH_GLOB         # !(pattern) etc. like in ksh
+        unsetopt BARE_GLOB_QUAL # otherwise !(pattern) breaks
 
-    # zsh-style autoload, required for e.g. bashcompinit
-    unsetopt KSH_AUTOLOAD
+        # zsh-style autoload, required for e.g. bashcompinit
+        unsetopt KSH_AUTOLOAD
 
-    # allow numeric glob (and incidentally, grouping of globs inside parens)
-    unsetopt SH_GLOB
-    ;;
-bash)
-    # set_prompt sets PS1 to a string likely including '$', don't expand it
-    shopt -u promptvars
+        # allow numeric glob (and incidentally, grouping of globs inside parens)
+        unsetopt SH_GLOB
+        ;;
+    bash)
+        # set_prompt sets PS1 to a string likely including '$', don't expand it
+        shopt -u promptvars
 
-    # enable ksh default features
-    shopt -s extglob        # !(pattern) etc. like in ksh
+        # enable ksh default features
+        shopt -s extglob        # !(pattern) etc. like in ksh
 
-    # enable zsh default features
-    shopt -s globstar       # recursive globbing with **
-    ;;
-ksh)
-    alias local=typeset
-    ;;
-esac
+        # enable zsh default features
+        shopt -s globstar       # recursive globbing with **
+        ;;
+    ksh)
+        alias local=typeset
+        ;;
+    esac
+}
+setup_shell_compat
 
 # standardize on bash-like variables that everyone assumes are preset
 : ${USERNAME:=$(id -un)}
