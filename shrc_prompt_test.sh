@@ -321,6 +321,19 @@ result="$(last_job_info)"
 assert_equal "last_job_info shows interrupted" "interrupted" "$result"
 
 ###############
+# TEST: last_job_info suppresses sub-threshold durations
+# shrc's last_job_info uses `seconds -gt 1`, mirrored by fish
+# format_duration and nushell format-duration. A 1-second command must
+# not emit "took 1 seconds" so every fast command doesn't noisily
+# annotate the prompt.
+
+bash_last_error() { :; }
+current_command="quick_command"
+SECONDS=1
+result="$(last_job_info)"
+assert_equal "last_job_info suppresses 1s duration" "" "$result"
+
+###############
 # TEST: preprompt integrates components
 
 HOME="$_testdir/fakehome"
