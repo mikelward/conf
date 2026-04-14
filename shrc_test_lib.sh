@@ -407,6 +407,10 @@ _fish_run_config() {
         TMUX= \
         SSH_CONNECTION= \
         run_with_timeout 15 fish --no-config -i -c "
+            # Stub tput first so any caller (pre-source preamble,
+            # config.fish itself, or post-source/snippet) that probes
+            # terminal capabilities sees a failing tput instead of
+            # depending on TERM=dumb terminfo quirks.
             function tput; return 1; end
             $_pre
             source $_srcdir/config/fish/config.fish
