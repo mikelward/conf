@@ -371,45 +371,44 @@ assert_equal "project returns basename of projectroot" "myproject" "$result"
 unset -f projectroot
 
 ###############
-# Test rm/mv/cp fall back to system commands outside a VCS repo
+# Test rm/mv/cp use system commands outside a VCS repo.
+# Routing predicate: "cwd is in a repo AND operand is inside it."
+# Both halves false here -> system command.
 
 mkdir -p "$_testdir/norepo2"
 echo "rm-me" > "$_testdir/norepo2/rmfile.txt"
 (cd "$_testdir/norepo2" && rm rmfile.txt)
-assert_false "rm falls back to command rm outside VCS" test -f "$_testdir/norepo2/rmfile.txt"
+assert_false "rm uses command rm outside VCS" test -f "$_testdir/norepo2/rmfile.txt"
 
 echo "mv-me" > "$_testdir/norepo2/mvfile.txt"
 (cd "$_testdir/norepo2" && mv mvfile.txt mvd.txt)
-assert_true "mv falls back to command mv outside VCS" test -f "$_testdir/norepo2/mvd.txt"
+assert_true "mv uses command mv outside VCS" test -f "$_testdir/norepo2/mvd.txt"
 assert_false "mv removes original outside VCS" test -f "$_testdir/norepo2/mvfile.txt"
 
 echo "cp-me" > "$_testdir/norepo2/cpfile.txt"
 (cd "$_testdir/norepo2" && cp cpfile.txt cpd.txt)
-assert_true "cp falls back to command cp outside VCS" test -f "$_testdir/norepo2/cpd.txt"
+assert_true "cp uses command cp outside VCS" test -f "$_testdir/norepo2/cpd.txt"
 assert_true "cp keeps original outside VCS" test -f "$_testdir/norepo2/cpfile.txt"
 
 ###############
-# Test rm/mv/cp fall back to system commands when cwd is inside a
-# repo but the file being operated on lives outside any repo (or in
-# a different one). `vcs detect` succeeds based on cwd, so the vcs
-# branch runs, then fails because the target isn't tracked; the
-# wrapper must still act on the file.
-#
-# gitrepo/.git was created earlier; cd'ing into it makes `vcs detect`
-# succeed, so without the fallback the wrappers invoke `vcs remove`
-# / `vcs move` / `vcs copy` on paths git doesn't know about and the
-# filesystem ends up untouched.
+# Test rm/mv/cp route by operand, not cwd: when cwd is inside a repo
+# but the file being operated on lives outside any repo (or in a
+# different one), the wrappers must use the system command rather
+# than invoking `vcs remove` / `vcs move` / `vcs copy` on paths vcs
+# doesn't track. gitrepo/.git was created earlier so cd'ing into it
+# makes cwd's rootdir /testdir/gitrepo, and these operands are under
+# siblings like /testdir/rm_outside -- outside that tree.
 
 mkdir -p "$_testdir/rm_outside"
 echo "rm-me-outside" > "$_testdir/rm_outside/outfile.txt"
 (cd "$_testdir/gitrepo" && rm "$_testdir/rm_outside/outfile.txt")
-assert_false "rm falls back when cwd in repo but file outside" \
+assert_false "rm uses command rm when cwd in repo but file outside" \
     test -f "$_testdir/rm_outside/outfile.txt"
 
 mkdir -p "$_testdir/mv_outside"
 echo "mv-me-outside" > "$_testdir/mv_outside/outfile.txt"
 (cd "$_testdir/gitrepo" && mv "$_testdir/mv_outside/outfile.txt" "$_testdir/mv_outside/outmoved.txt")
-assert_true "mv falls back when cwd in repo but file outside" \
+assert_true "mv uses command mv when cwd in repo but file outside" \
     test -f "$_testdir/mv_outside/outmoved.txt"
 assert_false "mv removes original when cwd in repo but file outside" \
     test -f "$_testdir/mv_outside/outfile.txt"
@@ -417,10 +416,75 @@ assert_false "mv removes original when cwd in repo but file outside" \
 mkdir -p "$_testdir/cp_outside"
 echo "cp-me-outside" > "$_testdir/cp_outside/outfile.txt"
 (cd "$_testdir/gitrepo" && cp "$_testdir/cp_outside/outfile.txt" "$_testdir/cp_outside/outcopied.txt")
-assert_true "cp falls back when cwd in repo but file outside" \
+assert_true "cp uses command cp when cwd in repo but file outside" \
     test -f "$_testdir/cp_outside/outcopied.txt"
 assert_true "cp keeps original when cwd in repo but file outside" \
     test -f "$_testdir/cp_outside/outfile.txt"
+
+###############
+# Test that vcs-command errors surface instead of being silently
+# masked. Before operand-based routing, the wrappers swallowed vcs
+# stderr and fell through to the system command on any failure -- so
+# a legitimate `vcs move` refusal (conflict, dest exists, backend
+# error, ...) was indistinguishable from "not in a repo" and the
+# filesystem quietly changed anyway.
+#
+# gitrepo has only an empty .git/ placeholder, so `git mv` from
+# inside it fails for _any_ input. Under the operand-based routing
+# the wrapper correctly routes to vcs (src is under cwd's rootdir),
+# vcs move fails, and the source stays put -- proving the wrapper
+# did NOT silently fall through to plain mv.
+
+echo "please-fail" > "$_testdir/gitrepo/vcs_err_src.txt"
+(cd "$_testdir/gitrepo" && mv vcs_err_src.txt vcs_err_dst.txt) >/dev/null 2>&1
+assert_true "mv: source survives when vcs move fails inside repo" \
+    test -f "$_testdir/gitrepo/vcs_err_src.txt"
+assert_false "mv: no silent fall-through to plain mv on vcs failure" \
+    test -f "$_testdir/gitrepo/vcs_err_dst.txt"
+rm -f "$_testdir/gitrepo/vcs_err_src.txt"
+
+# cp's "errors surface" case can't use a filesystem probe: vcs-git's
+# `copy` is implemented as `cp` + `git add`, so the destination file
+# gets created either way. Check the wrapper's exit status instead --
+# on vcs failure it must propagate non-zero, whereas the old blind
+# fallback returned 0 once plain cp succeeded.
+echo "please-fail" > "$_testdir/gitrepo/vcs_err_cpsrc.txt"
+(cd "$_testdir/gitrepo" && cp vcs_err_cpsrc.txt vcs_err_cpdst.txt) >/dev/null 2>&1
+_cp_rc=$?
+assert_false "cp: wrapper propagates vcs failure exit status" test "$_cp_rc" -eq 0
+command rm -f "$_testdir/gitrepo/vcs_err_cpsrc.txt" "$_testdir/gitrepo/vcs_err_cpdst.txt"
+
+echo "please-fail" > "$_testdir/gitrepo/vcs_err_rm.txt"
+(cd "$_testdir/gitrepo" && rm vcs_err_rm.txt) >/dev/null 2>&1
+assert_true "rm: target survives when vcs remove fails inside repo" \
+    test -f "$_testdir/gitrepo/vcs_err_rm.txt"
+command rm -f "$_testdir/gitrepo/vcs_err_rm.txt"
+
+###############
+# Flag handling: the operand probe must skip options. `mv -v src dst`
+# should route by `src`, not `-v`. Without flag-skipping, -v would be
+# picked as "first positional", _vcs_cwd_tracks would fail on it, and
+# the wrapper would always take the system-command branch regardless
+# of whether src is tracked -- hiding the bug behind always-works
+# plain mv. Here we mirror the errors-surface test: -v followed by an
+# in-repo source inside the fake gitrepo must still reach vcs move,
+# which fails, which leaves src in place. If flag-skipping is broken,
+# plain mv runs and the source disappears.
+
+echo "flag-test" > "$_testdir/gitrepo/flag_src.txt"
+(cd "$_testdir/gitrepo" && mv -v flag_src.txt flag_dst.txt) >/dev/null 2>&1
+assert_true "mv -v: flag skipped; operand check still routes via vcs" \
+    test -f "$_testdir/gitrepo/flag_src.txt"
+command rm -f "$_testdir/gitrepo/flag_src.txt"
+
+# `--` terminator: everything after it is positional, even if it
+# starts with `-`. The first positional here is `--weird`, which is
+# outside any repo and must route to plain rm.
+mkdir -p "$_testdir/rm_dashes"
+echo "x" > "$_testdir/rm_dashes/--weird"
+(cd "$_testdir/gitrepo" && rm -- "$_testdir/rm_dashes/--weird")
+assert_false "rm --: post-terminator operand routed by its own path" \
+    test -f "$_testdir/rm_dashes/--weird"
 
 ###############
 # Earlier tests unset a bunch of functions (status, projectroot, ...)
