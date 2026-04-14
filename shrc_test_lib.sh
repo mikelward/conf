@@ -431,8 +431,15 @@ _srcdir="$(cd "$(dirname "$0")" && pwd)"
 
 # Extract a shell function definition from a file and eval it.
 # Assumes the function starts at column 0 and ends with } at column 0.
+#
 # Usage: extract_func funcname [filepath]
-# filepath defaults to $_srcdir/shrc
+#        extract_func_subst funcname sed_expr [filepath]
+#
+# filepath defaults to $_srcdir/shrc. extract_func_subst applies a sed
+# substitution to the extracted body before eval'ing it -- useful for
+# testing branches that key off readonly shell variables (e.g. $UID):
+#   extract_func_subst ps1_character 's/\$UID/$_test_uid/g'
+#
 # Fails loudly if the function is not found, so a rename in shrc
 # doesn't silently fall through to a system command (or nothing).
 # Also fails if the extracted block doesn't end with a column-0 `}`,
@@ -441,9 +448,11 @@ _srcdir="$(cd "$(dirname "$0")" && pwd)"
 # mid-function). Without that check we'd eval a syntactically invalid
 # fragment and the first assertion against the missing function would
 # be the failure signal, far from the real cause.
-extract_func() {
-    local _fn="$1"
-    local _file="${2:-$_srcdir/shrc}"
+_extract_func_impl() {
+    local _caller="$1"
+    local _fn="$2"
+    local _sed="$3"
+    local _file="${4:-$_srcdir/shrc}"
     local _def
     local _last
     # Reject anything that isn't a plain identifier. `sed` interprets
@@ -452,14 +461,18 @@ extract_func() {
     # is only a safety fence, not a real restriction.
     case "$_fn" in
         ''|*[!A-Za-z0-9_]*)
-            echo "FAIL: extract_func invalid function name: '$_fn'" >&2
+            echo "FAIL: $_caller invalid function name: '$_fn'" >&2
             failures=$((failures + 1))
             return 1
             ;;
     esac
-    _def=$(sed -n "/^$_fn()/,/^}/p" "$_file")
+    if test -n "$_sed"; then
+        _def=$(sed -n "/^$_fn()/,/^}/p" "$_file" | sed "$_sed")
+    else
+        _def=$(sed -n "/^$_fn()/,/^}/p" "$_file")
+    fi
     if test -z "$_def"; then
-        echo "FAIL: extract_func could not find '$_fn' in $_file" >&2
+        echo "FAIL: $_caller could not find '$_fn' in $_file" >&2
         failures=$((failures + 1))
         return 1
     fi
@@ -469,43 +482,17 @@ extract_func() {
     # body.
     _last=$(printf '%s\n' "$_def" | tail -n 1)
     if test "$_last" != "}"; then
-        echo "FAIL: extract_func found '$_fn' in $_file but block does not end with a column-0 '}'" >&2
+        echo "FAIL: $_caller found '$_fn' in $_file but block does not end with a column-0 '}'" >&2
         failures=$((failures + 1))
         return 1
     fi
     eval "$_def"
 }
 
-# Like extract_func, but applies a sed substitution to the extracted
-# body before eval'ing it. Useful for testing branches that key off
-# readonly shell variables (e.g. $UID). Example:
-#   extract_func_subst ps1_character 's/\$UID/$_test_uid/g'
-# Fails loudly if the function is not found or the extracted block does
-# not end with a column-0 `}` (see extract_func above).
+extract_func() {
+    _extract_func_impl extract_func "$1" "" "${2:-}"
+}
+
 extract_func_subst() {
-    local _fn="$1"
-    local _sed="$2"
-    local _file="${3:-$_srcdir/shrc}"
-    local _def
-    local _last
-    case "$_fn" in
-        ''|*[!A-Za-z0-9_]*)
-            echo "FAIL: extract_func_subst invalid function name: '$_fn'" >&2
-            failures=$((failures + 1))
-            return 1
-            ;;
-    esac
-    _def=$(sed -n "/^$_fn()/,/^}/p" "$_file" | sed "$_sed")
-    if test -z "$_def"; then
-        echo "FAIL: extract_func_subst could not find '$_fn' in $_file" >&2
-        failures=$((failures + 1))
-        return 1
-    fi
-    _last=$(printf '%s\n' "$_def" | tail -n 1)
-    if test "$_last" != "}"; then
-        echo "FAIL: extract_func_subst found '$_fn' in $_file but block does not end with a column-0 '}'" >&2
-        failures=$((failures + 1))
-        return 1
-    fi
-    eval "$_def"
+    _extract_func_impl extract_func_subst "$1" "$2" "${3:-}"
 }
