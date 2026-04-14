@@ -389,6 +389,40 @@ assert_true "cp falls back to command cp outside VCS" test -f "$_testdir/norepo2
 assert_true "cp keeps original outside VCS" test -f "$_testdir/norepo2/cpfile.txt"
 
 ###############
+# Test rm/mv/cp fall back to system commands when cwd is inside a
+# repo but the file being operated on lives outside any repo (or in
+# a different one). `vcs detect` succeeds based on cwd, so the vcs
+# branch runs, then fails because the target isn't tracked; the
+# wrapper must still act on the file.
+#
+# gitrepo/.git was created earlier; cd'ing into it makes `vcs detect`
+# succeed, so without the fallback the wrappers invoke `vcs remove`
+# / `vcs move` / `vcs copy` on paths git doesn't know about and the
+# filesystem ends up untouched.
+
+mkdir -p "$_testdir/rm_outside"
+echo "rm-me-outside" > "$_testdir/rm_outside/outfile.txt"
+(cd "$_testdir/gitrepo" && rm "$_testdir/rm_outside/outfile.txt")
+assert_false "rm falls back when cwd in repo but file outside" \
+    test -f "$_testdir/rm_outside/outfile.txt"
+
+mkdir -p "$_testdir/mv_outside"
+echo "mv-me-outside" > "$_testdir/mv_outside/outfile.txt"
+(cd "$_testdir/gitrepo" && mv "$_testdir/mv_outside/outfile.txt" "$_testdir/mv_outside/outmoved.txt")
+assert_true "mv falls back when cwd in repo but file outside" \
+    test -f "$_testdir/mv_outside/outmoved.txt"
+assert_false "mv removes original when cwd in repo but file outside" \
+    test -f "$_testdir/mv_outside/outfile.txt"
+
+mkdir -p "$_testdir/cp_outside"
+echo "cp-me-outside" > "$_testdir/cp_outside/outfile.txt"
+(cd "$_testdir/gitrepo" && cp "$_testdir/cp_outside/outfile.txt" "$_testdir/cp_outside/outcopied.txt")
+assert_true "cp falls back when cwd in repo but file outside" \
+    test -f "$_testdir/cp_outside/outcopied.txt"
+assert_true "cp keeps original when cwd in repo but file outside" \
+    test -f "$_testdir/cp_outside/outfile.txt"
+
+###############
 # Earlier tests unset a bunch of functions (status, projectroot, ...)
 # to verify stub-then-call behaviour. Re-source shrc.vcs so the
 # dispatch-loop-generated wrappers exist again for the integration
