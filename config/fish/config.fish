@@ -1177,8 +1177,15 @@ if is_interactive
     end
 
     function fish_last_error
-        if test $last_job_status -ne 0
-            echo "Exit status $last_job_status"
+        # Mirror bash_last_error / nushell last-job-info: 0 is silent,
+        # 130 (SIGINT / Ctrl-C) renders as "interrupted", 148 (SIGTSTP /
+        # suspended) is silent, anything else renders as "status N".
+        switch $last_job_status
+            case 0 148
+            case 130
+                echo "interrupted"
+            case '*'
+                echo "status $last_job_status"
         end
     end
 

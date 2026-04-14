@@ -200,6 +200,30 @@ result="$(_fish_run '
 assert_equal "fish last_job_info suppresses 1s duration" "" "$result"
 
 ###############
+# TEST: fish_last_error (parity with bash_last_error / nushell last-job-info)
+# Exercises the real fish_last_error by setting last_job_status directly.
+# Expected output contract:
+#   0    -> ""                (success)
+#   130  -> "interrupted"     (Ctrl-C)
+#   148  -> ""                (suspended)
+#   other-> "status <N>"      (matches bash/nushell wording, lowercase)
+
+result="$(_fish_run 'set -g last_job_status 0; fish_last_error')"
+assert_equal "fish fish_last_error silent on success" "" "$result"
+
+result="$(_fish_run 'set -g last_job_status 1; fish_last_error')"
+assert_equal "fish fish_last_error formats status N" "status 1" "$result"
+
+result="$(_fish_run 'set -g last_job_status 130; fish_last_error')"
+assert_equal "fish fish_last_error 130 is interrupted" "interrupted" "$result"
+
+result="$(_fish_run 'set -g last_job_status 148; fish_last_error')"
+assert_equal "fish fish_last_error silent when suspended (148)" "" "$result"
+
+result="$(_fish_run 'set -g last_job_status 42; fish_last_error')"
+assert_equal "fish fish_last_error preserves arbitrary codes" "status 42" "$result"
+
+###############
 # TEST: fish_prompt integrates prompt_line and bar
 
 # Use a fixed COLUMNS so the bar width is predictable.
