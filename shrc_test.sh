@@ -1010,7 +1010,7 @@ if have_command bash; then
     # process and `make test` hangs forever ("Suspended (tty output)").
     # With stdin=/dev/null bash can't do job control and stty fails
     # harmlessly with "Inappropriate ioctl for device".
-    result=$(cd "$_autocd_root" && bash --norc --noprofile -i -c '
+    result=$(cd "$_autocd_root" && run_with_timeout 10 bash --norc --noprofile -i -c '
         source '"$_srcdir"'/shrc >/dev/null 2>&1
         install_precommand_trap
         ./sub/
@@ -1022,7 +1022,7 @@ if have_command bash; then
     # Tilde-expanded form: user types `~/sub/` and expects to land in
     # $HOME/sub, not see "Is a directory". Mirrors the zsh ~/scripts/
     # regression this fix addresses.
-    result=$(HOME="$_autocd_root" bash --norc --noprofile -i -c '
+    result=$(HOME="$_autocd_root" run_with_timeout 10 bash --norc --noprofile -i -c '
         source '"$_srcdir"'/shrc >/dev/null 2>&1
         install_precommand_trap
         ~/sub/
@@ -1038,7 +1038,7 @@ if have_command bash; then
     # time, so without the pre-block `unalias -a`, `l() { ... }` would
     # parse as `ls -CF() { ... }` and raise a syntax error, leaving
     # install_precommand_trap undefined.
-    result=$(bash --norc --noprofile -i -c '
+    result=$(run_with_timeout 10 bash --norc --noprofile -i -c '
         alias l="ls -CF"
         alias ll="ls -alF"
         alias la="ls -A"
@@ -1057,18 +1057,17 @@ if have_command bash; then
     # call fired tcsetattr from a non-foreground pgrp under `make -j`
     # and suspended the process ("Suspended (tty output)") -- `make
     # test` hung forever. A `test -t 0` guard around stty makes this
-    # safe. Use a short `timeout` so a regression surfaces as a test
-    # failure, not a hung CI run.
-    if have_command timeout; then
-        result=$(timeout 10 bash --norc --noprofile -i -c '
-            source '"$_srcdir"'/shrc >/dev/null 2>&1
-            printf "DONE"
-        ' </dev/null 2>/dev/null)
-        assert_equal "shrc stty guard: sources cleanly with stdin=/dev/null (no SIGTTOU hang)" \
-            "DONE" "$result"
-    else
-        skip_block "shrc stty guard test: timeout(1) not installed"
-    fi
+    # safe. The run_with_timeout wrapper adds a short timeout(1)
+    # fence so a future regression surfaces as a test failure, not a
+    # hung CI run. When timeout(1) isn't installed the wrapper runs
+    # the command unfenced; this matches the prior skip-with-timeout
+    # behaviour while still giving coverage on boxes with timeout.
+    result=$(run_with_timeout 10 bash --norc --noprofile -i -c '
+        source '"$_srcdir"'/shrc >/dev/null 2>&1
+        printf "DONE"
+    ' </dev/null 2>/dev/null)
+    assert_equal "shrc stty guard: sources cleanly with stdin=/dev/null (no SIGTTOU hang)" \
+        "DONE" "$result"
 else
     skip_block "bash -i autocd + alias tests: bash not installed"
 fi
@@ -1077,7 +1076,7 @@ fi
 # `cd -- foo/`. We can't drive ZLE non-interactively, so exercise the
 # widget function directly with a fake BUFFER.
 if have_command zsh; then
-    result=$(cd "$_autocd_root" && zsh -c '
+    result=$(cd "$_autocd_root" && run_with_timeout 10 zsh -c '
         resolve_cdpath_dir() {
             case "$1" in
             /*|./*|../*)
@@ -1111,7 +1110,7 @@ if have_command zsh; then
         "cd -- ./sub/" "$result"
 
     # Non-dir / multi-word / no-slash inputs are passed through unchanged.
-    result=$(cd "$_autocd_root" && zsh -c '
+    result=$(cd "$_autocd_root" && run_with_timeout 10 zsh -c '
         resolve_cdpath_dir() {
             case "$1" in
             /*|./*|../*)
@@ -1148,7 +1147,7 @@ if have_command zsh; then
     # to the tilde-expanded absolute path so .accept-line cd`s into it
     # instead of trying to exec $HOME/foo/ and dying on permission
     # denied. This is the bug users hit with `~/scripts/`.
-    result=$(HOME="$_autocd_root" zsh -c '
+    result=$(HOME="$_autocd_root" run_with_timeout 10 zsh -c '
         source '"$_srcdir"'/shrc >/dev/null 2>&1
         BUFFER="~/sub/"
         _autocd_accept_line() {
@@ -1168,7 +1167,7 @@ if have_command zsh; then
         "cd -- $_autocd_root/sub/" "$result"
 
     # Verify shrc actually registers the widget.
-    result=$(zsh -i -c 'source '"$_srcdir"'/shrc >/dev/null 2>&1; \
+    result=$(run_with_timeout 10 zsh -i -c 'source '"$_srcdir"'/shrc >/dev/null 2>&1; \
         if typeset -f _autocd_accept_line >/dev/null; then \
             print -r "REGMARK"; \
         fi' </dev/null 2>/dev/null | sed -n 's/.*REGMARK.*/registered/p' | head -1)
@@ -1180,7 +1179,7 @@ if have_command zsh; then
     # mode). zsh does not honor IFS=: for unquoted param splitting, so
     # a naive POSIX implementation iterates once with the whole
     # colon-joined string and fails to find anything in CDPATH.
-    result=$(zsh -c '
+    result=$(run_with_timeout 10 zsh -c '
         source '"$_srcdir"'/shrc >/dev/null 2>&1
         # shrc sets CDPATH=".:$HOME", so override after sourcing.
         CDPATH=".:'"$_cdpath_parent"'"
@@ -1245,7 +1244,7 @@ if have_command dash; then
     _vcsguard_home="$_testdir/vcsguard_home"
     mkdir -p "$_vcsguard_home"
     ln -sf "$_srcdir/shrc.vcs" "$_vcsguard_home/.shrc.vcs"
-    _vcsguard_stderr=$(HOME="$_vcsguard_home" dash -c '. "$1"' _ "$_srcdir/shrc" 2>&1 >/dev/null)
+    _vcsguard_stderr=$(HOME="$_vcsguard_home" run_with_timeout 10 dash -c '. "$1"' _ "$_srcdir/shrc" 2>&1 >/dev/null)
     assert_not_contains "shrc sources cleanly under dash despite .shrc.vcs present" \
         "Syntax error" "$_vcsguard_stderr"
 else

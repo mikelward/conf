@@ -35,7 +35,7 @@ _fish_run() {
         TERM=dumb \
         SHPOOL_SESSION_NAME= \
         TMUX= \
-        fish --no-config -i -c "
+        run_with_timeout 15 fish --no-config -i -c "
             function tput; return 1; end
             set -g color false
             set -g normal ''

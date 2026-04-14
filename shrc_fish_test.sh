@@ -33,7 +33,7 @@ _fish_run() {
         SHPOOL_SESSION_NAME= \
         TMUX= \
         SSH_CONNECTION= \
-        fish --no-config -i -c "
+        run_with_timeout 15 fish --no-config -i -c "
             function tput; return 1; end
             source $_config
             # Ensure stubs survive config.fish's interactive setup.
