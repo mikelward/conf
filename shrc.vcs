@@ -36,41 +36,30 @@ prompt_info() {
 
 # Use vcs binary for cp/mv/rm overrides.
 #
-# Routing is driven by WHERE THE FIRST POSITIONAL ARGUMENT LIVES, not
-# by cwd alone. That way `mv /tmp/foo /tmp/bar` run from inside a git
-# checkout uses plain mv (file is outside any repo), and a vcs move
-# failure inside the repo (conflict, destination exists, ...) surfaces
-# as an error instead of being silently masked by a fall-through to
-# plain mv.
+# Routing policy:
+#   - If ANY argument starts with `-`, fall through to the system
+#     command unmodified. The wrapper is explicitly a helper for the
+#     bare interactive form (`mv src dst`, `rm file`, etc.); the moment
+#     the user reaches for options the wrapper gets out of the way and
+#     lets the standard command do exactly what was asked. This
+#     avoids having to model flag semantics (`-t DEST SRC` value
+#     consumption, `-rf` stacked shorts, `--` terminator, etc.) which
+#     is impossible to get universally right and easy to get subtly
+#     wrong (e.g. an earlier revision of this code happily passed
+#     `-t DEST SRC` to `vcs move` with DEST picked as the source).
+#   - Otherwise, route based on whether the first argument's path is
+#     inside cwd's vcs repo. If so, use vcs; else the system command.
+#     `vcs <op>` errors propagate (no silent fallback to the system
+#     command) so legitimate refusals (conflict, dest exists, ...) are
+#     visible.
 #
-# Predicate: "cwd is in a repo AND the operand is inside that same
-# repo." We use cwd's rootdir rather than an operand-side vcs call so
-# only one subprocess runs per invocation, and so we don't depend on
-# `vcs rootdir PATH` semantics (which currently do path joining, not
-# containment lookup). If cwd is outside any repo we route to the
-# system command directly -- vcs commands dispatch from cwd, so they
-# couldn't usefully run anyway.
-
-# Print the first positional (non-flag) element of "$@", or nothing.
-# `--` terminates flag parsing, matching POSIX util conventions.
-# Flag-value separation (e.g. `-t DEST SRC`) is not modeled -- rare in
-# interactive use and the `-t` user is the one most likely to want the
-# tracked path checked anyway.
-_vcs_first_positional() {
-    local _end_flags=false _arg
-    for _arg; do
-        if $_end_flags; then printf '%s' "$_arg"; return; fi
-        case "$_arg" in
-            --) _end_flags=true ;;
-            -*) ;;
-            *) printf '%s' "$_arg"; return ;;
-        esac
-    done
-}
+# Consequence: users who habitually type `rm -rf` or `cp -r` get
+# standard tool behaviour even inside a repo. To route a recursive
+# operation through vcs, invoke it directly (`vcs remove -r ...`).
 
 # True if $1 is a path living inside cwd's vcs repo. Resolves relative
-# paths against $PWD (not against some cd'd dirname) because the vcs
-# command we're about to run will interpret them from $PWD too.
+# paths against $PWD because the vcs command we're about to run
+# interprets them from $PWD too.
 _vcs_cwd_tracks() {
     local _src="$1" _root _abs
     test -n "$_src" || return 1
@@ -86,7 +75,11 @@ _vcs_cwd_tracks() {
 }
 
 cp() {
-    if _vcs_cwd_tracks "$(_vcs_first_positional "$@")"; then
+    local _arg
+    for _arg; do
+        case "$_arg" in -*) command cp "$@"; return ;; esac
+    done
+    if _vcs_cwd_tracks "${1-}"; then
         command vcs copy "$@"
     else
         command cp "$@"
@@ -94,7 +87,11 @@ cp() {
 }
 
 mv() {
-    if _vcs_cwd_tracks "$(_vcs_first_positional "$@")"; then
+    local _arg
+    for _arg; do
+        case "$_arg" in -*) command mv "$@"; return ;; esac
+    done
+    if _vcs_cwd_tracks "${1-}"; then
         command vcs move "$@"
     else
         command mv "$@"
@@ -102,7 +99,11 @@ mv() {
 }
 
 rm() {
-    if _vcs_cwd_tracks "$(_vcs_first_positional "$@")"; then
+    local _arg
+    for _arg; do
+        case "$_arg" in -*) command rm "$@"; return ;; esac
+    done
+    if _vcs_cwd_tracks "${1-}"; then
         command vcs remove "$@"
     else
         command rm "$@"
