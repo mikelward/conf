@@ -754,8 +754,16 @@ if is_interactive
     # use custom vi-like key bindings (emacs bindings layered on vi mode)
     set -g fish_key_bindings my_vi_key_bindings
 
-    # regain use of Ctrl+S and Ctrl+Q
-    stty start undef stop undef 2>/dev/null
+    # regain use of Ctrl+S and Ctrl+Q. Guard with `isatty stdin` so
+    # config.fish doesn't SIGTTOU-hang when sourced in an interactive-
+    # but-non-tty context (parallel test runs under `make -j`, fish -i
+    # under nohup, etc.): stty calls tcsetattr on the controlling tty,
+    # which fires SIGTTOU when the caller's process group isn't the
+    # foreground. 2>/dev/null alone doesn't help -- SIGTTOU is a signal,
+    # not stderr.
+    if isatty stdin
+        stty start undef stop undef 2>/dev/null
+    end
 
     # mirror zsh's `zle_highlight=(default:bold)` so user input stands out.
     set -g fish_color_command --bold

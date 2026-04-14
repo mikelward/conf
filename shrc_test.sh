@@ -1003,12 +1003,19 @@ if have_command bash; then
     # distro default `alias l='ls -CF'` that would clash with shrc's
     # `l() { ... }` function definition via bash parse-time alias
     # expansion); we only want to exercise shrc itself here.
+    # </dev/null is critical under `make -j`: without it, bash -i inherits
+    # the controlling terminal, enables job control, creates its own
+    # process group, and then shrc's `stty start undef stop undef` hits
+    # tcsetattr from a non-foreground pgrp -- SIGTTOU suspends the
+    # process and `make test` hangs forever ("Suspended (tty output)").
+    # With stdin=/dev/null bash can't do job control and stty fails
+    # harmlessly with "Inappropriate ioctl for device".
     result=$(cd "$_autocd_root" && bash --norc --noprofile -i -c '
         source '"$_srcdir"'/shrc >/dev/null 2>&1
         install_precommand_trap
         ./sub/
         printf "\nPWDMARK=%s\n" "$PWD"
-    ' 2>/dev/null | sed -n 's/.*PWDMARK=//p')
+    ' </dev/null 2>/dev/null | sed -n 's/.*PWDMARK=//p')
     assert_equal "bash -i autocds on trailing slash via DEBUG trap" \
         "$_autocd_root/sub" "$result"
 
@@ -1020,7 +1027,7 @@ if have_command bash; then
         install_precommand_trap
         ~/sub/
         printf "\nPWDMARK=%s\n" "$PWD"
-    ' 2>/dev/null | sed -n 's/.*PWDMARK=//p')
+    ' </dev/null 2>/dev/null | sed -n 's/.*PWDMARK=//p')
     assert_equal "bash -i autocds on ~/foo/ via DEBUG trap" \
         "$_autocd_root/sub" "$result"
 
@@ -1041,9 +1048,27 @@ if have_command bash; then
         else
             printf "MISSING"
         fi
-    ' 2>/dev/null)
+    ' </dev/null 2>/dev/null)
     assert_equal "shrc sources cleanly despite inherited l/ll/la aliases" \
         "OK" "$result"
+
+    # Regression: sourcing shrc in a non-tty interactive bash must not
+    # SIGTTOU-hang on `stty start undef stop undef`. Pre-fix, the stty
+    # call fired tcsetattr from a non-foreground pgrp under `make -j`
+    # and suspended the process ("Suspended (tty output)") -- `make
+    # test` hung forever. A `test -t 0` guard around stty makes this
+    # safe. Use a short `timeout` so a regression surfaces as a test
+    # failure, not a hung CI run.
+    if have_command timeout; then
+        result=$(timeout 10 bash --norc --noprofile -i -c '
+            source '"$_srcdir"'/shrc >/dev/null 2>&1
+            printf "DONE"
+        ' </dev/null 2>/dev/null)
+        assert_equal "shrc stty guard: sources cleanly with stdin=/dev/null (no SIGTTOU hang)" \
+            "DONE" "$result"
+    else
+        skip_block "shrc stty guard test: timeout(1) not installed"
+    fi
 else
     skip_block "bash -i autocd + alias tests: bash not installed"
 fi
@@ -1146,7 +1171,7 @@ if have_command zsh; then
     result=$(zsh -i -c 'source '"$_srcdir"'/shrc >/dev/null 2>&1; \
         if typeset -f _autocd_accept_line >/dev/null; then \
             print -r "REGMARK"; \
-        fi' 2>/dev/null | sed -n 's/.*REGMARK.*/registered/p' | head -1)
+        fi' </dev/null 2>/dev/null | sed -n 's/.*REGMARK.*/registered/p' | head -1)
     assert_equal "shrc registers _autocd_accept_line widget in zsh" \
         "registered" "$result"
 

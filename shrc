@@ -1763,8 +1763,12 @@ if is_interactive; then
 
     log_history "New session as $USERNAME: $0 $*"
 
-    # regain use of Ctrl+S and Ctrl+Q
-    stty start undef stop undef
+    # regain use of Ctrl+S and Ctrl+Q. Guard with `test -t 0` so shrc
+    # doesn't SIGTTOU-hang when sourced in an interactive-but-non-tty
+    # context (parallel test runs under `make -j`, bash -i under nohup,
+    # etc.): stty calls tcsetattr on the controlling tty, which fires
+    # SIGTTOU when the caller's process group isn't the foreground.
+    test -t 0 && stty start undef stop undef 2>/dev/null
 
     init_colors
     init_title_sequences
