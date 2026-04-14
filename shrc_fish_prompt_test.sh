@@ -13,82 +13,53 @@ if ! command -v fish >/dev/null 2>&1; then
     exit 0
 fi
 
-_srcdir="$(cd "$(dirname "$0")" && pwd)"
-_config="$_srcdir/config/fish/config.fish"
+# Shared fish color/stub preamble. Colors are set pre-source so
+# config.fish sees color=false at source time, and re-set post-source so
+# anything config.fish overwrites is restored. Function stubs are
+# post-source so they override config.fish definitions.
+_fish_colors='
+    set -g color false
+    set -g normal ""
+    set -g bold ""
+    set -g underline ""
+    set -g standout ""
+    set -g black ""
+    set -g red ""
+    set -g green ""
+    set -g yellow ""
+    set -g blue ""
+    set -g magenta ""
+    set -g cyan ""
+    set -g white ""
+    set -g titlestart ""
+    set -g titlefinish ""
+'
 
-# Run a fish snippet with prompt-related functions from config.fish preloaded,
-# using stubs that disable colors and avoid touching the real environment.
-# The snippet runs inside an interactive fish (`fish -i -c`) so that the
-# prompt functions defined under `if is_interactive` are available. A
-# minimal fake home directory is used to keep config.fish from sourcing
-# local overrides. Tty/color escapes are suppressed by stubbing tput.
+# Run a fish snippet with prompt-related functions from config.fish
+# preloaded, using stubs that disable colors and avoid touching the real
+# environment. The snippet runs inside an interactive fish (`fish -i -c`)
+# so that prompt functions defined under `if is_interactive` are available.
 _fish_run() {
-    local _snippet="$1"
-    local _fakehome="$_testdir/fakehome"
-    mkdir -p "$_fakehome"
-    # </dev/null prevents fish -i from inheriting make's controlling
-    # terminal: otherwise fish enables job control, moves to its own
-    # process group, and config.fish's `stty start undef stop undef`
-    # triggers SIGTTOU (tcsetattr from a non-foreground pgrp). With
-    # stdin=/dev/null fish can't grab the tty and stty fails harmlessly.
-    HOME="$_fakehome" \
-        TERM=dumb \
-        SHPOOL_SESSION_NAME= \
-        TMUX= \
-        run_with_timeout 15 fish --no-config -i -c "
-            function tput; return 1; end
-            set -g color false
-            set -g normal ''
-            set -g bold ''
-            set -g underline ''
-            set -g standout ''
-            set -g black ''
-            set -g red ''
-            set -g green ''
-            set -g yellow ''
-            set -g blue ''
-            set -g magenta ''
-            set -g cyan ''
-            set -g white ''
-            set -g titlestart ''
-            set -g titlefinish ''
-            source $_config
-            # Ensure stubs survive config.fish's interactive setup.
-            set -g color false
-            set -g normal ''
-            set -g bold ''
-            set -g underline ''
-            set -g standout ''
-            set -g black ''
-            set -g red ''
-            set -g green ''
-            set -g yellow ''
-            set -g blue ''
-            set -g magenta ''
-            set -g cyan ''
-            set -g white ''
-            set -g titlestart ''
-            set -g titlefinish ''
-            function bell; end
-            function flash_terminal; end
-            function jobs; end
-            function is_ssh_valid; return 0; end
-            function on_production_host; return 1; end
-            function on_my_workstation; return 0; end
-            function on_my_laptop; return 1; end
-            function inside_tmux; return 1; end
-            function have_command
-                switch \$argv[1]
-                    case vcs; return 0
-                    case '*'; command -v \$argv[1] >/dev/null 2>&1
-                end
+    _fish_run_config "$_fish_colors" "$_fish_colors"'
+        function bell; end
+        function flash_terminal; end
+        function jobs; end
+        function is_ssh_valid; return 0; end
+        function on_production_host; return 1; end
+        function on_my_workstation; return 0; end
+        function on_my_laptop; return 1; end
+        function inside_tmux; return 1; end
+        function have_command
+            switch $argv[1]
+                case vcs; return 0
+                case "*"; command -v $argv[1] >/dev/null 2>&1
             end
-            function vcs; return 1; end
-            function projectroot; return 1; end
-            function projectname; return 1; end
-            function log_history; end
-            $_snippet
-        " </dev/null
+        end
+        function vcs; return 1; end
+        function projectroot; return 1; end
+        function projectname; return 1; end
+        function log_history; end
+    ' "$1"
 }
 
 ###############

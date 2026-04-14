@@ -13,38 +13,21 @@ if ! command -v fish >/dev/null 2>&1; then
     exit 0
 fi
 
-_srcdir="$(cd "$(dirname "$0")" && pwd)"
 _config="$_srcdir/config/fish/config.fish"
 
 # Run a fish snippet with config.fish preloaded. Uses a fake HOME so
 # config.fish's interactive setup (history file, ssh alias parsing,
-# shpool startup) runs against a clean workspace.
+# shpool startup) runs against a clean workspace. The have_command stub
+# runs AFTER source so it overrides any definition config.fish installs.
 _fish_run() {
-    local _snippet="$1"
-    local _fakehome="$_testdir/fakehome"
-    mkdir -p "$_fakehome"
-    # </dev/null prevents fish -i from inheriting make's controlling
-    # terminal: otherwise fish enables job control, moves to its own
-    # process group, and config.fish's `stty start undef stop undef`
-    # triggers SIGTTOU (tcsetattr from a non-foreground pgrp). With
-    # stdin=/dev/null fish can't grab the tty and stty fails harmlessly.
-    HOME="$_fakehome" \
-        TERM=dumb \
-        SHPOOL_SESSION_NAME= \
-        TMUX= \
-        SSH_CONNECTION= \
-        run_with_timeout 15 fish --no-config -i -c "
-            function tput; return 1; end
-            source $_config
-            # Ensure stubs survive config.fish's interactive setup.
-            function have_command
-                switch \$argv[1]
-                    case shpool autoshpool brew yum apt-get; return 1
-                    case '*'; command -v \$argv[1] >/dev/null 2>&1
-                end
+    _fish_run_config "" '
+        function have_command
+            switch $argv[1]
+                case shpool autoshpool brew yum apt-get; return 1
+                case "*"; command -v $argv[1] >/dev/null 2>&1
             end
-            $_snippet
-        " </dev/null
+        end
+    ' "$1"
 }
 
 ###############

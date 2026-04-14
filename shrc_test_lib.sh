@@ -379,6 +379,42 @@ run_interactive_with_timeout() {
     fi
 }
 
+# Run a fish snippet with config.fish sourced inside an interactive fish.
+# Shared by shrc_fish_test.sh and shrc_fish_prompt_test.sh so the fiddly
+# invocation (fake HOME, SIGTTOU avoidance, timeout fence, stdin detach)
+# only lives in one place.
+#
+# </dev/null prevents fish -i from inheriting make's controlling terminal:
+# otherwise fish enables job control, moves to its own process group, and
+# config.fish's `stty start undef stop undef` triggers SIGTTOU (tcsetattr
+# from a non-foreground pgrp). With stdin=/dev/null fish can't grab the
+# tty and stty fails harmlessly.
+#
+# Callers pass pre-source and post-source fish preambles so they can seed
+# colors before config.fish reads them OR override functions config.fish
+# defines. Either preamble may be empty.
+#
+# Usage: _fish_run_config PRE_SOURCE POST_SOURCE SNIPPET
+_fish_run_config() {
+    local _pre="$1"
+    local _post="$2"
+    local _snippet="$3"
+    local _fakehome="$_testdir/fakehome"
+    mkdir -p "$_fakehome"
+    HOME="$_fakehome" \
+        TERM=dumb \
+        SHPOOL_SESSION_NAME= \
+        TMUX= \
+        SSH_CONNECTION= \
+        run_with_timeout 15 fish --no-config -i -c "
+            function tput; return 1; end
+            $_pre
+            source $_srcdir/config/fish/config.fish
+            $_post
+            $_snippet
+        " </dev/null
+}
+
 # Create a temp directory for testing
 _testdir=$(mktemp -d)
 trap 'rm -rf "$_testdir"' EXIT
