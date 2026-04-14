@@ -231,6 +231,28 @@ export GIT_EDITOR="$EDITOR"
 export HGEDITOR="$EDITOR"
 export JJ_EDITOR="$EDITOR"
 
+# Run a command with a timeout if `timeout(1)` is installed, else run
+# it directly. Prevents a regression in any of the shell-invocation
+# tests (bash -i, zsh -i, fish -i, dash -c) from hanging `make test`
+# forever when a non-foreground-pgrp tcsetattr or similar trap suspends
+# the subshell ("Suspended (tty output)"). A failed-to-complete command
+# surfaces as a test failure with a non-zero exit (124 on timeout),
+# not an infinite wait.
+#
+# Usage: run_with_timeout SECONDS command [args...]
+# The default timeout is intentionally short-ish (10s is plenty for any
+# real shrc sourcing); override per call when a test is known to do
+# more work.
+run_with_timeout() {
+    local _secs="${1?run_with_timeout: missing seconds}"
+    shift
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$_secs" "$@"
+    else
+        "$@"
+    fi
+}
+
 # Create a temp directory for testing
 _testdir=$(mktemp -d)
 trap 'rm -rf "$_testdir"' EXIT
