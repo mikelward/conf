@@ -22,9 +22,10 @@ if ! command -v vcs >/dev/null 2>&1; then
     exit 0
 fi
 
-# have_command must see the real binary (shrc_test_lib.sh stubs it out
-# for other suites, but here we need the real thing for the cp/mv/rm
-# wrappers that call `command vcs detect`).
+# Define have_command as a plain PATH lookup. shrc.vcs expects shrc to
+# have defined it; we haven't sourced shrc here (only shrc.vcs below),
+# so provide a minimal real-command lookup for the cp/mv/rm wrappers
+# that call `command vcs detect`.
 have_command() {
     command -v "$1" >/dev/null 2>&1
 }
@@ -453,13 +454,16 @@ assert_equal "project works on real git repo" "realgit" "$result"
 # budget we catch ~10x regressions without flaking on slow CI.
 # VCS_PERF_BUDGET_MS=0 disables the check for manual profiling.
 
-_start=$(date +%s%N 2>/dev/null || echo "0")
+# Warmup: exclude first-call variance (binary load, cache file creation)
+# from the timed loop.
+(cd "$_testdir/gitrepo" && vcs >/dev/null 2>&1)
+_start=$(_now_ns)
 _i=0
 while test $_i -lt 10; do
     (cd "$_testdir/gitrepo" && vcs >/dev/null 2>&1)
     _i=$((_i + 1))
 done
-_end=$(date +%s%N 2>/dev/null || echo "0")
+_end=$(_now_ns)
 _vcs_perf_budget_ms="${VCS_PERF_BUDGET_MS:-200}"
 if test "$_start" != "0" && test "$_end" != "0"; then
     _elapsed_ms=$(( (_end - _start) / 1000000 ))

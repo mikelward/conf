@@ -187,7 +187,7 @@ assert_equal "fish maybe_start_shpool_and_exit no-op without shpool" "survived" 
 ###############
 # TEST: CDPATH is set for all shells (not just interactive)
 
-result="$(HOME=$_testdir/fakehome fish --no-config -c "source $_config; echo \$CDPATH" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome run_with_timeout 15 fish --no-config -c "source $_config; echo \$CDPATH" 2>/dev/null)"
 assert_contains "fish CDPATH contains HOME" "$_testdir/fakehome" "$result"
 assert_not_contains "fish CDPATH does not contain conf" "$_testdir/fakehome/conf" "$result"
 
@@ -206,13 +206,13 @@ assert_contains "fish EDITRC exported when ~/.editrc exists" ".editrc" "$result"
 # TEST: environment-only vars (BLOCKSIZE, GREP_COLOR, CLICOLOR, LSCOLORS)
 # are set even in a non-interactive fish
 
-result="$(HOME=$_testdir/fakehome fish --no-config -c "source $_config; echo \$BLOCKSIZE \$GREP_COLOR \$CLICOLOR" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome run_with_timeout 15 fish --no-config -c "source $_config; echo \$BLOCKSIZE \$GREP_COLOR \$CLICOLOR" 2>/dev/null)"
 assert_equal "fish BLOCKSIZE/GREP_COLOR/CLICOLOR set in non-interactive shell" "1024 4 true" "$result"
 
-result="$(HOME=$_testdir/fakehome TERM=xterm fish --no-config -c "source $_config; echo \$LSCOLORS" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome TERM=xterm run_with_timeout 15 fish --no-config -c "source $_config; echo \$LSCOLORS" 2>/dev/null)"
 assert_equal "fish LSCOLORS for xterm" "exfxxxxxcxxxxx" "$result"
 
-result="$(HOME=$_testdir/fakehome TERM=linux fish --no-config -c "source $_config; echo \$LSCOLORS" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome TERM=linux run_with_timeout 15 fish --no-config -c "source $_config; echo \$LSCOLORS" 2>/dev/null)"
 assert_equal "fish LSCOLORS for linux terminal" "ExFxxxxxCxxxxx" "$result"
 
 ###############
@@ -252,7 +252,7 @@ assert_true "fish fish_command_not_found non-existent falls through" \
 # not tilde-expand, so without manual expansion in resolve_cdpath_dir
 # this would miss even when $HOME/sub exists -- mirrors the zsh
 # ~/scripts/ bug this fix addresses.
-result="$(HOME=$_fish_autocd fish --no-config -c '
+result="$(HOME=$_fish_autocd run_with_timeout 15 fish --no-config -c '
     source '"$_config"'
     set -e CDPATH
     fish_command_not_found ~/sub/ >/dev/null 2>&1
@@ -261,7 +261,7 @@ result="$(HOME=$_fish_autocd fish --no-config -c '
 assert_equal "fish fish_command_not_found cds on ~/foo/" \
     "$_fish_autocd/sub" "$result"
 
-result="$(HOME=$_fish_autocd fish --no-config -c '
+result="$(HOME=$_fish_autocd run_with_timeout 15 fish --no-config -c '
     source '"$_config"'
     set -e CDPATH
     resolve_cdpath_dir ~/sub/
@@ -271,7 +271,7 @@ assert_equal "fish resolve_cdpath_dir prints tilde-expanded path" \
 
 # When a system_fish_command_not_found is defined ahead of sourcing,
 # it is preserved and called for non-slash commands.
-result="$(HOME=$_testdir/fakehome fish --no-config -c '
+result="$(HOME=$_testdir/fakehome run_with_timeout 15 fish --no-config -c '
     function fish_command_not_found
         echo "SYSTEM:$argv[1]"
     end
@@ -284,7 +284,7 @@ assert_contains "fish preserves and delegates to system hook" \
 # Re-sourcing the config does NOT wrap the system hook inside itself
 # (idempotency: system_fish_command_not_found should still print SYSTEM:,
 # not be clobbered by our own override).
-result="$(HOME=$_testdir/fakehome fish --no-config -c '
+result="$(HOME=$_testdir/fakehome run_with_timeout 15 fish --no-config -c '
     function fish_command_not_found
         echo "SYSTEM:$argv[1]"
     end
@@ -328,11 +328,18 @@ result="$(_fish_run '
 ')"
 assert_equal "fish find_up finds file in current dir" "$_find_up_dir/a/marker.txt" "$result"
 
-_fish_run '
+# Run find_up with a missing file and have the snippet echo a specific
+# marker if it returns 1. Don't rely on $? from _fish_run alone: a fish
+# crash, timeout (124), or missing-binary (127) would also be non-zero
+# and pass a naive "exit code is 1" check for the wrong reason.
+result="$(_fish_run '
     cd '"$_find_up_dir/a/b/c"'
-    find_up nonexistent_file_xyz '"$_find_up_dir/a/b/c"'
-'
-assert_equal "fish find_up returns 1 for missing file" "1" "$?"
+    if not find_up nonexistent_file_xyz '"$_find_up_dir/a/b/c"'
+        echo FIND_UP_MISSING
+    end
+')"
+assert_contains "fish find_up returns 1 for missing file" \
+    "FIND_UP_MISSING" "$result"
 
 rm -rf "$_find_up_dir"
 

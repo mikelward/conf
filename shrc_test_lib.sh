@@ -18,6 +18,26 @@
 failures=0
 passes=0
 _skipped=0
+_skipped_all=0
+
+# Capture the real interpreter before we stub BASH_VERSION / ZSH_VERSION
+# below. Tests pass this to test_summary so the summary header reflects
+# the actual shell under test, not whatever the stubs make it look like.
+# Fallback chain: prefer $BASH_VERSION / $ZSH_VERSION, then /proc on Linux,
+# then ps(1), finally a plain "sh". /proc/$$/exe alone is not portable
+# (macOS / *BSD have no /proc), which would previously collapse to the
+# literal fallback string and mislabel the summary.
+if test -n "${BASH_VERSION:-}"; then
+    _real_shell=bash
+elif test -n "${ZSH_VERSION:-}"; then
+    _real_shell=zsh
+else
+    _real_shell=$(basename "$(readlink -f /proc/$$/exe 2>/dev/null)" 2>/dev/null)
+    if test -z "$_real_shell" || test "$_real_shell" = "exe"; then
+        _real_shell=$(ps -p $$ -o comm= 2>/dev/null | sed 's/^-//;s/[[:space:]]//g')
+    fi
+    test -n "$_real_shell" || _real_shell=sh
+fi
 
 # The ${n?missing ...} strict references below make the test script
 # abort with a clear error if an assertion is called with too few
@@ -38,8 +58,10 @@ assert_equal() {
     local label="${1?assert_equal: missing label}"
     local expected="${2?assert_equal: missing expected value}"
     local actual="${3?assert_equal: missing actual value}"
-    if test $# -ne 3; then
-        echo "FAIL: $label (assert_equal: expected 3 args, got $#)" >&2
+    # The ${n?} refs above already abort on missing args. The $# check
+    # only fires on 4+ args (a call that looks right but leaks extras).
+    if test $# -gt 3; then
+        echo "FAIL: $label (assert_equal: too many args, got $#)" >&2
         failures=$((failures + 1))
         return 1
     fi
@@ -91,8 +113,8 @@ assert_contains() {
     local label="${1?assert_contains: missing label}"
     local needle="${2?assert_contains: missing needle}"
     local haystack="${3?assert_contains: missing haystack}"
-    if test $# -ne 3; then
-        echo "FAIL: $label (assert_contains: expected 3 args, got $#)" >&2
+    if test $# -gt 3; then
+        echo "FAIL: $label (assert_contains: too many args, got $#)" >&2
         failures=$((failures + 1))
         return 1
     fi
@@ -121,8 +143,8 @@ assert_not_contains() {
     local label="${1?assert_not_contains: missing label}"
     local needle="${2?assert_not_contains: missing needle}"
     local haystack="${3?assert_not_contains: missing haystack}"
-    if test $# -ne 3; then
-        echo "FAIL: $label (assert_not_contains: expected 3 args, got $#)" >&2
+    if test $# -gt 3; then
+        echo "FAIL: $label (assert_not_contains: too many args, got $#)" >&2
         failures=$((failures + 1))
         return 1
     fi
@@ -149,10 +171,10 @@ assert_not_contains() {
 
 # Mark the current test script as wholly skipped (e.g. required tool is
 # missing). test_summary then reports SKIP rather than a misleading
-# "all 0 tests passed." Callers should typically `exit 0` after the
-# final test_summary, which returns 0 in this case.
+# "all 0 tests passed." Sets a dedicated flag rather than mutating the
+# skip_block counter so the two concepts stay distinct.
 skip_all() {
-    _skipped=1
+    _skipped_all=1
     local _reason="${1:-}"
     if test -n "$_reason"; then
         echo "SKIP: $_reason"
@@ -171,6 +193,8 @@ skip_block() {
 }
 
 # Print summary and exit with appropriate code.
+# Always exits (never returns) so callers can't accidentally run code
+# after a summary prints.
 # Fails (exit 1) when:
 #   - any assertion failed, OR
 #   - no assertions ran AND nothing was explicitly skipped (catches
@@ -182,19 +206,41 @@ test_summary() {
         echo "$name: $failures test(s) failed, $passes passed."
         exit 1
     fi
-    if test "$passes" -eq 0 && test "$_skipped" -eq 0; then
+    if test "$passes" -eq 0 \
+        && test "$_skipped" -eq 0 \
+        && test "$_skipped_all" -eq 0; then
         echo "$name: FAIL - no tests ran and none were explicitly skipped"
         exit 1
     fi
-    if test "$passes" -eq 0; then
+    if test "$_skipped_all" -eq 1 && test "$passes" -eq 0; then
         echo "$name: SKIPPED"
-        return 0
+        exit 0
+    fi
+    if test "$passes" -eq 0; then
+        # All tests skipped via skip_block (no skip_all, no passes).
+        echo "$name: $_skipped block(s) skipped, 0 tests ran"
+        exit 0
     fi
     if test "$_skipped" -gt 0; then
         echo "$name: all $passes tests passed ($_skipped skipped)."
     else
         echo "$name: all $passes tests passed."
     fi
+    exit 0
+}
+
+# Portable nanosecond clock for perf tests. GNU date +%s%N returns
+# digits; BSD date (macOS) does not support %N and returns a literal N
+# suffix. Callers test the result against "0" to detect unavailability,
+# which the raw `date +%s%N || echo 0` pattern missed when date exits 0
+# but emits a non-numeric tail. Always prints "0" when %N is unsupported.
+_now_ns() {
+    local _ns
+    _ns=$(date +%s%N 2>/dev/null)
+    case "$_ns" in
+        ''|*[!0-9]*) echo 0 ;;
+        *) echo "$_ns" ;;
+    esac
 }
 
 # Stub out shell detection
@@ -224,7 +270,12 @@ trim_prefix() {
     puts "${_target#$_prefix}"
 }
 
-# Prevent any test from opening an interactive editor
+# Prevent any test from opening an interactive editor.
+# The trailing `--` becomes $0 in the wrapped `sh -c`, so the first real
+# filename tools like git/hg/jj append (`$EDITOR /path/to/COMMIT_EDITMSG`)
+# lands in $1 as expected. Without that trailing sentinel the filename
+# would be swallowed by $0 and the stub would write to the wrong place
+# (or nothing at all).
 export EDITOR="sh -c 'printf \"edited by test\n\" > \"\$1\"' --"
 export VISUAL="$EDITOR"
 export GIT_EDITOR="$EDITOR"
@@ -313,6 +364,18 @@ extract_func() {
     local _fn="$1"
     local _file="${2:-$_srcdir/shrc}"
     local _def
+    local _last
+    # Reject anything that isn't a plain identifier. `sed` interprets
+    # $_fn as a BRE, so a stray `.` / `[` / etc. in the name would match
+    # unintended lines; all shrc function names are identifiers so this
+    # is only a safety fence, not a real restriction.
+    case "$_fn" in
+        ''|*[!A-Za-z0-9_]*)
+            echo "FAIL: extract_func invalid function name: '$_fn'" >&2
+            failures=$((failures + 1))
+            return 1
+            ;;
+    esac
     _def=$(sed -n "/^$_fn()/,/^}/p" "$_file")
     if test -z "$_def"; then
         echo "FAIL: extract_func could not find '$_fn' in $_file" >&2
@@ -343,6 +406,14 @@ extract_func_subst() {
     local _sed="$2"
     local _file="${3:-$_srcdir/shrc}"
     local _def
+    local _last
+    case "$_fn" in
+        ''|*[!A-Za-z0-9_]*)
+            echo "FAIL: extract_func_subst invalid function name: '$_fn'" >&2
+            failures=$((failures + 1))
+            return 1
+            ;;
+    esac
     _def=$(sed -n "/^$_fn()/,/^}/p" "$_file" | sed "$_sed")
     if test -z "$_def"; then
         echo "FAIL: extract_func_subst could not find '$_fn' in $_file" >&2

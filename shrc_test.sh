@@ -704,10 +704,13 @@ rm -f "$_autoshpool_calls" "$_returned"
 assert_true "maybe_start_shpool_and_exit skips when not wanted" test -f "$_returned"
 assert_false "maybe_start_shpool_and_exit does not call autoshpool when not wanted" test -f "$_autoshpool_calls"
 
-# Clean up
+# Clean up: re-extract the real connected_remotely / inside_project so
+# later tests (and any code added below) see shrc's actual implementation
+# instead of the stubs left over from the shpool block above.
 rm -f "$_autoshpool_calls" "$_returned"
-connected_remotely() { false; }
-inside_project() { false; }
+unset -f connected_remotely inside_project
+extract_func connected_remotely
+extract_func inside_project
 
 ###############
 # BASH-ONLY TESTS
@@ -1050,8 +1053,6 @@ assert_contains "shrc gates .shrc.vcs sourcing on bash/zsh" \
 _helper_selftest() {
     # stdout: "pass" or "fail" depending on whether the helper incremented
     # $failures. Runs in a subshell so the counter mutations don't leak.
-    local _expect="$1"
-    shift
     (
         failures=0
         passes=0
@@ -1064,17 +1065,17 @@ _helper_selftest() {
     )
 }
 
-result=$(_helper_selftest fail assert_contains "dummy" "" "haystack")
+result=$(_helper_selftest assert_contains "dummy" "" "haystack")
 assert_equal "assert_contains rejects empty needle" "fail" "$result"
 
-result=$(_helper_selftest fail assert_not_contains "dummy" "" "haystack")
+result=$(_helper_selftest assert_not_contains "dummy" "" "haystack")
 assert_equal "assert_not_contains rejects empty needle" "fail" "$result"
 
 # Sanity: non-empty needles on an empty haystack still behave correctly.
-result=$(_helper_selftest fail assert_contains "dummy" "x" "")
+result=$(_helper_selftest assert_contains "dummy" "x" "")
 assert_equal "assert_contains fails on empty haystack with non-empty needle" "fail" "$result"
 
-result=$(_helper_selftest pass assert_not_contains "dummy" "x" "")
+result=$(_helper_selftest assert_not_contains "dummy" "x" "")
 assert_equal "assert_not_contains passes on empty haystack with non-empty needle" "pass" "$result"
 
 unset -f _helper_selftest
@@ -1095,8 +1096,6 @@ good_fn() {
 TRUNC
 
 _extract_selftest() {
-    local _expect="$1"
-    shift
     (
         failures=0
         passes=0
@@ -1109,21 +1108,28 @@ _extract_selftest() {
     )
 }
 
-result=$(_extract_selftest pass extract_func good_fn "$_extract_selftest_dir/good")
+result=$(_extract_selftest extract_func good_fn "$_extract_selftest_dir/good")
 assert_equal "extract_func accepts well-formed function" "pass" "$result"
 
-result=$(_extract_selftest fail extract_func missing_fn "$_extract_selftest_dir/good")
+result=$(_extract_selftest extract_func missing_fn "$_extract_selftest_dir/good")
 assert_equal "extract_func rejects missing function" "fail" "$result"
 
-result=$(_extract_selftest fail extract_func good_fn "$_extract_selftest_dir/truncated")
+result=$(_extract_selftest extract_func good_fn "$_extract_selftest_dir/truncated")
 assert_equal "extract_func rejects block without column-0 closing brace" "fail" "$result"
 
-result=$(_extract_selftest fail extract_func_subst good_fn 's/ok/OK/' "$_extract_selftest_dir/truncated")
+result=$(_extract_selftest extract_func_subst good_fn 's/ok/OK/' "$_extract_selftest_dir/truncated")
 assert_equal "extract_func_subst rejects block without column-0 closing brace" "fail" "$result"
+
+# Regression: non-identifier function names are rejected (sed-metachar
+# safety fence -- real shrc fns are all plain identifiers so this is
+# belt-and-braces).
+result=$(_extract_selftest extract_func 'bad.name' "$_extract_selftest_dir/good")
+assert_equal "extract_func rejects non-identifier function name" "fail" "$result"
+
+result=$(_extract_selftest extract_func_subst 'bad.name' 's/x/y/' "$_extract_selftest_dir/good")
+assert_equal "extract_func_subst rejects non-identifier function name" "fail" "$result"
 
 rm -rf "$_extract_selftest_dir"
 unset -f _extract_selftest
 
-_shell="$(basename "$(readlink -f /proc/$$/exe)" 2>/dev/null || echo "sh")"
-
-test_summary "$_shell shrc_test"
+test_summary "$_real_shell shrc_test"
