@@ -17,72 +17,31 @@ _cdpath_parent="$_testdir/autocd_cdpath"
 mkdir -p "$_cdpath_parent/elsewhere"
 
 # zsh's accept-line widget rewrites a trailing-slash dir buffer to
-# `cd -- foo/`. We can't drive ZLE non-interactively, so exercise the
-# widget function directly with a fake BUFFER.
-result=$(cd "$_autocd_root" && run_interactive_with_timeout 10 zsh -c '
-    resolve_cdpath_dir() {
-        case "$1" in
-        /*|./*|../*)
-            [[ -d "$1" ]] && { print -r -- "$1"; return 0; }
-            return 1
-            ;;
-        esac
-        [[ -d "$1" ]] && { print -r -- "$1"; return 0; }
-        local _p
-        for _p in ${(s.:.)CDPATH}; do
-            [[ -z "$_p" ]] && _p=.
-            [[ -d "$_p/$1" ]] && { print -r -- "$_p/$1"; return 0; }
-        done
-        return 1
-    }
-    _autocd_accept_line() {
-        emulate -L zsh
-        local _resolved
-        if [[ "$BUFFER" == */ ]] \
-           && [[ "$BUFFER" != *[[:space:]]* ]] \
-           && _resolved=$(resolve_cdpath_dir "$BUFFER") \
-           && [[ -n "$_resolved" ]]; then
-            BUFFER="cd -- $_resolved"
-        fi
-    }
+# `cd -- foo/`. We can't drive ZLE non-interactively, so source the
+# real shrc under `zsh -i` (so its `if is_interactive` block actually
+# defines _autocd_accept_line and registers the widget) and stub out
+# `zle` so the widget's trailing `zle .accept-line` call is a no-op.
+# This exercises shrc's ACTUAL implementations -- a regression in
+# either `_autocd_accept_line` or `resolve_cdpath_dir` would surface
+# here, unlike an inline copy.
+result=$(cd "$_autocd_root" && run_interactive_with_timeout 10 zsh -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    zle() { : }   # shadow the builtin so `zle .accept-line` is inert
     BUFFER="./sub/"
     _autocd_accept_line
     print -r -- "$BUFFER"
-')
+' </dev/null 2>/dev/null)
 assert_equal "zsh accept-line widget rewrites trailing-slash dir" \
     "cd -- ./sub/" "$result"
 
 # Non-dir / multi-word / no-slash inputs are passed through unchanged.
-result=$(cd "$_autocd_root" && run_interactive_with_timeout 10 zsh -c '
-    resolve_cdpath_dir() {
-        case "$1" in
-        /*|./*|../*)
-            [[ -d "$1" ]] && { print -r -- "$1"; return 0; }
-            return 1
-            ;;
-        esac
-        [[ -d "$1" ]] && { print -r -- "$1"; return 0; }
-        local _p
-        for _p in ${(s.:.)CDPATH}; do
-            [[ -z "$_p" ]] && _p=.
-            [[ -d "$_p/$1" ]] && { print -r -- "$_p/$1"; return 0; }
-        done
-        return 1
-    }
-    _autocd_accept_line() {
-        emulate -L zsh
-        local _resolved
-        if [[ "$BUFFER" == */ ]] \
-           && [[ "$BUFFER" != *[[:space:]]* ]] \
-           && _resolved=$(resolve_cdpath_dir "$BUFFER") \
-           && [[ -n "$_resolved" ]]; then
-            BUFFER="cd -- $_resolved"
-        fi
-    }
+result=$(cd "$_autocd_root" && run_interactive_with_timeout 10 zsh -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    zle() { : }
     BUFFER="./sub/ arg"
     _autocd_accept_line
     print -r -- "$BUFFER"
-')
+' </dev/null 2>/dev/null)
 assert_equal "zsh accept-line widget leaves multi-word buffers alone" \
     "./sub/ arg" "$result"
 
@@ -90,22 +49,13 @@ assert_equal "zsh accept-line widget leaves multi-word buffers alone" \
 # to the tilde-expanded absolute path so .accept-line cd`s into it
 # instead of trying to exec $HOME/foo/ and dying on permission
 # denied. This is the bug users hit with `~/scripts/`.
-result=$(HOME="$_autocd_root" run_interactive_with_timeout 10 zsh -c '
+result=$(HOME="$_autocd_root" run_interactive_with_timeout 10 zsh -i -c '
     source '"$_srcdir"'/shrc >/dev/null 2>&1
+    zle() { : }
     BUFFER="~/sub/"
-    _autocd_accept_line() {
-        emulate -L zsh
-        local _resolved
-        if [[ "$BUFFER" == */ ]] \
-           && [[ "$BUFFER" != *[[:space:]]* ]] \
-           && _resolved=$(resolve_cdpath_dir "$BUFFER") \
-           && [[ -n "$_resolved" ]]; then
-            BUFFER="cd -- $_resolved"
-        fi
-    }
     _autocd_accept_line
     print -r -- "$BUFFER"
-' 2>/dev/null)
+' </dev/null 2>/dev/null)
 assert_equal "zsh accept-line widget expands ~/foo/ to absolute cd" \
     "cd -- $_autocd_root/sub/" "$result"
 

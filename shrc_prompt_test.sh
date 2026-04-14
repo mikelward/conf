@@ -684,13 +684,16 @@ HOSTNAME="testhost"
 inside_project() { true; }
 prompt_info() { echo "proj main"; }
 is_ssh_valid() { true; }
-_start=$(date +%s%N 2>/dev/null || echo "0")
+# Warmup: exclude first-call disk/icache variance (module resolution,
+# readline setup, etc.) from the timed loop.
+prompt_line >/dev/null 2>&1
+_start=$(_now_ns)
 _i=0
 while test $_i -lt 50; do
     prompt_line >/dev/null 2>&1
     _i=$((_i + 1))
 done
-_end=$(date +%s%N 2>/dev/null || echo "0")
+_end=$(_now_ns)
 # Budget: 50 prompt_line calls with prompt_info stubbed should stay
 # under 1s even on slow CI. The shell-composition path forks several
 # subshells per prompt, so it's noticeably slower than the old single
@@ -713,6 +716,4 @@ fi
 inside_project() { false; }
 prompt_info() { :; }
 
-_shell="$(basename "$(readlink -f /proc/$$/exe)" 2>/dev/null || echo "bash")"
-
-test_summary "$_shell shrc_prompt_test"
+test_summary "$_real_shell shrc_prompt_test"
