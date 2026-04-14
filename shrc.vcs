@@ -35,25 +35,78 @@ prompt_info() {
 }
 
 # Use vcs binary for cp/mv/rm overrides.
+#
+# Routing is driven by WHERE THE FIRST POSITIONAL ARGUMENT LIVES, not
+# by cwd alone. That way `mv /tmp/foo /tmp/bar` run from inside a git
+# checkout uses plain mv (file is outside any repo), and a vcs move
+# failure inside the repo (conflict, destination exists, ...) surfaces
+# as an error instead of being silently masked by a fall-through to
+# plain mv.
+#
+# Predicate: "cwd is in a repo AND the operand is inside that same
+# repo." We use cwd's rootdir rather than an operand-side vcs call so
+# only one subprocess runs per invocation, and so we don't depend on
+# `vcs rootdir PATH` semantics (which currently do path joining, not
+# containment lookup). If cwd is outside any repo we route to the
+# system command directly -- vcs commands dispatch from cwd, so they
+# couldn't usefully run anyway.
+
+# Print the first positional (non-flag) element of "$@", or nothing.
+# `--` terminates flag parsing, matching POSIX util conventions.
+# Flag-value separation (e.g. `-t DEST SRC`) is not modeled -- rare in
+# interactive use and the `-t` user is the one most likely to want the
+# tracked path checked anyway.
+_vcs_first_positional() {
+    local _end_flags=false _arg
+    for _arg; do
+        if $_end_flags; then printf '%s' "$_arg"; return; fi
+        case "$_arg" in
+            --) _end_flags=true ;;
+            -*) ;;
+            *) printf '%s' "$_arg"; return ;;
+        esac
+    done
+}
+
+# True if $1 is a path living inside cwd's vcs repo. Resolves relative
+# paths against $PWD (not against some cd'd dirname) because the vcs
+# command we're about to run will interpret them from $PWD too.
+_vcs_cwd_tracks() {
+    local _src="$1" _root _abs
+    test -n "$_src" || return 1
+    _root=$(command vcs rootdir 2>/dev/null) || return 1
+    case "$_src" in
+        /*) _abs="$_src" ;;
+        *)  _abs="$PWD/$_src" ;;
+    esac
+    case "$_abs" in
+        "$_root"|"$_root"/*) return 0 ;;
+    esac
+    return 1
+}
+
 cp() {
-    if command vcs detect >/dev/null 2>&1; then
-        command vcs copy "$@" 2>/dev/null && return
+    if _vcs_cwd_tracks "$(_vcs_first_positional "$@")"; then
+        command vcs copy "$@"
+    else
+        command cp "$@"
     fi
-    command cp "$@"
 }
 
 mv() {
-    if command vcs detect >/dev/null 2>&1; then
-        command vcs move "$@" 2>/dev/null && return
+    if _vcs_cwd_tracks "$(_vcs_first_positional "$@")"; then
+        command vcs move "$@"
+    else
+        command mv "$@"
     fi
-    command mv "$@"
 }
 
 rm() {
-    if command vcs detect >/dev/null 2>&1; then
-        command vcs remove "$@" 2>/dev/null && return
+    if _vcs_cwd_tracks "$(_vcs_first_positional "$@")"; then
+        command vcs remove "$@"
+    else
+        command rm "$@"
     fi
-    command rm "$@"
 }
 
 
