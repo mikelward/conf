@@ -26,6 +26,11 @@ _fish_run() {
     local _snippet="$1"
     local _fakehome="$_testdir/fakehome"
     mkdir -p "$_fakehome"
+    # </dev/null prevents fish -i from inheriting make's controlling
+    # terminal: otherwise fish enables job control, moves to its own
+    # process group, and config.fish's `stty start undef stop undef`
+    # triggers SIGTTOU (tcsetattr from a non-foreground pgrp). With
+    # stdin=/dev/null fish can't grab the tty and stty fails harmlessly.
     HOME="$_fakehome" \
         TERM=dumb \
         SHPOOL_SESSION_NAME= \
@@ -83,7 +88,7 @@ _fish_run() {
             function projectname; return 1; end
             function log_history; end
             $_snippet
-        "
+        " </dev/null
 }
 
 ###############
