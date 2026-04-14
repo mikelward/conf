@@ -38,6 +38,7 @@ test-all: \
 	test-nu-config \
 	test-shrc-dash \
 	test-shrc-bash \
+	test-shrc-zsh \
 	test-shrc-vcs \
 	test-shrc-prompt \
 	test-shrc-fish \
@@ -79,11 +80,28 @@ test-nu-config:
 		echo "SKIP: test-nu-config (nushell not installed)"; \
 	fi
 
+# shrc_test.sh holds sh-portable tests and is run under both dash and
+# bash as a portability cross-check. Shell-specific end-to-end tests
+# (which spawn an interactive subshell of that shell and source shrc)
+# live in per-shell files so e.g. `dash shrc_test.sh` does not need to
+# spawn `bash -i` at all -- that cross-shell invocation was the source
+# of the SIGTTOU-under-tty hang the outer timeout only partially fenced.
 test-shrc-dash:
 	@dash shrc_test.sh
+	@dash shrc_dash_test.sh
 
 test-shrc-bash:
 	@bash shrc_test.sh
+	@bash shrc_bash_test.sh
+
+# zsh is optional; skip gracefully when it isn't installed (same pattern
+# as fish in test-lint / nu in test-nu-parse).
+test-shrc-zsh:
+	@if command -v zsh >/dev/null 2>&1; then \
+		zsh shrc_zsh_test.sh; \
+	else \
+		echo "SKIP: test-shrc-zsh (zsh not installed)"; \
+	fi
 
 test-shrc-vcs: vcs-build
 	@PATH="$(CURDIR)/vcs:$$PATH" bash shrc_vcs_test.sh
@@ -109,7 +127,7 @@ test-amethyst:
 .PHONY: all install install-dotfiles install-vcs vcs-build \
 	test test-all test-lint \
 	test-nu-parse test-nu-config \
-	test-shrc-dash test-shrc-bash \
+	test-shrc-dash test-shrc-bash test-shrc-zsh \
 	test-shrc-vcs \
 	test-shrc-prompt test-shrc-fish test-shrc-fish-prompt \
 	test-gitconfig test-makefile test-amethyst
