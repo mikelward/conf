@@ -17,61 +17,51 @@ extract_func add_path
 # Save PATH for restoration after path function tests
 _saved_path="$PATH"
 
-# Test prepend_path
 start_test "prepend_path adds to front"
 PATH="/usr/bin:/bin"
 prepend_path /usr/local/bin
 assert_equal "/usr/local/bin:/usr/bin:/bin" "$PATH"
 
-# Test prepend_path removes duplicates
 start_test "prepend_path moves existing to front"
 PATH="/usr/local/bin:/usr/bin:/bin"
 prepend_path /bin
 assert_equal "/bin:/usr/local/bin:/usr/bin" "$PATH"
 
-# Test prepend_path on empty PATH
 start_test "prepend_path on empty PATH"
 PATH=
 prepend_path /usr/bin
 assert_equal "/usr/bin" "$PATH"
 
-# Test append_path
 start_test "append_path adds to end"
 PATH="/usr/bin:/bin"
 append_path /usr/local/bin
 assert_equal "/usr/bin:/bin:/usr/local/bin" "$PATH"
 
-# Test append_path removes duplicates
 start_test "append_path moves existing to end"
 PATH="/usr/local/bin:/usr/bin:/bin"
 append_path /usr/local/bin
 assert_equal "/usr/bin:/bin:/usr/local/bin" "$PATH"
 
-# Test append_path on empty PATH
 start_test "append_path on empty PATH"
 PATH=
 append_path /usr/bin
 assert_equal "/usr/bin" "$PATH"
 
-# Test delete_path
 start_test "delete_path removes entry"
 PATH="/usr/local/bin:/usr/bin:/bin"
 delete_path /usr/bin
 assert_equal "/usr/local/bin:/bin" "$PATH"
 
-# Test delete_path with entry not present
 start_test "delete_path no-op if not present"
 PATH="/usr/bin:/bin"
 delete_path /nonexistent
 assert_equal "/usr/bin:/bin" "$PATH"
 
-# Test delete_path only entry
 start_test "delete_path removes only entry"
 PATH="/usr/bin"
 delete_path /usr/bin
 assert_equal "" "$PATH"
 
-# Test inpath
 start_test "inpath finds existing entry"
 PATH="/usr/bin:/bin"
 inpath /usr/bin
@@ -82,37 +72,31 @@ PATH="/usr/bin:/bin"
 inpath /nonexistent
 assert_equal "1" "$?"
 
-# Test add_path (default = append if not present)
 start_test "add_path appends if not present"
 PATH="/usr/bin:/bin"
 add_path /usr/local/bin
 assert_equal "/usr/bin:/bin:/usr/local/bin" "$PATH"
 
-# Test add_path does not duplicate
 start_test "add_path no-op if already present"
 PATH="/usr/bin:/bin"
 add_path /usr/bin
 assert_equal "/usr/bin:/bin" "$PATH"
 
-# Test add_path start
 start_test "add_path start prepends"
 PATH="/usr/bin:/bin"
 add_path /usr/local/bin start
 assert_equal "/usr/local/bin:/usr/bin:/bin" "$PATH"
 
-# Test add_path start moves existing entry
 start_test "add_path start moves existing to front"
 PATH="/usr/bin:/bin:/usr/local/bin"
 add_path /usr/local/bin start
 assert_equal "/usr/local/bin:/usr/bin:/bin" "$PATH"
 
-# Test add_path end
 start_test "add_path end appends"
 PATH="/usr/bin:/bin"
 add_path /usr/local/bin end
 assert_equal "/usr/bin:/bin:/usr/local/bin" "$PATH"
 
-# Test add_path end moves existing entry
 start_test "add_path end moves existing to end"
 PATH="/usr/local/bin:/usr/bin:/bin"
 add_path /usr/local/bin end
@@ -149,7 +133,6 @@ start_test "delete_path with parens"
 delete_path "$_tmpdir/path (v2)/bin"
 assert_equal "/usr/bin:/bin" "$PATH"
 
-# Test add_path with special chars
 start_test "add_path start with parens"
 add_path "$_tmpdir/path (v2)/bin" start
 assert_equal "$_tmpdir/path (v2)/bin:/usr/bin:/bin" "$PATH"
@@ -180,7 +163,6 @@ extract_func get_ptr_records
 extract_func each
 extract_func delline
 
-# Test puts
 start_test "puts single arg"
 assert_equal "hello" "$(puts hello)"
 start_test "puts multiple args"
@@ -192,13 +174,11 @@ assert_equal "-n -e" "$(puts -n -e)"
 start_test "puts backslash"
 assert_equal 'hello\nworld' "$(puts 'hello\nworld')"
 
-# Test gets (read -r wrapper)
 start_test "gets preserves backslashes"
 extract_func gets
 result=$(printf '%s\n' 'hello\tworld' | { gets val; puts "$val"; })
 assert_equal 'hello\tworld' "$result"
 
-# Test join
 start_test "join comma"
 assert_equal "a,b,c" "$(join , a b c)"
 start_test "join space"
@@ -208,7 +188,6 @@ assert_equal "a" "$(join , a)"
 start_test "join empty sep"
 assert_equal "abc" "$(join "" a b c)"
 
-# Test body
 start_test "body passes header and body"
 result=$(printf 'HEADER\nline1\nline2\n' | body cat)
 assert_equal "HEADER
@@ -233,7 +212,6 @@ assert_equal "H1
 H2
 beta" "$result"
 
-# Test first_arg_last
 start_test "first_arg_last moves first arg to end"
 result=$(first_arg_last echo target a b)
 assert_equal "a b target" "$result"
@@ -299,7 +277,6 @@ assert_equal "" "$result"
 
 rm -rf "$_tmpdir"
 
-# Test path
 start_test "path finds sh"
 PATH="/usr/bin:/bin"
 result=$(path sh)
@@ -316,7 +293,6 @@ assert_equal "1" "$?"
 # zsh isn't in /usr/bin.
 PATH="$_saved_path"
 
-# Test get_address_records
 start_test "get_address_records extracts A and AAAA"
 input="example.com.		300	IN	A	93.184.216.34
 example.com.		300	IN	AAAA	2606:2800:220:1:248:1893:25c8:1946"
@@ -325,13 +301,11 @@ expected="93.184.216.34
 2606:2800:220:1:248:1893:25c8:1946"
 assert_equal "$expected" "$result"
 
-# Test get_ptr_records
 start_test "get_ptr_records extracts PTR"
 input="34.216.184.93.in-addr.arpa. 300	IN	PTR	example.com."
 result=$(echo "$input" | get_ptr_records)
 assert_equal "example.com." "$result"
 
-# Test each
 start_test "each runs command on each line"
 result=$(printf 'a\nb\nc\n' | each echo "item:")
 expected="item: a
@@ -339,7 +313,6 @@ item: b
 item: c"
 assert_equal "$expected" "$result"
 
-# Test delline
 start_test "delline removes specified line"
 _tmpfile=$(mktemp)
 printf 'line1\nline2\nline3\n' > "$_tmpfile"
@@ -350,7 +323,6 @@ line3"
 assert_equal "$expected" "$result"
 rm -f "$_tmpfile"
 
-# Test delline on empty file
 start_test "delline on empty file"
 _tmpfile=$(mktemp)
 printf '' > "$_tmpfile"
@@ -359,7 +331,6 @@ result=$(cat "$_tmpfile")
 assert_equal "" "$result"
 rm -f "$_tmpfile"
 
-# Test delline on single-line file
 start_test "delline removes only line"
 _tmpfile=$(mktemp)
 printf 'only line\n' > "$_tmpfile"
@@ -368,7 +339,6 @@ result=$(cat "$_tmpfile")
 assert_equal "" "$result"
 rm -f "$_tmpfile"
 
-# Test delline on single-line file removing non-existent line
 start_test "delline no-op for out of range line"
 _tmpfile=$(mktemp)
 printf 'only line\n' > "$_tmpfile"
@@ -411,25 +381,21 @@ extract_func maybe_start_shpool_and_exit
 ###############
 # COMMAND INSPECTION
 
-# Test is_builtin
 start_test "is_builtin cd"
 assert_true is_builtin cd
 start_test "is_builtin ls"
 assert_false is_builtin ls
 
-# Test is_command
 start_test "is_command /bin/sh"
 assert_true is_command sh
 start_test "is_command nonexistent_xyz"
 assert_false is_command nonexistent_xyz
 
-# Test have_command
 start_test "have_command sh"
 assert_true have_command sh
 start_test "have_command nonexistent_xyz"
 assert_false have_command nonexistent_xyz
 
-# Test is_runnable (functions, builtins, and commands all count)
 start_test "is_runnable sh"
 assert_true is_runnable sh
 start_test "is_runnable cd"
@@ -439,7 +405,6 @@ assert_true is_runnable is_runnable
 start_test "is_runnable nonexistent_xyz"
 assert_false is_runnable nonexistent_xyz
 
-# Test is_alias
 start_test "is_alias detects alias"
 alias _test_alias_xyz='echo hi'
 assert_true is_alias _test_alias_xyz
@@ -450,12 +415,10 @@ unalias _test_alias_xyz
 ###############
 # ERROR AND WARN
 
-# Test error (output goes to stderr)
 start_test "error prints to stderr"
 result=$(error "test error message" 2>&1)
 assert_equal "test error message" "$result"
 
-# Test warn (output goes to stderr)
 start_test "warn prints to stderr"
 result=$(warn "test warning" 2>&1)
 assert_equal "test warning" "$result"
@@ -463,7 +426,6 @@ assert_equal "test warning" "$result"
 ###############
 # QUIET
 
-# Test quiet suppresses stdout and stderr
 start_test "quiet suppresses stdout"
 result=$(quiet echo "should not appear")
 assert_equal "" "$result"
@@ -472,7 +434,6 @@ start_test "quiet suppresses stderr"
 result=$(quiet sh -c 'echo err >&2')
 assert_equal "" "$result"
 
-# Test quiet preserves exit code
 start_test "quiet preserves success"
 quiet true
 assert_equal "0" "$?"
@@ -484,13 +445,11 @@ assert_equal "1" "$?"
 ###############
 # RUN
 
-# Test run with SIMULATE=false (default)
 start_test "run executes command"
 result=$(SIMULATE=false run echo "hello")
 # logger may not be available, so just check it runs
 assert_equal "hello" "$result"
 
-# Test run with SIMULATE=true
 start_test "run simulates command"
 result=$(SIMULATE=true run echo "hello")
 assert_equal "Would run echo hello" "$result"
@@ -516,7 +475,6 @@ rm -rf "$_simrun_dir"
 
 _tmpdir=$(mktemp -d)
 
-# Test bak
 start_test "bak creates .bak file"
 touch "$_tmpdir/testfile"
 (cd "$_tmpdir" && bak testfile)
@@ -524,14 +482,12 @@ assert_true test -f "$_tmpdir/testfile.bak"
 start_test "bak removes original"
 assert_false test -f "$_tmpdir/testfile"
 
-# Test unbak with .bak argument
 start_test "unbak restores from .bak arg"
 (cd "$_tmpdir" && unbak testfile.bak)
 assert_true test -f "$_tmpdir/testfile"
 start_test "unbak removes .bak"
 assert_false test -f "$_tmpdir/testfile.bak"
 
-# Test unbak with original name argument
 start_test "unbak restores from original name"
 (cd "$_tmpdir" && bak testfile)
 (cd "$_tmpdir" && unbak testfile)
@@ -539,7 +495,6 @@ assert_true test -f "$_tmpdir/testfile"
 start_test "unbak removes .bak (original name)"
 assert_false test -f "$_tmpdir/testfile.bak"
 
-# Test bak with multiple files
 start_test "bak multiple files a"
 touch "$_tmpdir/a" "$_tmpdir/b"
 (cd "$_tmpdir" && bak a b)
@@ -549,7 +504,6 @@ assert_true test -f "$_tmpdir/b.bak"
 
 rm -rf "$_tmpdir"
 
-# Test isort
 start_test "isort sorts file in place"
 _tmpfile=$(mktemp)
 printf 'cherry\napple\nbanana\n' > "$_tmpfile"
@@ -561,7 +515,6 @@ cherry"
 assert_equal "$expected" "$result"
 rm -f "$_tmpfile"
 
-# Test realdir
 start_test "realdir returns absolute directory"
 _tmpdir=$(mktemp -d)
 mkdir -p "$_tmpdir/subdir"
@@ -605,12 +558,10 @@ rm -f "$_tmpfile"
 ###############
 # WHAT
 
-# Test what for a command
 start_test "what finds sh"
 result=$(what sh)
 assert_true test -n "$result"
 
-# Test what for a function
 start_test "what shows function definition"
 result=$(what is_runnable)
 assert_true test -n "$result"
@@ -635,7 +586,6 @@ start_test "trydiff does not modify original"
 assert_equal "hello
 world" "$result"
 
-# Test applydiff
 start_test "applydiff modifies file"
 (cd "$_tmpdir" && applydiff ./upcase input)
 result=$(cat "$_tmpdir/input")
@@ -663,12 +613,10 @@ rm -rf "$_tmpdir"
 ###############
 # TZ2TZ
 
-# Test that tz2tz converts between timezones
 start_test "tz2tz converts timezone"
 result=$(tz2tz UTC America/New_York "2024-01-15 12:00:00")
 assert_contains "2024" "$result"
 
-# Test that tz2tz handles multi-word date specs
 start_test "tz2tz with multi-word date spec"
 result=$(tz2tz UTC UTC "2024-01-15 12:00:00")
 assert_contains "12:00:00" "$result"
@@ -676,7 +624,6 @@ assert_contains "12:00:00" "$result"
 ###############
 # ENVIRONMENT DETECTION
 
-# Test connected_via_ssh
 start_test "connected_via_ssh with SSH_CONNECTION"
 SSH_CONNECTION="1.2.3.4 5678 5.6.7.8 22"
 assert_true connected_via_ssh
@@ -685,7 +632,6 @@ start_test "connected_via_ssh without SSH_CONNECTION"
 unset SSH_CONNECTION
 assert_false connected_via_ssh
 
-# Test connected_remotely (delegates to connected_via_ssh)
 start_test "connected_remotely with SSH_CONNECTION"
 SSH_CONNECTION="1.2.3.4 5678 5.6.7.8 22"
 assert_true connected_remotely
@@ -693,7 +639,6 @@ unset SSH_CONNECTION
 start_test "connected_remotely without SSH_CONNECTION"
 assert_false connected_remotely
 
-# Test inside_tmux
 start_test "inside_tmux with TMUX set"
 TMUX="/tmp/tmux-1000/default,12345,0"
 assert_true inside_tmux
@@ -701,7 +646,6 @@ unset TMUX
 start_test "inside_tmux without TMUX"
 assert_false inside_tmux
 
-# Test in_shpool
 start_test "in_shpool with SHPOOL_SESSION_NAME"
 SHPOOL_SESSION_NAME="main"
 assert_true in_shpool
@@ -751,7 +695,6 @@ result="$(cat "$_autoshpool_calls" 2>/dev/null)"
 start_test "switchshpool calls autoshpool switch"
 assert_equal "autoshpool switch newsession" "$result"
 
-# Test switchshpool when autoshpool fails → does not exit
 start_test "switchshpool does not exit when autoshpool fails"
 rm -f "$_autoshpool_calls"
 _returned="$_testdir/shpool_returned"
@@ -877,19 +820,16 @@ root() {
 # A test function to use as an argument to root
 myfunc() { echo "hello"; }
 
-# Test root with a function argument
 start_test "root detects function argument"
 _root_log=""
 root myfunc arg1 arg2
 assert_equal "function: myfunc arg1 arg2" "$_root_log"
 
-# Test root with a non-function argument
 start_test "root passes non-function to root command"
 _root_log=""
 root systemctl restart nginx
 assert_equal "root: systemctl restart nginx" "$_root_log"
 
-# Test root with a command that doesn't exist
 start_test "root passes unknown command to root command"
 _root_log=""
 root nonexistent_command --flag
@@ -905,7 +845,6 @@ unset -f root_cmd myfunc root
 extract_func bell
 extract_func retry
 
-# Test retry succeeds immediately when command passes
 start_test "retry calls command once on immediate success"
 _retry_dir=$(mktemp -d)
 _retry_counter="$_retry_dir/count"
@@ -921,7 +860,6 @@ PATH="$_retry_dir:$PATH" retry --sleep 0 "$_retry_dir/retrystub"
 result=$(cat "$_retry_counter")
 assert_equal "1" "$result"
 
-# Test retry retries after failure then stops on success
 start_test "retry calls command twice when first attempt fails"
 rm -f "$_retry_counter"
 cat > "$_retry_dir/retrystub" << STUB
@@ -937,7 +875,6 @@ PATH="$_retry_dir:$PATH" retry --sleep 0 "$_retry_dir/retrystub"
 result=$(cat "$_retry_counter")
 assert_equal "2" "$result"
 
-# Test retry --sleep=N form
 start_test "retry --sleep=0 calls command twice"
 rm -f "$_retry_counter"
 cat > "$_retry_dir/retrystub" << STUB
@@ -953,7 +890,6 @@ PATH="$_retry_dir:$PATH" retry --sleep=0 "$_retry_dir/retrystub"
 result=$(cat "$_retry_counter")
 assert_equal "2" "$result"
 
-# Test retry without --sleep flag defaults (just verify it parses)
 start_test "retry without --sleep succeeds"
 rm -f "$_retry_counter"
 cat > "$_retry_dir/retrystub" << 'STUB'
