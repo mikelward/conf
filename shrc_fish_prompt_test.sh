@@ -63,8 +63,6 @@ _fish_run() {
 }
 
 ###############
-# TEST: maybe_space
-
 start_test "fish maybe_space with content"
 result="$(_fish_run 'maybe_space hello')"
 assert_equal " hello" "$result"
@@ -78,22 +76,16 @@ result="$(_fish_run 'maybe_space')"
 assert_equal "" "$result"
 
 ###############
-# TEST: bar
-
 start_test "fish bar prints N separator characters"
 result="$(_fish_run 'bar 5')"
 assert_equal "―――――" "$result"
 
 ###############
-# TEST: ps1_character
-
 start_test "fish ps1_character prints >"
 result="$(_fish_run 'ps1_character')"
 assert_equal ">" "$result"
 
 ###############
-# TEST: in_shpool
-
 start_test "fish in_shpool false when unset"
 result="$(_fish_run 'if in_shpool; echo yes; else; echo no; end')"
 assert_equal "no" "$result"
@@ -103,8 +95,6 @@ result="$(_fish_run 'set -g SHPOOL_SESSION_NAME main; if in_shpool; echo yes; el
 assert_equal "yes" "$result"
 
 ###############
-# TEST: session_name
-
 start_test "fish session_name empty when not in pool"
 result="$(_fish_run 'session_name')"
 assert_equal "" "$result"
