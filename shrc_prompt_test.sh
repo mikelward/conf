@@ -39,6 +39,7 @@ extract_func short_hostname
 extract_func set_prompt
 extract_func ps1
 extract_func ps1_character
+extract_func _ps1_red_char
 extract_func keymap_character
 extract_func getshopt
 extract_func _color_print
@@ -85,6 +86,11 @@ on_test_host() { false; }
 on_dev_host() { false; }
 inside_tmux() { false; }
 in_shpool() { false; }
+# Default to non-root. Tests that specifically exercise the root
+# branches of host_info / ps1_character re-stub this to `true`. The
+# sandbox frequently runs as UID 0, so without this stub every test
+# would hit the `[root]` / red-prompt-char paths.
+i_am_root() { false; }
 bell() { :; }
 log_history() { :; }
 
@@ -97,34 +103,27 @@ assert_equal '_ ' "$PS2"
 assert_equal '#? ' "$PS3"
 
 ###############
-# $UID is readonly in bash, so we can't toggle it at runtime. Instead
-# re-extract ps1_character with $UID replaced by a settable $_test_uid
-# so both branches are exercised on every run (regardless of the user
-# the test runs as).
+# ps1_character is always `$` (the bash/zsh-native glyph). When root,
+# it's the same glyph wrapped in red escape markers so readline's
+# width calculation still sees one character. When colour is off
+# (the default in these tests), the wrap is a no-op.
 
-start_test "ps1_character for root"
-extract_func_subst ps1_character 's/\$UID/$_test_uid/g'
-_test_uid=0
-assert_equal '#' "$(ps1_character)"
-start_test "ps1_character for non-root"
-_test_uid=1000
+start_test "ps1_character non-root prints plain dollar"
+i_am_root() { false; }
 assert_equal '$' "$(ps1_character)"
 
-# Likewise re-extract ps1 with the same substitution so its output can
-# be tested under both UIDs. ps1 calls keymap_character (stubbed by
-# returning early when no keymap is active) and ps1_character.
-start_test "ps1 output for root"
-extract_func_subst ps1 's/\$UID/$_test_uid/g'
-_test_uid=0
-assert_equal '# ' "$(ps1)"
-start_test "ps1 output for non-root"
-_test_uid=1000
+start_test "ps1_character root prints plain dollar when colour off"
+i_am_root() { true; }
+assert_equal '$' "$(ps1_character)"
+i_am_root() { false; }
+
+start_test "ps1 output non-root"
 assert_equal '$ ' "$(ps1)"
 
-# Re-extract the real ps1/ps1_character for the rest of the tests so
-# subsequent assertions see shrc's actual UID binding.
-extract_func ps1_character
-extract_func ps1
+start_test "ps1 output root when colour off"
+i_am_root() { true; }
+assert_equal '$ ' "$(ps1)"
+i_am_root() { false; }
 
 ###############
 start_test "short_hostname strips domain and username prefix"
@@ -201,6 +200,12 @@ result="$(host_info)"
 assert_equal "laptop [mysession]" "$result"
 in_shpool() { false; }
 unset SHPOOL_SESSION_NAME
+
+start_test "host_info prepends [root] when root"
+i_am_root() { true; }
+result="$(host_info)"
+assert_equal "[root] laptop shpool" "$result"
+i_am_root() { false; }
 
 ###############
 start_test "dir_info uses vcs prompt-info inside a project"
@@ -373,17 +378,16 @@ assert_contains "SSH" "$result"
 is_ssh_valid() { true; }
 
 ###############
+# PS1 is always `$ ` now (colour off in this test; root would get a
+# red `$` via escape markers otherwise). The # vs $ root glyph is
+# gone -- host_info carries the [root] tag as the visible cue.
 start_test "preprompt sets PS1"
 
 PS1=""
 current_command=
 SECONDS=0
 preprompt >/dev/null
-if test "$UID" -eq 0; then
-    _expected_ps1='# '
-else
-    _expected_ps1='$ '
-fi
+_expected_ps1='$ '
 assert_equal "$_expected_ps1" "$PS1"
 
 ###############
@@ -422,12 +426,9 @@ _resolve_cr() {
     done <<< "$1"
 }
 
-# Determine expected ps1_character based on actual UID
-if test "$UID" -eq 0; then
-    _ps1char='#'
-else
-    _ps1char='$'
-fi
+# The PS1 glyph is always `$` under the test's colour-off setup;
+# root's red wrapping is empty when colour is disabled.
+_ps1char='$'
 
 ###############
 start_test "whole prompt: mikel on laptop, at home, need to auth"
@@ -673,6 +674,23 @@ current_command="slow"
 SECONDS=5
 result="$(last_job_info)"
 assert_contains $'\033[33m'"took 5 seconds"$'\033[0m' "$result"
+
+start_test "ps1_character is red-wrapped dollar when root"
+# \[...\] are the bash markers that tell readline the enclosed
+# sequence is zero-width. _ps1_red_char emits them around the ANSI
+# escape + glyph; shell=bash is the shrc-detected mode under this
+# test harness.
+i_am_root() { true; }
+assert_equal '\['$'\033[31m''\]$\['$'\033[0m''\]' "$(ps1_character)"
+i_am_root() { false; }
+
+start_test "host_info root tag: brackets plain, 'root' in red"
+i_am_root() { true; }
+result="$(host_info)"
+# Literal "[" then red-wrapped "root" then plain "]" so the
+# brackets stay readable even when the terminal swallows colour.
+assert_contains "["$'\033[31m'"root"$'\033[0m'"]" "$result"
+i_am_root() { false; }
 
 # Restore color variables
 color="$_saved_color"

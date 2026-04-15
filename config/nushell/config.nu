@@ -866,12 +866,13 @@ def prompt-info [...flags: string] { do $env.prompt-info $flags }
 def host-info [] {
     let h = (short-hostname)
     let host = if (on-production-host) { red $h } else { $h }
+    let root_info = if (i-am-root) { $"[(red 'root')] " } else { "" }
     let tag = if (in-shpool) {
         $" [(green ($env.SHPOOL_SESSION_NAME? | default ""))]"
     } else {
         $" (yellow "shpool")"
     }
-    $host + $tag
+    $root_info + $host + $tag
 }
 
 # replace a leading $HOME in $PWD with "~"
@@ -938,9 +939,16 @@ def title-escape [t: string] {
     }
 }
 
-# print a character that should be the last part of the prompt
+# Print a character that should be the last part of the prompt.
+# `>` is nushell's native convention, deliberately different from
+# bash/zsh's `$`: seeing `>` at the prompt is a hint that this is
+# nushell, i.e. which syntax is live. Each shell uses its own native
+# glyph so the prompt doubles as a which-shell-am-I-in cue. When
+# root, the glyph is the same (`>`) but coloured red; host-info also
+# prepends a red [root] tag so the "you are root" cue is visible
+# even without colour.
 def ps1-character [] {
-    if (i-am-root) { "#" } else { ">" }
+    if (i-am-root) { red ">" } else { ">" }
 }
 
 # return the bell character for xterm-family terminals so the caller
