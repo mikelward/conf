@@ -60,14 +60,17 @@ let results = [
     (run-test "nu format-duration 1h2m3s" { assert equal (format-duration 3723sec) "1 hours 2 minutes 3 seconds" })
 
     ###############
-    # ps1-character: '>' when not root, '#' when root.
+    # ps1-character: always '>' (nushell's native glyph, flagging
+    # which-shell-am-I-in). When root it's still '>' but returned
+    # via red(), so colour (not shape) is the root cue. The [root]
+    # prefix in host-info carries the visible-without-colour cue.
     (run-test "nu ps1-character non-root" {
         $env.UID = 1000
         assert equal (ps1-character) ">"
     })
-    (run-test "nu ps1-character root" {
+    (run-test "nu ps1-character root wraps in red" {
         $env.UID = 0
-        assert equal (ps1-character) "#"
+        assert str contains (ps1-character) ">"
     })
 
     ###############
@@ -1807,11 +1810,22 @@ except OSError: pass
     (run-test "nu host-info paints hostname red on production" {
         $env.HOSTNAME = "prodhost"
         $env.USERNAME = "mikel"
+        $env.UID = 1000
         hide-env --ignore-errors SHPOOL_SESSION_NAME
         $env.on-production-host = {|| true }
         let out = (host-info)
         assert str contains $out "prodhost"
         assert str contains $out (ansi red)
+    })
+    (run-test "nu host-info prepends [root] when root" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.UID = 0
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.on-production-host = {|| false }
+        let out = (host-info)
+        assert str contains $out "[root]"
+        assert str contains $out "laptop"
     })
     (run-test "nu host-info shows yellow shpool warning off shpool" {
         $env.HOSTNAME = "mikel-laptop"

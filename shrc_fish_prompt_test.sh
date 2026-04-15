@@ -49,6 +49,9 @@ _fish_run() {
         function on_my_workstation; return 0; end
         function on_my_laptop; return 1; end
         function inside_tmux; return 1; end
+        # Default to non-root. Tests that exercise the root branches
+        # of host_info / ps1_character re-stub this to return 0 (true).
+        function i_am_root; return 1; end
         function have_command
             switch $argv[1]
                 case vcs; return 0
@@ -81,8 +84,13 @@ result="$(_fish_run 'bar 5')"
 assert_equal "―――――" "$result"
 
 ###############
-start_test "fish ps1_character prints >"
+start_test "fish ps1_character prints > non-root"
 result="$(_fish_run 'ps1_character')"
+assert_equal ">" "$result"
+
+start_test "fish ps1_character prints plain > when root (colour off)"
+# colour=false in the _fish_run preamble, so red() is a no-op wrap.
+result="$(_fish_run 'function i_am_root; return 0; end; ps1_character')"
 assert_equal ">" "$result"
 
 ###############
@@ -293,6 +301,17 @@ result="$(_fish_run '
     host_info
 ')"
 assert_equal "laptop [edge1]" "$result"
+
+start_test "fish host_info prepends [root] when root"
+result="$(_fish_run '
+    set -g HOSTNAME mikel-laptop
+    set -g USERNAME mikel
+    function on_production_host; return 1; end
+    function in_shpool; return 1; end
+    function i_am_root; return 0; end
+    host_info
+')"
+assert_equal "[root] laptop shpool" "$result"
 
 ###############
 # TEST: tilde_pwd replaces $HOME with ~

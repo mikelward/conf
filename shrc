@@ -1289,13 +1289,17 @@ host_info() {
     if on_production_host; then
         _host="$(red "$_host")"
     fi
+    local _root_info=
+    if i_am_root; then
+        _root_info="[$(red 'root')] "
+    fi
     local _tag
     if in_shpool; then
         _tag=" [$(green "$SHPOOL_SESSION_NAME")]"
     else
         _tag=" $(yellow shpool)"
     fi
-    printf '%s%s' "$_host" "$_tag"
+    printf '%s%s%s' "$_root_info" "$_host" "$_tag"
 }
 
 # replace a leading $HOME in $PWD with "~"
@@ -1615,13 +1619,35 @@ ps1() {
     printf ' '
 }
 
-# print a character that should be the last part of the prompt
+# Print a character that should be the last part of the prompt.
+# Deliberately different from fish's `>` and nushell's `>`: seeing `$`
+# at the prompt is a hint that this is a bash/zsh shell, i.e. which
+# syntax is live. Each shell uses its own native glyph so the prompt
+# doubles as a which-shell-am-I-in cue. When root, the glyph is the
+# same (`$`) but coloured red; host_info also prepends a red [root]
+# tag so the "you are root" cue is visible even without colour.
 ps1_character() {
-    if test $UID -eq 0; then
-        printf '#'
+    if i_am_root; then
+        _ps1_red_char '$'
     else
         printf '$'
     fi
+}
+
+# Print $1 in red, wrapped in the zero-width escape markers PS1
+# expects (bash's \[...\], zsh's %{...%}) so readline's line-wrap
+# accounting stays correct. Plain if colours are off.
+_ps1_red_char() {
+    local _char="$1"
+    if ! $color; then
+        printf '%s' "$_char"
+        return
+    fi
+    case "$shell" in
+    bash) printf '\[%s\]%s\[%s\]' "$red" "$_char" "$normal" ;;
+    zsh)  printf '%%{%s%%}%s%%{%s%%}' "$red" "$_char" "$normal" ;;
+    *)    printf '%s%s%s' "$red" "$_char" "$normal" ;;
+    esac
 }
 
 # return whether the given shell option is on

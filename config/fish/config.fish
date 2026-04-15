@@ -1084,13 +1084,17 @@ if is_interactive
         if on_production_host
             set _host (red $_host | string collect)
         end
+        set _root_info ""
+        if i_am_root
+            set _root_info "["(red 'root' | string collect)"] "
+        end
         set _tag
         if in_shpool
             set _tag " ["(green $SHPOOL_SESSION_NAME | string collect)"]"
         else
             set _tag " "(yellow shpool | string collect)
         end
-        printf '%s%s' $_host $_tag
+        printf '%s%s%s' $_root_info $_host $_tag
     end
 
     # replace a leading $HOME in $PWD with "~"
@@ -1464,9 +1468,19 @@ exec zsh -i'
         printf ' '
     end
 
-    # print a character that should be the last part of the prompt
+    # Print a character that should be the last part of the prompt.
+    # Deliberately different from bash/zsh's `$`: seeing `>` at the
+    # prompt is a hint that this is fish, i.e. which syntax is live.
+    # Each shell uses its own native glyph so the prompt doubles as
+    # a which-shell-am-I-in cue. When root, the glyph is the same
+    # (`>`) but coloured red; host_info also prepends a red [root]
+    # tag so the "you are root" cue is visible even without colour.
     function ps1_character
-        printf '>'
+        if i_am_root
+            red '>'
+        else
+            printf '>'
+        end
     end
 
     # print the current vi-like editing mode (e.g. INSERT, NORMAL).
