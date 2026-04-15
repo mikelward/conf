@@ -38,63 +38,75 @@ source "$_srcdir/shrc.vcs" >/dev/null 2>&1
 # Test vcs detection
 
 # Test git detection
+start_test "vcs detects git repo"
 mkdir -p "$_testdir/gitrepo/subdir"
 mkdir "$_testdir/gitrepo/.git"
 result=$(cd "$_testdir/gitrepo" && vcs)
-assert_equal "vcs detects git repo" "git" "$result"
+assert_equal "git" "$result"
 
 # Test hg detection
+start_test "vcs detects hg repo"
 mkdir -p "$_testdir/hgrepo"
 mkdir "$_testdir/hgrepo/.hg"
 result=$(cd "$_testdir/hgrepo" && vcs)
-assert_equal "vcs detects hg repo" "hg" "$result"
+assert_equal "hg" "$result"
 
 # Test jj detection
+start_test "vcs detects jj repo"
 mkdir -p "$_testdir/jjrepo"
 mkdir "$_testdir/jjrepo/.jj"
 result=$(cd "$_testdir/jjrepo" && vcs)
-assert_equal "vcs detects jj repo" "jj" "$result"
+assert_equal "jj" "$result"
 
 # Test no vcs. The binary prints "vcs: no version control system
 # detected" on stderr for detect failures; capture stderr separately so
 # it doesn't leak into the test output.
+start_test "vcs returns empty for no repo"
 mkdir -p "$_testdir/norepo"
 result=$(cd "$_testdir/norepo" && vcs 2>/dev/null)
-assert_equal "vcs returns empty for no repo" "" "$result"
+assert_equal "" "$result"
+start_test "vcs returns false for no repo"
 (cd "$_testdir/norepo" && vcs 2>/dev/null)
-assert_equal "vcs returns false for no repo" "1" "$?"
+assert_equal "1" "$?"
 
 # rootdir() redirects stderr internally so the preprompt doesn't leak
 # "vcs: no version control system detected" every prompt.
+start_test "rootdir silent on stderr outside repo"
 _stderr=$(cd "$_testdir/norepo" && rootdir 2>&1 >/dev/null)
-assert_equal "rootdir silent on stderr outside repo" "" "$_stderr"
+assert_equal "" "$_stderr"
 
 # Test vcs detection from subdirectory
+start_test "vcs detects git from subdir"
 result=$(cd "$_testdir/gitrepo/subdir" && vcs)
-assert_equal "vcs detects git from subdir" "git" "$result"
+assert_equal "git" "$result"
 
 # Test .vcs_cache is created
-assert_true "vcs creates .vcs_cache" test -f "$_testdir/gitrepo/.vcs_cache"
+start_test "vcs creates .vcs_cache"
+assert_true test -f "$_testdir/gitrepo/.vcs_cache"
 
 # Test .vcs_cache is used on second call
+start_test "vcs uses cache on second call"
 result=$(cd "$_testdir/gitrepo" && vcs)
-assert_equal "vcs uses cache on second call" "git" "$result"
+assert_equal "git" "$result"
 
 ###############
 # Test vcs_backend and vcs_hosting
 
 # git repo should have git backend
+start_test "vcs_backend returns git for git repo"
 rm -f "$_testdir/gitrepo/.vcs_cache"
 result=$(cd "$_testdir/gitrepo" && vcs_backend)
-assert_equal "vcs_backend returns git for git repo" "git" "$result"
+assert_equal "git" "$result"
 
 # hg repo has no backend (cache uses - sentinel)
+start_test "vcs_backend returns empty for hg repo"
 rm -f "$_testdir/hgrepo/.vcs_cache"
 result=$(cd "$_testdir/hgrepo" && vcs_backend)
-assert_equal "vcs_backend returns empty for hg repo" "" "$result"
+assert_equal "" "$result"
 # Verify the sentinel is written to line 1 of cache
 _cache_line1=$(head -1 "$_testdir/hgrepo/.vcs_cache")
-assert_contains "hg cache uses - sentinel for backend" " - " "$_cache_line1"
+start_test "hg cache uses - sentinel for backend"
+assert_contains " - " "$_cache_line1"
 
 # Helper: write a git config with a given origin URL into a jj repo's
 # embedded git store. The vcs binary reads this config directly.
@@ -112,131 +124,162 @@ EOF
 }
 
 # jj repo with git backend + github remote
+start_test "vcs_backend returns git for jj-git repo"
 _write_jj_origin "$_testdir/jjrepo" "https://github.com/user/repo.git"
 rm -f "$_testdir/jjrepo/.vcs_cache"
 result=$(cd "$_testdir/jjrepo" && vcs_backend)
-assert_equal "vcs_backend returns git for jj-git repo" "git" "$result"
+assert_equal "git" "$result"
 result=$(cd "$_testdir/jjrepo" && vcs_hosting)
-assert_equal "vcs_hosting returns github for github remote" "github" "$result"
+start_test "vcs_hosting returns github for github remote"
+assert_equal "github" "$result"
 
 # jj repo with gerrit remote
+start_test "vcs_hosting returns gerrit for googlesource remote"
 _write_jj_origin "$_testdir/jjrepo_gerrit" "https://chromium.googlesource.com/foo/bar"
 result=$(cd "$_testdir/jjrepo_gerrit" && vcs_hosting)
-assert_equal "vcs_hosting returns gerrit for googlesource remote" "gerrit" "$result"
+assert_equal "gerrit" "$result"
 
 # jj repo with gitlab remote
+start_test "vcs_hosting returns gitlab for gitlab.com remote"
 _write_jj_origin "$_testdir/jjrepo_gitlab" "https://gitlab.com/user/repo.git"
 result=$(cd "$_testdir/jjrepo_gitlab" && vcs_hosting)
-assert_equal "vcs_hosting returns gitlab for gitlab.com remote" "gitlab" "$result"
+assert_equal "gitlab" "$result"
 
 # self-hosted gitlab
+start_test "vcs_hosting returns gitlab for self-hosted gitlab"
 _write_jj_origin "$_testdir/jjrepo_gitlab_self" "https://gitlab.mycompany.com/group/repo.git"
 result=$(cd "$_testdir/jjrepo_gitlab_self" && vcs_hosting)
-assert_equal "vcs_hosting returns gitlab for self-hosted gitlab" "gitlab" "$result"
+assert_equal "gitlab" "$result"
 
 # jj repo with bitbucket remote
+start_test "vcs_hosting returns bitbucket for bitbucket remote"
 _write_jj_origin "$_testdir/jjrepo_bitbucket" "https://bitbucket.org/user/repo.git"
 result=$(cd "$_testdir/jjrepo_bitbucket" && vcs_hosting)
-assert_equal "vcs_hosting returns bitbucket for bitbucket remote" "bitbucket" "$result"
+assert_equal "bitbucket" "$result"
 
 # jj repo with sourcehut remote
+start_test "vcs_hosting returns sourcehut for sr.ht remote"
 _write_jj_origin "$_testdir/jjrepo_srht" "https://git.sr.ht/~user/repo"
 result=$(cd "$_testdir/jjrepo_srht" && vcs_hosting)
-assert_equal "vcs_hosting returns sourcehut for sr.ht remote" "sourcehut" "$result"
+assert_equal "sourcehut" "$result"
 
 # jj repo with no origin remote
+start_test "vcs_hosting returns empty for no remote"
 _write_jj_origin "$_testdir/jjrepo_noremote" ""
 result=$(cd "$_testdir/jjrepo_noremote" && vcs_hosting)
-assert_equal "vcs_hosting returns empty for no remote" "" "$result"
+assert_equal "" "$result"
 
 # jj repo with non-git backend
+start_test "vcs_backend returns piper for piper backend"
 mkdir -p "$_testdir/jjrepo_piper/.jj/repo/store"
 echo "piper" > "$_testdir/jjrepo_piper/.jj/repo/store/type"
 result=$(cd "$_testdir/jjrepo_piper" && vcs_backend)
-assert_equal "vcs_backend returns piper for piper backend" "piper" "$result"
+assert_equal "piper" "$result"
 result=$(cd "$_testdir/jjrepo_piper" && vcs_hosting)
-assert_equal "vcs_hosting returns empty for non-git backend" "" "$result"
+start_test "vcs_hosting returns empty for non-git backend"
+assert_equal "" "$result"
 
 # Verify cache format: line 1 has 3 fields, line 2 has rootdir
+start_test "vcs_cache line 1 contains backend"
 rm -f "$_testdir/jjrepo/.vcs_cache"
 (cd "$_testdir/jjrepo" && vcs >/dev/null)
 _cache_line1=$(head -1 "$_testdir/jjrepo/.vcs_cache")
 _cache_line2=$(sed -n '2p' "$_testdir/jjrepo/.vcs_cache")
-assert_contains "vcs_cache line 1 contains backend" "git" "$_cache_line1"
-assert_contains "vcs_cache line 1 contains hosting" "github" "$_cache_line1"
+assert_contains "git" "$_cache_line1"
+start_test "vcs_cache line 1 contains hosting"
+assert_contains "github" "$_cache_line1"
 _field_count=$(echo "$_cache_line1" | awk '{print NF}')
-assert_equal "vcs_cache line 1 has 3 fields (all set)" "3" "$_field_count"
-assert_equal "vcs_cache line 2 is rootdir" "$_testdir/jjrepo" "$_cache_line2"
+start_test "vcs_cache line 1 has 3 fields (all set)"
+assert_equal "3" "$_field_count"
+start_test "vcs_cache line 2 is rootdir"
+assert_equal "$_testdir/jjrepo" "$_cache_line2"
 
 # Verify cache has 3 fields on line 1 even when backend and hosting are empty
+start_test "vcs_cache line 1 has 3 fields (sentinels)"
 rm -f "$_testdir/hgrepo/.vcs_cache"
 (cd "$_testdir/hgrepo" && vcs >/dev/null)
 _cache_line1=$(head -1 "$_testdir/hgrepo/.vcs_cache")
 _field_count=$(echo "$_cache_line1" | awk '{print NF}')
-assert_equal "vcs_cache line 1 has 3 fields (sentinels)" "3" "$_field_count"
-assert_contains "hg cache line 1 ends with - -" "- -" "$_cache_line1"
+assert_equal "3" "$_field_count"
+start_test "hg cache line 1 ends with - -"
+assert_contains "- -" "$_cache_line1"
 
 # Verify cache has 3 fields on line 1 when only hosting is empty
+start_test "vcs_cache line 1 has 3 fields (hosting sentinel)"
 rm -f "$_testdir/jjrepo_noremote/.vcs_cache"
 (cd "$_testdir/jjrepo_noremote" && vcs >/dev/null)
 _cache_line1=$(head -1 "$_testdir/jjrepo_noremote/.vcs_cache")
 _field_count=$(echo "$_cache_line1" | awk '{print NF}')
-assert_equal "vcs_cache line 1 has 3 fields (hosting sentinel)" "3" "$_field_count"
-assert_contains "git backend with no hosting ends with -" "git -" "$_cache_line1"
+assert_equal "3" "$_field_count"
+start_test "git backend with no hosting ends with -"
+assert_contains "git -" "$_cache_line1"
 
 # Test paths with spaces
+start_test "vcs detects git in path with spaces"
 mkdir -p "$_testdir/path with spaces/subdir"
 mkdir "$_testdir/path with spaces/.git"
 result=$(cd "$_testdir/path with spaces" && vcs)
-assert_equal "vcs detects git in path with spaces" "git" "$result"
+assert_equal "git" "$result"
 result=$(cd "$_testdir/path with spaces" && rootdir)
-assert_equal "rootdir works with spaces in path" "$_testdir/path with spaces" "$result"
+start_test "rootdir works with spaces in path"
+assert_equal "$_testdir/path with spaces" "$result"
 result=$(cd "$_testdir/path with spaces" && vcs_backend)
-assert_equal "vcs_backend works with spaces in path" "git" "$result"
+start_test "vcs_backend works with spaces in path"
+assert_equal "git" "$result"
 result=$(cd "$_testdir/path with spaces/subdir" && rootdir)
-assert_equal "rootdir from subdir works with spaces" "$_testdir/path with spaces" "$result"
+start_test "rootdir from subdir works with spaces"
+assert_equal "$_testdir/path with spaces" "$result"
 result=$(cd "$_testdir/path with spaces/subdir" && rootdir "file.txt")
-assert_equal "rootdir with arg works with spaces" "$_testdir/path with spaces/file.txt" "$result"
+start_test "rootdir with arg works with spaces"
+assert_equal "$_testdir/path with spaces/file.txt" "$result"
 
 # Test paths with backslashes (read -r prevents mangling)
+start_test "vcs detects git in path with backslash"
 mkdir -p "$_testdir/back\\slash"
 mkdir "$_testdir/back\\slash/.git"
 result=$(cd "$_testdir/back\\slash" && vcs)
-assert_equal "vcs detects git in path with backslash" "git" "$result"
+assert_equal "git" "$result"
 result=$(cd "$_testdir/back\\slash" && rootdir)
-assert_equal "rootdir works with backslash in path" "$_testdir/back\\slash" "$result"
+start_test "rootdir works with backslash in path"
+assert_equal "$_testdir/back\\slash" "$result"
 
 ###############
 # Test cv (clear vcs cache)
 
+start_test "cv removes .vcs_cache"
 (cd "$_testdir/gitrepo" && cv)
-assert_false "cv removes .vcs_cache" test -f "$_testdir/gitrepo/.vcs_cache"
+assert_false test -f "$_testdir/gitrepo/.vcs_cache"
 
 ###############
 # Test rootdir
 
 # Re-detect to create cache
+start_test "rootdir returns repo root"
 (cd "$_testdir/gitrepo/subdir" && vcs >/dev/null)
 result=$(cd "$_testdir/gitrepo/subdir" && rootdir)
-assert_equal "rootdir returns repo root" "$_testdir/gitrepo" "$result"
+assert_equal "$_testdir/gitrepo" "$result"
 
 # Test rootdir with arguments
+start_test "rootdir with arg returns full path"
 result=$(cd "$_testdir/gitrepo/subdir" && rootdir "file.txt")
-assert_equal "rootdir with arg returns full path" "$_testdir/gitrepo/file.txt" "$result"
+assert_equal "$_testdir/gitrepo/file.txt" "$result"
 
+start_test "rootdir with multiple args"
 result=$(cd "$_testdir/gitrepo/subdir" && rootdir "a.txt" "b.txt")
 expected="$_testdir/gitrepo/a.txt
 $_testdir/gitrepo/b.txt"
-assert_equal "rootdir with multiple args" "$expected" "$result"
+assert_equal "$expected" "$result"
 
 ###############
 # Test subdir
 
+start_test "subdir returns path under root"
 result=$(cd "$_testdir/gitrepo/subdir" && subdir)
-assert_equal "subdir returns path under root" "subdir" "$result"
+assert_equal "subdir" "$result"
 
+start_test "subdir at root returns empty"
 result=$(cd "$_testdir/gitrepo" && subdir)
-assert_equal "subdir at root returns empty" "" "$result"
+assert_equal "" "$result"
 
 ###############
 # Test clone dispatch
@@ -247,27 +290,31 @@ have_command() { return 0; }
 jj() { _clone_log="jj $*"; }
 hg() { _clone_log="hg $*"; }
 
+start_test "clone dispatches .git to jj git clone"
 clone https://github.com/foo/bar.git
-assert_equal "clone dispatches .git to jj git clone" "jj git clone https://github.com/foo/bar.git" "$_clone_log"
+assert_equal "jj git clone https://github.com/foo/bar.git" "$_clone_log"
 
+start_test "clone dispatches /hg/ to hg"
 _clone_log=""
 clone https://hg.example.com/hg/repo
-assert_equal "clone dispatches /hg/ to hg" "hg clone https://hg.example.com/hg/repo" "$_clone_log"
+assert_equal "hg clone https://hg.example.com/hg/repo" "$_clone_log"
 
 # Test fallback to git when jj is unavailable
+start_test "clone falls back to git when jj unavailable"
 unset -f jj
 have_command() { test "$1" != "jj"; }
 confirm() { return 0; }
 git() { _clone_log="git $*"; }
 _clone_log=""
 clone https://github.com/foo/bar.git
-assert_equal "clone falls back to git when jj unavailable" "git clone https://github.com/foo/bar.git" "$_clone_log"
+assert_equal "git clone https://github.com/foo/bar.git" "$_clone_log"
 
 # Test declining fallback
+start_test "clone aborts when user declines git fallback"
 confirm() { return 1; }
 _clone_log=""
 clone https://github.com/foo/bar.git
-assert_equal "clone aborts when user declines git fallback" "" "$_clone_log"
+assert_equal "" "$_clone_log"
 
 unset -f git hg jj have_command confirm
 unset _clone_log
@@ -276,56 +323,66 @@ unset _clone_log
 # Test status_chars
 
 # Stub status to return known output
+start_test "status_chars extracts unique sorted chars"
 status() {
     printf 'M  file1.txt\nA  file2.txt\n?? file3.txt\nM  file4.txt\n'
 }
 result=$(status_chars)
-assert_equal "status_chars extracts unique sorted chars" "?? A M" "$result"
+assert_equal "?? A M" "$result"
 
 # Stub status returning clean
+start_test "status_chars returns empty for clean"
 status() { :; }
 result=$(status_chars)
-assert_equal "status_chars returns empty for clean" "" "$result"
+assert_equal "" "$result"
 
 # Single status code
+start_test "status_chars single modified file"
 status() { printf 'M  file1.txt\n'; }
 result=$(status_chars)
-assert_equal "status_chars single modified file" "M" "$result"
+assert_equal "M" "$result"
 
 # Only untracked files
+start_test "status_chars only untracked"
 status() { printf '?? file1.txt\n?? file2.txt\n'; }
 result=$(status_chars)
-assert_equal "status_chars only untracked" "??" "$result"
+assert_equal "??" "$result"
 
 # Two-character status codes (e.g. git staged+unstaged)
+start_test "status_chars two-char codes"
 status() { printf 'AM file1.txt\nMM file2.txt\n'; }
 result=$(status_chars)
-assert_equal "status_chars two-char codes" "AM MM" "$result"
+assert_equal "AM MM" "$result"
 
 # Status codes with ! (e.g. hg missing)
+start_test "status_chars with ! status"
 status() { printf '! file1.txt\nM file2.txt\n'; }
 result=$(status_chars)
-assert_equal "status_chars with ! status" "! M" "$result"
+assert_equal "! M" "$result"
 
 # Ignored files (!!) should be recognized
+start_test "status_chars ignored and untracked"
 status() { printf '!! ignored.txt\n?? untracked.txt\n'; }
 result=$(status_chars)
-assert_equal "status_chars ignored and untracked" "!! ??" "$result"
+assert_equal "!! ??" "$result"
 
 # Lines with lowercase or non-matching first fields are filtered out
+start_test "status_chars filters non-matching lines"
 status() { printf 'M  file1.txt\nfoo bar.txt\n123 baz.txt\n'; }
 result=$(status_chars)
-assert_equal "status_chars filters non-matching lines" "M" "$result"
+assert_equal "M" "$result"
 
 # Duplicate codes are deduplicated
+start_test "status_chars deduplicates"
 status() { printf 'A  f1\nA  f2\nA  f3\n'; }
 result=$(status_chars)
-assert_equal "status_chars deduplicates" "A" "$result"
+assert_equal "A" "$result"
 
 # Many distinct codes are sorted
+start_test "status_chars sorts codes"
 status() { printf 'R  f1\nD  f2\nA  f3\nM  f4\n'; }
 result=$(status_chars)
-assert_equal "status_chars sorts codes" "A D M R" "$result"
+assert_equal "A D M R" "$result"
 
 unset -f status
 
@@ -333,41 +390,49 @@ unset -f status
 # Test allknown
 
 # Stub unknown to return something
+start_test "allknown prints unknown files"
 unknown() { echo "untracked.txt"; }
 result=$(allknown)
-assert_equal "allknown prints unknown files" "untracked.txt" "$result"
+assert_equal "untracked.txt" "$result"
+start_test "allknown returns false when files unknown"
 allknown >/dev/null
-assert_equal "allknown returns false when files unknown" "1" "$?"
+assert_equal "1" "$?"
 
 # Stub unknown to return nothing
+start_test "allknown returns true when no unknown files"
 unknown() { :; }
 allknown >/dev/null
-assert_equal "allknown returns true when no unknown files" "0" "$?"
+assert_equal "0" "$?"
 
 unset -f unknown
 
 ###############
 # Test target_relative_to
 
+start_test "target_relative_to same parent"
 result=$(target_relative_to "src/foo.txt" "src")
-assert_equal "target_relative_to same parent" "foo.txt" "$result"
+assert_equal "foo.txt" "$result"
 
+start_test "target_relative_to sibling dir"
 result=$(target_relative_to "src/foo.txt" "lib")
-assert_equal "target_relative_to sibling dir" "../src/foo.txt" "$result"
+assert_equal "../src/foo.txt" "$result"
 
+start_test "target_relative_to from dot"
 result=$(target_relative_to "foo.txt" ".")
-assert_equal "target_relative_to from dot" "foo.txt" "$result"
+assert_equal "foo.txt" "$result"
 
+start_test "target_relative_to nested"
 result=$(target_relative_to "a/b/c" "a")
-assert_equal "target_relative_to nested" "b/c" "$result"
+assert_equal "b/c" "$result"
 
 ###############
 # Test project
 
 # Stub projectroot
+start_test "project returns basename of projectroot"
 projectroot() { echo "/home/user/repos/myproject"; }
 result=$(project)
-assert_equal "project returns basename of projectroot" "myproject" "$result"
+assert_equal "myproject" "$result"
 unset -f projectroot
 
 ###############
@@ -375,20 +440,25 @@ unset -f projectroot
 # Routing predicate: "cwd is in a repo AND operand is inside it."
 # Both halves false here -> system command.
 
+start_test "rm uses command rm outside VCS"
 mkdir -p "$_testdir/norepo2"
 echo "rm-me" > "$_testdir/norepo2/rmfile.txt"
 (cd "$_testdir/norepo2" && rm rmfile.txt)
-assert_false "rm uses command rm outside VCS" test -f "$_testdir/norepo2/rmfile.txt"
+assert_false test -f "$_testdir/norepo2/rmfile.txt"
 
+start_test "mv uses command mv outside VCS"
 echo "mv-me" > "$_testdir/norepo2/mvfile.txt"
 (cd "$_testdir/norepo2" && mv mvfile.txt mvd.txt)
-assert_true "mv uses command mv outside VCS" test -f "$_testdir/norepo2/mvd.txt"
-assert_false "mv removes original outside VCS" test -f "$_testdir/norepo2/mvfile.txt"
+assert_true test -f "$_testdir/norepo2/mvd.txt"
+start_test "mv removes original outside VCS"
+assert_false test -f "$_testdir/norepo2/mvfile.txt"
 
+start_test "cp uses command cp outside VCS"
 echo "cp-me" > "$_testdir/norepo2/cpfile.txt"
 (cd "$_testdir/norepo2" && cp cpfile.txt cpd.txt)
-assert_true "cp uses command cp outside VCS" test -f "$_testdir/norepo2/cpd.txt"
-assert_true "cp keeps original outside VCS" test -f "$_testdir/norepo2/cpfile.txt"
+assert_true test -f "$_testdir/norepo2/cpd.txt"
+start_test "cp keeps original outside VCS"
+assert_true test -f "$_testdir/norepo2/cpfile.txt"
 
 ###############
 # Test rm/mv/cp route by operand, not cwd: when cwd is inside a repo
@@ -399,26 +469,31 @@ assert_true "cp keeps original outside VCS" test -f "$_testdir/norepo2/cpfile.tx
 # makes cwd's rootdir /testdir/gitrepo, and these operands are under
 # siblings like /testdir/rm_outside -- outside that tree.
 
+start_test "rm uses command rm when cwd in repo but file outside"
 mkdir -p "$_testdir/rm_outside"
 echo "rm-me-outside" > "$_testdir/rm_outside/outfile.txt"
 (cd "$_testdir/gitrepo" && rm "$_testdir/rm_outside/outfile.txt")
-assert_false "rm uses command rm when cwd in repo but file outside" \
+assert_false \
     test -f "$_testdir/rm_outside/outfile.txt"
 
+start_test "mv uses command mv when cwd in repo but file outside"
 mkdir -p "$_testdir/mv_outside"
 echo "mv-me-outside" > "$_testdir/mv_outside/outfile.txt"
 (cd "$_testdir/gitrepo" && mv "$_testdir/mv_outside/outfile.txt" "$_testdir/mv_outside/outmoved.txt")
-assert_true "mv uses command mv when cwd in repo but file outside" \
+assert_true \
     test -f "$_testdir/mv_outside/outmoved.txt"
-assert_false "mv removes original when cwd in repo but file outside" \
+start_test "mv removes original when cwd in repo but file outside"
+assert_false \
     test -f "$_testdir/mv_outside/outfile.txt"
 
+start_test "cp uses command cp when cwd in repo but file outside"
 mkdir -p "$_testdir/cp_outside"
 echo "cp-me-outside" > "$_testdir/cp_outside/outfile.txt"
 (cd "$_testdir/gitrepo" && cp "$_testdir/cp_outside/outfile.txt" "$_testdir/cp_outside/outcopied.txt")
-assert_true "cp uses command cp when cwd in repo but file outside" \
+assert_true \
     test -f "$_testdir/cp_outside/outcopied.txt"
-assert_true "cp keeps original when cwd in repo but file outside" \
+start_test "cp keeps original when cwd in repo but file outside"
+assert_true \
     test -f "$_testdir/cp_outside/outfile.txt"
 
 ###############
@@ -435,11 +510,13 @@ assert_true "cp keeps original when cwd in repo but file outside" \
 # vcs move fails, and the source stays put -- proving the wrapper
 # did NOT silently fall through to plain mv.
 
+start_test "mv: source survives when vcs move fails inside repo"
 echo "please-fail" > "$_testdir/gitrepo/vcs_err_src.txt"
 (cd "$_testdir/gitrepo" && mv vcs_err_src.txt vcs_err_dst.txt) >/dev/null 2>&1
-assert_true "mv: source survives when vcs move fails inside repo" \
+assert_true \
     test -f "$_testdir/gitrepo/vcs_err_src.txt"
-assert_false "mv: no silent fall-through to plain mv on vcs failure" \
+start_test "mv: no silent fall-through to plain mv on vcs failure"
+assert_false \
     test -f "$_testdir/gitrepo/vcs_err_dst.txt"
 rm -f "$_testdir/gitrepo/vcs_err_src.txt"
 
@@ -448,15 +525,17 @@ rm -f "$_testdir/gitrepo/vcs_err_src.txt"
 # gets created either way. Check the wrapper's exit status instead --
 # on vcs failure it must propagate non-zero, whereas the old blind
 # fallback returned 0 once plain cp succeeded.
+start_test "cp: wrapper propagates vcs failure exit status"
 echo "please-fail" > "$_testdir/gitrepo/vcs_err_cpsrc.txt"
 (cd "$_testdir/gitrepo" && cp vcs_err_cpsrc.txt vcs_err_cpdst.txt) >/dev/null 2>&1
 _cp_rc=$?
-assert_false "cp: wrapper propagates vcs failure exit status" test "$_cp_rc" -eq 0
+assert_false test "$_cp_rc" -eq 0
 command rm -f "$_testdir/gitrepo/vcs_err_cpsrc.txt" "$_testdir/gitrepo/vcs_err_cpdst.txt"
 
+start_test "rm: target survives when vcs remove fails inside repo"
 echo "please-fail" > "$_testdir/gitrepo/vcs_err_rm.txt"
 (cd "$_testdir/gitrepo" && rm vcs_err_rm.txt) >/dev/null 2>&1
-assert_true "rm: target survives when vcs remove fails inside repo" \
+assert_true \
     test -f "$_testdir/gitrepo/vcs_err_rm.txt"
 command rm -f "$_testdir/gitrepo/vcs_err_rm.txt"
 
@@ -482,27 +561,31 @@ command rm -f "$_testdir/gitrepo/vcs_err_rm.txt"
 # DESTDIR SRC`, which git mv rejects (no -t option). Under
 # bail-on-flags the wrapper just runs `command mv -t DEST SRC`, which
 # works regardless of whether DESTDIR is tracked.
+start_test "mv -t DEST SRC: SRC lands in DEST"
 mkdir -p "$_testdir/gitrepo/flag_mv_dest"
 echo "move-me" > "$_testdir/flag_mv_src.txt"
 (cd "$_testdir/gitrepo" && mv -t "$_testdir/gitrepo/flag_mv_dest" "$_testdir/flag_mv_src.txt") >/dev/null 2>&1
-assert_true "mv -t DEST SRC: SRC lands in DEST" \
+assert_true \
     test -f "$_testdir/gitrepo/flag_mv_dest/flag_mv_src.txt"
-assert_false "mv -t DEST SRC: SRC gone from original location" \
+start_test "mv -t DEST SRC: SRC gone from original location"
+assert_false \
     test -f "$_testdir/flag_mv_src.txt"
 
 # Combined short flags: `rm -rf` must not fail on the stacked form
 # and must actually remove the target (whether via vcs or plain).
+start_test "rm -rf on dir: target gone"
 mkdir -p "$_testdir/flag_rm_dir/sub"
 echo "delete-me" > "$_testdir/flag_rm_dir/sub/file.txt"
 (cd "$_testdir/gitrepo" && rm -rf "$_testdir/flag_rm_dir") >/dev/null 2>&1
-assert_false "rm -rf on dir: target gone" test -d "$_testdir/flag_rm_dir"
+assert_false test -d "$_testdir/flag_rm_dir"
 
 # `--` counts as a dash-prefixed arg under the bail-on-flags rule, so
 # `rm -- FILE` is simply `command rm -- FILE`. Still removes the file.
+start_test "rm -- FILE still removes FILE"
 mkdir -p "$_testdir/rm_dashes"
 echo "x" > "$_testdir/rm_dashes/--weird"
 (cd "$_testdir/gitrepo" && rm -- "$_testdir/rm_dashes/--weird")
-assert_false "rm -- FILE still removes FILE" \
+assert_false \
     test -f "$_testdir/rm_dashes/--weird"
 
 ###############
@@ -518,16 +601,19 @@ source "$_srcdir/shrc.vcs" >/dev/null 2>&1
 # some stale shell fallback. Check the function body text rather than
 # running them (cheap, deterministic).
 
+start_test "vcs() calls command vcs"
 _vcs_body="$(type vcs)"
-assert_contains "vcs() calls command vcs" "command vcs" "$_vcs_body"
+assert_contains "command vcs" "$_vcs_body"
 
+start_test "prompt_info() calls command vcs prompt-info"
 _prompt_info_body="$(type prompt_info)"
-assert_contains "prompt_info() calls command vcs prompt-info" \
+assert_contains \
     "command vcs prompt-info" "$_prompt_info_body"
 
 # Wrappers generated by the command dispatch loop should all call vcs.
+start_test "status() calls vcs"
 _status_body="$(type status)"
-assert_contains "status() calls vcs" "vcs" "$_status_body"
+assert_contains "vcs" "$_status_body"
 
 ###############
 # Test prompt_info and vcs status on a real initialized git repo (fake
@@ -540,31 +626,40 @@ git init "$_realgit" >/dev/null 2>&1
     git -c user.email=test@test.com -c user.name=Test \
         commit --allow-empty -m "test" >/dev/null 2>&1)
 
+start_test "prompt_info succeeds in git repo"
 result=$(cd "$_realgit" && prompt_info --color=never)
-assert_equal "prompt_info succeeds in git repo" "0" "$?"
-assert_true "prompt_info output non-empty in git repo" test -n "$result"
+assert_equal "0" "$?"
+start_test "prompt_info output non-empty in git repo"
+assert_true test -n "$result"
 _first_token="${result%% *}"
-assert_equal "prompt_info output starts with project name" "realgit" "$_first_token"
+start_test "prompt_info output starts with project name"
+assert_equal "realgit" "$_first_token"
 
+start_test "prompt_info succeeds (exit 0) in git repo"
 (cd "$_realgit" && prompt_info --color=never >/dev/null 2>&1)
-assert_equal "prompt_info succeeds (exit 0) in git repo" "0" "$?"
+assert_equal "0" "$?"
 
+start_test "prompt_info fails outside repo"
 (cd "$_testdir/norepo" && prompt_info --color=never >/dev/null 2>&1)
-assert_equal "prompt_info fails outside repo" "1" "$?"
+assert_equal "1" "$?"
 
+start_test "vcs status succeeds in git repo"
 (cd "$_realgit" && vcs status >/dev/null 2>&1)
-assert_equal "vcs status succeeds in git repo" "0" "$?"
+assert_equal "0" "$?"
 
 # The `st` alias (wired by the command dispatch loop) should exit 0 in
 # a clean real repo.
+start_test "st alias succeeds in git repo"
 (cd "$_realgit" && st >/dev/null 2>&1)
-assert_equal "st alias succeeds in git repo" "0" "$?"
+assert_equal "0" "$?"
 
 # projectroot and project work off a real repo too.
+start_test "projectroot works on real git repo"
 result=$(cd "$_realgit" && projectroot)
-assert_equal "projectroot works on real git repo" "$_realgit" "$result"
+assert_equal "$_realgit" "$result"
 result=$(cd "$_realgit" && project)
-assert_equal "project works on real git repo" "realgit" "$result"
+start_test "project works on real git repo"
+assert_equal "realgit" "$result"
 
 ###############
 # Performance: binary vcs detection should be fast. With a 200ms
@@ -573,6 +668,7 @@ assert_equal "project works on real git repo" "realgit" "$result"
 
 # Warmup: exclude first-call variance (binary load, cache file creation)
 # from the timed loop.
+        start_test "vcs detect within ${_vcs_perf_budget_ms}ms budget"
 (cd "$_testdir/gitrepo" && vcs >/dev/null 2>&1)
 _start=$(_now_ns)
 _i=0
@@ -586,7 +682,7 @@ if test "$_start" != "0" && test "$_end" != "0"; then
     _elapsed_ms=$(( (_end - _start) / 1000000 ))
     echo "  10 x vcs detect: ${_elapsed_ms}ms (budget ${_vcs_perf_budget_ms}ms)"
     if test "$_vcs_perf_budget_ms" -gt 0; then
-        assert_true "vcs detect within ${_vcs_perf_budget_ms}ms budget" \
+        assert_true \
             test "$_elapsed_ms" -le "$_vcs_perf_budget_ms"
     fi
 else

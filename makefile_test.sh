@@ -10,78 +10,109 @@ _srcdir="$(cd "$(dirname "$0")" && pwd)"
 # Test that expected targets exist
 _targets=$(make -C "$_srcdir" -pRrq 2>/dev/null | sed -n '/^# Files/,$ s/^\([a-z][-a-z]*\):.*/\1/p' | sort -u)
 
-assert_contains "all target exists" "all" "$_targets"
-assert_contains "install target exists" "install" "$_targets"
-assert_contains "install-dotfiles target exists" "install-dotfiles" "$_targets"
-assert_contains "install-vcs target exists" "install-vcs" "$_targets"
-assert_contains "vcs-build target exists" "vcs-build" "$_targets"
-assert_contains "test target exists" "test" "$_targets"
+start_test "all target exists"
+assert_contains "all" "$_targets"
+start_test "install target exists"
+assert_contains "install" "$_targets"
+start_test "install-dotfiles target exists"
+assert_contains "install-dotfiles" "$_targets"
+start_test "install-vcs target exists"
+assert_contains "install-vcs" "$_targets"
+start_test "vcs-build target exists"
+assert_contains "vcs-build" "$_targets"
+start_test "test target exists"
+assert_contains "test" "$_targets"
 
 # Bare `make` (no target) must build, not install. Verify the default
 # target is `all`, that `all` depends on vcs-build, and that its recipe
 # does NOT invoke the install-* targets.
+start_test "default target is all"
 _default_target=$(make -C "$_srcdir" -pRrq 2>/dev/null |
     sed -n 's/^\.DEFAULT_GOAL := //p')
-assert_equal "default target is all" "all" "$_default_target"
+assert_equal "all" "$_default_target"
 _all_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^all:')
-assert_contains "all depends on vcs-build" "vcs-build" "$_all_deps"
+start_test "all depends on vcs-build"
+assert_contains "vcs-build" "$_all_deps"
 _default_recipe=$(make -C "$_srcdir" -n 2>/dev/null)
-assert_not_contains "bare make does not run confinst" "confinst" "$_default_recipe"
-assert_not_contains "bare make does not run install-vcs" "install-vcs" "$_default_recipe"
+start_test "bare make does not run confinst"
+assert_not_contains "confinst" "$_default_recipe"
+start_test "bare make does not run install-vcs"
+assert_not_contains "install-vcs" "$_default_recipe"
 
 # Test that install depends on install-dotfiles and install-vcs
+start_test "install depends on install-dotfiles"
 _install_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^install:')
-assert_contains "install depends on install-dotfiles" "install-dotfiles" "$_install_deps"
-assert_contains "install depends on install-vcs" "install-vcs" "$_install_deps"
+assert_contains "install-dotfiles" "$_install_deps"
+start_test "install depends on install-vcs"
+assert_contains "install-vcs" "$_install_deps"
 
 # Test that the VCS test target depends on vcs-build so the submodule
 # binary is built before tests that require it.
+start_test "test-shrc-vcs depends on vcs-build"
 _vcs_test_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^test-shrc-vcs:')
-assert_contains "test-shrc-vcs depends on vcs-build" "vcs-build" "$_vcs_test_deps"
+assert_contains "vcs-build" "$_vcs_test_deps"
 
 # Test that per-test sub-targets exist so `make -j` can schedule them in
 # parallel. Each test script gets its own make target; `test-all` aggregates
 # them and `test` dispatches to `test-all` with -j.
-assert_contains "test-all target exists" "test-all" "$_targets"
-assert_contains "test-lint target exists" "test-lint" "$_targets"
-assert_contains "test-nu-parse target exists" "test-nu-parse" "$_targets"
-assert_contains "test-nu-config target exists" "test-nu-config" "$_targets"
-assert_contains "test-shrc-dash target exists" "test-shrc-dash" "$_targets"
-assert_contains "test-shrc-bash target exists" "test-shrc-bash" "$_targets"
-assert_contains "test-shrc-vcs target exists" "test-shrc-vcs" "$_targets"
-assert_contains "test-shrc-prompt target exists" "test-shrc-prompt" "$_targets"
-assert_contains "test-shrc-fish target exists" "test-shrc-fish" "$_targets"
-assert_contains "test-shrc-fish-prompt target exists" "test-shrc-fish-prompt" "$_targets"
-assert_contains "test-gitconfig target exists" "test-gitconfig" "$_targets"
-assert_contains "test-makefile target exists" "test-makefile" "$_targets"
-assert_contains "test-amethyst target exists" "test-amethyst" "$_targets"
+start_test "test-all target exists"
+assert_contains "test-all" "$_targets"
+start_test "test-lint target exists"
+assert_contains "test-lint" "$_targets"
+start_test "test-nu-parse target exists"
+assert_contains "test-nu-parse" "$_targets"
+start_test "test-nu-config target exists"
+assert_contains "test-nu-config" "$_targets"
+start_test "test-shrc-dash target exists"
+assert_contains "test-shrc-dash" "$_targets"
+start_test "test-shrc-bash target exists"
+assert_contains "test-shrc-bash" "$_targets"
+start_test "test-shrc-vcs target exists"
+assert_contains "test-shrc-vcs" "$_targets"
+start_test "test-shrc-prompt target exists"
+assert_contains "test-shrc-prompt" "$_targets"
+start_test "test-shrc-fish target exists"
+assert_contains "test-shrc-fish" "$_targets"
+start_test "test-shrc-fish-prompt target exists"
+assert_contains "test-shrc-fish-prompt" "$_targets"
+start_test "test-gitconfig target exists"
+assert_contains "test-gitconfig" "$_targets"
+start_test "test-makefile target exists"
+assert_contains "test-makefile" "$_targets"
+start_test "test-amethyst target exists"
+assert_contains "test-amethyst" "$_targets"
 
 # Test that test-all depends on every per-test sub-target so that a single
 # `make test-all` invocation covers the full test suite.
+    start_test "test-all depends on $_sub"
 _test_all_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^test-all:')
 for _sub in test-lint test-nu-parse test-nu-config \
             test-shrc-dash test-shrc-bash \
             test-shrc-vcs \
             test-shrc-prompt test-shrc-fish test-shrc-fish-prompt \
             test-gitconfig test-makefile test-amethyst; do
-    assert_contains "test-all depends on $_sub" "$_sub" "$_test_all_deps"
+    assert_contains "$_sub" "$_test_all_deps"
 done
 unset _sub
 
 # Test that `make test` dispatches to the parallel build. We check the recipe
 # rather than running it to avoid recursion and to keep the test fast.
+start_test "test recipe invokes parallel make"
 _test_recipe=$(make -C "$_srcdir" -n test 2>/dev/null)
-assert_contains "test recipe invokes parallel make" "-j" "$_test_recipe"
-assert_contains "test recipe targets test-all" "test-all" "$_test_recipe"
+assert_contains "-j" "$_test_recipe"
+start_test "test recipe targets test-all"
+assert_contains "test-all" "$_test_recipe"
 
 # Test that TEST_JOBS is overridable (setting it should change the recipe).
+start_test "TEST_JOBS=1 uses -j 1"
 _recipe_j1=$(make -C "$_srcdir" -n test TEST_JOBS=1 2>/dev/null)
-assert_contains "TEST_JOBS=1 uses -j 1" "-j 1" "$_recipe_j1"
+assert_contains "-j 1" "$_recipe_j1"
 
 # test-lint must gracefully skip fish when it's not installed (fish is
 # optional, unlike shellcheck/dash/bash which are required). Verify by
 # running test-lint under a PATH that hides fish and checking that a
 # SKIP line appears instead of the recipe erroring out.
+start_test "test-lint succeeds when fish is missing"
 _bare_path="$_testdir/bare_bin"
 mkdir -p "$_bare_path"
 # Populate the stub directory with everything test-lint's required tools
@@ -94,8 +125,9 @@ for _tool in bash dash shellcheck make awk sed grep sh env cat command test npro
 done
 _lint_out=$(PATH="$_bare_path" make -C "$_srcdir" test-lint 2>&1)
 _lint_rc=$?
-assert_equal "test-lint succeeds when fish is missing" "0" "$_lint_rc"
-assert_contains "test-lint skips fish -n when missing" \
+assert_equal "0" "$_lint_rc"
+start_test "test-lint skips fish -n when missing"
+assert_contains \
     "SKIP: fish" "$_lint_out"
 rm -rf "$_bare_path"
 

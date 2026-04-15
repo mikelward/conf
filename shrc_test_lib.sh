@@ -19,6 +19,28 @@ failures=0
 passes=0
 _skipped=0
 _skipped_all=0
+# Name of the current test block, set by start_test and used by the
+# assert_* helpers as the FAIL: attribution. Default reminds test
+# authors to call start_test before asserting.
+_current_test="(no start_test called)"
+
+# Announce the start of a test block. Sets $_current_test so failing
+# assertions print the block's label. Silent on a passing run so a
+# green `make test` summary stays terse; set TEST_VERBOSE=1 to echo
+# each section header and an "ok" line per successful assertion,
+# which is useful when attributing stray stderr or stepping through
+# a debug session.
+#
+# Blocks that only run one assertion use the start_test label as the
+# entire description. Blocks with several assertions lean on the
+# printed expected/actual values in the FAIL output to tell them
+# apart. If a sub-label on an individual assertion feels necessary,
+# that's the signal to split it into its own start_test block.
+start_test() {
+    _current_test="$*"
+    test -n "${TEST_VERBOSE:-}" && printf '  %s\n' "$_current_test"
+    return 0
+}
 
 # Capture the real interpreter before we stub BASH_VERSION / ZSH_VERSION
 # below. Tests pass this to test_summary so the summary header reflects
@@ -43,32 +65,40 @@ fi
 # abort with a clear error if an assertion is called with too few
 # arguments. The `$#` check additionally catches the common typo class
 # where an unset variable expanded to empty AND collapsed a trailing
-# argument. E.g. `assert_equal "label" "$expcted" "$actual"` --
-# previously $expcted silently expanded to "" and the helper received
-# three args ("label", "", "<actual>") with a false match when $actual
-# was also empty. We can't detect that under word-split arg passing
-# (the empty string IS a valid argument), but we CAN flag call sites
-# that forgot an argument entirely, and missing args are the most
-# common typo in practice.
+# argument. E.g. `assert_equal "$expcted" "$actual"` -- $expcted
+# silently expands to "" and the helper sees only one arg; the ${2?}
+# ref above aborts with "missing actual value". We can't detect the
+# case where an empty expansion still leaves the right arg count (the
+# empty string IS a valid argument), but we CAN flag call sites that
+# forgot an argument entirely, which is the most common typo.
 # Intentionally NOT using `set -u` globally: shrc functions rely on
 # `local _where=$2` style implicit-empty on missing args, so inheriting
 # -u would abort them. `set -e` is also avoided: the helpers' job is
 # to observe non-zero exits.
+# Print an "    ok" line for a passing assertion when TEST_VERBOSE is
+# set. Silent otherwise. Indented one level deeper than start_test's
+# banner so the visual hierarchy reads as section > assertion.
+_assert_ok() {
+    test -n "${TEST_VERBOSE:-}" && printf '    ok: %s\n' "$*"
+    return 0
+}
+
 assert_equal() {
-    local label="${1?assert_equal: missing label}"
-    local expected="${2?assert_equal: missing expected value}"
-    local actual="${3?assert_equal: missing actual value}"
+    local expected="${1?assert_equal: missing expected value}"
+    local actual="${2?assert_equal: missing actual value}"
     # The ${n?} refs above already abort on missing args. The $# check
-    # only fires on 4+ args (a call that looks right but leaks extras).
-    if test $# -gt 3; then
-        echo "FAIL: $label (assert_equal: too many args, got $#)" >&2
+    # only fires on 3+ args (a call that looks right but leaks extras,
+    # e.g. an author carrying over the old LABEL EXPECTED ACTUAL form).
+    if test $# -gt 2; then
+        echo "FAIL: $_current_test (assert_equal: too many args, got $#; label is now set by start_test)" >&2
         failures=$((failures + 1))
         return 1
     fi
     if test "$expected" = "$actual"; then
         passes=$((passes + 1))
+        _assert_ok "equal: $expected"
     else
-        echo "FAIL: $label"
+        echo "FAIL: $_current_test"
         echo "  expected: $expected"
         echo "  actual:   $actual"
         failures=$((failures + 1))
@@ -76,62 +106,60 @@ assert_equal() {
 }
 
 assert_true() {
-    local label="${1?assert_true: missing label}"
-    shift
     if test $# -eq 0; then
-        echo "FAIL: $label (assert_true: no command given)" >&2
+        echo "FAIL: $_current_test (assert_true: no command given)" >&2
         failures=$((failures + 1))
         return 1
     fi
     if "$@"; then
         passes=$((passes + 1))
+        _assert_ok "true: $*"
     else
-        echo "FAIL: $label"
+        echo "FAIL: $_current_test"
         echo "  expected command to succeed: $*"
         failures=$((failures + 1))
     fi
 }
 
 assert_false() {
-    local label="${1?assert_false: missing label}"
-    shift
     if test $# -eq 0; then
-        echo "FAIL: $label (assert_false: no command given)" >&2
+        echo "FAIL: $_current_test (assert_false: no command given)" >&2
         failures=$((failures + 1))
         return 1
     fi
     if "$@"; then
-        echo "FAIL: $label"
+        echo "FAIL: $_current_test"
         echo "  expected command to fail: $*"
         failures=$((failures + 1))
     else
         passes=$((passes + 1))
+        _assert_ok "false: $*"
     fi
 }
 
 assert_contains() {
-    local label="${1?assert_contains: missing label}"
-    local needle="${2?assert_contains: missing needle}"
-    local haystack="${3?assert_contains: missing haystack}"
-    if test $# -gt 3; then
-        echo "FAIL: $label (assert_contains: too many args, got $#)" >&2
+    local needle="${1?assert_contains: missing needle}"
+    local haystack="${2?assert_contains: missing haystack}"
+    if test $# -gt 2; then
+        echo "FAIL: $_current_test (assert_contains: too many args, got $#; label is now set by start_test)" >&2
         failures=$((failures + 1))
         return 1
     fi
     # Reject an empty needle: the case pattern *""* matches any
-    # haystack, so `assert_contains "label" "$unset" "$actual"` would
-    # silently pass. That's a wiring-bug trap, not a useful assertion.
+    # haystack, so `assert_contains "$unset" "$actual"` would silently
+    # pass. That's a wiring-bug trap, not a useful assertion.
     if test -z "$needle"; then
-        echo "FAIL: $label (assert_contains: empty needle; use assert_equal for empty-string checks)" >&2
+        echo "FAIL: $_current_test (assert_contains: empty needle; use assert_equal for empty-string checks)" >&2
         failures=$((failures + 1))
         return 1
     fi
     case "$haystack" in
     *"$needle"*)
         passes=$((passes + 1))
+        _assert_ok "contains: $needle"
         ;;
     *)
-        echo "FAIL: $label"
+        echo "FAIL: $_current_test"
         echo "  expected to contain: $(printf '%s' "$needle" | cat -v)"
         echo "  actual:              $(printf '%s' "$haystack" | cat -v)"
         failures=$((failures + 1))
@@ -140,31 +168,31 @@ assert_contains() {
 }
 
 assert_not_contains() {
-    local label="${1?assert_not_contains: missing label}"
-    local needle="${2?assert_not_contains: missing needle}"
-    local haystack="${3?assert_not_contains: missing haystack}"
-    if test $# -gt 3; then
-        echo "FAIL: $label (assert_not_contains: too many args, got $#)" >&2
+    local needle="${1?assert_not_contains: missing needle}"
+    local haystack="${2?assert_not_contains: missing haystack}"
+    if test $# -gt 2; then
+        echo "FAIL: $_current_test (assert_not_contains: too many args, got $#; label is now set by start_test)" >&2
         failures=$((failures + 1))
         return 1
     fi
     # Reject an empty needle: *""* matches any haystack, so
-    # `assert_not_contains "label" "$unset" "$actual"` would always
-    # fail -- making the test look red for the wrong reason.
+    # `assert_not_contains "$unset" "$actual"` would always fail --
+    # making the test look red for the wrong reason.
     if test -z "$needle"; then
-        echo "FAIL: $label (assert_not_contains: empty needle; use assert_equal for empty-string checks)" >&2
+        echo "FAIL: $_current_test (assert_not_contains: empty needle; use assert_equal for empty-string checks)" >&2
         failures=$((failures + 1))
         return 1
     fi
     case "$haystack" in
     *"$needle"*)
-        echo "FAIL: $label"
+        echo "FAIL: $_current_test"
         echo "  expected not to contain: $(printf '%s' "$needle" | cat -v)"
         echo "  actual:                  $(printf '%s' "$haystack" | cat -v)"
         failures=$((failures + 1))
         ;;
     *)
         passes=$((passes + 1))
+        _assert_ok "not-contains: $needle"
         ;;
     esac
 }

@@ -35,6 +35,7 @@ _read_bufmark() {
     sed -n 's/.*BUFMARK://p' | tail -1 | tr -d '\r'
 }
 
+start_test "zsh accept-line widget rewrites trailing-slash dir"
 result=$(cd "$_autocd_root" && run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     source '"$_srcdir"'/shrc >/dev/null 2>&1
     zle() { : }   # shadow the builtin so `zle .accept-line` is inert
@@ -42,10 +43,10 @@ result=$(cd "$_autocd_root" && run_interactive_with_timeout 10 zsh --no-rcs -i -
     _autocd_accept_line
     print -r -- "BUFMARK:$BUFFER"
 ' </dev/null 2>/dev/null | _read_bufmark)
-assert_equal "zsh accept-line widget rewrites trailing-slash dir" \
-    "cd -- ./sub/" "$result"
+assert_equal "cd -- ./sub/" "$result"
 
 # Non-dir / multi-word / no-slash inputs are passed through unchanged.
+start_test "zsh accept-line widget leaves multi-word buffers alone"
 result=$(cd "$_autocd_root" && run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     source '"$_srcdir"'/shrc >/dev/null 2>&1
     zle() { : }
@@ -53,13 +54,13 @@ result=$(cd "$_autocd_root" && run_interactive_with_timeout 10 zsh --no-rcs -i -
     _autocd_accept_line
     print -r -- "BUFMARK:$BUFFER"
 ' </dev/null 2>/dev/null | _read_bufmark)
-assert_equal "zsh accept-line widget leaves multi-word buffers alone" \
-    "./sub/ arg" "$result"
+assert_equal "./sub/ arg" "$result"
 
 # End-to-end: under the real shrc, a `~/foo/` buffer must rewrite
 # to the tilde-expanded absolute path so .accept-line cd`s into it
 # instead of trying to exec $HOME/foo/ and dying on permission
 # denied. This is the bug users hit with `~/scripts/`.
+start_test "zsh accept-line widget expands ~/foo/ to absolute cd"
 result=$(HOME="$_autocd_root" run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     source '"$_srcdir"'/shrc >/dev/null 2>&1
     zle() { : }
@@ -67,22 +68,22 @@ result=$(HOME="$_autocd_root" run_interactive_with_timeout 10 zsh --no-rcs -i -c
     _autocd_accept_line
     print -r -- "BUFMARK:$BUFFER"
 ' </dev/null 2>/dev/null | _read_bufmark)
-assert_equal "zsh accept-line widget expands ~/foo/ to absolute cd" \
-    "cd -- $_autocd_root/sub/" "$result"
+assert_equal "cd -- $_autocd_root/sub/" "$result"
 
 # Verify shrc actually registers the widget.
+start_test "shrc registers _autocd_accept_line widget in zsh"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c 'source '"$_srcdir"'/shrc >/dev/null 2>&1; \
     if typeset -f _autocd_accept_line >/dev/null; then \
         print -r "REGMARK"; \
     fi' </dev/null 2>/dev/null | sed -n 's/.*REGMARK.*/registered/p' | head -1)
-assert_equal "shrc registers _autocd_accept_line widget in zsh" \
-    "registered" "$result"
+assert_equal "registered" "$result"
 
 # Regression: resolve_cdpath_dir sourced from the real shrc must
 # split CDPATH correctly under `emulate -L zsh` (the widget's
 # mode). zsh does not honor IFS=: for unquoted param splitting, so
 # a naive POSIX implementation iterates once with the whole
 # colon-joined string and fails to find anything in CDPATH.
+start_test "resolve_cdpath_dir walks CDPATH under emulate -L zsh"
 result=$(run_interactive_with_timeout 10 zsh -c '
     source '"$_srcdir"'/shrc >/dev/null 2>&1
     # shrc sets CDPATH=".:$HOME", so override after sourcing.
@@ -98,7 +99,6 @@ result=$(run_interactive_with_timeout 10 zsh -c '
     }
     widget_probe
 ' 2>/dev/null | tail -1)
-assert_equal "resolve_cdpath_dir walks CDPATH under emulate -L zsh" \
-    "FOUND" "$result"
+assert_equal "FOUND" "$result"
 
 test_summary "shrc_zsh_test"

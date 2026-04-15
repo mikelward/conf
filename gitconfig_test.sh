@@ -15,66 +15,86 @@ fi
 
 # submodule.recurse is enabled so that git clone automatically
 # initializes submodules (e.g. the vcs submodule).
+start_test "submodule.recurse is true"
 _recurse=$(git config --file "$_gitconfig" submodule.recurse)
-assert_equal "submodule.recurse is true" "true" "$_recurse"
+assert_equal "true" "$_recurse"
 
 # Core directives we rely on across scripts.
-assert_equal "core.excludesfile points at gitexclude" \
+start_test "core.excludesfile points at gitexclude"
+assert_equal \
     "~/.gitexclude" "$(git config --file "$_gitconfig" core.excludesfile)"
-assert_equal "init.defaultBranch is main" \
+start_test "init.defaultBranch is main"
+assert_equal \
     "main" "$(git config --file "$_gitconfig" init.defaultBranch)"
-assert_equal "pull.rebase is true" \
+start_test "pull.rebase is true"
+assert_equal \
     "true" "$(git config --file "$_gitconfig" pull.rebase)"
-assert_equal "push.default is current" \
+start_test "push.default is current"
+assert_equal \
     "current" "$(git config --file "$_gitconfig" push.default)"
-assert_equal "status.showUntrackedFiles is all" \
+start_test "status.showUntrackedFiles is all"
+assert_equal \
     "all" "$(git config --file "$_gitconfig" status.showUntrackedFiles)"
-assert_equal "rerere.enabled is true" \
+start_test "rerere.enabled is true"
+assert_equal \
     "true" "$(git config --file "$_gitconfig" rerere.enabled)"
-assert_equal "diff.algorithm is patience" \
+start_test "diff.algorithm is patience"
+assert_equal \
     "patience" "$(git config --file "$_gitconfig" diff.algorithm)"
-assert_equal "merge.conflictstyle is zdiff3" \
+start_test "merge.conflictstyle is zdiff3"
+assert_equal \
     "zdiff3" "$(git config --file "$_gitconfig" merge.conflictstyle)"
-assert_equal "diff.renames is true" \
+start_test "diff.renames is true"
+assert_equal \
     "true" "$(git config --file "$_gitconfig" diff.renames)"
 # init.templatedir wires our commit-msg / pre-commit hook scaffolding
 # into every newly created repo. Losing this silently drops hooks.
-assert_equal "init.templatedir points at gittemplates" \
+start_test "init.templatedir points at gittemplates"
+assert_equal \
     "~/.gittemplates" "$(git config --file "$_gitconfig" init.templatedir)"
 # branch.autoSetupMerge/Rebase make newly created branches track upstream
 # and rebase-pull by default; regressions here silently change pull/push
 # semantics across every repo.
-assert_equal "branch.autoSetupMerge is always" \
+start_test "branch.autoSetupMerge is always"
+assert_equal \
     "always" "$(git config --file "$_gitconfig" branch.autoSetupMerge)"
-assert_equal "branch.autoSetupRebase is always" \
+start_test "branch.autoSetupRebase is always"
+assert_equal \
     "always" "$(git config --file "$_gitconfig" branch.autoSetupRebase)"
 # color.ui=auto is what makes git commands colorize stdout in terminals;
 # "false"/"never" would silently strip colors from the entire workflow.
-assert_equal "color.ui is auto" \
+start_test "color.ui is auto"
+assert_equal \
     "auto" "$(git config --file "$_gitconfig" color.ui)"
 # log.date sets the format used by history aliases. A regression would
 # silently reformat the `history` alias output.
-assert_contains "log.date is format-local with YYYY-MM-DD HH:MM:SS" \
+start_test "log.date is format-local with YYYY-MM-DD HH:MM:SS"
+assert_contains \
     "format-local:%Y-%m-%d %H:%M:%S" \
     "$(git config --file "$_gitconfig" log.date)"
 # difftool.prompt=no keeps `git difftool` from asking before every file.
-assert_equal "difftool.prompt is no" \
+start_test "difftool.prompt is no"
+assert_equal \
     "no" "$(git config --file "$_gitconfig" difftool.prompt)"
 # user.name/email must be non-empty -- otherwise every first commit on a
 # new machine would either prompt or (worse) be attributed to the shell
 # user's default identity.
 _user_name=$(git config --file "$_gitconfig" user.name)
 _user_email=$(git config --file "$_gitconfig" user.email)
-assert_true "user.name is set" test -n "$_user_name"
-assert_true "user.email is set" test -n "$_user_email"
+start_test "user.name is set"
+assert_true test -n "$_user_name"
+start_test "user.email is set"
+assert_true test -n "$_user_email"
 # The local-override include is what lets per-host tweaks live outside
 # the checked-in config. Without it, corporate overrides silently fall
 # back to the upstream defaults.
-assert_equal "include.path points at local overrides" \
+start_test "include.path points at local overrides"
+assert_equal \
     "~/.gitconfig.local" "$(git config --file "$_gitconfig" include.path)"
 
 # A sampling of aliases used by the shrc wrappers and muscle memory.
 # These are the ones whose absence would quietly break daily workflow.
+    start_test "alias.$_alias_name"
 for _alias_pair in \
     "st=status --short" \
     "co=checkout" \
@@ -87,11 +107,12 @@ do
     _alias_name="${_alias_pair%%=*}"
     _alias_value="${_alias_pair#*=}"
     _got=$(git config --file "$_gitconfig" "alias.$_alias_name")
-    assert_equal "alias.$_alias_name" "$_alias_value" "$_got"
+    assert_equal "$_alias_value" "$_got"
 done
 
 # The config should parse cleanly as a whole under `git config --list`.
+start_test "gitconfig parses cleanly"
 git config --file "$_gitconfig" --list >/dev/null 2>&1
-assert_equal "gitconfig parses cleanly" "0" "$?"
+assert_equal "0" "$?"
 
 test_summary "gitconfig"
