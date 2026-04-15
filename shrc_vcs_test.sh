@@ -37,21 +37,18 @@ source "$_srcdir/shrc.vcs" >/dev/null 2>&1
 ###############
 # Test vcs detection
 
-# Test git detection
 start_test "vcs detects git repo"
 mkdir -p "$_testdir/gitrepo/subdir"
 mkdir "$_testdir/gitrepo/.git"
 result=$(cd "$_testdir/gitrepo" && vcs)
 assert_equal "git" "$result"
 
-# Test hg detection
 start_test "vcs detects hg repo"
 mkdir -p "$_testdir/hgrepo"
 mkdir "$_testdir/hgrepo/.hg"
 result=$(cd "$_testdir/hgrepo" && vcs)
 assert_equal "hg" "$result"
 
-# Test jj detection
 start_test "vcs detects jj repo"
 mkdir -p "$_testdir/jjrepo"
 mkdir "$_testdir/jjrepo/.jj"
@@ -75,16 +72,13 @@ start_test "rootdir silent on stderr outside repo"
 _stderr=$(cd "$_testdir/norepo" && rootdir 2>&1 >/dev/null)
 assert_equal "" "$_stderr"
 
-# Test vcs detection from subdirectory
 start_test "vcs detects git from subdir"
 result=$(cd "$_testdir/gitrepo/subdir" && vcs)
 assert_equal "git" "$result"
 
-# Test .vcs_cache is created
 start_test "vcs creates .vcs_cache"
 assert_true test -f "$_testdir/gitrepo/.vcs_cache"
 
-# Test .vcs_cache is used on second call
 start_test "vcs uses cache on second call"
 result=$(cd "$_testdir/gitrepo" && vcs)
 assert_equal "git" "$result"
@@ -214,7 +208,6 @@ assert_equal "3" "$_field_count"
 start_test "git backend with no hosting ends with -"
 assert_contains "git -" "$_cache_line1"
 
-# Test paths with spaces
 start_test "vcs detects git in path with spaces"
 mkdir -p "$_testdir/path with spaces/subdir"
 mkdir "$_testdir/path with spaces/.git"
@@ -233,7 +226,6 @@ result=$(cd "$_testdir/path with spaces/subdir" && rootdir "file.txt")
 start_test "rootdir with arg works with spaces"
 assert_equal "$_testdir/path with spaces/file.txt" "$result"
 
-# Test paths with backslashes (read -r prevents mangling)
 start_test "vcs detects git in path with backslash"
 mkdir -p "$_testdir/back\\slash"
 mkdir "$_testdir/back\\slash/.git"
@@ -259,7 +251,6 @@ start_test "rootdir returns repo root"
 result=$(cd "$_testdir/gitrepo/subdir" && rootdir)
 assert_equal "$_testdir/gitrepo" "$result"
 
-# Test rootdir with arguments
 start_test "rootdir with arg returns full path"
 result=$(cd "$_testdir/gitrepo/subdir" && rootdir "file.txt")
 assert_equal "$_testdir/gitrepo/file.txt" "$result"
@@ -299,7 +290,6 @@ _clone_log=""
 clone https://hg.example.com/hg/repo
 assert_equal "hg clone https://hg.example.com/hg/repo" "$_clone_log"
 
-# Test fallback to git when jj is unavailable
 start_test "clone falls back to git when jj unavailable"
 unset -f jj
 have_command() { test "$1" != "jj"; }
@@ -309,7 +299,6 @@ _clone_log=""
 clone https://github.com/foo/bar.git
 assert_equal "git clone https://github.com/foo/bar.git" "$_clone_log"
 
-# Test declining fallback
 start_test "clone aborts when user declines git fallback"
 confirm() { return 1; }
 _clone_log=""

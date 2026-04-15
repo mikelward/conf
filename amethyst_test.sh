@@ -12,7 +12,6 @@ _amethyst="$_srcdir/amethyst.yml"
 start_test "amethyst.yml exists"
 assert_true test -f "$_amethyst"
 
-# Test that mod1 (hot key prefix) is option.
 start_test "mod1 is option"
 _mod1=$(sed -n '/^mod1:/,/^[^ ]/{ /^  - /p; }' "$_amethyst" | sed 's/^  - //')
 assert_equal "option" "$_mod1"

@@ -39,7 +39,6 @@ assert_not_contains "confinst" "$_default_recipe"
 start_test "bare make does not run install-vcs"
 assert_not_contains "install-vcs" "$_default_recipe"
 
-# Test that install depends on install-dotfiles and install-vcs
 start_test "install depends on install-dotfiles"
 _install_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^install:')
 assert_contains "install-dotfiles" "$_install_deps"
@@ -103,7 +102,6 @@ assert_contains "-j" "$_test_recipe"
 start_test "test recipe targets test-all"
 assert_contains "test-all" "$_test_recipe"
 
-# Test that TEST_JOBS is overridable (setting it should change the recipe).
 start_test "TEST_JOBS=1 uses -j 1"
 _recipe_j1=$(make -C "$_srcdir" -n test TEST_JOBS=1 2>/dev/null)
 assert_contains "-j 1" "$_recipe_j1"
