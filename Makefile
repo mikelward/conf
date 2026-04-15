@@ -35,9 +35,11 @@ test:
 # Same as `test`, with TEST_VERBOSE=1 exported so shrc_test_lib's
 # start_test / assert_* helpers print per-section banners and per-
 # assertion "ok" lines. Useful when attributing stray stderr to the
-# right test block or stepping through a debug session.
+# right test block or stepping through a debug session. Delegates
+# back to `test` so the parallel / output-sync / -j flags live in
+# exactly one place.
 test-verbose:
-	@TEST_VERBOSE=1 $(MAKE) --no-print-directory --output-sync=target -j $(TEST_JOBS) test-all
+	@TEST_VERBOSE=1 $(MAKE) test
 
 test-all: \
 	test-lint \
