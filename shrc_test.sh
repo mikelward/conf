@@ -220,8 +220,6 @@ start_test "first_arg_last single arg"
 result=$(first_arg_last echo only)
 assert_equal "only" "$result"
 
-# Test shift_options
-# We use echo as the command to see what gets passed
 start_test "shift_options moves options before target"
 result=$(shift_options echo target -a -b rest)
 assert_equal "-a -b target rest" "$result"
@@ -464,8 +462,8 @@ SIMULATE=true run touch "$_simrun_dir/marker" >/dev/null 2>&1
 assert_false \
     test -e "$_simrun_dir/marker"
 # And the default path (SIMULATE=false) really does execute it.
-SIMULATE=false run touch "$_simrun_dir/marker" >/dev/null 2>&1
 start_test "run SIMULATE=false executes command"
+SIMULATE=false run touch "$_simrun_dir/marker" >/dev/null 2>&1
 assert_true \
     test -e "$_simrun_dir/marker"
 rm -rf "$_simrun_dir"
@@ -581,8 +579,8 @@ chmod +x "$_tmpdir/upcase"
 trydiff_result=$(cd "$_tmpdir" && trydiff ./upcase input 2>&1)
 assert_true test -n "$trydiff_result"
 # Original file should be unchanged
-result=$(cat "$_tmpdir/input")
 start_test "trydiff does not modify original"
+result=$(cat "$_tmpdir/input")
 assert_equal "hello
 world" "$result"
 
@@ -635,29 +633,30 @@ assert_false connected_via_ssh
 start_test "connected_remotely with SSH_CONNECTION"
 SSH_CONNECTION="1.2.3.4 5678 5.6.7.8 22"
 assert_true connected_remotely
-unset SSH_CONNECTION
+
 start_test "connected_remotely without SSH_CONNECTION"
+unset SSH_CONNECTION
 assert_false connected_remotely
 
 start_test "inside_tmux with TMUX set"
 TMUX="/tmp/tmux-1000/default,12345,0"
 assert_true inside_tmux
-unset TMUX
+
 start_test "inside_tmux without TMUX"
+unset TMUX
 assert_false inside_tmux
 
 start_test "in_shpool with SHPOOL_SESSION_NAME"
 SHPOOL_SESSION_NAME="main"
 assert_true in_shpool
-unset SHPOOL_SESSION_NAME
+
 start_test "in_shpool without SHPOOL_SESSION_NAME"
+unset SHPOOL_SESSION_NAME
 assert_false in_shpool
 
 ###############
 # SHPOOL FUNCTIONS
 
-# Test want_shpool
-# want_shpool returns true if connected remotely or inside a project
 start_test "want_shpool when connected remotely"
 connected_remotely() { true; }
 inside_project() { false; }
@@ -691,8 +690,9 @@ rm -f "$_autoshpool_calls"
 # Run in subshell since switchshpool calls exit on success
 (switchshpool "newsession")
 assert_equal "0" "$?"
-result="$(cat "$_autoshpool_calls" 2>/dev/null)"
+
 start_test "switchshpool calls autoshpool switch"
+result="$(cat "$_autoshpool_calls" 2>/dev/null)"
 assert_equal "autoshpool switch newsession" "$result"
 
 start_test "switchshpool does not exit when autoshpool fails"
@@ -726,8 +726,9 @@ rm -f "$_autoshpool_calls" "$_returned"
     echo yes > "$_returned"
 )
 assert_false test -f "$_returned"
-result="$(cat "$_autoshpool_calls" 2>/dev/null)"
+
 start_test "maybe_start_shpool_and_exit calls autoshpool with no args"
+result="$(cat "$_autoshpool_calls" 2>/dev/null)"
 assert_equal "autoshpool " "$result"
 
 # When autoshpool fails → does not exit
