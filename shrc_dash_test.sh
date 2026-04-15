@@ -14,11 +14,11 @@
 # pointing at the repo's shrc.vcs and source shrc in a dash subshell.
 # Without the guard this aborts with "Syntax error: '(' unexpected"
 # on the declare/array syntax in _github_review.
+start_test "shrc sources cleanly under dash despite .shrc.vcs present"
 _vcsguard_home="$_testdir/vcsguard_home"
 mkdir -p "$_vcsguard_home"
 ln -sf "$_srcdir/shrc.vcs" "$_vcsguard_home/.shrc.vcs"
 _vcsguard_stderr=$(HOME="$_vcsguard_home" run_with_timeout 10 dash -c '. "$1"' _ "$_srcdir/shrc" 2>&1 >/dev/null)
-assert_not_contains "shrc sources cleanly under dash despite .shrc.vcs present" \
-    "Syntax error" "$_vcsguard_stderr"
+assert_not_contains "Syntax error" "$_vcsguard_stderr"
 
 test_summary "shrc_dash_test"

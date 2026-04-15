@@ -89,34 +89,37 @@ bell() { :; }
 log_history() { :; }
 
 ###############
-# TEST: basic_prompt
+start_test "basic_prompt"
 
 basic_prompt
-assert_equal "basic_prompt sets PS1" '$ ' "$PS1"
-assert_equal "basic_prompt sets PS2" '_ ' "$PS2"
-assert_equal "basic_prompt sets PS3" '#? ' "$PS3"
+assert_equal '$ ' "$PS1"
+assert_equal '_ ' "$PS2"
+assert_equal '#? ' "$PS3"
 
 ###############
-# TEST: ps1_character
 # $UID is readonly in bash, so we can't toggle it at runtime. Instead
 # re-extract ps1_character with $UID replaced by a settable $_test_uid
 # so both branches are exercised on every run (regardless of the user
 # the test runs as).
 
+start_test "ps1_character for root"
 extract_func_subst ps1_character 's/\$UID/$_test_uid/g'
 _test_uid=0
-assert_equal "ps1_character for root" '#' "$(ps1_character)"
+assert_equal '#' "$(ps1_character)"
+start_test "ps1_character for non-root"
 _test_uid=1000
-assert_equal "ps1_character for non-root" '$' "$(ps1_character)"
+assert_equal '$' "$(ps1_character)"
 
 # Likewise re-extract ps1 with the same substitution so its output can
 # be tested under both UIDs. ps1 calls keymap_character (stubbed by
 # returning early when no keymap is active) and ps1_character.
+start_test "ps1 output for root"
 extract_func_subst ps1 's/\$UID/$_test_uid/g'
 _test_uid=0
-assert_equal "ps1 output for root" '# ' "$(ps1)"
+assert_equal '# ' "$(ps1)"
+start_test "ps1 output for non-root"
 _test_uid=1000
-assert_equal "ps1 output for non-root" '$ ' "$(ps1)"
+assert_equal '$ ' "$(ps1)"
 
 # Re-extract the real ps1/ps1_character for the rest of the tests so
 # subsequent assertions see shrc's actual UID binding.
@@ -124,103 +127,106 @@ extract_func ps1_character
 extract_func ps1
 
 ###############
-# TEST: short_hostname
+start_test "short_hostname strips domain and username prefix"
 
 HOSTNAME="testuser-myhost.example.com"
 USERNAME="testuser"
 result="$(short_hostname)"
-assert_equal "short_hostname strips domain and username prefix" "myhost" "$result"
+assert_equal "myhost" "$result"
 
+start_test "short_hostname simple"
 HOSTNAME="simplehost"
 result="$(short_hostname)"
-assert_equal "short_hostname simple" "simplehost" "$result"
+assert_equal "simplehost" "$result"
 
 HOSTNAME="testhost"
 
 ###############
-# TEST: maybe_space
+start_test "maybe_space with content"
 
 result="$(maybe_space "hello")"
-assert_equal "maybe_space with content" " hello" "$result"
+assert_equal " hello" "$result"
 
+start_test "maybe_space with empty"
 result="$(maybe_space "")"
-assert_equal "maybe_space with empty" "" "$result"
+assert_equal "" "$result"
 
+start_test "maybe_space with no args"
 result="$(maybe_space)"
-assert_equal "maybe_space with no args" "" "$result"
+assert_equal "" "$result"
 
 ###############
-# TEST: auth_info empty (SSH valid)
+start_test "auth_info empty (SSH valid)"
 
 is_ssh_valid() { true; }
 result="$(auth_info)"
-assert_equal "auth_info empty when ssh valid" "" "$result"
+assert_equal "" "$result"
 
 ###############
-# TEST: auth_info shows warning when SSH invalid
+start_test "auth_info shows warning when SSH invalid"
 
 is_ssh_valid() { false; }
 result="$(auth_info)"
-assert_equal "auth_info warns when ssh invalid" "SSH" "$result"
+assert_equal "SSH" "$result"
 
 # Restore
 is_ssh_valid() { true; }
 
 ###############
-# TEST: tilde_pwd replaces $HOME with ~
+start_test "tilde_pwd replaces \$HOME with ~"
 
 HOME="$_testdir/fakehome"
 mkdir -p "$HOME/documents"
 PWD="$HOME"
-assert_equal "tilde_pwd at \$HOME" "~" "$(tilde_pwd)"
+assert_equal "~" "$(tilde_pwd)"
 PWD="$HOME/documents"
-assert_equal "tilde_pwd inside \$HOME" "~/documents" "$(tilde_pwd)"
+assert_equal "~/documents" "$(tilde_pwd)"
 PWD="/usr/local"
-assert_equal "tilde_pwd outside \$HOME" "/usr/local" "$(tilde_pwd)"
+assert_equal "/usr/local" "$(tilde_pwd)"
 
 ###############
-# TEST: host_info composes hostname and shpool tag
+start_test "host_info composes hostname and shpool tag"
 
 HOSTNAME="mikel-laptop"
 USERNAME="mikel"
 on_production_host() { false; }
 in_shpool() { false; }
 result="$(host_info)"
-assert_equal "host_info off shpool off prod" "laptop shpool" "$result"
+assert_equal "laptop shpool" "$result"
 
+start_test "host_info in shpool"
 in_shpool() { true; }
 SHPOOL_SESSION_NAME="mysession"
 result="$(host_info)"
-assert_equal "host_info in shpool" "laptop [mysession]" "$result"
+assert_equal "laptop [mysession]" "$result"
 in_shpool() { false; }
 unset SHPOOL_SESSION_NAME
 
 ###############
-# TEST: dir_info uses vcs prompt-info inside a project
+start_test "dir_info uses vcs prompt-info inside a project"
 
 # prompt_info is defined in shrc.vcs; stub it here.
 prompt_info() { echo "myproject main"; }
 inside_project() { true; }
 result="$(dir_info)"
-assert_equal "dir_info delegates to prompt_info inside project" \
-    "myproject main" "$result"
+assert_equal "myproject main" "$result"
 
 ###############
-# TEST: dir_info falls back to tilde_pwd outside a project
+start_test "dir_info falls back to tilde_pwd outside a project"
 
 inside_project() { false; }
 PWD="$HOME/documents"
 result="$(dir_info)"
-assert_equal "dir_info uses tilde pwd outside project" "~/documents" "$result"
+assert_equal "~/documents" "$result"
 
 ###############
-# TEST: dir_info falls back to tilde_pwd when prompt_info outputs nothing
+start_test "dir_info falls back to tilde_pwd when prompt_info outputs nothing"
 
 inside_project() { true; }
 prompt_info() { :; }
 PWD="$HOME"
 result="$(dir_info)"
-assert_equal "dir_info falls back when prompt_info empty" "~" "$result"
+assert_equal "~" "$result"
 
 # Reset project stubs
 inside_project() { false; }
@@ -228,7 +234,7 @@ prompt_info() { :; }
 PWD="$HOME/documents"
 
 ###############
-# TEST: prompt_line composes host_info, dir_info, auth_info
+start_test "prompt_line composes host_info, dir_info, auth_info"
 
 on_production_host() { false; }
 in_shpool() { false; }
@@ -236,28 +242,26 @@ is_ssh_valid() { true; }
 inside_project() { false; }
 PWD="$HOME"
 result="$(prompt_line)"
-assert_equal "prompt_line without auth warning" \
-    "laptop shpool ~" "$result"
+assert_equal "laptop shpool ~" "$result"
 
+start_test "prompt_line with auth warning"
 is_ssh_valid() { false; }
 result="$(prompt_line)"
-assert_equal "prompt_line with auth warning" \
-    "laptop shpool ~ SSH" "$result"
+assert_equal "laptop shpool ~ SSH" "$result"
 is_ssh_valid() { true; }
 
 ###############
-# TEST: prompt_line inside a project delegates dir info to prompt_info
+start_test "prompt_line inside a project delegates dir info to prompt_info"
 
 prompt_info() { echo "conf main"; }
 inside_project() { true; }
 result="$(prompt_line)"
-assert_equal "prompt_line inside project shows vcs info" \
-    "laptop shpool conf main" "$result"
+assert_equal "laptop shpool conf main" "$result"
 inside_project() { false; }
 prompt_info() { :; }
 
 ###############
-# TEST: last_job_info with exit status 1
+start_test "last_job_info with exit status 1"
 
 current_command="false"
 SECONDS=0
@@ -265,76 +269,76 @@ SECONDS=0
 bash_last_error() { echo "status 1"; }
 result="$(last_job_info)"
 # Output ends with newline, captured by $() strips trailing newlines
-assert_equal "last_job_info shows error status" "status 1" "$result"
+assert_equal "status 1" "$result"
 
 ###############
-# TEST: last_job_info with no error
+start_test "last_job_info with no error"
 
 bash_last_error() { :; }
 current_command="true"
 SECONDS=0
 result="$(last_job_info)"
-assert_equal "last_job_info no output on success" "" "$result"
+assert_equal "" "$result"
 
 ###############
-# TEST: last_job_info with duration
+start_test "last_job_info with duration"
 
 bash_last_error() { :; }
 current_command="sleep"
 SECONDS=5
 result="$(last_job_info)"
-assert_equal "last_job_info shows duration" "took 5 seconds" "$result"
+assert_equal "took 5 seconds" "$result"
 
 ###############
-# TEST: last_job_info with error and duration
+start_test "last_job_info with error and duration"
 
 bash_last_error() { echo "status 1"; }
 current_command="failing_command"
 SECONDS=65
 result="$(last_job_info)"
-assert_equal "last_job_info shows error and duration" "status 1 took 1 minutes 5 seconds" "$result"
+assert_equal "status 1 took 1 minutes 5 seconds" "$result"
 
 ###############
-# TEST: last_job_info skipped when no current_command
+start_test "last_job_info skipped when no current_command"
 
 bash_last_error() { echo "status 1"; }
 current_command=
 result="$(last_job_info)"
-assert_equal "last_job_info skipped without current_command" "" "$result"
+assert_equal "" "$result"
 
 ###############
-# TEST: last_job_info with hours
+start_test "last_job_info with hours"
 
 bash_last_error() { :; }
 current_command="long_command"
 SECONDS=3661
 result="$(last_job_info)"
-assert_equal "last_job_info shows hours" "took 1 hours 1 minutes 1 seconds" "$result"
+assert_equal "took 1 hours 1 minutes 1 seconds" "$result"
 
 ###############
-# TEST: last_job_info with interrupted (exit 130)
+start_test "last_job_info with interrupted (exit 130)"
 
 bash_last_error() { echo "interrupted"; }
 current_command="interrupted_cmd"
 SECONDS=0
 result="$(last_job_info)"
-assert_equal "last_job_info shows interrupted" "interrupted" "$result"
+assert_equal "interrupted" "$result"
 
 ###############
-# TEST: last_job_info suppresses sub-threshold durations
 # shrc's last_job_info uses `seconds -gt 1`, mirrored by fish
 # format_duration and nushell format-duration. A 1-second command must
 # not emit "took 1 seconds" so every fast command doesn't noisily
 # annotate the prompt.
+start_test "last_job_info suppresses sub-threshold durations"
 
 bash_last_error() { :; }
 current_command="quick_command"
 SECONDS=1
 result="$(last_job_info)"
-assert_equal "last_job_info suppresses 1s duration" "" "$result"
+assert_equal "" "$result"
 
 ###############
-# TEST: preprompt integrates components
+start_test "preprompt integrates components"
 
 HOME="$_testdir/fakehome"
 mkdir -p "$HOME"
@@ -353,23 +357,23 @@ PWD="$HOME"
 bash_last_error() { :; }
 
 result="$(preprompt)"
-assert_contains "preprompt contains hostname" "testhost" "$result"
-assert_contains "preprompt contains dir" "~" "$result"
+assert_contains "testhost" "$result"
+assert_contains "~" "$result"
 
 ###############
-# TEST: preprompt with auth warning
+start_test "preprompt with auth warning"
 
 is_ssh_valid() { false; }
 current_command=
 SECONDS=0
 result="$(preprompt)"
-assert_contains "preprompt contains SSH warning" "SSH" "$result"
+assert_contains "SSH" "$result"
 
 # Restore
 is_ssh_valid() { true; }
 
 ###############
-# TEST: preprompt sets PS1
+start_test "preprompt sets PS1"
 
 PS1=""
 current_command=
@@ -380,14 +384,14 @@ if test "$UID" -eq 0; then
 else
     _expected_ps1='$ '
 fi
-assert_equal "preprompt sets PS1 via set_prompt" "$_expected_ps1" "$PS1"
+assert_equal "$_expected_ps1" "$PS1"
 
 ###############
-# TEST: set_prompt
+start_test "set_prompt"
 
 PS1=""
 set_prompt
-assert_equal "set_prompt sets PS1" "$_expected_ps1" "$PS1"
+assert_equal "$_expected_ps1" "$PS1"
 
 ###############
 # WHOLE PROMPT TESTS
@@ -426,7 +430,7 @@ else
 fi
 
 ###############
-# WHOLE PROMPT: mikel on laptop, at home, need to auth
+start_test "whole prompt: mikel on laptop, at home, need to auth"
 
 HOME="$_testdir/fakehome"
 mkdir -p "$HOME"
@@ -448,11 +452,11 @@ outgoing() { return 1; }
 result="$(_resolve_cr "$(preprompt)")"
 expected="
 laptop shpool ~ SSH ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
-assert_equal "whole prompt: laptop, home, need auth" "$expected" "$result"
-assert_equal "whole prompt: laptop sets PS1" "$_ps1char " "$PS1"
+assert_equal "$expected" "$result"
+assert_equal "$_ps1char " "$PS1"
 
 ###############
-# WHOLE PROMPT: mikel on laptop, in /usr, last command exited with status 1
+start_test "whole prompt: mikel on laptop, in /usr, last command exited with status 1"
 
 USERNAME="mikel"
 HOSTNAME="mikel-laptop"
@@ -473,10 +477,10 @@ result="$(_resolve_cr "$(preprompt)")"
 expected="status 1
 
 laptop shpool /usr ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
-assert_equal "whole prompt: laptop, /usr, status 1" "$expected" "$result"
+assert_equal "$expected" "$result"
 
 ###############
-# WHOLE PROMPT: mikel on workstation, in project directory, need to shpool
+start_test "whole prompt: mikel on workstation, in project directory, need to shpool"
 
 _vcsdir="$_testdir/conf"
 mkdir -p "$_vcsdir"
@@ -498,11 +502,10 @@ base() { :; }
 result="$(_resolve_cr "$(preprompt)")"
 expected="
 workstation shpool conf main ―――――――――――――――――――――――――――――――――――――――――――――――――――"
-assert_equal "whole prompt: workstation, project root, shpool" "$expected" "$result"
+assert_equal "$expected" "$result"
 
 ###############
-# WHOLE PROMPT: mikel on workstation, in shpool session, in project subdirectory,
-#               with outgoing commit, local changes, and stale fetch
+start_test "whole prompt: mikel on workstation, shpool, subdir, outgoing, changes, fetch"
 
 _edgedir="$_testdir/edge1"
 mkdir -p "$_edgedir/ui"
@@ -525,7 +528,7 @@ result="$(_resolve_cr "$(preprompt)")"
 expected="
 workstation [edge1] edge1 ui somebranch * fetch ――――――――――――――――――――――――――――――――
 abc1234 Bump targetSdk to 36"
-assert_equal "whole prompt: workstation, shpool, subdir, outgoing, changes, fetch" "$expected" "$result"
+assert_equal "$expected" "$result"
 
 # Reset all stubs for subsequent tests
 USERNAME="testuser"
@@ -630,46 +633,46 @@ yellow=$'\033[33m'
 blue=$'\033[34m'
 normal=$'\033[0m'
 
-# TEST: red() wraps text in red escape sequences
+start_test "red() wraps text in red escape sequences"
 result="$(red "error")"
-assert_equal "red() wraps text" $'\033[31m'"error"$'\033[0m' "$result"
+assert_equal $'\033[31m'"error"$'\033[0m' "$result"
 
-# TEST: green() wraps text in green escape sequences
+start_test "green() wraps text in green escape sequences"
 result="$(green "ok")"
-assert_equal "green() wraps text" $'\033[32m'"ok"$'\033[0m' "$result"
+assert_equal $'\033[32m'"ok"$'\033[0m' "$result"
 
-# TEST: yellow() wraps text in yellow escape sequences
+start_test "yellow() wraps text in yellow escape sequences"
 result="$(yellow "warning")"
-assert_equal "yellow() wraps text" $'\033[33m'"warning"$'\033[0m' "$result"
+assert_equal $'\033[33m'"warning"$'\033[0m' "$result"
 
-# TEST: blue() wraps text in blue escape sequences
+start_test "blue() wraps text in blue escape sequences"
 result="$(blue "info")"
-assert_equal "blue() wraps text" $'\033[34m'"info"$'\033[0m' "$result"
+assert_equal $'\033[34m'"info"$'\033[0m' "$result"
 
-# TEST: set_color outputs the escape for a named color
+start_test "set_color outputs the escape for a named color"
 result="$(set_color red)"
-assert_equal "set_color red" $'\033[31m' "$result"
+assert_equal $'\033[31m' "$result"
 
-# TEST: set_color with multiple attributes
+start_test "set_color with multiple attributes"
 bold=$'\033[1m'
 result="$(set_color bold red)"
-assert_equal "set_color bold red" $'\033[1m'$'\033[31m' "$result"
+assert_equal $'\033[1m'$'\033[31m' "$result"
 bold=''
 
-# TEST: last_job_info error is red
+start_test "last_job_info error is red"
 in_shpool() { false; }
 current_command="failing"
 SECONDS=0
 bash_last_error() { echo "status 1"; }
 result="$(last_job_info)"
-assert_contains "last_job_info error is red" $'\033[31m'"status 1"$'\033[0m' "$result"
+assert_contains $'\033[31m'"status 1"$'\033[0m' "$result"
 
-# TEST: last_job_info duration is yellow
+start_test "last_job_info duration is yellow"
 bash_last_error() { :; }
 current_command="slow"
 SECONDS=5
 result="$(last_job_info)"
-assert_contains "last_job_info duration is yellow" $'\033[33m'"took 5 seconds"$'\033[0m' "$result"
+assert_contains $'\033[33m'"took 5 seconds"$'\033[0m' "$result"
 
 # Restore color variables
 color="$_saved_color"
@@ -694,6 +697,7 @@ HOSTNAME="testhost"
 # the shell-composition cost (host_info, dir_info, auth_info, color
 # wrapping, subshell captures) without forking the Go binary.
 
+        start_test "prompt_line within ${_prompt_perf_budget_ms}ms budget"
 inside_project() { true; }
 prompt_info() { echo "proj main"; }
 is_ssh_valid() { true; }
@@ -718,8 +722,7 @@ if test "$_start" != "0" && test "$_end" != "0"; then
     _elapsed_ms=$(( (_end - _start) / 1000000 ))
     echo "  50 x prompt_line (shell compose): ${_elapsed_ms}ms (budget ${_prompt_perf_budget_ms}ms)"
     if test "$_prompt_perf_budget_ms" -gt 0; then
-        assert_true "prompt_line within ${_prompt_perf_budget_ms}ms budget" \
-            test "$_elapsed_ms" -le "$_prompt_perf_budget_ms"
+        assert_true test "$_elapsed_ms" -le "$_prompt_perf_budget_ms"
     fi
 else
     skip_block "prompt_line perf check: date +%s%N unavailable"

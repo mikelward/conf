@@ -65,62 +65,76 @@ _fish_run() {
 ###############
 # TEST: maybe_space
 
+start_test "fish maybe_space with content"
 result="$(_fish_run 'maybe_space hello')"
-assert_equal "fish maybe_space with content" " hello" "$result"
+assert_equal " hello" "$result"
 
+start_test "fish maybe_space with empty"
 result="$(_fish_run 'maybe_space ""')"
-assert_equal "fish maybe_space with empty" "" "$result"
+assert_equal "" "$result"
 
+start_test "fish maybe_space with no args"
 result="$(_fish_run 'maybe_space')"
-assert_equal "fish maybe_space with no args" "" "$result"
+assert_equal "" "$result"
 
 ###############
 # TEST: bar
 
+start_test "fish bar prints N separator characters"
 result="$(_fish_run 'bar 5')"
-assert_equal "fish bar prints N separator characters" "―――――" "$result"
+assert_equal "―――――" "$result"
 
 ###############
 # TEST: ps1_character
 
+start_test "fish ps1_character prints >"
 result="$(_fish_run 'ps1_character')"
-assert_equal "fish ps1_character prints >" ">" "$result"
+assert_equal ">" "$result"
 
 ###############
 # TEST: in_shpool
 
+start_test "fish in_shpool false when unset"
 result="$(_fish_run 'if in_shpool; echo yes; else; echo no; end')"
-assert_equal "fish in_shpool false when unset" "no" "$result"
+assert_equal "no" "$result"
 
+start_test "fish in_shpool true when SHPOOL_SESSION_NAME set"
 result="$(_fish_run 'set -g SHPOOL_SESSION_NAME main; if in_shpool; echo yes; else; echo no; end')"
-assert_equal "fish in_shpool true when SHPOOL_SESSION_NAME set" "yes" "$result"
+assert_equal "yes" "$result"
 
 ###############
 # TEST: session_name
 
+start_test "fish session_name empty when not in pool"
 result="$(_fish_run 'session_name')"
-assert_equal "fish session_name empty when not in pool" "" "$result"
+assert_equal "" "$result"
 
+start_test "fish session_name returns shpool session"
 result="$(_fish_run 'set -g SHPOOL_SESSION_NAME edge1; session_name')"
-assert_equal "fish session_name returns shpool session" "edge1 " "$result"
+assert_equal "edge1 " "$result"
 
 ###############
 # TEST: format_duration (parity with bash last_job_info duration format)
 
+start_test "fish format_duration 0ms -> empty"
 result="$(_fish_run 'format_duration 0')"
-assert_equal "fish format_duration 0ms -> empty" "" "$result"
+assert_equal "" "$result"
 
+start_test "fish format_duration 1s -> empty (below threshold)"
 result="$(_fish_run 'format_duration 1000')"
-assert_equal "fish format_duration 1s -> empty (below threshold)" "" "$result"
+assert_equal "" "$result"
 
+start_test "fish format_duration 5s"
 result="$(_fish_run 'format_duration 5000')"
-assert_equal "fish format_duration 5s" "5 seconds" "$result"
+assert_equal "5 seconds" "$result"
 
+start_test "fish format_duration 1m5s"
 result="$(_fish_run 'format_duration 65000')"
-assert_equal "fish format_duration 1m5s" "1 minutes 5 seconds" "$result"
+assert_equal "1 minutes 5 seconds" "$result"
 
+start_test "fish format_duration 1h1m1s"
 result="$(_fish_run 'format_duration 3661000')"
-assert_equal "fish format_duration 1h1m1s" "1 hours 1 minutes 1 seconds" "$result"
+assert_equal "1 hours 1 minutes 1 seconds" "$result"
 
 ###############
 # TEST: last_job_info (parity with bash). Same behaviour contract:
@@ -131,73 +145,81 @@ assert_equal "fish format_duration 1h1m1s" "1 hours 1 minutes 1 seconds" "$resul
 # - joins error + duration with a single space
 # - emits a trailing newline only when something was printed
 
+start_test "fish last_job_info shows error status"
 result="$(_fish_run '
     function fish_last_error; echo "status 1"; end
     set -g current_command false
     set -g CMD_DURATION 0
     last_job_info
 ')"
-assert_equal "fish last_job_info shows error status" "status 1" "$result"
+assert_equal "status 1" "$result"
 
+start_test "fish last_job_info no output on success"
 result="$(_fish_run '
     function fish_last_error; end
     set -g current_command true
     set -g CMD_DURATION 0
     last_job_info
 ')"
-assert_equal "fish last_job_info no output on success" "" "$result"
+assert_equal "" "$result"
 
+start_test "fish last_job_info shows duration (lowercase took)"
 result="$(_fish_run '
     function fish_last_error; end
     set -g current_command sleep
     set -g CMD_DURATION 5000
     last_job_info
 ')"
-assert_equal "fish last_job_info shows duration (lowercase took)" \
+assert_equal \
     "took 5 seconds" "$result"
 
+start_test "fish last_job_info shows error and duration"
 result="$(_fish_run '
     function fish_last_error; echo "status 1"; end
     set -g current_command failing_command
     set -g CMD_DURATION 65000
     last_job_info
 ')"
-assert_equal "fish last_job_info shows error and duration" \
+assert_equal \
     "status 1 took 1 minutes 5 seconds" "$result"
 
+start_test "fish last_job_info skipped without current_command"
 result="$(_fish_run '
     function fish_last_error; echo "status 1"; end
     set -e current_command
     set -g CMD_DURATION 0
     last_job_info
 ')"
-assert_equal "fish last_job_info skipped without current_command" "" "$result"
+assert_equal "" "$result"
 
+start_test "fish last_job_info shows hours"
 result="$(_fish_run '
     function fish_last_error; end
     set -g current_command long_command
     set -g CMD_DURATION 3661000
     last_job_info
 ')"
-assert_equal "fish last_job_info shows hours" \
+assert_equal \
     "took 1 hours 1 minutes 1 seconds" "$result"
 
+start_test "fish last_job_info shows interrupted"
 result="$(_fish_run '
     function fish_last_error; echo "interrupted"; end
     set -g current_command interrupted_cmd
     set -g CMD_DURATION 0
     last_job_info
 ')"
-assert_equal "fish last_job_info shows interrupted" "interrupted" "$result"
+assert_equal "interrupted" "$result"
 
 # Sub-threshold durations must not print, matching bash's `seconds -gt 1`.
+start_test "fish last_job_info suppresses 1s duration"
 result="$(_fish_run '
     function fish_last_error; end
     set -g current_command quick
     set -g CMD_DURATION 1000
     last_job_info
 ')"
-assert_equal "fish last_job_info suppresses 1s duration" "" "$result"
+assert_equal "" "$result"
 
 ###############
 # TEST: fish_last_error (parity with bash_last_error / nushell last-job-info)
@@ -208,20 +230,25 @@ assert_equal "fish last_job_info suppresses 1s duration" "" "$result"
 #   148  -> ""                (suspended)
 #   other-> "status <N>"      (matches bash/nushell wording, lowercase)
 
+start_test "fish fish_last_error silent on success"
 result="$(_fish_run 'set -g last_job_status 0; fish_last_error')"
-assert_equal "fish fish_last_error silent on success" "" "$result"
+assert_equal "" "$result"
 
+start_test "fish fish_last_error formats status N"
 result="$(_fish_run 'set -g last_job_status 1; fish_last_error')"
-assert_equal "fish fish_last_error formats status N" "status 1" "$result"
+assert_equal "status 1" "$result"
 
+start_test "fish fish_last_error 130 is interrupted"
 result="$(_fish_run 'set -g last_job_status 130; fish_last_error')"
-assert_equal "fish fish_last_error 130 is interrupted" "interrupted" "$result"
+assert_equal "interrupted" "$result"
 
+start_test "fish fish_last_error silent when suspended (148)"
 result="$(_fish_run 'set -g last_job_status 148; fish_last_error')"
-assert_equal "fish fish_last_error silent when suspended (148)" "" "$result"
+assert_equal "" "$result"
 
+start_test "fish fish_last_error preserves arbitrary codes"
 result="$(_fish_run 'set -g last_job_status 42; fish_last_error')"
-assert_equal "fish fish_last_error preserves arbitrary codes" "status 42" "$result"
+assert_equal "status 42" "$result"
 
 ###############
 # TEST: fish_prompt integrates prompt_line and bar
@@ -256,6 +283,7 @@ _ps1char='>'
 ###############
 # TEST: host_info composes short hostname and shpool tag
 
+start_test "fish host_info off shpool off prod"
 result="$(_fish_run '
     set -g HOSTNAME mikel-laptop
     set -g USERNAME mikel
@@ -263,8 +291,9 @@ result="$(_fish_run '
     function in_shpool; return 1; end
     host_info
 ')"
-assert_equal "fish host_info off shpool off prod" "laptop shpool" "$result"
+assert_equal "laptop shpool" "$result"
 
+start_test "fish host_info in shpool"
 result="$(_fish_run '
     set -g HOSTNAME mikel-laptop
     set -g USERNAME mikel
@@ -273,43 +302,49 @@ result="$(_fish_run '
     function in_shpool; return 0; end
     host_info
 ')"
-assert_equal "fish host_info in shpool" "laptop [edge1]" "$result"
+assert_equal "laptop [edge1]" "$result"
 
 ###############
 # TEST: tilde_pwd replaces $HOME with ~
 
+start_test "fish tilde_pwd at \$HOME"
 result="$(_fish_run 'cd $HOME; tilde_pwd')"
-assert_equal "fish tilde_pwd at \$HOME" "~" "$result"
+assert_equal "~" "$result"
 
+start_test "fish tilde_pwd inside \$HOME"
 result="$(_fish_run 'mkdir -p $HOME/documents; cd $HOME/documents; tilde_pwd')"
-assert_equal "fish tilde_pwd inside \$HOME" "~/documents" "$result"
+assert_equal "~/documents" "$result"
 
+start_test "fish tilde_pwd outside \$HOME"
 result="$(_fish_run 'cd /usr; tilde_pwd')"
-assert_equal "fish tilde_pwd outside \$HOME" "/usr" "$result"
+assert_equal "/usr" "$result"
 
 ###############
 # TEST: dir_info delegates to prompt_info inside a project
 
+start_test "fish dir_info uses prompt_info inside project"
 result="$(_fish_run '
     function prompt_info; echo "myproject main"; end
     dir_info
 ')"
-assert_equal "fish dir_info uses prompt_info inside project" \
+assert_equal \
     "myproject main" "$result"
 
 ###############
 # TEST: dir_info falls back to tilde_pwd when prompt_info returns empty
 
+start_test "fish dir_info falls back to tilde_pwd"
 result="$(_fish_run '
     function prompt_info; return 1; end
     cd $HOME
     dir_info
 ')"
-assert_equal "fish dir_info falls back to tilde_pwd" "~" "$result"
+assert_equal "~" "$result"
 
 ###############
 # TEST: prompt_line composes host_info + dir_info + auth_info
 
+start_test "fish prompt_line without auth warning"
 result="$(_fish_run '
     set -g HOSTNAME mikel-laptop
     set -g USERNAME mikel
@@ -320,9 +355,10 @@ result="$(_fish_run '
     cd $HOME
     prompt_line
 ')"
-assert_equal "fish prompt_line without auth warning" \
+assert_equal \
     "laptop shpool ~" "$result"
 
+start_test "fish prompt_line with auth warning"
 result="$(_fish_run '
     set -g HOSTNAME mikel-laptop
     set -g USERNAME mikel
@@ -333,12 +369,13 @@ result="$(_fish_run '
     cd $HOME
     prompt_line
 ')"
-assert_equal "fish prompt_line with auth warning" \
+assert_equal \
     "laptop shpool ~ SSH" "$result"
 
 ###############
 # TEST: prompt_line inside a project shows vcs prompt-info output
 
+start_test "fish prompt_line inside project shows vcs info"
 result="$(_fish_run '
     set -g HOSTNAME mikel-laptop
     set -g USERNAME mikel
@@ -348,12 +385,13 @@ result="$(_fish_run '
     function prompt_info; echo "conf main"; end
     prompt_line
 ')"
-assert_equal "fish prompt_line inside project shows vcs info" \
+assert_equal \
     "laptop shpool conf main" "$result"
 
 ###############
 # WHOLE PROMPT: laptop, home directory, need to auth
 
+start_test "fish whole prompt: laptop, home, need auth"
 result="$(_fish_run '
     set -g HOSTNAME mikel-laptop
     set -g USERNAME mikel
@@ -374,11 +412,12 @@ result="$(_resolve_cr "$result")"
 expected="
 laptop shpool ~ SSH ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 $_ps1char "
-assert_equal "fish whole prompt: laptop, home, need auth" "$expected" "$result"
+assert_equal "$expected" "$result"
 
 ###############
 # WHOLE PROMPT: workstation, project dir with vcs info
 
+start_test "fish whole prompt: workstation, project root, shpool"
 result="$(_fish_run '
     set -g HOSTNAME mikel-workstation
     set -g USERNAME mikel
@@ -396,11 +435,12 @@ result="$(_resolve_cr "$result")"
 expected="
 workstation shpool conf main ―――――――――――――――――――――――――――――――――――――――――――――――――――
 $_ps1char "
-assert_equal "fish whole prompt: workstation, project root, shpool" "$expected" "$result"
+assert_equal "$expected" "$result"
 
 ###############
 # WHOLE PROMPT: inside shpool session, subdir, dirty, stale fetch
 
+start_test "fish whole prompt: workstation, shpool, subdir, dirty, fetch"
 result="$(_fish_run '
     set -g HOSTNAME mikel-workstation
     set -g USERNAME mikel
@@ -419,37 +459,45 @@ result="$(_resolve_cr "$result")"
 expected="
 workstation [edge1] edge1 ui somebranch * fetch ――――――――――――――――――――――――――――――――
 $_ps1char "
-assert_equal "fish whole prompt: workstation, shpool, subdir, dirty, fetch" "$expected" "$result"
+assert_equal "$expected" "$result"
 
 ###############
 # TEST: fish_mode_prompt displays the current vi-style bind mode
 
+start_test "fish_mode_prompt insert mode"
 result="$(_fish_run 'set -g fish_bind_mode insert; fish_mode_prompt')"
-assert_equal "fish_mode_prompt insert mode" "INSERT " "$result"
+assert_equal "INSERT " "$result"
 
+start_test "fish_mode_prompt default (normal) mode"
 result="$(_fish_run 'set -g fish_bind_mode default; fish_mode_prompt')"
-assert_equal "fish_mode_prompt default (normal) mode" "NORMAL " "$result"
+assert_equal "NORMAL " "$result"
 
+start_test "fish_mode_prompt visual mode"
 result="$(_fish_run 'set -g fish_bind_mode visual; fish_mode_prompt')"
-assert_equal "fish_mode_prompt visual mode" "VISUAL " "$result"
+assert_equal "VISUAL " "$result"
 
+start_test "fish_mode_prompt replace mode"
 result="$(_fish_run 'set -g fish_bind_mode replace; fish_mode_prompt')"
-assert_equal "fish_mode_prompt replace mode" "REPLACE " "$result"
+assert_equal "REPLACE " "$result"
 
+start_test "fish_mode_prompt replace_one mode"
 result="$(_fish_run 'set -g fish_bind_mode replace_one; fish_mode_prompt')"
-assert_equal "fish_mode_prompt replace_one mode" "REPLACE " "$result"
+assert_equal "REPLACE " "$result"
 
+start_test "fish_mode_prompt empty when fish_bind_mode unset"
 result="$(_fish_run 'set -e fish_bind_mode; fish_mode_prompt')"
-assert_equal "fish_mode_prompt empty when fish_bind_mode unset" "" "$result"
+assert_equal "" "$result"
 
+start_test "fish_mode_prompt falls back to raw mode name"
 result="$(_fish_run 'set -g fish_bind_mode mystery; fish_mode_prompt')"
-assert_equal "fish_mode_prompt falls back to raw mode name" "mystery " "$result"
+assert_equal "mystery " "$result"
 
 ###############
 # TEST: my_vi_key_bindings is selected as the key binding function
 
+start_test "fish sets fish_key_bindings to my_vi_key_bindings"
 result="$(_fish_run 'echo $fish_key_bindings')"
-assert_equal "fish sets fish_key_bindings to my_vi_key_bindings" "my_vi_key_bindings" "$result"
+assert_equal "my_vi_key_bindings" "$result"
 
 ###############
 # PERFORMANCE
@@ -459,6 +507,7 @@ assert_equal "fish sets fish_key_bindings to my_vi_key_bindings" "my_vi_key_bind
 # than fish startup. `prompt_info` is stubbed so we don't fork the real
 # Go binary here. The budget catches ~10x regressions without flaking on
 # slow CI; FISH_PROMPT_PERF_BUDGET_MS=0 disables the check.
+        start_test "fish prompt_line within ${_fish_perf_budget_ms}ms budget"
 _fish_perf_budget_ms="${FISH_PROMPT_PERF_BUDGET_MS:-1000}"
 _fish_perf_line=$(_fish_run '
     set -g HOSTNAME mikel-workstation
@@ -482,7 +531,7 @@ _fish_perf_ms=$(printf '%s\n' "$_fish_perf_line" | sed -n 's/^PERF_MS=//p' | hea
 if test -n "$_fish_perf_ms"; then
     echo "  50 x fish prompt_line (binary stub): ${_fish_perf_ms}ms (budget ${_fish_perf_budget_ms}ms)"
     if test "$_fish_perf_budget_ms" -gt 0; then
-        assert_true "fish prompt_line within ${_fish_perf_budget_ms}ms budget" \
+        assert_true \
             test "$_fish_perf_ms" -le "$_fish_perf_budget_ms"
     fi
 else

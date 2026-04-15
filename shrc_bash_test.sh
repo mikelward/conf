@@ -33,26 +33,26 @@ mkdir -p "$_autocd_root/sub"
 # is kept for the same reason against older toolchains that lack
 # setsid -- and the timeout -k fallback in run_with_timeout bounds any
 # residual hang to ~N+2s.
+start_test "bash -i autocds on trailing slash via DEBUG trap"
 result=$(cd "$_autocd_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     source '"$_srcdir"'/shrc >/dev/null 2>&1
     install_precommand_trap
     ./sub/
     printf "\nPWDMARK=%s\n" "$PWD"
 ' </dev/null 2>/dev/null | sed -n 's/.*PWDMARK=//p')
-assert_equal "bash -i autocds on trailing slash via DEBUG trap" \
-    "$_autocd_root/sub" "$result"
+assert_equal "$_autocd_root/sub" "$result"
 
 # Tilde-expanded form: user types `~/sub/` and expects to land in
 # $HOME/sub, not see "Is a directory". Mirrors the zsh ~/scripts/
 # regression this fix addresses.
+start_test "bash -i autocds on ~/foo/ via DEBUG trap"
 result=$(HOME="$_autocd_root" run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     source '"$_srcdir"'/shrc >/dev/null 2>&1
     install_precommand_trap
     ~/sub/
     printf "\nPWDMARK=%s\n" "$PWD"
 ' </dev/null 2>/dev/null | sed -n 's/.*PWDMARK=//p')
-assert_equal "bash -i autocds on ~/foo/ via DEBUG trap" \
-    "$_autocd_root/sub" "$result"
+assert_equal "$_autocd_root/sub" "$result"
 
 # Regression: sourcing shrc under an interactive bash that inherits
 # aliases with the same names as shrc's function definitions (e.g.
@@ -61,6 +61,7 @@ assert_equal "bash -i autocds on ~/foo/ via DEBUG trap" \
 # time, so without the pre-block `unalias -a`, `l() { ... }` would
 # parse as `ls -CF() { ... }` and raise a syntax error, leaving
 # install_precommand_trap undefined.
+start_test "shrc sources cleanly despite inherited l/ll/la aliases"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     alias l="ls -CF"
     alias ll="ls -alF"
@@ -72,8 +73,7 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
         printf "MISSING"
     fi
 ' </dev/null 2>/dev/null)
-assert_equal "shrc sources cleanly despite inherited l/ll/la aliases" \
-    "OK" "$result"
+assert_equal "OK" "$result"
 
 # Regression: sourcing shrc in a non-tty interactive bash must not
 # SIGTTOU-hang on `stty start undef stop undef`. Pre-fix, the stty
@@ -85,11 +85,11 @@ assert_equal "shrc sources cleanly despite inherited l/ll/la aliases" \
 # hung CI run. When timeout(1) isn't installed the wrapper runs
 # the command unfenced; this matches the prior skip-with-timeout
 # behaviour while still giving coverage on boxes with timeout.
+start_test "shrc stty guard: sources cleanly with stdin=/dev/null (no SIGTTOU hang)"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     source '"$_srcdir"'/shrc >/dev/null 2>&1
     printf "DONE"
 ' </dev/null 2>/dev/null)
-assert_equal "shrc stty guard: sources cleanly with stdin=/dev/null (no SIGTTOU hang)" \
-    "DONE" "$result"
+assert_equal "DONE" "$result"
 
 test_summary "shrc_bash_test"

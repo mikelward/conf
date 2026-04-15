@@ -32,6 +32,13 @@ TEST_JOBS ?= $(shell nproc 2>/dev/null || echo 8)
 test:
 	@$(MAKE) --no-print-directory --output-sync=target -j $(TEST_JOBS) test-all
 
+# Same as `test`, with TEST_VERBOSE=1 exported so shrc_test_lib's
+# start_test / assert_* helpers print per-section banners and per-
+# assertion "ok" lines. Useful when attributing stray stderr to the
+# right test block or stepping through a debug session.
+test-verbose:
+	@TEST_VERBOSE=1 $(MAKE) --no-print-directory --output-sync=target -j $(TEST_JOBS) test-all
+
 test-all: \
 	test-lint \
 	test-nu-parse \
