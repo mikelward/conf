@@ -13,6 +13,10 @@
   Firefox; bash and zsh.
 - Create tests before implementing.
 - Verify tests are passing as you go and when committing.
+- Proactively run lint and presubmit tests and proactively fix them.
+- Check applicable coding conventions and apply them proactively.
+- Do not introduce extra newlines all on their own. Check all added newlines
+  and ensure they're in blocks we need to be touching.
 - If preexisting tests are already red when you start a task, fix them as the
   *first* commit of the series — don't stack new work on a broken baseline.
   If the failure is genuinely unrelated and out of scope, say so up front and
@@ -48,7 +52,7 @@
   *before* engaging with the rest of the message: `git fetch origin`, cut a
   fresh `claude/<short-topic>` branch off `origin/main`, announce the switch.
 
-# Pull requests
+# Pull requests and reviews
 
 - Open PRs ready for review (not draft) unless I say otherwise.
 - End every reply with the open-PR link (or `.../compare/main...<branch>`
@@ -57,6 +61,8 @@
   on the feature by URL, one per line — the "View PR" chip sticks to the
   first link and hides the rest
   (anthropics/claude-code#46625).
+- Watch the review for automated findings and any comments, and proactively
+  address them.
 - Never leave a review comment thread silently dismissed. Either reply on
   the thread *or* resolve it. When you think a comment is a false positive,
   say *why* on the thread (one or two sentences). Acknowledgement noise
