@@ -309,18 +309,18 @@ bash)
     shell=bash
     ;;
 *)
-    # dash / sh / ksh: pretend to be bash so extracted functions take
-    # their bash-branch code paths (which are the unit under test on
-    # this run). BASH_VERSION is stubbed so shrc's own `is_bash`
-    # (which checks ${BASH_VERSION:-}) also reports true if any
-    # extracted code calls it.
-    BASH_VERSION="${BASH_VERSION:-fake}"
-    ZSH_VERSION=
+    # dash / sh / ksh: don't masquerade as bash. Earlier this branch
+    # set BASH_VERSION="fake" so extracted-function snippets would take
+    # bash-branch code paths, but we now source shrc as a whole under
+    # each real interpreter -- the dash run is a portability cross-
+    # check of dash semantics, not a fake-bash-under-dash one. The fake
+    # also caused setup_shell_compat to take its bash branch and emit
+    # `shopt: not found` warnings on every dash test source.
     is_zsh() { false; }
-    is_bash() { true; }
+    is_bash() { false; }
     is_dash() { false; }
     is_sh() { false; }
-    shell=bash
+    shell=sh
     ;;
 esac
 

@@ -1,19 +1,20 @@
 #!/bin/dash
 #
-# End-to-end tests that exercise shrc under a real `dash` subshell.
-# Only the dash-specific behaviour (the bash/zsh guard around sourcing
-# shrc.vcs, which uses bash-only syntax) lives here; the sh-portable
-# shrc function tests live in shrc_test.sh.
+# End-to-end test that sourcing shrc under a real dash subshell falls
+# into the basic-mode short-circuit cleanly -- no syntax error, no
+# bashism blowup. shrc functions aren't expected to work under dash
+# (the bash/zsh-only test suite lives in shrc_test.sh), this file only
+# guards the "user accidentally invoked sh/dash" path.
 #
 # Run from the Makefile via `dash shrc_dash_test.sh`.
 
 . "$(dirname "$0")/shrc_test_lib.sh"
 
-# Sanity-check the guard end-to-end: running shrc under dash must not
-# emit a syntax error from .shrc.vcs. Drop a symlink at $HOME/.shrc.vcs
-# pointing at the repo's shrc.vcs and source shrc in a dash subshell.
-# Without the guard this aborts with "Syntax error: '(' unexpected"
-# on the declare/array syntax in _github_review.
+# A symlinked .shrc.vcs in $HOME used to surface a syntax-error
+# regression here (shrc.vcs uses bash-only declare/array syntax). The
+# basic-mode short-circuit at the top of shrc returns long before
+# reaching the .shrc.vcs sourcing now, so this test mostly catches
+# stray bashisms that slip in *above* the short-circuit.
 start_test "shrc sources cleanly under dash despite .shrc.vcs present"
 _vcsguard_home="$_testdir/vcsguard_home"
 mkdir -p "$_vcsguard_home"

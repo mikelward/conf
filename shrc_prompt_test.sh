@@ -23,46 +23,12 @@ USERNAME="testuser"
 TERM="dumb"
 shell="bash"
 
-# Extract prompt functions from shrc
-extract_func basic_prompt
-extract_func preprompt
-extract_func prompt_line
-extract_func host_info
-extract_func dir_info
-extract_func tilde_pwd
-extract_func maybe_space
-extract_func bar
-extract_func last_job_info
-extract_func flash_terminal
-extract_func job_info
-extract_func short_hostname
-extract_func set_prompt
-extract_func ps1
-extract_func ps1_character
-extract_func _ps1_red_char
-extract_func keymap_character
-extract_func getshopt
-extract_func _color_print
-extract_func blue
-extract_func green
-extract_func red
-extract_func yellow
-extract_func set_color
-extract_func title
-extract_func set_title
-extract_func short_pwd
-extract_func project_or_pwd
-extract_func session_name
-extract_func show_hostname_in_title
-extract_func i_am_root
-extract_func on_production_host
-extract_func auth_info
-extract_func need_auth
-extract_func is_ssh_valid
-extract_func inside_project
-extract_func in_shpool
-extract_func is_function
-extract_func bash_last_error
+# Pull in every shrc function via a single sourcing pass. The
+# SHRC_LOAD_FUNCTIONS_ONLY guards inside shrc skip the env-setup and
+# interactive / .shrc.local / auth blocks, so $PATH and exported state
+# are left untouched. Replaces what used to be ~40 individual
+# extract_func calls.
+SHRC_LOAD_FUNCTIONS_ONLY=1 . "$_srcdir/shrc"
 
 # Stub VCS functions (no VCS by default). prompt_line calls
 # `vcs prompt-line`; stub vcs() so tests don't depend on the real binary.
