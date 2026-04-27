@@ -408,7 +408,7 @@ run_interactive_with_timeout() {
 }
 
 # Run a fish snippet with config.fish sourced inside an interactive fish.
-# Shared by shrc_fish_test.sh and shrc_fish_prompt_test.sh so the fiddly
+# Shared by fish_test.sh and fish_prompt_test.sh so the fiddly
 # invocation (fake HOME, SIGTTOU avoidance, timeout fence, stdin detach)
 # only lives in one place.
 #

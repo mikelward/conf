@@ -20,17 +20,19 @@ start_test "install-vcs target exists"
 assert_contains "install-vcs" "$_targets"
 start_test "vcs-build target exists"
 assert_contains "vcs-build" "$_targets"
+start_test "vcs-fetch target exists"
+assert_contains "vcs-fetch" "$_targets"
 start_test "test target exists"
 assert_contains "test" "$_targets"
 
-# vcs-build must use --remote so the submodule tracks main HEAD instead of
-# the parent's pinned commit, and must wire up core.hooksPath so the
-# post-merge / post-rewrite hooks fire automatically on pull / rebase.
-_vcs_build_recipe=$(make -C "$_srcdir" -n vcs-build 2>/dev/null)
-start_test "vcs-build uses --remote to track main HEAD"
-assert_contains "submodule update --remote" "$_vcs_build_recipe"
-start_test "vcs-build wires up core.hooksPath"
-assert_contains "core.hooksPath gittemplates/hooks" "$_vcs_build_recipe"
+# vcs-fetch is the network-doing target: it tracks the vcs submodule's
+# main HEAD and wires up core.hooksPath so post-merge / post-rewrite
+# fire. vcs-build composes vcs-fetch + the binary build.
+_vcs_fetch_recipe=$(make -C "$_srcdir" -n vcs-fetch 2>/dev/null)
+start_test "vcs-fetch uses --remote to track main HEAD"
+assert_contains "submodule update --remote" "$_vcs_fetch_recipe"
+start_test "vcs-fetch wires up core.hooksPath"
+assert_contains "core.hooksPath gittemplates/hooks" "$_vcs_fetch_recipe"
 
 # Bare `make` (no target) must build, not install. Verify the default
 # target is `all`, that `all` depends on vcs-build, and that its recipe
@@ -54,51 +56,35 @@ assert_contains "install-dotfiles" "$_install_deps"
 start_test "install depends on install-vcs"
 assert_contains "install-vcs" "$_install_deps"
 
-# Test that the VCS test target depends on vcs-build so the submodule
-# binary is built before tests that require it.
-start_test "test-shrc-vcs depends on vcs-build"
-_vcs_test_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^test-shrc-vcs:')
-assert_contains "vcs-build" "$_vcs_test_deps"
+# test-vcs depends on the real-file vcs/vcs binary (not on the PHONY
+# vcs-build), so `make test` doesn't trigger a network fetch on every
+# invocation -- only an actual binary change re-triggers it.
+start_test "test-vcs depends on vcs/vcs"
+_test_vcs_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^test-vcs:')
+assert_contains "vcs/vcs" "$_test_vcs_deps"
+start_test "test-vcs does not depend on vcs-build"
+assert_not_contains "vcs-build" "$_test_vcs_deps"
 
-# Test that per-test sub-targets exist so `make -j` can schedule them in
-# parallel. Each test script gets its own make target; `test-all` aggregates
-# them and `test` dispatches to `test-all` with -j.
+# Test that per-topic sub-targets exist so `make -j` can schedule them in
+# parallel. test-all aggregates them and `test` dispatches to test-all
+# with -j.
 start_test "test-all target exists"
 assert_contains "test-all" "$_targets"
-start_test "test-lint target exists"
-assert_contains "test-lint" "$_targets"
-start_test "test-nu-parse target exists"
-assert_contains "test-nu-parse" "$_targets"
-start_test "test-nu-config target exists"
-assert_contains "test-nu-config" "$_targets"
-start_test "test-shrc-dash target exists"
-assert_contains "test-shrc-dash" "$_targets"
-start_test "test-shrc-bash target exists"
-assert_contains "test-shrc-bash" "$_targets"
-start_test "test-shrc-vcs target exists"
-assert_contains "test-shrc-vcs" "$_targets"
-start_test "test-shrc-prompt target exists"
-assert_contains "test-shrc-prompt" "$_targets"
-start_test "test-shrc-fish target exists"
-assert_contains "test-shrc-fish" "$_targets"
-start_test "test-shrc-fish-prompt target exists"
-assert_contains "test-shrc-fish-prompt" "$_targets"
-start_test "test-gitconfig target exists"
-assert_contains "test-gitconfig" "$_targets"
-start_test "test-makefile target exists"
-assert_contains "test-makefile" "$_targets"
-start_test "test-amethyst target exists"
-assert_contains "test-amethyst" "$_targets"
-
-# Test that test-all depends on every per-test sub-target so that a single
-# `make test-all` invocation covers the full test suite.
-    start_test "test-all depends on $_sub"
-_test_all_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^test-all:')
-for _sub in test-lint test-nu-parse test-nu-config \
-            test-shrc-dash test-shrc-bash \
-            test-shrc-vcs \
-            test-shrc-prompt test-shrc-fish test-shrc-fish-prompt \
+for _sub in test-dash test-bash test-zsh test-prompt test-vcs \
+            test-fish test-nu test-lint \
             test-gitconfig test-makefile test-amethyst; do
+    start_test "$_sub target exists"
+    assert_contains "$_sub" "$_targets"
+done
+unset _sub
+
+# Test that test-all depends on every per-topic sub-target so that a single
+# `make test-all` invocation covers the full test suite.
+_test_all_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^test-all:')
+for _sub in test-dash test-bash test-zsh test-prompt test-vcs \
+            test-fish test-nu test-lint \
+            test-gitconfig test-makefile test-amethyst; do
+    start_test "test-all depends on $_sub"
     assert_contains "$_sub" "$_test_all_deps"
 done
 unset _sub

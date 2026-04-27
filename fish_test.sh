@@ -9,7 +9,7 @@
 
 if ! command -v fish >/dev/null 2>&1; then
     skip_all "fish not installed"
-    test_summary "fish shrc_fish_test"
+    test_summary "fish_test"
     exit 0
 fi
 
@@ -362,4 +362,4 @@ assert_contains \
 
 rm -rf "$_find_up_dir"
 
-test_summary "fish shrc_fish_test"
+test_summary "fish_test"

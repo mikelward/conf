@@ -9,7 +9,7 @@
 
 if ! command -v fish >/dev/null 2>&1; then
     skip_all "fish not installed"
-    test_summary "fish shrc_fish_prompt_test"
+    test_summary "fish_prompt_test"
     exit 0
 fi
 
@@ -547,4 +547,4 @@ else
     skip_block "fish prompt_line perf check: could not parse elapsed time"
 fi
 
-test_summary "fish shrc_fish_prompt_test"
+test_summary "fish_prompt_test"
