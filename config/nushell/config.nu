@@ -195,76 +195,6 @@ def maybe-start-shpool-and-exit [] {
     }
 }
 
-# Resolve $arg to an existing directory the way `cd` does, honoring
-# $env.CDPATH. Returns the resolved absolute path, or "" if no match.
-# Absolute paths and paths starting with ./ or ../ bypass CDPATH,
-# matching cd(1) semantics. A leading `~` or `~/` is expanded manually
-# via `path expand` before the lookup, mirroring shrc's and
-# config.fish's tilde handling so `~/scripts/` resolves even though
-# `path exists` treats the literal `~` as a missing file.
-def resolve-cdpath-dir [arg_in: string] {
-    if ($arg_in | is-empty) { return "" }
-    # Expand a leading `~` or `~/` manually off $env.HOME rather than
-    # `path expand`, which uses the OS passwd home and so ignores
-    # HOME overrides (the tests rely on the override).
-    let arg = if $arg_in == "~" {
-        $env.HOME
-    } else if ($arg_in | str starts-with "~/") {
-        [$env.HOME ($arg_in | str substring 2..)] | path join
-    } else {
-        $arg_in
-    }
-    let is_explicit = (
-        ($arg | str starts-with "/") or
-        ($arg | str starts-with "./") or
-        ($arg | str starts-with "../")
-    )
-    if $is_explicit {
-        if (($arg | path exists) and (($arg | path type) == "dir")) {
-            return ($arg | path expand)
-        }
-        return ""
-    }
-    if (($arg | path exists) and (($arg | path type) == "dir")) {
-        return ($arg | path expand)
-    }
-    for p in ($env.CDPATH? | default []) {
-        let base = if ($p | is-empty) { "." } else { $p }
-        let candidate = ([$base $arg] | path join)
-        if (($candidate | path exists) and (($candidate | path type) == "dir")) {
-            return ($candidate | path expand)
-        }
-    }
-    ""
-}
-
-# CDPATH-aware `cd`. Nushell's built-in `cd` ignores $env.CDPATH, so
-# `cd scripts` from ~/conf fails even when $HOME/scripts exists.
-# Resolve via CDPATH first; if no match, pass the original arg
-# through to built-in `cd` so its error messages and edge cases
-# (cd -, cd with no arg -> HOME) are preserved. The `alias cd =
-# cd-with-cdpath` below redirects REPL and post-definition `cd`
-# calls through this wrapper; the `cd $target` line inside is
-# parsed before the alias exists, so it still resolves to the
-# built-in. Mirrors shrc's and config.fish's CDPATH handling, which
-# is provided natively by bash/zsh/fish.
-def --env cd-with-cdpath [dir?: string] {
-    let target = if ($dir | is-empty) {
-        # no arg -> $env.HOME, matching bash/zsh/fish. (Nushell's
-        # built-in `cd` with no arg uses the OS home dir from the
-        # passwd database, ignoring $env.HOME.)
-        $env.HOME
-    } else if $dir == "-" {
-        # pass `-` through; nu's built-in handles OLDPWD.
-        $dir
-    } else {
-        let resolved = (resolve-cdpath-dir $dir)
-        if ($resolved | is-not-empty) { $resolved } else { $dir }
-    }
-    cd $target
-}
-alias cd = cd-with-cdpath
-
 # return true if inside tmux
 def inside-tmux [] {
     is-env-set "TMUX"
@@ -1308,17 +1238,6 @@ $env.config = ($env.config | upsert hooks.pre_prompt [{||
     }
     $env.CMD_START_TIME = null
 }])
-
-# Trailing-slash autocd at the REPL is PWD-only in nushell: typing
-# `foo/` only cds when foo exists in $PWD. Unlike shrc's zsh
-# accept-line widget and fish's fish_command_not_found (which
-# rewrite `foo/` to `cd foo/` and so pick up CDPATH via the shell's
-# cd), nushell has no clean extension point here. Overriding Enter
-# via reedline's ExecuteHostCommand loses the user's buffer (the
-# event exits reedline before the original buffer can be read), and
-# the command_not_found hook runs in a sub-scope so it can't mutate
-# $env.PWD. For CDPATH parity, use `cd scripts` or `cd scripts/`
-# explicitly -- cd-with-cdpath handles the lookup.
 
 # Maybe attach to shpool instead of running a bare nu interactively.
 # Skipped in non-interactive mode so the test suite stays quiet. Mirrors
