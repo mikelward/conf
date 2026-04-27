@@ -933,123 +933,6 @@ jc() { journalctl --no-hostname "$@"; }
 sc() { systemctl "$@"; }
 uc() { systemctl --user "$@"; }
 
-# Shared body of the bash/zsh command-not-found hooks wired up below in
-# the interactive section. If the missed "command" ends with a `/`, try
-# to cd there (same lookup as `cd`, so CDPATH still applies); otherwise
-# delegate to whichever saved system hook exists. This gives us a
-# "trailing-slash autocd": typing `foo/` at the prompt changes into
-# foo, while bare `foo` stays a "command not found" error.
-#
-# We deliberately avoid `shopt -s autocd` (bash) / `setopt AUTO_CD`
-# (zsh), which auto-cd on *any* bare directory name -- far too
-# aggressive and easy to trigger by accident (e.g. a typo that happens
-# to name a directory). Requiring a trailing `/` makes the intent
-# explicit.
-# If $1 looks like a trailing-slash autocd trigger -- a single word
-# ending in `/` that names an existing directory -- cd into it and
-# return 0. Otherwise return 1 without side effects. Shared by the
-# zsh accept-line widget and the bash DEBUG-trap hook below so that
-# `foo/` reliably becomes `cd foo/` even when the shell would have
-# tried (and failed) to exec the directory directly.
-# Resolve $1 to an existing directory the way `cd` does, honoring
-# CDPATH. On success, prints the resolved path ($1 itself for
-# absolute or ./ / ../ paths, or $entry/$1 for a CDPATH hit) and
-# returns 0; on failure, prints nothing and returns 1. Absolute paths
-# and paths starting with ./ or ../ bypass CDPATH, matching cd(1)
-# semantics. A leading `~` or `~/` is expanded manually, since
-# test(1) does not do tilde expansion -- without this, `~/scripts/`
-# would miss even when $HOME/scripts exists, and the zsh widget
-# below would fall through to .accept-line, which then tilde-expands
-# and tries to exec the directory.
-#
-# Callers use the printed path directly (see try_autocd_trailing_slash
-# and _autocd_accept_line) instead of passing the original arg to cd,
-# so cd doesn't re-do the CDPATH walk.
-#
-# zsh does not word-split unquoted `$CDPATH` on `:` even when IFS=: --
-# splitting requires SH_WORD_SPLIT, which is off under `emulate -L
-# zsh` (the _autocd_accept_line widget's mode). Use zsh's native
-# `$cdpath` array form there; everything else uses POSIX IFS
-# splitting.
-resolve_cdpath_dir() {
-    case "$1" in
-    "~") set -- "$HOME" ;;
-    "~/"*) set -- "$HOME/${1#"~/"}" ;;
-    esac
-    case "$1" in
-    /*|./*|../*)
-        if test -d "$1"; then
-            printf '%s\n' "$1"
-            return 0
-        fi
-        return 1
-        ;;
-    esac
-    if test -d "$1"; then
-        printf '%s\n' "$1"
-        return 0
-    fi
-    if is_zsh; then
-        for _p in $cdpath; do
-            test -z "$_p" && _p=.
-            if test -d "$_p/$1"; then
-                printf '%s\n' "$_p/$1"
-                unset _p
-                return 0
-            fi
-        done
-        unset _p
-        return 1
-    fi
-    # Walk CDPATH entries; an empty entry means `.` per POSIX.
-    _oldifs="$IFS"
-    IFS=:
-    for _p in $CDPATH; do
-        test -z "$_p" && _p=.
-        if test -d "$_p/$1"; then
-            IFS="$_oldifs"
-            printf '%s\n' "$_p/$1"
-            unset _oldifs _p
-            return 0
-        fi
-    done
-    IFS="$_oldifs"
-    unset _oldifs _p
-    return 1
-}
-
-try_autocd_trailing_slash() {
-    case "$1" in
-    */)
-        # reject multi-word buffers like `foo/ bar`
-        case "$1" in *[[:space:]]*) return 1 ;; esac
-        _resolved=$(resolve_cdpath_dir "$1") || return 1
-        if test -z "$_resolved"; then
-            unset _resolved
-            return 1
-        fi
-        cd -- "$_resolved" || { unset _resolved; return 1; }
-        unset _resolved
-        return 0
-        ;;
-    esac
-    return 1
-}
-
-maybe_autocd_trailing_slash() {
-    if try_autocd_trailing_slash "$1"; then
-        return 0
-    fi
-    if is_function system_command_not_found_handle; then
-        system_command_not_found_handle "$@"
-    elif is_function system_command_not_found_handler; then
-        system_command_not_found_handler "$@"
-    else
-        printf '%s: command not found\n' "$1" >&2
-        return 127
-    fi
-}
-
 ##################################
 # ENVIRONMENT SETUP FOR ALL SHELLS
 # Set $PATH early in case other stuff here needs it.
@@ -2063,44 +1946,17 @@ if is_interactive; then
 
     case "$shell" in
     zsh)
-        # zsh enhancements. NOTE: AUTO_CD is deliberately not set --
-        # see maybe_autocd_trailing_slash and the command_not_found_handler
-        # hook below for our trailing-slash autocd replacement.
+        # zsh enhancements. AUTO_CD lets typing a bare directory name
+        # (or a directory path with trailing slash) at the prompt cd
+        # there directly, with CDPATH applied -- so `Downloads<TAB>`
+        # finds $HOME/Downloads via CDPATH and `Downloads<ENTER>` cds
+        # into it.
+        setopt AUTO_CD
         setopt CORRECT
         setopt DVORAK
         setopt EXTENDED_GLOB
         setopt PROMPT_PERCENT
         setopt PUSHD_SILENT
-
-        # Save any pre-existing command_not_found_handler (e.g. distros
-        # with a "try `apt install X`" helper) under a system_* alias so
-        # we can fall through to it. The `! is_function system_*` guard
-        # keeps re-sourcing this file idempotent.
-        if is_function command_not_found_handler \
-           && ! is_function system_command_not_found_handler; then
-            eval "system_$(declare -f command_not_found_handler)"
-        fi
-        command_not_found_handler() {
-            maybe_autocd_trailing_slash "$@"
-        }
-
-        # zsh calls command_not_found_handler only when PATH lookup
-        # fails. `src/vcs/` doesn't fail lookup -- zsh tries to exec
-        # the directory and dies with "permission denied" before the
-        # handler runs. Intercept at the line-editor level instead:
-        # rewrite the buffer to `cd -- foo/` right before accepting.
-        _autocd_accept_line() {
-            emulate -L zsh
-            local _resolved
-            if [[ "$BUFFER" == */ ]] \
-               && [[ "$BUFFER" != *[[:space:]]* ]] \
-               && _resolved=$(resolve_cdpath_dir "$BUFFER") \
-               && [[ -n "$_resolved" ]]; then
-                BUFFER="cd -- $_resolved"
-            fi
-            zle .accept-line
-        }
-        zle -N accept-line _autocd_accept_line
 
         # complete both commands and files for the first word
         compctl -C -c -f
@@ -2321,35 +2177,14 @@ if is_interactive; then
 
         ;;
     bash)
-        # bash enhancements. NOTE: `shopt -s autocd` is deliberately
-        # not set -- see maybe_autocd_trailing_slash and the
-        # command_not_found_handle hook below for our trailing-slash
-        # autocd replacement.
+        # bash enhancements. autocd lets typing a bare directory name
+        # (or a directory path with trailing slash) at the prompt cd
+        # there directly, with CDPATH applied -- so `Downloads<TAB>`
+        # finds $HOME/Downloads via CDPATH and `Downloads<ENTER>` cds
+        # into it.
+        shopt -s autocd
         shopt -s checkwinsize
         shopt -s lithist
-
-        # Save any pre-existing command_not_found_handle (e.g. Ubuntu's
-        # command-not-found package's "sudo apt install X" helper)
-        # under a system_* alias so we can fall through to it. The
-        # `! is_function system_*` guard keeps re-sourcing idempotent.
-        if is_function command_not_found_handle \
-           && ! is_function system_command_not_found_handle; then
-            eval "system_$(declare -f command_not_found_handle)"
-        fi
-        command_not_found_handle() {
-            maybe_autocd_trailing_slash "$@"
-        }
-
-        # Same trailing-slash autocd trick as the zsh widget above,
-        # but bash has no ZLE. Piggy-back on the DEBUG trap
-        # (installed per-prompt by install_precommand_trap) and use
-        # `shopt -s extdebug` so a non-zero trap return cancels the
-        # would-be exec of the directory. extdebug also enables
-        # functrace (DEBUG inherits into functions), which would make
-        # the trap fire for set_title inside install_precommand_trap
-        # and self-remove too early -- so we gate on FUNCNAME depth
-        # to only act for top-level commands.
-        shopt -s extdebug
 
         escape_start='\['
         escape_end='\]'
@@ -2358,20 +2193,8 @@ if is_interactive; then
         # the DEBUG trap is disabled during running of preprompt to avoid lots
         # of extra processing and several pointless title changes
         _bash_debug_trap() {
-            # Only fire for top-level commands. Inside any function
-            # (e.g. install_precommand_trap itself, a user function, a
-            # command substitution), FUNCNAME has more than just this
-            # hook on the stack -- skip without removing the trap.
-            if test "${#FUNCNAME[@]}" -ne 1; then
-                return 0
-            fi
-            if try_autocd_trailing_slash "$1"; then
-                remove_precommand_trap
-                return 1
-            fi
             precommand "$1"
             remove_precommand_trap
-            return 0
         }
         install_precommand_trap() {
             trap '_bash_debug_trap "$BASH_COMMAND"' DEBUG

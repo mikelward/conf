@@ -336,13 +336,14 @@ let results = [
     })
 
     ###############
-    # command_not_found hook is not set (autocd is native)
+    # command_not_found hook is not set
     (run-test "nu command_not_found hook is not set" {
         assert equal ($env.config.hooks.command_not_found | describe) "nothing"
     })
 
     ###############
-    # cd with trailing slash works
+    # cd with trailing slash works (direct path; nu's built-in cd does
+    # not consult $env.CDPATH, so the path must exist relative to PWD)
     (run-test "nu cd with trailing slash enters directory" {
         let base = ($env.HOME | path expand)
         mkdir ([$base "cdtest" "sub"] | path join)
@@ -350,171 +351,30 @@ let results = [
         cd ./sub/
         assert str contains $env.PWD "cdtest/sub"
     })
-
-    ###############
-    # resolve-cdpath-dir: CDPATH-aware directory lookup for autocd
-    (run-test "nu resolve-cdpath-dir finds PWD-relative dir" {
-        let base = (mktemp -d)
-        mkdir ([$base "sub"] | path join)
-        cd $base
-        $env.CDPATH = ["/nonexistent-cdpath-xyz"]
-        assert equal (resolve-cdpath-dir "sub") ([$base "sub"] | path join | path expand)
-    })
-    (run-test "nu resolve-cdpath-dir finds dir via CDPATH" {
-        let base = (mktemp -d)
-        mkdir ([$base "target"] | path join)
-        let elsewhere = (mktemp -d)
-        cd $elsewhere
-        $env.CDPATH = [$base]
-        assert equal (resolve-cdpath-dir "target") ([$base "target"] | path join | path expand)
-    })
-    (run-test "nu resolve-cdpath-dir honors trailing slash" {
-        let base = (mktemp -d)
-        mkdir ([$base "target"] | path join)
-        let elsewhere = (mktemp -d)
-        cd $elsewhere
-        $env.CDPATH = [$base]
-        assert equal (resolve-cdpath-dir "target/") ([$base "target"] | path join | path expand)
-    })
-    (run-test "nu resolve-cdpath-dir returns empty for missing dir" {
-        cd (mktemp -d)
-        $env.CDPATH = ["/nonexistent-cdpath-xyz"]
-        assert equal (resolve-cdpath-dir "no-such-name-zzz") ""
-    })
-    (run-test "nu resolve-cdpath-dir returns empty for a regular file" {
-        let base = (mktemp -d)
-        touch ([$base "plain-file"] | path join)
-        cd $base
-        $env.CDPATH = []
-        assert equal (resolve-cdpath-dir "plain-file") ""
-    })
-    (run-test "nu resolve-cdpath-dir absolute path bypasses CDPATH" {
-        let base = (mktemp -d)
-        # CDPATH has a dir with 'target', but we ask by absolute path
-        # that doesn't exist -> must NOT fall back to CDPATH.
-        mkdir ([$base "target"] | path join)
-        $env.CDPATH = [$base]
-        assert equal (resolve-cdpath-dir "/nonexistent-absolute-xyz") ""
-    })
-    (run-test "nu resolve-cdpath-dir absolute path found" {
-        let base = (mktemp -d)
-        assert equal (resolve-cdpath-dir $base) ($base | path expand)
-    })
-    (run-test "nu resolve-cdpath-dir dot-slash bypasses CDPATH" {
-        let base = (mktemp -d)
-        # CDPATH has 'target'; we ask for ./target from elsewhere.
-        mkdir ([$base "target"] | path join)
-        let elsewhere = (mktemp -d)
-        cd $elsewhere
-        $env.CDPATH = [$base]
-        # './target' from $elsewhere does not exist and must not fall
-        # through to CDPATH.
-        assert equal (resolve-cdpath-dir "./target") ""
-    })
-    (run-test "nu resolve-cdpath-dir PWD takes precedence over CDPATH" {
-        let pwd_base = (mktemp -d)
-        let cd_base = (mktemp -d)
-        mkdir ([$pwd_base "target"] | path join)
-        mkdir ([$cd_base "target"] | path join)
-        cd $pwd_base
-        $env.CDPATH = [$cd_base]
-        assert equal (resolve-cdpath-dir "target") ([$pwd_base "target"] | path join | path expand)
-    })
-    (run-test "nu resolve-cdpath-dir empty arg returns empty" {
-        $env.CDPATH = [$env.HOME]
-        assert equal (resolve-cdpath-dir "") ""
-    })
-    (run-test "nu resolve-cdpath-dir empty CDPATH entry treated as PWD" {
-        let base = (mktemp -d)
-        mkdir ([$base "sub"] | path join)
-        cd $base
-        # Empty CDPATH entry should match PWD (mirrors shrc/fish).
-        $env.CDPATH = [""]
-        assert equal (resolve-cdpath-dir "sub") ([$base "sub"] | path join | path expand)
-    })
-    (run-test "nu resolve-cdpath-dir expands ~/foo to $HOME/foo" {
-        let base = (mktemp -d)
-        mkdir ([$base "sub"] | path join)
-        $env.HOME = $base
-        $env.CDPATH = []
-        # `path exists` does not tilde-expand, so without explicit
-        # handling `~/sub` would miss even when $HOME/sub exists.
-        # Mirrors the fix in shrc and config.fish for `~/scripts/`.
-        assert equal (resolve-cdpath-dir "~/sub") ([$base "sub"] | path join | path expand)
-    })
-    (run-test "nu resolve-cdpath-dir expands bare ~ to \$HOME" {
-        let base = (mktemp -d)
-        $env.HOME = $base
-        $env.CDPATH = []
-        assert equal (resolve-cdpath-dir "~") ($base | path expand)
-    })
-
-    ###############
-    # cd honors CDPATH
-    (run-test "nu cd with bare name resolves via CDPATH" {
-        let cd_base = (mktemp -d)
-        mkdir ([$cd_base "target"] | path join)
-        let elsewhere = (mktemp -d)
-        cd $elsewhere
-        $env.CDPATH = [$cd_base]
-        cd target
-        assert equal ($env.PWD | path expand) ([$cd_base "target"] | path join | path expand)
-    })
-    (run-test "nu cd with trailing-slash name resolves via CDPATH" {
-        let cd_base = (mktemp -d)
-        mkdir ([$cd_base "target"] | path join)
-        let elsewhere = (mktemp -d)
-        cd $elsewhere
-        $env.CDPATH = [$cd_base]
-        cd target/
-        assert equal ($env.PWD | path expand) ([$cd_base "target"] | path join | path expand)
-    })
-    (run-test "nu cd prefers PWD-relative over CDPATH" {
-        let pwd_base = (mktemp -d)
-        let cd_base = (mktemp -d)
-        mkdir ([$pwd_base "target"] | path join)
-        mkdir ([$cd_base "target"] | path join)
-        cd $pwd_base
-        $env.CDPATH = [$cd_base]
-        cd target
-        assert equal ($env.PWD | path expand) ([$pwd_base "target"] | path join | path expand)
-    })
-    (run-test "nu cd absolute path bypasses CDPATH" {
-        let cd_base = (mktemp -d)
-        mkdir ([$cd_base "target"] | path join)
+    (run-test "nu cd absolute path works" {
         let abs = (mktemp -d)
-        $env.CDPATH = [$cd_base]
         cd $abs
         assert equal ($env.PWD | path expand) ($abs | path expand)
-    })
-    (run-test "nu cd errors on missing dir after CDPATH miss" {
-        cd (mktemp -d)
-        $env.CDPATH = ["/nonexistent-xyz-123"]
-        let caught = (try { cd no-such-dir-zzzz; false } catch { true })
-        assert $caught "cd should error when name is not found in PWD or CDPATH"
-    })
-    (run-test "nu cd with no arg goes to HOME" {
-        let start = (mktemp -d)
-        cd $start
-        $env.CDPATH = []
-        cd
-        assert equal ($env.PWD | path expand) ($env.HOME | path expand)
     })
     (run-test "nu cd - returns to previous directory" {
         let a = (mktemp -d)
         let b = (mktemp -d)
-        $env.CDPATH = []
         cd $a
         cd $b
         cd -
         assert equal ($env.PWD | path expand) ($a | path expand)
     })
+    (run-test "nu cd errors on missing dir" {
+        cd (mktemp -d)
+        let caught = (try { cd no-such-dir-zzzz; false } catch { true })
+        assert $caught "cd should error when name does not exist in PWD"
+    })
 
     ###############
-    # No Enter keybinding: we must NOT override Enter, because
-    # ExecuteHostCommand loses the user's buffer (see config.nu
-    # comment by cd-with-cdpath). Regressing that would break every
-    # command submission.
+    # No Enter keybinding: overriding Enter via reedline's
+    # ExecuteHostCommand loses the user's buffer, so `ls<Enter>`
+    # would do nothing. Regression guard against ever wiring one up
+    # (we tried for CDPATH-aware autocd once and it broke everything).
     (run-test "nu does not override Enter" {
         let overrides = ($env.config.keybindings | where keycode == "enter")
         assert equal ($overrides | length) 0 $"Enter must not be overridden, found: ($overrides | to nuon)"

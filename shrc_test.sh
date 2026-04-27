@@ -874,177 +874,21 @@ start_test "shrc CDPATH does not contain \$HOME/conf"
 assert_not_contains "\$HOME/conf" "$_cdpath_line"
 
 ###############
-# Trailing-slash autocd hook (maybe_autocd_trailing_slash)
-# Verify shrc no longer enables the aggressive autocd options.
-start_test "shrc does not shopt -s autocd"
-assert_equal "" \
+# Autocd: shrc enables `shopt -s autocd` (bash) and `setopt AUTO_CD`
+# (zsh) so typing `Downloads<TAB><ENTER>` from any directory finds and
+# enters $HOME/Downloads via CDPATH. The custom trailing-slash autocd
+# machinery that used to gate this on a `/` suffix has been removed in
+# favor of the shells' built-ins.
+start_test "shrc enables shopt -s autocd"
+assert_contains "shopt -s autocd" \
     "$(grep -E '^[[:space:]]*shopt -s autocd' "$_srcdir/shrc")"
-start_test "shrc does not setopt AUTO_CD"
-assert_equal "" \
+start_test "shrc enables setopt AUTO_CD"
+assert_contains "setopt AUTO_CD" \
     "$(grep -E '^[[:space:]]*setopt AUTO_CD' "$_srcdir/shrc")"
-
-# Set up a temp directory tree for cd tests
-_autocd_root="$_testdir/autocd"
-mkdir -p "$_autocd_root/sub"
-
-# Trailing slash on an existing dir cds into it.
-start_test "maybe_autocd_trailing_slash cds on trailing slash"
-_saved_pwd="$PWD"
-(
-    cd "$_autocd_root" || exit 1
-    CDPATH=  # avoid surprising CDPATH lookups during the test
-    maybe_autocd_trailing_slash "./sub/" >/dev/null 2>&1
-    if test "$PWD" = "$_autocd_root/sub"; then
-        exit 0
-    else
-        exit 1
-    fi
-)
-assert_equal "0" "$?"
-cd "$_saved_pwd" || true
-
-# try_autocd_trailing_slash: returns 0 + cds for single-word trailing-slash
-# dirs, returns 1 without side effects for everything else.
-start_test "try_autocd_trailing_slash cds on match"
-(
-    cd "$_autocd_root" || exit 1
-    CDPATH=
-    try_autocd_trailing_slash "./sub/" >/dev/null 2>&1
-    test "$PWD" = "$_autocd_root/sub"
-)
-assert_equal "0" "$?"
-
-start_test "try_autocd_trailing_slash returns 1 for non-existent"
-(
-    cd "$_autocd_root" || exit 1
-    CDPATH=
-    try_autocd_trailing_slash "./no_such/"
-)
-assert_equal "1" "$?"
-
-start_test "try_autocd_trailing_slash returns 1 without trailing /"
-(
-    cd "$_autocd_root" || exit 1
-    CDPATH=
-    try_autocd_trailing_slash "./sub"
-)
-assert_equal "1" "$?"
-
-# A multi-word buffer like `./sub/ arg` must not autocd -- it's a real
-# command invocation, not a directory the user wants to enter.
-start_test "try_autocd_trailing_slash returns 1 for multi-word"
-(
-    cd "$_autocd_root" || exit 1
-    CDPATH=
-    try_autocd_trailing_slash "./sub/ arg"
-)
-assert_equal "1" "$?"
-
-# resolve_cdpath_dir honors CDPATH for relative names, matching `cd`.
-# Mirror the real-world bug: from $_autocd_root (no local `peer`), but
-# with CDPATH pointing at a parent that *does* contain `peer`, both
-# resolve_cdpath_dir and try_autocd_trailing_slash must succeed.
-start_test "resolve_cdpath_dir prints CDPATH-resolved path"
-mkdir -p "$_autocd_root/peer"
-_cdpath_parent="$_testdir/autocd_cdpath"
-mkdir -p "$_cdpath_parent/elsewhere"
-result=$(
-    cd "$_autocd_root/sub" || exit 1
-    CDPATH="$_cdpath_parent"
-    resolve_cdpath_dir "elsewhere/"
-)
-assert_equal \
-    "$_cdpath_parent/elsewhere/" "$result"
-
-start_test "resolve_cdpath_dir returns 1 when missing everywhere"
-(
-    cd "$_autocd_root/sub" || exit 1
-    CDPATH="$_cdpath_parent"
-    resolve_cdpath_dir "no_such_peer/" >/dev/null
-)
-assert_equal "1" "$?"
-
-# Absolute / ./ / ../ paths bypass CDPATH.
-start_test "resolve_cdpath_dir ./ bypasses CDPATH"
-(
-    cd "$_autocd_root/sub" || exit 1
-    CDPATH="$_cdpath_parent"
-    # `elsewhere` is in CDPATH but we pass `./elsewhere/` -- must NOT find it.
-    resolve_cdpath_dir "./elsewhere/" >/dev/null
-)
-assert_equal "1" "$?"
-
-# resolve_cdpath_dir expands a leading ~ / ~/ manually. test(1) does
-# not tilde-expand, so without this `~/scripts/` would miss even when
-# $HOME/scripts exists -- the original bug behind this fix.
-start_test "resolve_cdpath_dir expands ~/foo/"
-result=$(HOME="$_autocd_root" CDPATH= resolve_cdpath_dir "~/sub/")
-assert_equal \
-    "$_autocd_root/sub/" "$result"
-
-start_test "resolve_cdpath_dir expands bare ~"
-result=$(HOME="$_autocd_root" CDPATH= resolve_cdpath_dir "~")
-assert_equal \
-    "$_autocd_root" "$result"
-
-# Echo the resolved path for direct / ./ forms too.
-start_test "resolve_cdpath_dir prints ./-relative path as-is"
-result=$(cd "$_autocd_root" && CDPATH= resolve_cdpath_dir "./sub/")
-assert_equal \
-    "./sub/" "$result"
-
-# try_autocd_trailing_slash cds via the tilde-expanded path.
-start_test "try_autocd_trailing_slash cds via ~/foo/"
-(
-    HOME="$_autocd_root" CDPATH= \
-        try_autocd_trailing_slash "~/sub/" >/dev/null 2>&1
-    test "$PWD" = "$_autocd_root/sub"
-)
-assert_equal "0" "$?"
-
-# try_autocd_trailing_slash now uses CDPATH too.
-start_test "try_autocd_trailing_slash cds via CDPATH"
-(
-    cd "$_autocd_root/sub" || exit 1
-    CDPATH="$_cdpath_parent"
-    try_autocd_trailing_slash "elsewhere/" >/dev/null 2>&1
-    test "$PWD" = "$_cdpath_parent/elsewhere"
-)
-assert_equal "0" "$?"
-
-# Trailing slash on a non-existent dir falls through to the "not found"
-# fallback (no system hook defined here).
-start_test "maybe_autocd_trailing_slash non-existent falls through"
-result=$(CDPATH= maybe_autocd_trailing_slash "./no_such_dir_xyz/" 2>&1)
-assert_contains \
-    "command not found" "$result"
-
-# No trailing slash: falls through to the "not found" fallback.
-start_test "maybe_autocd_trailing_slash no slash falls through"
-result=$(maybe_autocd_trailing_slash "someweirdcmd" 2>&1)
-assert_contains \
-    "command not found" "$result"
-
-# With a saved system hook, it gets called for non-matches.
-start_test "maybe_autocd_trailing_slash delegates to system hook"
-system_command_not_found_handle() { printf 'SYSTEM:%s\n' "$1"; }
-result=$(maybe_autocd_trailing_slash "someweirdcmd" 2>&1)
-assert_equal \
-    "SYSTEM:someweirdcmd" "$result"
-unset -f system_command_not_found_handle
-
-# And the zsh-style name also works.
-start_test "maybe_autocd_trailing_slash delegates to zsh-style system hook"
-system_command_not_found_handler() { printf 'SYSTEMR:%s\n' "$1"; }
-result=$(maybe_autocd_trailing_slash "someweirdcmd" 2>&1)
-assert_equal \
-    "SYSTEMR:someweirdcmd" "$result"
-unset -f system_command_not_found_handler
 
 # End-to-end tests that exercise shrc under a real `bash -i` subshell
 # live in shrc_bash_test.sh (driven via the Makefile's test-shrc-bash
-# target). Likewise shrc_zsh_test.sh covers the zsh accept-line widget
-# autocd path. Keeping those cross-shell spawns out of this file means
+# target). Keeping those cross-shell spawns out of this file means
 # `dash shrc_test.sh` no longer launches `bash -i` / `zsh` subshells
 # it wouldn't otherwise need, eliminating the SIGTTOU-under-tty hang
 # that the outer run_with_timeout fence was only partially covering.
