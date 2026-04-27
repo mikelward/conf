@@ -25,6 +25,13 @@ vcs-build:
 # `make test TEST_JOBS=1` to run tests sequentially.
 TEST_JOBS ?= $(shell nproc 2>/dev/null || echo 8)
 
+# .test-cache holds per-target stamp files. Each test target's recipe
+# only re-runs when one of its declared source dependencies is newer
+# than the stamp; touching unrelated files (AGENTS.md, README, etc.)
+# leaves stamps up-to-date so the suite is a no-op. `make test-full`
+# wipes the cache to force a complete re-run.
+CACHE := .test-cache
+
 # `make test` runs every test target in parallel via a recursive make. Each
 # test is its own target so GNU make can schedule them concurrently; they are
 # independent (each test script creates its own temp dir via mktemp).
@@ -42,27 +49,79 @@ test:
 test-verbose:
 	@TEST_VERBOSE=1 $(MAKE) test
 
+# Force every test to re-run by wiping the stamp cache, then dispatch
+# to `test`. CI and Claude should use this; local dev gets the
+# incremental `test`.
+test-full:
+	@rm -rf $(CACHE)
+	@$(MAKE) test
+
 test-all: \
+	test-shrc \
+	test-fish \
+	test-nu \
 	test-lint \
-	test-nu-parse \
-	test-nu-config \
-	test-shrc-dash \
-	test-shrc-bash \
-	test-shrc-zsh \
-	test-shrc-vcs \
-	test-shrc-prompt \
-	test-shrc-fish \
-	test-shrc-fish-prompt \
 	test-gitconfig \
 	test-makefile \
 	test-amethyst
 
-# Static lint/parse checks are sub-second each, so we bundle them into one
-# target rather than spawning a make job per syntax check. shellcheck,
-# dash, and bash are required; fish is optional (skips gracefully when
-# not installed, matching the test-nu-parse pattern) since not every
-# box has fish.
-test-lint:
+$(CACHE):
+	@mkdir -p $@
+
+# test-shrc: shrc behavior across dash/bash/zsh, plus shrc.vcs (which
+# shrc itself sources when the running shell is bash/zsh per shrc:1133)
+# and the prompt function. Depends on vcs-build because shrc_vcs_test.sh
+# exercises the real `vcs` binary; order-only (|) so vcs-build's PHONY
+# always-runs status doesn't invalidate the stamp every invocation.
+$(CACHE)/test-shrc.stamp: shrc shrc.vcs shrc_test_lib.sh \
+                          shrc_test.sh shrc_dash_test.sh \
+                          shrc_bash_test.sh shrc_zsh_test.sh \
+                          shrc_prompt_test.sh shrc_vcs_test.sh \
+                          | vcs-build $(CACHE)
+	@dash shrc_test.sh
+	@dash shrc_dash_test.sh
+	@bash shrc_test.sh
+	@bash shrc_bash_test.sh
+	@if command -v zsh >/dev/null 2>&1; then \
+		zsh shrc_test.sh && zsh shrc_zsh_test.sh; \
+	else \
+		echo "SKIP: shrc_test.sh under zsh (zsh not installed)"; \
+	fi
+	@bash shrc_prompt_test.sh
+	@PATH="$(CURDIR)/vcs:$$PATH" bash shrc_vcs_test.sh
+	@touch $@
+
+# test-fish: fish config + fish prompt. Stubs `vcs` as a fish function,
+# so doesn't need vcs-build.
+$(CACHE)/test-fish.stamp: config/fish/config.fish shrc_test_lib.sh \
+                          shrc_fish_test.sh shrc_fish_prompt_test.sh \
+                          | $(CACHE)
+	@bash shrc_fish_test.sh
+	@bash shrc_fish_prompt_test.sh
+	@touch $@
+
+# test-nu: nushell parse + behavioral tests. Stubs `vcs` with shell
+# scripts in temp dirs, so doesn't need vcs-build. Skips gracefully
+# when `nu` isn't installed.
+$(CACHE)/test-nu.stamp: config/nushell/config.nu config/nushell/config_test.nu \
+                        | $(CACHE)
+	@if command -v nu >/dev/null 2>&1; then \
+		nu --no-config-file --commands 'source config/nushell/config.nu' && \
+		nu --no-config-file config/nushell/config_test.nu; \
+	else \
+		echo "SKIP: test-nu (nushell not installed)"; \
+	fi
+	@touch $@
+
+# test-lint: static syntax/lint checks bundled into one target since
+# each is sub-second. shellcheck, dash, and bash are required; fish is
+# optional (skips gracefully when not installed).
+$(CACHE)/test-lint.stamp: shrc shrc.vcs profile exitrc \
+                          gittemplates/hooks/post-merge \
+                          gittemplates/hooks/post-rewrite \
+                          gittemplates/hooks/pre-commit \
+                          config/fish/config.fish \
+                          | $(CACHE)
 	@shellcheck -s bash -S error shrc
 	@shellcheck -s bash -S error shrc.vcs
 	@dash -n shrc
@@ -70,81 +129,43 @@ test-lint:
 	@dash -n exitrc
 	@dash -n gittemplates/hooks/post-merge
 	@dash -n gittemplates/hooks/post-rewrite
-	@bash -n gittemplates/hooks/pre-commit
 	@bash -n shrc
 	@bash -n shrc.vcs
+	@bash -n gittemplates/hooks/pre-commit
 	@if command -v fish >/dev/null 2>&1; then \
 		fish -n config/fish/config.fish; \
 	else \
 		echo "SKIP: fish -n config/fish/config.fish (fish not installed)"; \
 	fi
+	@touch $@
 
-test-nu-parse:
-	@if command -v nu >/dev/null 2>&1; then \
-		nu --no-config-file --commands 'source config/nushell/config.nu'; \
-	else \
-		echo "SKIP: test-nu-parse (nushell not installed)"; \
-	fi
-
-test-nu-config:
-	@if command -v nu >/dev/null 2>&1; then \
-		nu --no-config-file config/nushell/config_test.nu; \
-	else \
-		echo "SKIP: test-nu-config (nushell not installed)"; \
-	fi
-
-# shrc_test.sh holds sh-portable tests and is run under both dash and
-# bash as a portability cross-check. Shell-specific end-to-end tests
-# (which spawn an interactive subshell of that shell and source shrc)
-# live in per-shell files so e.g. `dash shrc_test.sh` does not need to
-# spawn `bash -i` at all -- that cross-shell invocation was the source
-# of the SIGTTOU-under-tty hang the outer timeout only partially fenced.
-test-shrc-dash:
-	@dash shrc_test.sh
-	@dash shrc_dash_test.sh
-
-test-shrc-bash:
-	@bash shrc_test.sh
-	@bash shrc_bash_test.sh
-
-# zsh is optional; skip gracefully when it isn't installed (same pattern
-# as fish in test-lint / nu in test-nu-parse). Runs the sh-portable
-# shrc_test.sh driver under zsh too -- shrc is sourced by zsh users in
-# the wild, so zsh-runtime coverage of the extracted shrc helpers
-# (word splitting, `local` scoping, empty-string semantics) shakes out
-# portability issues that neither dash nor bash would catch.
-test-shrc-zsh:
-	@if command -v zsh >/dev/null 2>&1; then \
-		zsh shrc_test.sh && zsh shrc_zsh_test.sh; \
-	else \
-		echo "SKIP: test-shrc-zsh (zsh not installed)"; \
-	fi
-
-test-shrc-vcs: vcs-build
-	@PATH="$(CURDIR)/vcs:$$PATH" bash shrc_vcs_test.sh
-
-test-shrc-prompt:
-	@bash shrc_prompt_test.sh
-
-test-shrc-fish:
-	@bash shrc_fish_test.sh
-
-test-shrc-fish-prompt:
-	@bash shrc_fish_prompt_test.sh
-
-test-gitconfig:
+$(CACHE)/test-gitconfig.stamp: gitconfig gitconfig_test.sh shrc_test_lib.sh \
+                               | $(CACHE)
 	@sh gitconfig_test.sh
+	@touch $@
 
-test-makefile:
+$(CACHE)/test-makefile.stamp: Makefile makefile_test.sh shrc_test_lib.sh \
+                              | $(CACHE)
 	@bash makefile_test.sh
+	@touch $@
 
-test-amethyst:
+$(CACHE)/test-amethyst.stamp: amethyst.yml amethyst_test.sh shrc_test_lib.sh \
+                              | $(CACHE)
 	@bash amethyst_test.sh
+	@touch $@
+
+# Friendly aliases that route through the stamps. Listed as .PHONY so
+# `make test-shrc` always re-evaluates the stamp's source dependencies;
+# the stamp itself is the real-file target whose timestamp gates work.
+test-shrc: $(CACHE)/test-shrc.stamp
+test-fish: $(CACHE)/test-fish.stamp
+test-nu: $(CACHE)/test-nu.stamp
+test-lint: $(CACHE)/test-lint.stamp
+test-gitconfig: $(CACHE)/test-gitconfig.stamp
+test-makefile: $(CACHE)/test-makefile.stamp
+test-amethyst: $(CACHE)/test-amethyst.stamp
 
 .PHONY: all install install-dotfiles install-vcs vcs-build \
-	test test-all test-lint \
-	test-nu-parse test-nu-config \
-	test-shrc-dash test-shrc-bash test-shrc-zsh \
-	test-shrc-vcs \
-	test-shrc-prompt test-shrc-fish test-shrc-fish-prompt \
+	test test-verbose test-full test-all \
+	test-shrc test-fish test-nu test-lint \
 	test-gitconfig test-makefile test-amethyst

@@ -54,35 +54,29 @@ assert_contains "install-dotfiles" "$_install_deps"
 start_test "install depends on install-vcs"
 assert_contains "install-vcs" "$_install_deps"
 
-# Test that the VCS test target depends on vcs-build so the submodule
-# binary is built before tests that require it.
-start_test "test-shrc-vcs depends on vcs-build"
-_vcs_test_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^test-shrc-vcs:')
-assert_contains "vcs-build" "$_vcs_test_deps"
+# Test that test-shrc's stamp depends on vcs-build so the submodule
+# binary is built before shrc_vcs_test.sh runs. (Order-only dep, so the
+# rule appears after a `|` separator in the parsed makefile database.)
+start_test "test-shrc stamp depends on vcs-build"
+_shrc_stamp_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null |
+    grep '^\.test-cache/test-shrc\.stamp:')
+assert_contains "vcs-build" "$_shrc_stamp_deps"
 
-# Test that per-test sub-targets exist so `make -j` can schedule them in
-# parallel. Each test script gets its own make target; `test-all` aggregates
+# Test that per-topic sub-targets exist so `make -j` can schedule them in
+# parallel. Each topic gets its own make target; `test-all` aggregates
 # them and `test` dispatches to `test-all` with -j.
 start_test "test-all target exists"
 assert_contains "test-all" "$_targets"
+start_test "test-full target exists"
+assert_contains "test-full" "$_targets"
+start_test "test-shrc target exists"
+assert_contains "test-shrc" "$_targets"
+start_test "test-fish target exists"
+assert_contains "test-fish" "$_targets"
+start_test "test-nu target exists"
+assert_contains "test-nu" "$_targets"
 start_test "test-lint target exists"
 assert_contains "test-lint" "$_targets"
-start_test "test-nu-parse target exists"
-assert_contains "test-nu-parse" "$_targets"
-start_test "test-nu-config target exists"
-assert_contains "test-nu-config" "$_targets"
-start_test "test-shrc-dash target exists"
-assert_contains "test-shrc-dash" "$_targets"
-start_test "test-shrc-bash target exists"
-assert_contains "test-shrc-bash" "$_targets"
-start_test "test-shrc-vcs target exists"
-assert_contains "test-shrc-vcs" "$_targets"
-start_test "test-shrc-prompt target exists"
-assert_contains "test-shrc-prompt" "$_targets"
-start_test "test-shrc-fish target exists"
-assert_contains "test-shrc-fish" "$_targets"
-start_test "test-shrc-fish-prompt target exists"
-assert_contains "test-shrc-fish-prompt" "$_targets"
 start_test "test-gitconfig target exists"
 assert_contains "test-gitconfig" "$_targets"
 start_test "test-makefile target exists"
@@ -90,18 +84,24 @@ assert_contains "test-makefile" "$_targets"
 start_test "test-amethyst target exists"
 assert_contains "test-amethyst" "$_targets"
 
-# Test that test-all depends on every per-test sub-target so that a single
+# Test that test-all depends on every per-topic sub-target so that a single
 # `make test-all` invocation covers the full test suite.
-    start_test "test-all depends on $_sub"
 _test_all_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^test-all:')
-for _sub in test-lint test-nu-parse test-nu-config \
-            test-shrc-dash test-shrc-bash \
-            test-shrc-vcs \
-            test-shrc-prompt test-shrc-fish test-shrc-fish-prompt \
+for _sub in test-shrc test-fish test-nu test-lint \
             test-gitconfig test-makefile test-amethyst; do
+    start_test "test-all depends on $_sub"
     assert_contains "$_sub" "$_test_all_deps"
 done
 unset _sub
+
+# test-full must wipe the stamp cache before delegating to test, so a
+# `make test-full` invocation always re-runs every test even if stamps
+# would otherwise be up-to-date.
+_test_full_recipe=$(make -C "$_srcdir" -n test-full 2>/dev/null)
+start_test "test-full wipes the stamp cache"
+assert_contains "rm -rf .test-cache" "$_test_full_recipe"
+start_test "test-full delegates to test"
+assert_contains "test" "$_test_full_recipe"
 
 # Test that `make test` dispatches to the parallel build. We check the recipe
 # rather than running it to avoid recursion and to keep the test fast.
@@ -125,12 +125,15 @@ mkdir -p "$_bare_path"
 # Populate the stub directory with everything test-lint's required tools
 # need (shellcheck, dash, bash, plus the shell builtins/coreutils the
 # recipe itself calls). Omit `fish` so we exercise the skip branch.
-for _tool in bash dash shellcheck make awk sed grep sh env cat command test nproc; do
+for _tool in bash dash shellcheck make awk sed grep sh env cat command test nproc mkdir touch; do
     if _real=$(command -v "$_tool" 2>/dev/null); then
         ln -sf "$_real" "$_bare_path/$_tool"
     fi
 done
-_lint_out=$(PATH="$_bare_path" make -C "$_srcdir" test-lint 2>&1)
+# -B forces the recipe to run even if its stamp is up-to-date from a
+# prior invocation, otherwise we'd assert against an empty "Nothing to
+# be done" message instead of the SKIP line we want to see.
+_lint_out=$(PATH="$_bare_path" make -B -C "$_srcdir" test-lint 2>&1)
 _lint_rc=$?
 assert_equal "0" "$_lint_rc"
 start_test "test-lint skips fish -n when missing"
