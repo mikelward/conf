@@ -1,7 +1,8 @@
 [submodule "emacs.d/evil"]
-	path = emacs.d/evil
-	url = https://github.com/emacs-evil/evil.git
+        path = emacs.d/evil
+        url = https://github.com/emacs-evil/evil.git
 [submodule "vcs"]
-	path = vcs
-	url = https://github.com/mikelward/vcs.git
-	branch = main
+        path = vcs
+        url = https://github.com/mikelward/vcs.git
+        branch = main
+        ignore = all

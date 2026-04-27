@@ -16,7 +16,8 @@ install-vcs: vcs-build
 # these instead of requiring a prior `make install`. vcs/Makefile uses
 # real file targets, so this is a no-op when sources are unchanged.
 vcs-build:
-	git submodule update --init vcs
+	git config core.hooksPath gittemplates/hooks
+	git submodule update --remote --init vcs
 	$(MAKE) -C vcs
 
 # Number of parallel jobs to use for `make test`. Defaults to the CPU count
