@@ -13,17 +13,28 @@ install-vcs: vcs-build
 	$(MAKE) -C vcs install
 
 # vcs-build is the user-facing "do whatever it takes to get a fresh
-# vcs binary" target: fetch latest main, then build. Splits into the
-# two finer-grained pieces below so `make test` can depend on the
-# binary without triggering a network fetch on every invocation.
-vcs-build: vcs-fetch vcs/vcs
+# vcs binary" target: fetch latest main, then build. The recipe
+# sequences the two pieces explicitly via sub-make so `make -j
+# vcs-build` doesn't run `git submodule update --remote` (from
+# vcs-fetch) concurrently with `git submodule update --init` (from
+# the vcs/Makefile sentinel), which would contend on the same
+# .git/modules/vcs lock files.
+vcs-build:
+	$(MAKE) vcs-fetch
+	$(MAKE) vcs/vcs
 
-# vcs-fetch is the only target that does network I/O. It also (idempo-
-# tently) wires up core.hooksPath so the post-merge / post-rewrite
-# hooks fire and re-fetch on every pull / rebase. The hooks invoke
-# `git submodule update --remote --init vcs` directly (no make
-# round-trip); the parent's `all` target depends on vcs-fetch, and
-# explicit `make vcs-fetch` works too -- but `make test` does not.
+# vcs-fetch is the only target that does an explicit `--remote` update.
+# It also (idempotently) wires up core.hooksPath so the post-merge /
+# post-rewrite hooks fire and re-fetch on every pull / rebase. The
+# hooks invoke `git submodule update --remote --init vcs` directly
+# (no make round-trip); the parent's `all` target sequences vcs-fetch
+# before vcs/vcs via vcs-build, and explicit `make vcs-fetch` works
+# too -- but `make test` does not depend on vcs-fetch and so doesn't
+# do the --remote update on every test run. (Note: vcs/Makefile's
+# initial-checkout recipe also does a `git submodule update --init`,
+# which fetches the pinned commit on a fresh clone -- so vcs-fetch
+# isn't *literally* the only network-doing target, but it is the only
+# one tracking main HEAD.)
 vcs-fetch:
 	git config core.hooksPath gittemplates/hooks
 	git submodule update --remote --init vcs
@@ -38,11 +49,10 @@ vcs/vcs: | vcs/Makefile
 	$(MAKE) -C vcs
 
 # Sentinel for "submodule is checked out". Absent on fresh clone;
-# we populate it with a direct `git submodule update --init` rather
-# than recursing into `$(MAKE) vcs-fetch`, since the latter races with
-# vcs-build's own vcs-fetch prereq under `make -j`. Subsequent
-# vcs-fetch invocations (from `all`, hooks, or explicit `make
-# vcs-fetch`) will move the submodule to the latest main HEAD.
+# populated by a direct `git submodule update --init` (no `--remote`)
+# so this rule doesn't race with vcs-fetch's `--remote` update under
+# parallel make. Once vcs-build has run, the subsequent vcs-fetch
+# moves the submodule to the latest main HEAD.
 vcs/Makefile:
 	git submodule update --init vcs
 
@@ -50,6 +60,16 @@ vcs/Makefile:
 # (falling back to 8 if nproc isn't available). Override with e.g.
 # `make test TEST_JOBS=1` to run tests sequentially.
 TEST_JOBS ?= $(shell nproc 2>/dev/null || echo 8)
+
+# .test-cache holds per-target stamp files. Each test target's recipe
+# only re-runs when one of its declared source dependencies is newer
+# than the stamp, so editing unrelated files (AGENTS.md, README, etc.)
+# leaves the suite as a no-op. Optional-tool targets (test-zsh,
+# test-fish, test-nu) only touch their stamp when the tool was
+# actually present and the tests ran -- so installing the tool later
+# automatically re-runs the affected target. `make test-full` wipes
+# the cache to force a complete re-run.
+CACHE := .test-cache
 
 # `make test` runs every test target in parallel via a recursive make. Each
 # test is its own target so GNU make can schedule them concurrently; they are
@@ -68,6 +88,13 @@ test:
 test-verbose:
 	@TEST_VERBOSE=1 $(MAKE) test
 
+# Force every test to re-run by wiping the stamp cache, then dispatch
+# to `test`. Used by CI and when verifying after installing a new
+# optional tool.
+test-full:
+	@rm -rf $(CACHE)
+	@$(MAKE) test
+
 test-all: \
 	test-dash \
 	test-bash \
@@ -81,6 +108,9 @@ test-all: \
 	test-makefile \
 	test-amethyst
 
+$(CACHE):
+	@mkdir -p $@
+
 # Targets group by what's under test, not by which interpreter runs the
 # driver. shrc_test.sh runs under bash and zsh (the two shells whose
 # functions we actually care about). The dash target only runs
@@ -90,56 +120,83 @@ test-all: \
 # and test-vcs are bash-only because their drivers use bash/zsh-only
 # syntax (here-strings, arrays).
 
-test-dash:
+# shrc_dash_test.sh sources `shrc` under dash and symlinks shrc.vcs into
+# $HOME/.shrc.vcs to regression-test the basic-mode short-circuit, so
+# both files belong in the stamp deps even though dash never sources
+# shrc.vcs as a normal user.
+$(CACHE)/test-dash.stamp: shrc shrc.vcs shrc_test_lib.sh shrc_dash_test.sh | $(CACHE)
 	@dash shrc_dash_test.sh
+	@touch $@
+test-dash: $(CACHE)/test-dash.stamp
 
-test-bash:
+$(CACHE)/test-bash.stamp: shrc shrc_test_lib.sh shrc_test.sh shrc_bash_test.sh | $(CACHE)
 	@bash shrc_test.sh
 	@bash shrc_bash_test.sh
+	@touch $@
+test-bash: $(CACHE)/test-bash.stamp
 
-# zsh is optional; skip gracefully when it isn't installed (same pattern
-# as fish in test-fish / nu in test-nu).
-test-zsh:
+# zsh is optional; skip gracefully when it isn't installed. Only touch
+# the stamp when zsh was actually present and the tests ran, otherwise
+# installing zsh later wouldn't trigger a re-run.
+$(CACHE)/test-zsh.stamp: shrc shrc_test_lib.sh shrc_test.sh shrc_zsh_test.sh | $(CACHE)
 	@if command -v zsh >/dev/null 2>&1; then \
-		zsh shrc_test.sh && zsh shrc_zsh_test.sh; \
+		zsh shrc_test.sh && zsh shrc_zsh_test.sh && touch $@; \
 	else \
 		echo "SKIP: test-zsh (zsh not installed)"; \
 	fi
+test-zsh: $(CACHE)/test-zsh.stamp
 
-test-prompt:
+$(CACHE)/test-prompt.stamp: shrc shrc_test_lib.sh shrc_prompt_test.sh | $(CACHE)
 	@bash shrc_prompt_test.sh
+	@touch $@
+test-prompt: $(CACHE)/test-prompt.stamp
 
-# test-vcs depends on vcs/vcs (the real binary) rather than the PHONY
-# vcs-build, so editing AGENTS.md or running `make test` doesn't trigger
-# a network fetch -- only an actual binary rebuild (when submodule
-# sources changed) puts the binary on PATH.
-test-vcs: vcs/vcs
+# test-vcs depends on vcs/vcs (the real binary, not the PHONY vcs-build)
+# so a binary rebuild invalidates the stamp and the tests re-run. No
+# fetch is triggered by `make test`.
+$(CACHE)/test-vcs.stamp: shrc.vcs shrc_test_lib.sh shrc_vcs_test.sh vcs/vcs | $(CACHE)
 	@PATH="$(CURDIR)/vcs:$$PATH" bash shrc_vcs_test.sh
+	@touch $@
+test-vcs: $(CACHE)/test-vcs.stamp
 
 # fish_test.sh / fish_prompt_test.sh are bash drivers that test
-# config/fish/config.fish; fish itself isn't a hard requirement (the
-# drivers stub or skip when fish isn't on PATH).
-test-fish:
+# config/fish/config.fish; fish itself isn't a hard requirement. The
+# fish syntax check (fish -n) lives here too rather than in test-lint
+# so that test-lint stays fish-free and caches normally even when fish
+# isn't installed. Stamp only touched when fish is present so installing
+# fish later re-runs the suite.
+$(CACHE)/test-fish.stamp: config/fish/config.fish shrc_test_lib.sh \
+                          fish_test.sh fish_prompt_test.sh | $(CACHE)
 	@if command -v fish >/dev/null 2>&1; then \
-		bash fish_test.sh && bash fish_prompt_test.sh; \
+		fish -n config/fish/config.fish && \
+		bash fish_test.sh && \
+		bash fish_prompt_test.sh && \
+		touch $@; \
 	else \
 		echo "SKIP: test-fish (fish not installed)"; \
 	fi
+test-fish: $(CACHE)/test-fish.stamp
 
 # Nushell parse + behavioral tests, bundled because both invoke `nu` and
-# share the same skip behavior.
-test-nu:
+# share the same skip behavior. Stamp only touched when nu is present.
+$(CACHE)/test-nu.stamp: config/nushell/config.nu config/nushell/config_test.nu | $(CACHE)
 	@if command -v nu >/dev/null 2>&1; then \
 		nu --no-config-file --commands 'source config/nushell/config.nu' && \
-		nu --no-config-file config/nushell/config_test.nu; \
+		nu --no-config-file config/nushell/config_test.nu && \
+		touch $@; \
 	else \
 		echo "SKIP: test-nu (nushell not installed)"; \
 	fi
+test-nu: $(CACHE)/test-nu.stamp
 
-# Static lint/parse checks bundled into one target since each is sub-
-# second. shellcheck, dash, and bash are required; fish is optional
-# (skips gracefully when not installed).
-test-lint:
+# Static lint/parse checks for non-fish files; bundled into one target
+# since each check is sub-second. shellcheck, dash, and bash are all
+# required (no skip branch), so the stamp can be touched unconditionally
+# at the end and caches normally. Fish syntax check lives in test-fish.
+$(CACHE)/test-lint.stamp: shrc shrc.vcs profile exitrc \
+                          gittemplates/hooks/post-merge \
+                          gittemplates/hooks/post-rewrite \
+                          gittemplates/hooks/pre-commit | $(CACHE)
 	@shellcheck -s bash -S error shrc
 	@shellcheck -s bash -S error shrc.vcs
 	@dash -n shrc
@@ -150,23 +207,26 @@ test-lint:
 	@bash -n shrc
 	@bash -n shrc.vcs
 	@bash -n gittemplates/hooks/pre-commit
-	@if command -v fish >/dev/null 2>&1; then \
-		fish -n config/fish/config.fish; \
-	else \
-		echo "SKIP: fish -n config/fish/config.fish (fish not installed)"; \
-	fi
+	@touch $@
+test-lint: $(CACHE)/test-lint.stamp
 
-test-gitconfig:
+$(CACHE)/test-gitconfig.stamp: gitconfig gitconfig_test.sh shrc_test_lib.sh | $(CACHE)
 	@sh gitconfig_test.sh
+	@touch $@
+test-gitconfig: $(CACHE)/test-gitconfig.stamp
 
-test-makefile:
+$(CACHE)/test-makefile.stamp: Makefile makefile_test.sh shrc_test_lib.sh | $(CACHE)
 	@bash makefile_test.sh
+	@touch $@
+test-makefile: $(CACHE)/test-makefile.stamp
 
-test-amethyst:
+$(CACHE)/test-amethyst.stamp: amethyst.yml amethyst_test.sh shrc_test_lib.sh | $(CACHE)
 	@bash amethyst_test.sh
+	@touch $@
+test-amethyst: $(CACHE)/test-amethyst.stamp
 
 .PHONY: all install install-dotfiles install-vcs vcs-build vcs-fetch \
-	test test-verbose test-all \
+	test test-verbose test-full test-all \
 	test-dash test-bash test-zsh test-prompt test-vcs \
 	test-fish test-nu test-lint \
 	test-gitconfig test-makefile test-amethyst
