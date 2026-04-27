@@ -10,6 +10,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Read-only job; restrict GITHUB_TOKEN to the minimum scope rather than
+# inheriting whatever the repo / org default grants.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -17,6 +22,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          # Read-only test job; don't leave a write-capable token in
+          # the local git config for subsequent steps.
+          persist-credentials: false
       - name: make test
         # Runners check out fresh, so there is no cache to invalidate;
         # `make test` is equivalent to `make test-full` in this context.
