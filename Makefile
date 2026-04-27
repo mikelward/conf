@@ -70,6 +70,7 @@ test-lint:
 	@dash -n exitrc
 	@dash -n gittemplates/hooks/post-merge
 	@dash -n gittemplates/hooks/post-rewrite
+	@bash -n gittemplates/hooks/pre-commit
 	@bash -n shrc
 	@bash -n shrc.vcs
 	@if command -v fish >/dev/null 2>&1; then \
