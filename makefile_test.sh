@@ -23,6 +23,15 @@ assert_contains "vcs-build" "$_targets"
 start_test "test target exists"
 assert_contains "test" "$_targets"
 
+# vcs-build must use --remote so the submodule tracks main HEAD instead of
+# the parent's pinned commit, and must wire up core.hooksPath so the
+# post-merge / post-rewrite hooks fire automatically on pull / rebase.
+_vcs_build_recipe=$(make -C "$_srcdir" -n vcs-build 2>/dev/null)
+start_test "vcs-build uses --remote to track main HEAD"
+assert_contains "submodule update --remote" "$_vcs_build_recipe"
+start_test "vcs-build wires up core.hooksPath"
+assert_contains "core.hooksPath gittemplates/hooks" "$_vcs_build_recipe"
+
 # Bare `make` (no target) must build, not install. Verify the default
 # target is `all`, that `all` depends on vcs-build, and that its recipe
 # does NOT invoke the install-* targets.

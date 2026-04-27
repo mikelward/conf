@@ -1,5 +1,5 @@
 #!/bin/sh
 # Automatically update the vcs submodule to the latest main branch
-if [ -f .gitmodules ] && grep -q '\[submodule "vcs"\]' .gitmodules; then
+if test -f .gitmodules && grep -q '\[submodule "vcs"\]' .gitmodules; then
     git submodule update --remote --init vcs
 fi
