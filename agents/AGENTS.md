@@ -38,6 +38,9 @@
 
 - Develop on `claude/<short-topic>` branches off `origin/main`. Never commit
   directly to `main` / `master`. One topic per branch.
+- Use standard commit message formatting. Imperative/present mood. "Fix", not
+  "Fixed". First line is <66 chars and has no trailing dot. Remainder of the
+  commit message should cover both the what and they why.
 - One logical surviving change per commit. Rewrite unmerged commits freely
   (squash, amend, reorder, split) so each landing commit is one coherent
   change. Review-fix noise shouldn't survive into `main`.
@@ -45,9 +48,6 @@
   rebase is routine hygiene — don't ask. Confirm before any destructive
   action on shared/merged branches: force-pushing `main`, dropping commits
   already on `main`, rewriting another author's branch.
-- Stacked PRs: the lower PR (infra) targets `main`; the upper PR (feature)
-  targets the lower PR's branch. When the lower PR merges, rebase the upper
-  one onto `main`.
 - Merge cue (`merged` / `I merged` / `landed` / merge webhook) runs hygiene
   *before* engaging with the rest of the message: `git fetch origin`, cut a
   fresh `claude/<short-topic>` branch off `origin/main`, announce the switch.
