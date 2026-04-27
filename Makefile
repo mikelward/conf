@@ -20,9 +20,10 @@ vcs-build: vcs-fetch vcs/vcs
 
 # vcs-fetch is the only target that does network I/O. It also (idempo-
 # tently) wires up core.hooksPath so the post-merge / post-rewrite
-# hooks fire and re-fetch on every pull / rebase. Hooks call
-# `make vcs-fetch`, the parent's `all` target calls it, and explicit
-# `make vcs-fetch` works too -- but `make test` does not.
+# hooks fire and re-fetch on every pull / rebase. The hooks invoke
+# `git submodule update --remote --init vcs` directly (no make
+# round-trip); the parent's `all` target depends on vcs-fetch, and
+# explicit `make vcs-fetch` works too -- but `make test` does not.
 vcs-fetch:
 	git config core.hooksPath gittemplates/hooks
 	git submodule update --remote --init vcs
@@ -32,15 +33,18 @@ vcs-fetch:
 # uses real file targets internally, so `$(MAKE) -C vcs` is a no-op
 # when sources are unchanged. The order-only dep on vcs/Makefile
 # handles fresh clones where the submodule hasn't been checked out
-# yet -- we delegate to vcs-fetch in that case.
+# yet.
 vcs/vcs: | vcs/Makefile
 	$(MAKE) -C vcs
 
 # Sentinel for "submodule is checked out". Absent on fresh clone;
-# vcs-fetch populates it. No prereqs because we don't want this to
-# refire after the initial population.
+# we populate it with a direct `git submodule update --init` rather
+# than recursing into `$(MAKE) vcs-fetch`, since the latter races with
+# vcs-build's own vcs-fetch prereq under `make -j`. Subsequent
+# vcs-fetch invocations (from `all`, hooks, or explicit `make
+# vcs-fetch`) will move the submodule to the latest main HEAD.
 vcs/Makefile:
-	$(MAKE) vcs-fetch
+	git submodule update --init vcs
 
 # Number of parallel jobs to use for `make test`. Defaults to the CPU count
 # (falling back to 8 if nproc isn't available). Override with e.g.
