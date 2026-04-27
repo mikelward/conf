@@ -78,14 +78,15 @@ test-all: \
 	test-amethyst
 
 # Targets group by what's under test, not by which interpreter runs the
-# driver. shrc_test.sh is the sh-portable shrc test suite; running it
-# under dash, bash, and zsh is a portability cross-check, hence three
-# per-shell targets that each pair shrc_test.sh with the matching
-# shell-specific driver. test-prompt and test-vcs are bash-only because
-# their drivers use bash/zsh-only syntax (here-strings, arrays).
+# driver. shrc_test.sh runs under bash and zsh (the two shells whose
+# functions we actually care about). The dash target only runs
+# shrc_dash_test.sh, which regression-tests that sourcing shrc under
+# dash falls into the basic-mode short-circuit cleanly -- we don't try
+# to make every shrc function work under dash semantics. test-prompt
+# and test-vcs are bash-only because their drivers use bash/zsh-only
+# syntax (here-strings, arrays).
 
 test-dash:
-	@dash shrc_test.sh
 	@dash shrc_dash_test.sh
 
 test-bash:

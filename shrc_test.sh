@@ -6,13 +6,21 @@
 
 . "$(dirname "$0")/shrc_test_lib.sh"
 
-# Extract and source just the path functions.
-# They are self-contained and only depend on each other.
-extract_func prepend_path
-extract_func append_path
-extract_func delete_path
-extract_func inpath
-extract_func add_path
+# Pin USERNAME / HOSTNAME so sourcing shrc doesn't fork `id -un` /
+# `hostname -f` to fill them in -- keeps the test hermetic and
+# decouples it from the host's hostname resolution. UID and TTY are
+# left alone: UID is a special parameter under zsh (assigning it
+# actually changes the effective user) and TTY is harmless to
+# inherit.
+HOSTNAME="testhost"
+USERNAME="testuser"
+
+# Pull in every shrc function via a single sourcing pass. The
+# SHRC_LOAD_FUNCTIONS_ONLY guards inside shrc skip the env-setup and
+# interactive / .shrc.local / auth blocks, so $PATH and exported state
+# are left untouched. Replaces what used to be ~50 individual
+# extract_func calls.
+SHRC_LOAD_FUNCTIONS_ONLY=1 . "$_srcdir/shrc"
 
 # Save PATH for restoration after path function tests
 _saved_path="$PATH"
@@ -149,19 +157,6 @@ PATH="$_saved_path"
 
 ###############
 # UTILITY FUNCTIONS
-# Extract additional functions from shrc for testing.
-
-extract_func puts
-extract_func join
-extract_func body
-extract_func first_arg_last
-extract_func shift_options
-extract_func find_test_file
-extract_func path
-extract_func get_address_records
-extract_func get_ptr_records
-extract_func each
-extract_func delline
 
 start_test "puts single arg"
 assert_equal "hello" "$(puts hello)"
@@ -175,7 +170,6 @@ start_test "puts backslash"
 assert_equal 'hello\nworld' "$(puts 'hello\nworld')"
 
 start_test "gets preserves backslashes"
-extract_func gets
 result=$(printf '%s\n' 'hello\tworld' | { gets val; puts "$val"; })
 assert_equal 'hello\tworld' "$result"
 
@@ -344,37 +338,6 @@ delline 5 "$_tmpfile"
 result=$(cat "$_tmpfile")
 assert_equal "only line" "$result"
 rm -f "$_tmpfile"
-
-###############
-# Extract additional functions for testing.
-
-extract_func error
-extract_func warn
-extract_func quiet
-extract_func run
-extract_func is_builtin
-extract_func is_alias
-extract_func is_command
-extract_func have_command
-extract_func is_runnable
-extract_func bak
-extract_func unbak
-extract_func realdir
-extract_func isort
-extract_func age
-extract_func find_up
-extract_func tz2tz
-extract_func what
-extract_func trydiff
-extract_func applydiff
-extract_func recent
-extract_func connected_via_ssh
-extract_func connected_remotely
-extract_func inside_tmux
-extract_func in_shpool
-extract_func want_shpool
-extract_func switchshpool
-extract_func maybe_start_shpool_and_exit
 
 ###############
 # COMMAND INSPECTION
@@ -774,13 +737,12 @@ assert_true test -f "$_returned"
 start_test "maybe_start_shpool_and_exit does not call autoshpool when not wanted"
 assert_false test -f "$_autoshpool_calls"
 
-# Clean up: re-extract the real connected_remotely / inside_project so
-# later tests (and any code added below) see shrc's actual implementation
-# instead of the stubs left over from the shpool block above.
+# Re-source shrc so the real connected_remotely / inside_project are
+# restored for later tests, replacing the stubs left over from the
+# shpool block above. The SHRC_LOAD_FUNCTIONS_ONLY gate keeps the
+# environment side effects skipped on this second pass too.
 rm -f "$_autoshpool_calls" "$_returned"
-unset -f connected_remotely inside_project
-extract_func connected_remotely
-extract_func inside_project
+SHRC_LOAD_FUNCTIONS_ONLY=1 . "$_srcdir/shrc"
 
 ###############
 # each0 uses `read -d ''`, which is supported by both bash and zsh but
@@ -789,8 +751,6 @@ extract_func inside_project
 # (not the bash-masquerading stub).
 
 if test "$_real_shell" = bash || test "$_real_shell" = zsh; then
-    extract_func each0
-
     start_test "each0 runs command on null-delimited input"
     result=$(printf 'a\0b\0c\0' | each0 echo "item:")
     expected="item: a
@@ -802,13 +762,11 @@ else
 fi
 
 # Test root wrapper function
-extract_func is_function
 
 # Stub "command root" to record what was called
 _root_log=""
 root_cmd() { _root_log="root: $*"; }
 
-extract_func root
 # Override root to use our stub instead of "command root"
 root() {
     if is_function "$1"; then
@@ -842,9 +800,6 @@ unset -f root_cmd myfunc root
 
 ###############
 # RETRY
-
-extract_func bell
-extract_func retry
 
 start_test "retry calls command once on immediate success"
 _retry_dir=$(mktemp -d)
@@ -927,10 +882,6 @@ assert_equal "" \
 start_test "shrc does not setopt AUTO_CD"
 assert_equal "" \
     "$(grep -E '^[[:space:]]*setopt AUTO_CD' "$_srcdir/shrc")"
-
-extract_func resolve_cdpath_dir
-extract_func try_autocd_trailing_slash
-extract_func maybe_autocd_trailing_slash
 
 # Set up a temp directory tree for cd tests
 _autocd_root="$_testdir/autocd"
