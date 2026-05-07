@@ -62,6 +62,10 @@ _fish_run() {
         function projectroot; return 1; end
         function projectname; return 1; end
         function log_history; end
+        # fish_prompt now calls maybe_background_fetch which would fork
+        # `git fetch` if the test PWD happened to be inside a real repo.
+        # Stub it out so prompt tests stay deterministic and offline.
+        function maybe_background_fetch; end
     ' "$1"
 }
 
@@ -447,15 +451,15 @@ $_ps1char "
 assert_equal "$expected" "$result"
 
 ###############
-# WHOLE PROMPT: inside shpool session, subdir, dirty, stale fetch
+# WHOLE PROMPT: inside shpool session, subdir, dirty, behind upstream
 
-start_test "fish whole prompt: workstation, shpool, subdir, dirty, fetch"
+start_test "fish whole prompt: workstation, shpool, subdir, dirty, pull"
 result="$(_fish_run '
     set -g HOSTNAME mikel-workstation
     set -g USERNAME mikel
     set -g COLUMNS 80
     set -g SHPOOL_SESSION_NAME edge1
-    function prompt_info; echo "edge1 ui somebranch * fetch"; end
+    function prompt_info; echo "edge1 ui somebranch * pull"; end
     function vcs
         switch $argv[1]
             case map; return 0
@@ -466,7 +470,7 @@ result="$(_fish_run '
 ')"
 result="$(_resolve_cr "$result")"
 expected="
-workstation [edge1] edge1 ui somebranch * fetch ――――――――――――――――――――――――――――――――
+workstation [edge1] edge1 ui somebranch * pull ―――――――――――――――――――――――――――――――――
 $_ps1char "
 assert_equal "$expected" "$result"
 
@@ -546,5 +550,113 @@ if test -n "$_fish_perf_ms"; then
 else
     skip_block "fish prompt_line perf check: could not parse elapsed time"
 fi
+
+###############
+# maybe_background_fetch: fish version. Each test runs a fish snippet
+# that builds a fake git repo (a directory tree with a .git dir),
+# overrides the `git` command to fake rev-parse, and replaces
+# _run_bg_fetch with a recorder that prints to stdout. The test then
+# parses the snippet output to confirm whether the fetch fired.
+
+start_test "fish maybe_background_fetch fires when FETCH_HEAD missing"
+result="$(_fish_run '
+    set -g _fakerepo "'$_testdir'/fish_fakerepo_missing"
+    mkdir -p $_fakerepo/.git
+    cd $_fakerepo
+    function git
+        switch "$argv[1] $argv[2]"
+            case "rev-parse --git-dir"; echo "$_fakerepo/.git"
+            case "rev-parse --show-toplevel"; echo "$_fakerepo"
+            case "*"; command git $argv
+        end
+    end
+    function _run_bg_fetch; echo "FETCH=$argv[1]"; end
+    function is_ssh_valid; return 0; end
+    set -e _LAST_BG_FETCH_PWD
+    maybe_background_fetch
+')"
+assert_contains "FETCH=$_testdir/fish_fakerepo_missing" "$result"
+
+start_test "fish maybe_background_fetch no-op when PWD unchanged"
+result="$(_fish_run '
+    set -g _fakerepo "'$_testdir'/fish_fakerepo_unchanged"
+    mkdir -p $_fakerepo/.git
+    cd $_fakerepo
+    function git
+        switch "$argv[1] $argv[2]"
+            case "rev-parse --git-dir"; echo "$_fakerepo/.git"
+            case "rev-parse --show-toplevel"; echo "$_fakerepo"
+            case "*"; command git $argv
+        end
+    end
+    function _run_bg_fetch; echo "FETCH=$argv[1]"; end
+    function is_ssh_valid; return 0; end
+    set -g _LAST_BG_FETCH_PWD $PWD
+    maybe_background_fetch
+')"
+assert_equal "0" "$(printf %s "$result" | grep -c FETCH=)"
+
+start_test "fish maybe_background_fetch no-op when auth_info reports problems"
+result="$(_fish_run '
+    set -g _fakerepo "'$_testdir'/fish_fakerepo_noauth"
+    mkdir -p $_fakerepo/.git
+    cd $_fakerepo
+    function git
+        switch "$argv[1] $argv[2]"
+            case "rev-parse --git-dir"; echo "$_fakerepo/.git"
+            case "rev-parse --show-toplevel"; echo "$_fakerepo"
+            case "*"; command git $argv
+        end
+    end
+    function _run_bg_fetch; echo "FETCH=$argv[1]"; end
+    # SSH invalid -> auth_info emits "SSH" -> fetch should be skipped.
+    function is_ssh_valid; return 1; end
+    set -e _LAST_BG_FETCH_PWD
+    maybe_background_fetch
+')"
+assert_equal "0" "$(printf %s "$result" | grep -c FETCH=)"
+
+start_test "fish maybe_background_fetch no-op when FETCH_HEAD recent"
+result="$(_fish_run '
+    set -g _fakerepo "'$_testdir'/fish_fakerepo_fresh"
+    mkdir -p $_fakerepo/.git
+    touch $_fakerepo/.git/FETCH_HEAD
+    cd $_fakerepo
+    function git
+        switch "$argv[1] $argv[2]"
+            case "rev-parse --git-dir"; echo "$_fakerepo/.git"
+            case "rev-parse --show-toplevel"; echo "$_fakerepo"
+            case "*"; command git $argv
+        end
+    end
+    function _run_bg_fetch; echo "FETCH=$argv[1]"; end
+    function is_ssh_valid; return 0; end
+    set -e _LAST_BG_FETCH_PWD
+    maybe_background_fetch
+')"
+assert_equal "0" "$(printf %s "$result" | grep -c FETCH=)"
+
+start_test "fish maybe_background_fetch fires when FETCH_HEAD stale"
+result="$(_fish_run '
+    set -g _fakerepo "'$_testdir'/fish_fakerepo_stale"
+    mkdir -p $_fakerepo/.git
+    touch $_fakerepo/.git/FETCH_HEAD
+    # Backdate FETCH_HEAD past the 1h interval gate.
+    touch -d "2 hours ago" $_fakerepo/.git/FETCH_HEAD 2>/dev/null
+    or touch -t (date -u -v-2H +%Y%m%d%H%M.%S 2>/dev/null) $_fakerepo/.git/FETCH_HEAD
+    cd $_fakerepo
+    function git
+        switch "$argv[1] $argv[2]"
+            case "rev-parse --git-dir"; echo "$_fakerepo/.git"
+            case "rev-parse --show-toplevel"; echo "$_fakerepo"
+            case "*"; command git $argv
+        end
+    end
+    function _run_bg_fetch; echo "FETCH=$argv[1]"; end
+    function is_ssh_valid; return 0; end
+    set -e _LAST_BG_FETCH_PWD
+    maybe_background_fetch
+')"
+assert_contains "FETCH=$_testdir/fish_fakerepo_stale" "$result"
 
 test_summary "fish_prompt_test"

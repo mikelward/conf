@@ -1165,6 +1165,7 @@ preprompt() {
     last_job_info
     current_command=
     SECONDS=0
+    maybe_background_fetch
     set_color 'normal'
     printf '\n'
     bar $((COLUMNS))
@@ -1174,6 +1175,58 @@ preprompt() {
     set_title "$(title)"
     set_prompt
     flash_terminal
+}
+
+# How long FETCH_HEAD must be untouched before maybe_background_fetch will
+# run another git fetch in the same repo. One hour matches the prompt's
+# {behind} indicator semantics: if auto-fetch is keeping up the indicator
+# stays quiet, otherwise it nags with "pull".
+: "${BG_FETCH_INTERVAL_SECONDS:=3600}"
+
+# If we just cd'd into a git repo with working SSH auth and the repo's
+# FETCH_HEAD is older than $BG_FETCH_INTERVAL_SECONDS (or absent), kick
+# off `git fetch` in a detached background subshell. Called from preprompt.
+#
+# Two gates avoid being noisy:
+#   - PWD-change: most prompts don't follow a cd, so we early-return.
+#   - FETCH_HEAD mtime: prevents re-firing on every cd within the same
+#     repo (once a fetch starts, it'll touch FETCH_HEAD on completion).
+#
+# The auth gate skips the fetch when auth_info reports problems (typically
+# no SSH identity) so the prompt's {behind} indicator still nags the user.
+# GIT_TERMINAL_PROMPT=0 silences any HTTPS credential prompt that would
+# otherwise hang the orphaned fetch indefinitely.
+maybe_background_fetch() {
+    if test "$PWD" = "${_LAST_BG_FETCH_PWD:-}"; then
+        return
+    fi
+    _LAST_BG_FETCH_PWD="$PWD"
+    have_command git || return
+    local _git_dir
+    _git_dir="$(git rev-parse --git-dir 2>/dev/null)" || return
+    test -n "$(auth_info)" && return
+    local _fetch_head="$_git_dir/FETCH_HEAD"
+    if test -f "$_fetch_head"; then
+        local _now _mtime _age
+        _now="$(date +%s)"
+        _mtime="$(stat -c %Y "$_fetch_head" 2>/dev/null || stat -f %m "$_fetch_head" 2>/dev/null)"
+        _age=$((_now - _mtime))
+        test "$_age" -lt "$BG_FETCH_INTERVAL_SECONDS" && return
+    fi
+    local _root
+    _root="$(git rev-parse --show-toplevel 2>/dev/null)" || return
+    _run_bg_fetch "$_root"
+}
+
+# Spawn a detached `git fetch` in $1 (the repo root). Split out from
+# maybe_background_fetch so tests can intercept the call without having
+# to fake `git` itself. Subshell + & detaches the fetch so it doesn't
+# show up in `jobs` and doesn't keep the shell waiting at exit.
+# GIT_TERMINAL_PROMPT=0 prevents an HTTPS-creds prompt from hanging
+# the orphaned process indefinitely.
+_run_bg_fetch() {
+    local _root="$1"
+    ( GIT_TERMINAL_PROMPT=0 git -C "$_root" fetch --quiet >/dev/null 2>&1 & )
 }
 
 # print the hostname and shpool session tag for the preprompt line.
