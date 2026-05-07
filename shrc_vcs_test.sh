@@ -1,8 +1,9 @@
 #!/bin/bash
 #
 # Tests for shrc.vcs. Covers both the thin wrappers (which delegate to
-# the `vcs` Go binary from the mikelward/vcs submodule, already present
-# on PATH when run via `make test-shrc-vcs`) and the pure-shell helpers
+# the `vcs` Go binary cloned from mikelward/vcs into ./vcs, already
+# present on PATH when run via `make test-shrc-vcs`) and the pure-shell
+# helpers
 # (clone dispatch, status_chars, target_relative_to, allknown, project)
 # that don't require the binary. The per-VCS subcommand behaviour lives
 # in the `vcs` binary and is tested there.

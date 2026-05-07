@@ -1,5 +1,7 @@
 #!/bin/sh
-# Automatically update the vcs submodule to the latest main branch
-if test -f .gitmodules && grep -q '\[submodule "vcs"\]' .gitmodules; then
-    git submodule update --remote --init vcs
+# In conf, refresh the ./vcs clone to the latest main after a pull/merge.
+# Guard: only run when this repo's Makefile defines vcs-fetch (i.e. we
+# are in conf, not some other repo that inherited this hook).
+if test -f Makefile && grep -q '^vcs-fetch:' Makefile; then
+    make vcs-fetch
 fi

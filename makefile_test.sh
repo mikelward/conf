@@ -27,12 +27,15 @@ assert_contains "test" "$_targets"
 start_test "test-full target exists"
 assert_contains "test-full" "$_targets"
 
-# vcs-fetch is the network-doing target: it tracks the vcs submodule's
-# main HEAD and wires up core.hooksPath so post-merge / post-rewrite
-# fire. vcs-build composes vcs-fetch + the binary build.
+# vcs-fetch is the network-doing target: it clones mikelward/vcs into
+# ./vcs on first run, fetches+checks-out the configured ref on
+# subsequent runs, and wires up core.hooksPath so post-merge /
+# post-rewrite fire. vcs-build composes vcs-fetch + the binary build.
 _vcs_fetch_recipe=$(make -C "$_srcdir" -n vcs-fetch 2>/dev/null)
-start_test "vcs-fetch uses --remote to track main HEAD"
-assert_contains "submodule update --remote" "$_vcs_fetch_recipe"
+start_test "vcs-fetch references the mikelward/vcs remote"
+assert_contains "mikelward/vcs" "$_vcs_fetch_recipe"
+start_test "vcs-fetch fetches origin"
+assert_contains "git -C vcs fetch" "$_vcs_fetch_recipe"
 start_test "vcs-fetch wires up core.hooksPath"
 assert_contains "core.hooksPath gittemplates/hooks" "$_vcs_fetch_recipe"
 

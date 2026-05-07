@@ -1,8 +1,9 @@
 #!/bin/sh
-# Automatically update the vcs submodule to the latest main branch
-# after a rebase. Skipped on `git commit --amend` to avoid a network
-# fetch on every amend.
+# In conf, refresh the ./vcs clone to the latest main after a rebase.
+# Skipped on `git commit --amend` to avoid a network fetch on every
+# amend. Guard: only run when this repo's Makefile defines vcs-fetch
+# (i.e. we are in conf, not some other repo that inherited this hook).
 test "$1" = rebase || exit 0
-if test -f .gitmodules && grep -q '\[submodule "vcs"\]' .gitmodules; then
-    git submodule update --remote --init vcs
+if test -f Makefile && grep -q '^vcs-fetch:' Makefile; then
+    make vcs-fetch
 fi

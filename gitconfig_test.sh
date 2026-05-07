@@ -14,7 +14,7 @@ if ! command -v git >/dev/null 2>&1; then
 fi
 
 # submodule.recurse is enabled so that git clone automatically
-# initializes submodules (e.g. the vcs submodule).
+# initializes submodules (e.g. emacs.d/evil).
 start_test "submodule.recurse is true"
 _recurse=$(git config --file "$_gitconfig" submodule.recurse)
 assert_equal "true" "$_recurse"

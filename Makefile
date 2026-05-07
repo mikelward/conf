@@ -1,7 +1,7 @@
 # Default target: build everything locally (no install). Running `make`
-# with no args fetches the latest vcs submodule HEAD and builds the
-# binaries in-place so subsequent `make test` runs pick them up; it
-# does not touch $HOME or $PREFIX.
+# with no args clones (or pulls) mikelward/vcs into ./vcs and builds
+# the binaries in-place so subsequent `make test` runs pick them up;
+# it does not touch $HOME or $PREFIX.
 all: vcs-build
 
 install: install-dotfiles install-vcs
@@ -12,49 +12,54 @@ install-dotfiles:
 install-vcs: vcs-build
 	$(MAKE) -C vcs install
 
+VCS_URL := https://github.com/mikelward/vcs.git
+VCS_REF := origin/main
+
 # vcs-build is the user-facing "do whatever it takes to get a fresh
 # vcs binary" target: fetch latest main, then build. The recipe
 # sequences the two pieces explicitly via sub-make so `make -j
-# vcs-build` doesn't run `git submodule update --remote` (from
-# vcs-fetch) concurrently with `git submodule update --init` (from
-# the vcs/Makefile sentinel), which would contend on the same
-# .git/modules/vcs lock files.
+# vcs-build` doesn't run vcs-fetch's clone/pull concurrently with the
+# initial-checkout fired by vcs/Makefile's order-only dep.
 vcs-build:
 	$(MAKE) vcs-fetch
 	$(MAKE) vcs/vcs
 
-# vcs-fetch is the only target that does an explicit `--remote` update.
-# It also (idempotently) wires up core.hooksPath so the post-merge /
-# post-rewrite hooks fire and re-fetch on every pull / rebase. The
-# hooks invoke `git submodule update --remote --init vcs` directly
-# (no make round-trip); the parent's `all` target sequences vcs-fetch
-# before vcs/vcs via vcs-build, and explicit `make vcs-fetch` works
-# too -- but `make test` does not depend on vcs-fetch and so doesn't
-# do the --remote update on every test run. (Note: vcs/Makefile's
-# initial-checkout recipe also does a `git submodule update --init`,
-# which fetches the pinned commit on a fresh clone -- so vcs-fetch
-# isn't *literally* the only network-doing target, but it is the only
-# one tracking main HEAD.)
+# vcs-fetch is the only target that does a network update. On first
+# run it clones $(VCS_URL) into ./vcs; on subsequent runs it fetches
+# origin and checks out $(VCS_REF). It also (idempotently) wires up
+# core.hooksPath so the post-merge / post-rewrite hooks fire and
+# re-fetch on every pull / rebase. The hooks invoke `make vcs-fetch`
+# directly; the parent's `all` target sequences vcs-fetch before
+# vcs/vcs via vcs-build, and explicit `make vcs-fetch` works too --
+# but `make test` does not depend on vcs-fetch and so doesn't do a
+# network update on every test run. (Note: vcs/Makefile's initial-
+# checkout recipe also does a clone on a fresh checkout of conf -- so
+# vcs-fetch isn't *literally* the only network-doing target, but it
+# is the only one explicitly advancing to $(VCS_REF).)
 vcs-fetch:
 	git config core.hooksPath gittemplates/hooks
-	git submodule update --remote --init vcs
+	@if test -d vcs/.git; then \
+		git -C vcs fetch --quiet origin && \
+		git -C vcs checkout --quiet $(VCS_REF); \
+	else \
+		git clone --quiet $(VCS_URL) vcs; \
+	fi
 
 # vcs/vcs is a real-file target so depending on it from a test target
 # only triggers a rebuild when the binary itself changed. vcs/Makefile
 # uses real file targets internally, so `$(MAKE) -C vcs` is a no-op
 # when sources are unchanged. The order-only dep on vcs/Makefile
-# handles fresh clones where the submodule hasn't been checked out
-# yet.
+# handles fresh checkouts where ./vcs hasn't been cloned yet.
 vcs/vcs: | vcs/Makefile
 	$(MAKE) -C vcs
 
-# Sentinel for "submodule is checked out". Absent on fresh clone;
-# populated by a direct `git submodule update --init` (no `--remote`)
-# so this rule doesn't race with vcs-fetch's `--remote` update under
-# parallel make. Once vcs-build has run, the subsequent vcs-fetch
-# moves the submodule to the latest main HEAD.
+# Sentinel for "vcs is cloned". Absent on a fresh checkout of conf;
+# populated by a plain `git clone` (no fetch/checkout to $(VCS_REF))
+# so this rule doesn't race with vcs-fetch under parallel make. Once
+# vcs-build has run, the subsequent vcs-fetch advances ./vcs to
+# $(VCS_REF).
 vcs/Makefile:
-	git submodule update --init vcs
+	git clone --quiet $(VCS_URL) vcs
 
 # Number of parallel jobs to use for `make test`. Defaults to the CPU count
 # (falling back to 8 if nproc isn't available). Override with e.g.
