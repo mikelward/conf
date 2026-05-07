@@ -1,5 +1,8 @@
 #!/bin/sh
-# Automatically update the vcs submodule to the latest main branch
-if test -f .gitmodules && grep -q '\[submodule "vcs"\]' .gitmodules; then
-    git submodule update --remote --init vcs
+# In conf, refresh the ./vcs submodule to the commit recorded by the
+# just-merged superproject. This intentionally avoids branch-head
+# updates so a changed pin stays visible in `git status` until committed.
+if test -f .gitmodules &&
+        git config -f .gitmodules --get submodule.vcs.path >/dev/null 2>&1; then
+    git submodule update --init --recursive vcs
 fi
