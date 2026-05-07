@@ -26,8 +26,13 @@ vcs-build:
 
 # vcs-fetch is the only target that does a network update. On first
 # run it clones $(VCS_URL) into ./vcs; on subsequent runs it fetches
-# origin and checks out $(VCS_REF). It also (idempotently) wires up
-# core.hooksPath so the post-merge / post-rewrite hooks fire and
+# origin and checks out $(VCS_REF). The `test -e vcs/.git` probe
+# (rather than `test -d`) deliberately also matches a leftover
+# submodule worktree, where `.git` is a gitfile pointing into
+# .git/modules/vcs/. The submodule's origin is the same mikelward/vcs
+# remote, so fetch + checkout transparently migrates the user without
+# requiring a manual `submodule deinit`. It also (idempotently) wires
+# up core.hooksPath so the post-merge / post-rewrite hooks fire and
 # re-fetch on every pull / rebase. The hooks invoke `make vcs-fetch`
 # directly; the parent's `all` target sequences vcs-fetch before
 # vcs/vcs via vcs-build, and explicit `make vcs-fetch` works too --
@@ -38,7 +43,7 @@ vcs-build:
 # is the only one explicitly advancing to $(VCS_REF).)
 vcs-fetch:
 	git config core.hooksPath gittemplates/hooks
-	@if test -d vcs/.git; then \
+	@if test -e vcs/.git; then \
 		git -C vcs fetch --quiet origin && \
 		git -C vcs checkout --quiet $(VCS_REF); \
 	else \

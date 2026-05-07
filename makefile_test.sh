@@ -38,6 +38,13 @@ start_test "vcs-fetch fetches origin"
 assert_contains "git -C vcs fetch" "$_vcs_fetch_recipe"
 start_test "vcs-fetch wires up core.hooksPath"
 assert_contains "core.hooksPath gittemplates/hooks" "$_vcs_fetch_recipe"
+# Regression: existing-submodule users have `vcs/.git` as a gitfile
+# (regular file), not a directory. `test -d` would skip the
+# fetch+checkout branch and fall through to `git clone`, which fails
+# because vcs/ already exists. `test -e` accepts both.
+start_test "vcs-fetch uses test -e (not test -d) on vcs/.git"
+assert_contains "test -e vcs/.git" "$_vcs_fetch_recipe"
+assert_not_contains "test -d vcs/.git" "$_vcs_fetch_recipe"
 
 # Bare `make` (no target) must build, not install. Verify the default
 # target is `all`, that `all` depends on vcs-build, and that its recipe
