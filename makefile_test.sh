@@ -127,9 +127,10 @@ start_test "test-fish succeeds when fish is missing"
 _bare_path="$_testdir/bare_bin"
 mkdir -p "$_bare_path"
 # Populate the stub directory with everything the recipe itself calls
-# (shell builtins/coreutils, plus bash for the behavioral drivers).
-# Omit `fish` so we exercise the skip branch.
-for _tool in bash dash make awk sed grep sh env cat command test nproc mkdir touch; do
+# (shell builtins/coreutils, plus bash for the behavioral drivers, plus
+# go to build the vcs binary that test-fish depends on for VCS-aware
+# auto-fetch dispatch). Omit `fish` so we exercise the skip branch.
+for _tool in bash dash make awk sed grep sh env cat command test nproc mkdir touch go git; do
     if _real=$(command -v "$_tool" 2>/dev/null); then
         ln -sf "$_real" "$_bare_path/$_tool"
     fi

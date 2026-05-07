@@ -40,7 +40,25 @@ _fish_colors='
 # environment. The snippet runs inside an interactive fish (`fish -i -c`)
 # so that prompt functions defined under `if is_interactive` are available.
 _fish_run() {
-    _fish_run_config "$_fish_colors" "$_fish_colors"'
+    _fish_run_config "$_fish_colors" "$_fish_colors$_fish_default_post_stubs
+        # fish_prompt now calls maybe_background_fetch which would fork
+        # a fetch if the test PWD happened to be inside a real repo.
+        # Stub it out so general prompt tests stay deterministic and
+        # offline. Tests that exercise maybe_background_fetch itself
+        # use _fish_run_bg_fetch (below), which omits this stub.
+        function maybe_background_fetch; end
+    " "$1"
+}
+
+# Like _fish_run but leaves maybe_background_fetch and _run_bg_fetch
+# unstubbed so the test snippet can exercise the real implementation
+# (or override _run_bg_fetch with a recorder).
+_fish_run_bg_fetch() {
+    _fish_run_config "$_fish_colors" "$_fish_colors$_fish_default_post_stubs" "$1"
+}
+
+# Default post-source stubs shared by both runners.
+_fish_default_post_stubs='
         function bell; end
         function flash_terminal; end
         function jobs; end
@@ -62,12 +80,7 @@ _fish_run() {
         function projectroot; return 1; end
         function projectname; return 1; end
         function log_history; end
-        # fish_prompt now calls maybe_background_fetch which would fork
-        # `git fetch` if the test PWD happened to be inside a real repo.
-        # Stub it out so prompt tests stay deterministic and offline.
-        function maybe_background_fetch; end
-    ' "$1"
-}
+'
 
 ###############
 start_test "fish maybe_space with content"
@@ -553,62 +566,79 @@ fi
 
 ###############
 # maybe_background_fetch: fish version. Each test runs a fish snippet
-# that builds a fake git repo (a directory tree with a .git dir),
-# overrides the `git` command to fake rev-parse, and replaces
-# _run_bg_fetch with a recorder that prints to stdout. The test then
-# parses the snippet output to confirm whether the fetch fired.
+# that builds a fake VCS repo (a directory with the appropriate marker
+# directories — .git/, .hg/store/, .jj/repo/store/git/), stubs `vcs`,
+# `git`, and `have_command` to feed canned results into the gating
+# logic, and replaces _run_bg_fetch with a recorder that prints to
+# stdout. The test then parses the snippet output to confirm whether
+# the fetch fired and which VCS dispatch was used.
 
-start_test "fish maybe_background_fetch fires when FETCH_HEAD missing"
-result="$(_fish_run '
+# Shared boilerplate emitted into each fish snippet. Sets up:
+#   - `have_command` always-true for git/hg/jj/vcs (test host doesn't
+#     need those binaries installed for the gating branches to run)
+#   - `vcs` stub returning $_fake_vcs_type / $_fake_vcs_root
+#   - `git` stub returning fake rev-parse output for $_fakerepo
+#   - `_run_bg_fetch` recorder printing "FETCH=$vcs $root"
+#   - `is_ssh_valid` returning 0 (auth_info empty -> fetch allowed)
+_fish_bg_fetch_stubs='
+    function have_command
+        switch $argv[1]
+            case git hg jj vcs; return 0
+            case "*"; command -v $argv[1] >/dev/null 2>&1
+        end
+    end
+    function vcs
+        switch $argv[1]
+            case detect; echo "$_fake_vcs_type"
+            case rootdir; echo "$_fake_vcs_root"
+            case "*"; return 1
+        end
+    end
+    function git
+        switch "$argv[1] $argv[2]"
+            case "rev-parse --git-dir"; echo "$_fakerepo/.git"
+            case "rev-parse --show-toplevel"; echo "$_fakerepo"
+            case "*"; command git $argv
+        end
+    end
+    function _run_bg_fetch; echo "FETCH=$argv[1] $argv[2]"; end
+    function is_ssh_valid; return 0; end
+'
+
+start_test "fish maybe_background_fetch git fires when FETCH_HEAD missing"
+result="$(_fish_run_bg_fetch '
     set -g _fakerepo "'$_testdir'/fish_fakerepo_missing"
     mkdir -p $_fakerepo/.git
     cd $_fakerepo
-    function git
-        switch "$argv[1] $argv[2]"
-            case "rev-parse --git-dir"; echo "$_fakerepo/.git"
-            case "rev-parse --show-toplevel"; echo "$_fakerepo"
-            case "*"; command git $argv
-        end
-    end
-    function _run_bg_fetch; echo "FETCH=$argv[1]"; end
-    function is_ssh_valid; return 0; end
+    set -g _fake_vcs_type git
+    set -g _fake_vcs_root $_fakerepo
+    '"$_fish_bg_fetch_stubs"'
     set -e _LAST_BG_FETCH_PWD
     maybe_background_fetch
 ')"
-assert_contains "FETCH=$_testdir/fish_fakerepo_missing" "$result"
+assert_contains "FETCH=git $_testdir/fish_fakerepo_missing" "$result"
 
 start_test "fish maybe_background_fetch no-op when PWD unchanged"
-result="$(_fish_run '
+result="$(_fish_run_bg_fetch '
     set -g _fakerepo "'$_testdir'/fish_fakerepo_unchanged"
     mkdir -p $_fakerepo/.git
     cd $_fakerepo
-    function git
-        switch "$argv[1] $argv[2]"
-            case "rev-parse --git-dir"; echo "$_fakerepo/.git"
-            case "rev-parse --show-toplevel"; echo "$_fakerepo"
-            case "*"; command git $argv
-        end
-    end
-    function _run_bg_fetch; echo "FETCH=$argv[1]"; end
-    function is_ssh_valid; return 0; end
+    set -g _fake_vcs_type git
+    set -g _fake_vcs_root $_fakerepo
+    '"$_fish_bg_fetch_stubs"'
     set -g _LAST_BG_FETCH_PWD $PWD
     maybe_background_fetch
 ')"
 assert_equal "0" "$(printf %s "$result" | grep -c FETCH=)"
 
 start_test "fish maybe_background_fetch no-op when auth_info reports problems"
-result="$(_fish_run '
+result="$(_fish_run_bg_fetch '
     set -g _fakerepo "'$_testdir'/fish_fakerepo_noauth"
     mkdir -p $_fakerepo/.git
     cd $_fakerepo
-    function git
-        switch "$argv[1] $argv[2]"
-            case "rev-parse --git-dir"; echo "$_fakerepo/.git"
-            case "rev-parse --show-toplevel"; echo "$_fakerepo"
-            case "*"; command git $argv
-        end
-    end
-    function _run_bg_fetch; echo "FETCH=$argv[1]"; end
+    set -g _fake_vcs_type git
+    set -g _fake_vcs_root $_fakerepo
+    '"$_fish_bg_fetch_stubs"'
     # SSH invalid -> auth_info emits "SSH" -> fetch should be skipped.
     function is_ssh_valid; return 1; end
     set -e _LAST_BG_FETCH_PWD
@@ -616,28 +646,35 @@ result="$(_fish_run '
 ')"
 assert_equal "0" "$(printf %s "$result" | grep -c FETCH=)"
 
-start_test "fish maybe_background_fetch no-op when FETCH_HEAD recent"
-result="$(_fish_run '
-    set -g _fakerepo "'$_testdir'/fish_fakerepo_fresh"
-    mkdir -p $_fakerepo/.git
-    touch $_fakerepo/.git/FETCH_HEAD
+start_test "fish maybe_background_fetch no-op outside any VCS repo"
+result="$(_fish_run_bg_fetch '
+    set -g _fakerepo "'$_testdir'/fish_not_a_repo"
+    mkdir -p $_fakerepo
     cd $_fakerepo
-    function git
-        switch "$argv[1] $argv[2]"
-            case "rev-parse --git-dir"; echo "$_fakerepo/.git"
-            case "rev-parse --show-toplevel"; echo "$_fakerepo"
-            case "*"; command git $argv
-        end
-    end
-    function _run_bg_fetch; echo "FETCH=$argv[1]"; end
-    function is_ssh_valid; return 0; end
+    set -g _fake_vcs_type ""
+    set -g _fake_vcs_root ""
+    '"$_fish_bg_fetch_stubs"'
     set -e _LAST_BG_FETCH_PWD
     maybe_background_fetch
 ')"
 assert_equal "0" "$(printf %s "$result" | grep -c FETCH=)"
 
-start_test "fish maybe_background_fetch fires when FETCH_HEAD stale"
-result="$(_fish_run '
+start_test "fish maybe_background_fetch git no-op when FETCH_HEAD recent"
+result="$(_fish_run_bg_fetch '
+    set -g _fakerepo "'$_testdir'/fish_fakerepo_fresh"
+    mkdir -p $_fakerepo/.git
+    touch $_fakerepo/.git/FETCH_HEAD
+    cd $_fakerepo
+    set -g _fake_vcs_type git
+    set -g _fake_vcs_root $_fakerepo
+    '"$_fish_bg_fetch_stubs"'
+    set -e _LAST_BG_FETCH_PWD
+    maybe_background_fetch
+')"
+assert_equal "0" "$(printf %s "$result" | grep -c FETCH=)"
+
+start_test "fish maybe_background_fetch git fires when FETCH_HEAD stale"
+result="$(_fish_run_bg_fetch '
     set -g _fakerepo "'$_testdir'/fish_fakerepo_stale"
     mkdir -p $_fakerepo/.git
     touch $_fakerepo/.git/FETCH_HEAD
@@ -645,18 +682,69 @@ result="$(_fish_run '
     touch -d "2 hours ago" $_fakerepo/.git/FETCH_HEAD 2>/dev/null
     or touch -t (date -u -v-2H +%Y%m%d%H%M.%S 2>/dev/null) $_fakerepo/.git/FETCH_HEAD
     cd $_fakerepo
-    function git
-        switch "$argv[1] $argv[2]"
-            case "rev-parse --git-dir"; echo "$_fakerepo/.git"
-            case "rev-parse --show-toplevel"; echo "$_fakerepo"
-            case "*"; command git $argv
-        end
-    end
-    function _run_bg_fetch; echo "FETCH=$argv[1]"; end
-    function is_ssh_valid; return 0; end
+    set -g _fake_vcs_type git
+    set -g _fake_vcs_root $_fakerepo
+    '"$_fish_bg_fetch_stubs"'
     set -e _LAST_BG_FETCH_PWD
     maybe_background_fetch
 ')"
-assert_contains "FETCH=$_testdir/fish_fakerepo_stale" "$result"
+assert_contains "FETCH=git $_testdir/fish_fakerepo_stale" "$result"
+
+start_test "fish maybe_background_fetch hg fires when 00changelog.i stale"
+result="$(_fish_run_bg_fetch '
+    set -g _fakerepo "'$_testdir'/fish_fakerepo_hg_stale"
+    mkdir -p $_fakerepo/.hg/store
+    touch $_fakerepo/.hg/store/00changelog.i
+    touch -d "2 hours ago" $_fakerepo/.hg/store/00changelog.i 2>/dev/null
+    or touch -t (date -u -v-2H +%Y%m%d%H%M.%S 2>/dev/null) $_fakerepo/.hg/store/00changelog.i
+    cd $_fakerepo
+    set -g _fake_vcs_type hg
+    set -g _fake_vcs_root $_fakerepo
+    '"$_fish_bg_fetch_stubs"'
+    set -e _LAST_BG_FETCH_PWD
+    maybe_background_fetch
+')"
+assert_contains "FETCH=hg $_testdir/fish_fakerepo_hg_stale" "$result"
+
+start_test "fish maybe_background_fetch hg no-op when 00changelog.i recent"
+result="$(_fish_run_bg_fetch '
+    set -g _fakerepo "'$_testdir'/fish_fakerepo_hg_fresh"
+    mkdir -p $_fakerepo/.hg/store
+    touch $_fakerepo/.hg/store/00changelog.i
+    cd $_fakerepo
+    set -g _fake_vcs_type hg
+    set -g _fake_vcs_root $_fakerepo
+    '"$_fish_bg_fetch_stubs"'
+    set -e _LAST_BG_FETCH_PWD
+    maybe_background_fetch
+')"
+assert_equal "0" "$(printf %s "$result" | grep -c FETCH=)"
+
+start_test "fish maybe_background_fetch jj fires when FETCH_HEAD missing"
+result="$(_fish_run_bg_fetch '
+    set -g _fakerepo "'$_testdir'/fish_fakerepo_jj_missing"
+    mkdir -p $_fakerepo/.jj/repo/store/git
+    cd $_fakerepo
+    set -g _fake_vcs_type jj
+    set -g _fake_vcs_root $_fakerepo
+    '"$_fish_bg_fetch_stubs"'
+    set -e _LAST_BG_FETCH_PWD
+    maybe_background_fetch
+')"
+assert_contains "FETCH=jj $_testdir/fish_fakerepo_jj_missing" "$result"
+
+start_test "fish maybe_background_fetch jj no-op when FETCH_HEAD recent"
+result="$(_fish_run_bg_fetch '
+    set -g _fakerepo "'$_testdir'/fish_fakerepo_jj_fresh"
+    mkdir -p $_fakerepo/.jj/repo/store/git
+    touch $_fakerepo/.jj/repo/store/git/FETCH_HEAD
+    cd $_fakerepo
+    set -g _fake_vcs_type jj
+    set -g _fake_vcs_root $_fakerepo
+    '"$_fish_bg_fetch_stubs"'
+    set -e _LAST_BG_FETCH_PWD
+    maybe_background_fetch
+')"
+assert_equal "0" "$(printf %s "$result" | grep -c FETCH=)"
 
 test_summary "fish_prompt_test"

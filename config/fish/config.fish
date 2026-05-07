@@ -983,54 +983,88 @@ if is_interactive
         set current_command
     end
 
-    # How long FETCH_HEAD must be untouched before maybe_background_fetch
-    # will run another git fetch in the same repo. One hour matches the
-    # prompt's {behind} indicator semantics: if auto-fetch is keeping up
-    # the indicator stays quiet, otherwise it nags with "pull". Mirrors
-    # shrc's BG_FETCH_INTERVAL_SECONDS.
+    # How long the fetch marker must be untouched before
+    # maybe_background_fetch will run another fetch in the same repo.
+    # One hour matches the prompt's {behind} indicator semantics: if
+    # auto-fetch is keeping up the indicator stays quiet, otherwise
+    # it nags with "pull". Mirrors shrc's BG_FETCH_INTERVAL_SECONDS.
     if not set --query BG_FETCH_INTERVAL_SECONDS
         set --global BG_FETCH_INTERVAL_SECONDS 3600
     end
 
-    # If we just cd'd into a git repo with working SSH auth and the
-    # repo's FETCH_HEAD is older than $BG_FETCH_INTERVAL_SECONDS (or
-    # absent), kick off `git fetch` in a detached background job.
-    # Called from fish_prompt. Two gates avoid being noisy: the
-    # PWD-change check (most prompts don't follow a cd) and the
-    # FETCH_HEAD mtime check (avoids re-firing on every cd within the
-    # same repo). The auth gate skips the fetch when auth_info reports
-    # problems so the prompt's {behind} indicator still nags. Mirrors
-    # shrc's maybe_background_fetch; see that function for the rationale
+    # If we just cd'd into a git/hg/jj repo with working SSH auth and
+    # the repo's fetch marker is older than $BG_FETCH_INTERVAL_SECONDS
+    # (or absent), kick off a fetch in a detached background job. Each
+    # VCS uses its native fetch command and a VCS-specific marker file
+    # (mirrors the {behind} fallback in `vcs prompt-info`). Called from
+    # fish_prompt. Two gates avoid being noisy: the PWD-change check
+    # (most prompts don't follow a cd) and the marker-mtime check
+    # (avoids re-firing on every cd within the same repo). The auth
+    # gate skips the fetch when auth_info reports problems so the
+    # prompt's {behind} indicator still nags. Mirrors shrc's
+    # maybe_background_fetch; see that function for the rationale
     # behind each gate.
     function maybe_background_fetch
         if set -q _LAST_BG_FETCH_PWD; and test "$PWD" = "$_LAST_BG_FETCH_PWD"
             return
         end
         set --global _LAST_BG_FETCH_PWD $PWD
-        have_command git; or return
-        set _git_dir (command git rev-parse --git-dir 2>/dev/null | string collect)
-        test -n "$_git_dir"; or return
+        have_command vcs; or return
+        set _vcs (command vcs detect 2>/dev/null | string collect)
+        test -n "$_vcs"; or return
         set _auth (auth_info | string collect)
         test -z "$_auth"; or return
-        set _fetch_head "$_git_dir/FETCH_HEAD"
+        set _root ""
+        set _fetch_head ""
+        switch $_vcs
+            case git
+                have_command git; or return
+                set _git_dir (command git rev-parse --git-dir 2>/dev/null | string collect)
+                test -n "$_git_dir"; or return
+                set _root (command git rev-parse --show-toplevel 2>/dev/null | string collect)
+                test -n "$_root"; or return
+                set _fetch_head "$_git_dir/FETCH_HEAD"
+            case hg
+                have_command hg; or return
+                set _root (command vcs rootdir 2>/dev/null | string collect)
+                test -n "$_root"; or return
+                # 00changelog.i is rewritten by `hg pull` whether or not
+                # new changesets arrived, so its mtime tracks the most
+                # recent pull.
+                set _fetch_head "$_root/.hg/store/00changelog.i"
+            case jj
+                have_command jj; or return
+                set _root (command vcs rootdir 2>/dev/null | string collect)
+                test -n "$_root"; or return
+                set _fetch_head "$_root/.jj/repo/store/git/FETCH_HEAD"
+            case '*'
+                return
+        end
         if test -f "$_fetch_head"
             set _now (date +%s)
             set _mtime (stat -c %Y "$_fetch_head" 2>/dev/null)
             test -z "$_mtime"; and set _mtime (stat -f %m "$_fetch_head" 2>/dev/null)
             test -n "$_mtime"; and test (math $_now - $_mtime) -lt $BG_FETCH_INTERVAL_SECONDS; and return
         end
-        set _root (command git rev-parse --show-toplevel 2>/dev/null | string collect)
-        test -n "$_root"; or return
-        _run_bg_fetch $_root
+        _run_bg_fetch $_vcs $_root
     end
 
-    # Spawn a detached `git fetch` in $argv[1] (the repo root). Split out
-    # from maybe_background_fetch so tests can intercept the call. The
-    # `&` + `disown` pair detaches the fetch so it doesn't show up in
-    # `jobs` or hold up shell exit. GIT_TERMINAL_PROMPT=0 prevents an
-    # HTTPS-creds prompt from hanging the orphaned process.
+    # Spawn a detached fetch in $argv[2] (the repo root) for VCS
+    # $argv[1] (git|hg|jj). Split out from maybe_background_fetch so
+    # tests can intercept the call. The `&` + `disown` pair detaches
+    # the fetch so it doesn't show up in `jobs` or hold up shell exit.
+    # GIT_TERMINAL_PROMPT=0 prevents an HTTPS-creds prompt from hanging
+    # the orphaned process indefinitely (jj uses git underneath so it's
+    # affected too).
     function _run_bg_fetch
-        env GIT_TERMINAL_PROMPT=0 command git -C $argv[1] fetch --quiet >/dev/null 2>&1 &
+        switch $argv[1]
+            case git
+                env GIT_TERMINAL_PROMPT=0 command git -C $argv[2] fetch --quiet >/dev/null 2>&1 &
+            case hg
+                command hg -R $argv[2] pull --quiet >/dev/null 2>&1 &
+            case jj
+                env GIT_TERMINAL_PROMPT=0 command jj --repository $argv[2] git fetch --quiet >/dev/null 2>&1 &
+        end
         disown 2>/dev/null
     end
 

@@ -2042,15 +2042,17 @@ except OSError: pass
     })
 
     ###############
-    # maybe-background-fetch: nu version. Each test builds a fake git
-    # repo (a directory with .git/ inside it), overrides $env.run-bg-fetch
-    # with a recorder that writes to a file, and asserts whether
+    # maybe-background-fetch: nu version. Each test builds a fake VCS
+    # repo (a directory with the appropriate marker dir inside it),
+    # overrides $env.run-bg-fetch with a recorder that writes
+    # "<vcs> <root>" to a file, and asserts whether
     # maybe-background-fetch decided to fire. We can't intercept the
-    # external `git rev-parse` call cleanly in nu, so the fake repo is a
-    # real directory (`git init`-equivalent stub layout) and we let the
-    # real git binary handle the rev-parse. Skipped if git is missing.
-    (run-test "nu maybe-background-fetch fires when FETCH_HEAD missing" {
-        if not (have-command "git") { return }
+    # external `vcs detect` / `git rev-parse` calls cleanly in nu, so
+    # the fake repos are real directories laid out as if init'd by
+    # the corresponding tool, and we let the real binaries handle
+    # detection. Tests skip if the relevant binary is missing.
+    (run-test "nu maybe-background-fetch git fires when FETCH_HEAD missing" {
+        if not ((have-command "vcs") and (have-command "git")) { return }
         let base = ($env.HOME | path expand)
         let proj = ([$base "bgfetch-missing"] | path join)
         mkdir $proj
@@ -2058,28 +2060,28 @@ except OSError: pass
         ^git init --quiet --initial-branch=main
         ^git config commit.gpgsign false
         let log = ([$proj "fetch.log"] | path join)
-        $env.run-bg-fetch = {|root| $root | save -f $log }
+        $env.run-bg-fetch = {|vcs, root| $"($vcs) ($root)" | save -f $log }
         $env.is-ssh-valid = {|| true }
         $env.auth-info = {|| "" }
         maybe-background-fetch
-        assert (($log | path exists) and ((open $log | str trim) == $proj))
+        assert (($log | path exists) and ((open $log | str trim) == $"git ($proj)"))
     })
 
-    (run-test "nu maybe-background-fetch no-op outside git repo" {
-        if not (have-command "git") { return }
+    (run-test "nu maybe-background-fetch no-op outside any VCS repo" {
+        if not (have-command "vcs") { return }
         let base = ($env.HOME | path expand)
         let dir = ([$base "bgfetch-norepo"] | path join)
         mkdir $dir
         cd $dir
         let log = ([$dir "fetch.log"] | path join)
-        $env.run-bg-fetch = {|root| $root | save -f $log }
+        $env.run-bg-fetch = {|vcs, root| $"($vcs) ($root)" | save -f $log }
         $env.auth-info = {|| "" }
         maybe-background-fetch
         assert (not ($log | path exists))
     })
 
     (run-test "nu maybe-background-fetch no-op when auth-info reports problems" {
-        if not (have-command "git") { return }
+        if not ((have-command "vcs") and (have-command "git")) { return }
         let base = ($env.HOME | path expand)
         let proj = ([$base "bgfetch-noauth"] | path join)
         mkdir $proj
@@ -2087,15 +2089,15 @@ except OSError: pass
         ^git init --quiet --initial-branch=main
         ^git config commit.gpgsign false
         let log = ([$proj "fetch.log"] | path join)
-        $env.run-bg-fetch = {|root| $root | save -f $log }
+        $env.run-bg-fetch = {|vcs, root| $"($vcs) ($root)" | save -f $log }
         # Override auth-info to simulate missing SSH identity.
         $env.auth-info = {|| "SSH" }
         maybe-background-fetch
         assert (not ($log | path exists))
     })
 
-    (run-test "nu maybe-background-fetch no-op when FETCH_HEAD is recent" {
-        if not (have-command "git") { return }
+    (run-test "nu maybe-background-fetch git no-op when FETCH_HEAD is recent" {
+        if not ((have-command "vcs") and (have-command "git")) { return }
         let base = ($env.HOME | path expand)
         let proj = ([$base "bgfetch-fresh"] | path join)
         mkdir $proj
@@ -2105,14 +2107,14 @@ except OSError: pass
         # Recent FETCH_HEAD: created just now -> well under 1h.
         touch ([$proj ".git" "FETCH_HEAD"] | path join)
         let log = ([$proj "fetch.log"] | path join)
-        $env.run-bg-fetch = {|root| $root | save -f $log }
+        $env.run-bg-fetch = {|vcs, root| $"($vcs) ($root)" | save -f $log }
         $env.auth-info = {|| "" }
         maybe-background-fetch
         assert (not ($log | path exists))
     })
 
-    (run-test "nu maybe-background-fetch fires when FETCH_HEAD is stale" {
-        if not (have-command "git") { return }
+    (run-test "nu maybe-background-fetch git fires when FETCH_HEAD is stale" {
+        if not ((have-command "vcs") and (have-command "git")) { return }
         let base = ($env.HOME | path expand)
         let proj = ([$base "bgfetch-stale"] | path join)
         mkdir $proj
@@ -2124,10 +2126,82 @@ except OSError: pass
         # Backdate past the 1h interval so the stale-mtime branch trips.
         ^touch -d "2 hours ago" $fh
         let log = ([$proj "fetch.log"] | path join)
-        $env.run-bg-fetch = {|root| $root | save -f $log }
+        $env.run-bg-fetch = {|vcs, root| $"($vcs) ($root)" | save -f $log }
         $env.auth-info = {|| "" }
         maybe-background-fetch
-        assert (($log | path exists) and ((open $log | str trim) == $proj))
+        assert (($log | path exists) and ((open $log | str trim) == $"git ($proj)"))
+    })
+
+    # The hg tests don't shell out to `hg init`. We just lay down the
+    # `.hg/store/` directory tree by hand: that's enough for vcs detect
+    # to return "hg" (it keys off the `.hg` dir) and for the marker
+    # mtime branch to fire. have-command "hg" only checks PATH for an
+    # executable, so a broken-but-installed hg (e.g. mismatched python
+    # in some sandboxes) doesn't fail the test — the recorder
+    # short-circuits the actual `hg pull` invocation.
+    (run-test "nu maybe-background-fetch hg fires when 00changelog.i is stale" {
+        if not ((have-command "vcs") and (have-command "hg")) { return }
+        let base = ($env.HOME | path expand)
+        let proj = ([$base "bgfetch-hg-stale"] | path join)
+        let store = ([$proj ".hg" "store"] | path join)
+        mkdir $store
+        cd $proj
+        let marker = ([$store "00changelog.i"] | path join)
+        touch $marker
+        ^touch -d "2 hours ago" $marker
+        let log = ([$proj "fetch.log"] | path join)
+        $env.run-bg-fetch = {|vcs, root| $"($vcs) ($root)" | save -f $log }
+        $env.auth-info = {|| "" }
+        maybe-background-fetch
+        assert (($log | path exists) and ((open $log | str trim) == $"hg ($proj)"))
+    })
+
+    (run-test "nu maybe-background-fetch hg no-op when 00changelog.i is recent" {
+        if not ((have-command "vcs") and (have-command "hg")) { return }
+        let base = ($env.HOME | path expand)
+        let proj = ([$base "bgfetch-hg-fresh"] | path join)
+        let store = ([$proj ".hg" "store"] | path join)
+        mkdir $store
+        cd $proj
+        touch ([$store "00changelog.i"] | path join)
+        let log = ([$proj "fetch.log"] | path join)
+        $env.run-bg-fetch = {|vcs, root| $"($vcs) ($root)" | save -f $log }
+        $env.auth-info = {|| "" }
+        maybe-background-fetch
+        assert (not ($log | path exists))
+    })
+
+    (run-test "nu maybe-background-fetch jj fires when FETCH_HEAD missing" {
+        if not ((have-command "vcs") and (have-command "jj")) { return }
+        let base = ($env.HOME | path expand)
+        let proj = ([$base "bgfetch-jj-missing"] | path join)
+        mkdir $proj
+        cd $proj
+        with-env { JJ_USER: "test", JJ_EMAIL: "test@test" } {
+            ^jj git init
+        }
+        let log = ([$proj "fetch.log"] | path join)
+        $env.run-bg-fetch = {|vcs, root| $"($vcs) ($root)" | save -f $log }
+        $env.auth-info = {|| "" }
+        maybe-background-fetch
+        assert (($log | path exists) and ((open $log | str trim) == $"jj ($proj)"))
+    })
+
+    (run-test "nu maybe-background-fetch jj no-op when FETCH_HEAD is recent" {
+        if not ((have-command "vcs") and (have-command "jj")) { return }
+        let base = ($env.HOME | path expand)
+        let proj = ([$base "bgfetch-jj-fresh"] | path join)
+        mkdir $proj
+        cd $proj
+        with-env { JJ_USER: "test", JJ_EMAIL: "test@test" } {
+            ^jj git init
+        }
+        touch ([$proj ".jj" "repo" "store" "git" "FETCH_HEAD"] | path join)
+        let log = ([$proj "fetch.log"] | path join)
+        $env.run-bg-fetch = {|vcs, root| $"($vcs) ($root)" | save -f $log }
+        $env.auth-info = {|| "" }
+        maybe-background-fetch
+        assert (not ($log | path exists))
     })
 ]
 

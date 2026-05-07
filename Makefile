@@ -146,8 +146,12 @@ $(CACHE)/test-zsh.stamp: shrc shrc_test_lib.sh shrc_test.sh shrc_zsh_test.sh | $
 	fi
 test-zsh: $(CACHE)/test-zsh.stamp
 
-$(CACHE)/test-prompt.stamp: shrc shrc_test_lib.sh shrc_prompt_test.sh | $(CACHE)
-	@bash shrc_prompt_test.sh
+# test-prompt depends on vcs/vcs because maybe_background_fetch shells
+# out to `vcs detect` / `vcs rootdir` for VCS-aware dispatch; the test
+# stubs those calls but `have_command vcs` still expects the binary
+# on PATH.
+$(CACHE)/test-prompt.stamp: shrc shrc_test_lib.sh shrc_prompt_test.sh vcs/vcs | $(CACHE)
+	@PATH="$(CURDIR)/vcs:$$PATH" bash shrc_prompt_test.sh
 	@touch $@
 test-prompt: $(CACHE)/test-prompt.stamp
 
@@ -166,11 +170,11 @@ test-vcs: $(CACHE)/test-vcs.stamp
 # isn't installed. Stamp only touched when fish is present so installing
 # fish later re-runs the suite.
 $(CACHE)/test-fish.stamp: config/fish/config.fish shrc_test_lib.sh \
-                          fish_test.sh fish_prompt_test.sh | $(CACHE)
+                          fish_test.sh fish_prompt_test.sh vcs/vcs | $(CACHE)
 	@if command -v fish >/dev/null 2>&1; then \
 		fish -n config/fish/config.fish && \
-		bash fish_test.sh && \
-		bash fish_prompt_test.sh && \
+		PATH="$(CURDIR)/vcs:$$PATH" bash fish_test.sh && \
+		PATH="$(CURDIR)/vcs:$$PATH" bash fish_prompt_test.sh && \
 		touch $@; \
 	else \
 		echo "SKIP: test-fish (fish not installed)"; \
@@ -179,10 +183,10 @@ test-fish: $(CACHE)/test-fish.stamp
 
 # Nushell parse + behavioral tests, bundled because both invoke `nu` and
 # share the same skip behavior. Stamp only touched when nu is present.
-$(CACHE)/test-nu.stamp: config/nushell/config.nu config/nushell/config_test.nu | $(CACHE)
+$(CACHE)/test-nu.stamp: config/nushell/config.nu config/nushell/config_test.nu vcs/vcs | $(CACHE)
 	@if command -v nu >/dev/null 2>&1; then \
-		nu --no-config-file --commands 'source config/nushell/config.nu' && \
-		nu --no-config-file config/nushell/config_test.nu && \
+		PATH="$(CURDIR)/vcs:$$PATH" nu --no-config-file --commands 'source config/nushell/config.nu' && \
+		PATH="$(CURDIR)/vcs:$$PATH" nu --no-config-file config/nushell/config_test.nu && \
 		touch $@; \
 	else \
 		echo "SKIP: test-nu (nushell not installed)"; \

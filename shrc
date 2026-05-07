@@ -1178,34 +1178,62 @@ preprompt() {
 }
 
 # How long FETCH_HEAD must be untouched before maybe_background_fetch will
-# run another git fetch in the same repo. One hour matches the prompt's
+# run another fetch in the same repo. One hour matches the prompt's
 # {behind} indicator semantics: if auto-fetch is keeping up the indicator
 # stays quiet, otherwise it nags with "pull".
 : "${BG_FETCH_INTERVAL_SECONDS:=3600}"
 
-# If we just cd'd into a git repo with working SSH auth and the repo's
-# FETCH_HEAD is older than $BG_FETCH_INTERVAL_SECONDS (or absent), kick
-# off `git fetch` in a detached background subshell. Called from preprompt.
+# If we just cd'd into a repo with working SSH auth and the repo's
+# fetch marker is older than $BG_FETCH_INTERVAL_SECONDS (or absent),
+# kick off a fetch in a detached background subshell. Called from
+# preprompt. Supports git, hg, and jj — each uses its native fetch
+# command and a VCS-specific marker file (mirrors the {behind} fallback
+# in `vcs prompt-info`).
 #
 # Two gates avoid being noisy:
 #   - PWD-change: most prompts don't follow a cd, so we early-return.
-#   - FETCH_HEAD mtime: prevents re-firing on every cd within the same
-#     repo (once a fetch starts, it'll touch FETCH_HEAD on completion).
+#   - marker mtime: prevents re-firing on every cd within the same
+#     repo (once a fetch starts, it'll touch the marker on completion).
 #
-# The auth gate skips the fetch when auth_info reports problems (typically
-# no SSH identity) so the prompt's {behind} indicator still nags the user.
-# GIT_TERMINAL_PROMPT=0 silences any HTTPS credential prompt that would
-# otherwise hang the orphaned fetch indefinitely.
+# The auth gate skips the fetch when auth_info reports problems
+# (typically no SSH identity) so the prompt's {behind} indicator still
+# nags the user. GIT_TERMINAL_PROMPT=0 silences any HTTPS credential
+# prompt that would otherwise hang the orphaned fetch indefinitely
+# (also affects jj since it uses git's network layer underneath).
 maybe_background_fetch() {
     if test "$PWD" = "${_LAST_BG_FETCH_PWD:-}"; then
         return
     fi
     _LAST_BG_FETCH_PWD="$PWD"
-    have_command git || return
-    local _git_dir
-    _git_dir="$(git rev-parse --git-dir 2>/dev/null)" || return
+    have_command vcs || return
+    local _vcs _root _fetch_head
+    _vcs="$(vcs detect 2>/dev/null)"
+    test -n "$_vcs" || return
     test -n "$(auth_info)" && return
-    local _fetch_head="$_git_dir/FETCH_HEAD"
+    case "$_vcs" in
+        git)
+            have_command git || return
+            local _git_dir
+            _git_dir="$(git rev-parse --git-dir 2>/dev/null)" || return
+            _root="$(git rev-parse --show-toplevel 2>/dev/null)" || return
+            _fetch_head="$_git_dir/FETCH_HEAD"
+            ;;
+        hg)
+            have_command hg || return
+            _root="$(vcs rootdir 2>/dev/null)" || return
+            test -n "$_root" || return
+            # 00changelog.i is rewritten by `hg pull` whether or not new
+            # changesets arrived, so its mtime tracks the most recent pull.
+            _fetch_head="$_root/.hg/store/00changelog.i"
+            ;;
+        jj)
+            have_command jj || return
+            _root="$(vcs rootdir 2>/dev/null)" || return
+            test -n "$_root" || return
+            _fetch_head="$_root/.jj/repo/store/git/FETCH_HEAD"
+            ;;
+        *) return ;;
+    esac
     if test -f "$_fetch_head"; then
         local _now _mtime _age
         _now="$(date +%s)"
@@ -1213,20 +1241,23 @@ maybe_background_fetch() {
         _age=$((_now - _mtime))
         test "$_age" -lt "$BG_FETCH_INTERVAL_SECONDS" && return
     fi
-    local _root
-    _root="$(git rev-parse --show-toplevel 2>/dev/null)" || return
-    _run_bg_fetch "$_root"
+    _run_bg_fetch "$_vcs" "$_root"
 }
 
-# Spawn a detached `git fetch` in $1 (the repo root). Split out from
-# maybe_background_fetch so tests can intercept the call without having
-# to fake `git` itself. Subshell + & detaches the fetch so it doesn't
-# show up in `jobs` and doesn't keep the shell waiting at exit.
-# GIT_TERMINAL_PROMPT=0 prevents an HTTPS-creds prompt from hanging
-# the orphaned process indefinitely.
+# Spawn a detached fetch in $2 (the repo root) for VCS $1 (git|hg|jj).
+# Split out from maybe_background_fetch so tests can intercept the call
+# without having to fake the underlying VCS binary. Subshell + & detaches
+# the fetch so it doesn't show up in `jobs` and doesn't keep the shell
+# waiting at exit. GIT_TERMINAL_PROMPT=0 prevents an HTTPS-creds prompt
+# from hanging the orphaned process indefinitely (jj uses git underneath
+# so it's affected too).
 _run_bg_fetch() {
-    local _root="$1"
-    ( GIT_TERMINAL_PROMPT=0 git -C "$_root" fetch --quiet >/dev/null 2>&1 & )
+    local _vcs="$1" _root="$2"
+    case "$_vcs" in
+        git) ( GIT_TERMINAL_PROMPT=0 git -C "$_root" fetch --quiet >/dev/null 2>&1 & ) ;;
+        hg)  ( hg -R "$_root" pull --quiet >/dev/null 2>&1 & ) ;;
+        jj)  ( GIT_TERMINAL_PROMPT=0 jj --repository "$_root" git fetch --quiet >/dev/null 2>&1 & ) ;;
+    esac
 }
 
 # print the hostname and shpool session tag for the preprompt line.

@@ -1239,45 +1239,79 @@ $env.config = ($env.config | upsert hooks.pre_prompt [{||
     $env.CMD_START_TIME = null
 }])
 
-# How long FETCH_HEAD must be untouched before maybe-background-fetch
-# will run another git fetch in the same repo. One hour matches the
-# prompt's {behind} indicator semantics: if auto-fetch is keeping up
-# the indicator stays quiet, otherwise it nags with "pull". Mirrors
-# shrc's BG_FETCH_INTERVAL_SECONDS.
+# How long the fetch marker must be untouched before
+# maybe-background-fetch will run another fetch in the same repo. One
+# hour matches the prompt's {behind} indicator semantics: if auto-fetch
+# is keeping up the indicator stays quiet, otherwise it nags with
+# "pull". Mirrors shrc's BG_FETCH_INTERVAL_SECONDS.
 $env.BG_FETCH_INTERVAL_SECONDS = ($env.BG_FETCH_INTERVAL_SECONDS? | default 3600)
 
-# Spawn a detached `git fetch` for the given repo root. Overridable so
-# tests can intercept the call without forking git. The default shells
-# out to bash so we can use the `( cmd & )` trick to orphan the fetch
-# (nu 0.96 has no built-in detach-and-forget). GIT_TERMINAL_PROMPT=0
-# prevents an HTTPS-creds prompt from hanging the orphaned process.
-$env.run-bg-fetch = {|root|
-    ^bash -c '( GIT_TERMINAL_PROMPT=0 git -C "$0" fetch --quiet >/dev/null 2>&1 & )' $root
+# Spawn a detached fetch for the given repo root, dispatching by VCS
+# type ("git", "hg", or "jj"). Overridable so tests can intercept the
+# call without forking the underlying VCS. The default shells out to
+# bash so we can use the `( cmd & )` trick to orphan the fetch (nu 0.96
+# has no built-in detach-and-forget). GIT_TERMINAL_PROMPT=0 prevents
+# an HTTPS-creds prompt from hanging the orphaned process indefinitely
+# (jj uses git underneath so it's affected too).
+$env.run-bg-fetch = {|vcs, root|
+    let cmd = match $vcs {
+        "git" => '( GIT_TERMINAL_PROMPT=0 git -C "$0" fetch --quiet >/dev/null 2>&1 & )'
+        "hg"  => '( hg -R "$0" pull --quiet >/dev/null 2>&1 & )'
+        "jj"  => '( GIT_TERMINAL_PROMPT=0 jj --repository "$0" git fetch --quiet >/dev/null 2>&1 & )'
+        _     => ""
+    }
+    if ($cmd | is-empty) { return }
+    ^bash -c $cmd $root
 }
 
-# If we just cd'd into a git repo with working SSH auth and the repo's
-# FETCH_HEAD is older than $env.BG_FETCH_INTERVAL_SECONDS (or absent),
-# kick off `git fetch` in the background. Wired into hooks.env_change.PWD
-# below so it only fires on real cd events; bash/zsh/fish guard the same
+# If we just cd'd into a git/hg/jj repo with working SSH auth and the
+# repo's fetch marker is older than $env.BG_FETCH_INTERVAL_SECONDS (or
+# absent), kick off a fetch in the background. Each VCS uses its native
+# fetch command and a VCS-specific marker file (mirrors the {behind}
+# fallback in `vcs prompt-info`). Wired into hooks.env_change.PWD below
+# so it only fires on real cd events; bash/zsh/fish guard the same
 # function with a manual PWD-change check inside, but nu's hook system
 # does the gating for us. The auth gate skips the fetch when auth-info
 # reports problems so the prompt's {behind} indicator still nags.
 def maybe-background-fetch [] {
-    if not (have-command "git") { return }
+    if not (have-command "vcs") { return }
     let pwd = $env.PWD
-    let git_dir = (try { ^git -C $pwd rev-parse --absolute-git-dir | str trim } catch { "" })
-    if ($git_dir | is-empty) { return }
+    let vcs_type = (try { ^vcs detect | str trim } catch { "" })
+    if ($vcs_type | is-empty) { return }
     if ((auth-info) | is-not-empty) { return }
-    let fetch_head = ([$git_dir "FETCH_HEAD"] | path join)
-    if ($fetch_head | path exists) {
-        let mtime = (ls $fetch_head | get 0.modified | format date "%s" | into int)
+    let info = (match $vcs_type {
+        "git" => (do {
+            if not (have-command "git") { return null }
+            let git_dir = (try { ^git -C $pwd rev-parse --absolute-git-dir | str trim } catch { "" })
+            if ($git_dir | is-empty) { return null }
+            let root = (try { ^git -C $pwd rev-parse --show-toplevel | str trim } catch { "" })
+            if ($root | is-empty) { return null }
+            { root: $root, fetch_head: ([$git_dir "FETCH_HEAD"] | path join) }
+        })
+        "hg" => (do {
+            if not (have-command "hg") { return null }
+            let root = (try { ^vcs rootdir | str trim } catch { "" })
+            if ($root | is-empty) { return null }
+            # 00changelog.i is rewritten by `hg pull` whether or not new
+            # changesets arrived, so its mtime tracks the most recent pull.
+            { root: $root, fetch_head: ([$root ".hg" "store" "00changelog.i"] | path join) }
+        })
+        "jj" => (do {
+            if not (have-command "jj") { return null }
+            let root = (try { ^vcs rootdir | str trim } catch { "" })
+            if ($root | is-empty) { return null }
+            { root: $root, fetch_head: ([$root ".jj" "repo" "store" "git" "FETCH_HEAD"] | path join) }
+        })
+        _ => null
+    })
+    if ($info | is-empty) { return }
+    if ($info.fetch_head | path exists) {
+        let mtime = (ls $info.fetch_head | get 0.modified | format date "%s" | into int)
         let now = (date now | format date "%s" | into int)
         let interval = ($env.BG_FETCH_INTERVAL_SECONDS | into int)
         if (($now - $mtime) < $interval) { return }
     }
-    let root = (try { ^git -C $pwd rev-parse --show-toplevel | str trim } catch { "" })
-    if ($root | is-empty) { return }
-    do $env.run-bg-fetch $root
+    do $env.run-bg-fetch $vcs_type $info.root
 }
 
 # Fire maybe-background-fetch after every cd. The hook receives

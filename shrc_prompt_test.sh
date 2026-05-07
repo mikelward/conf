@@ -51,7 +51,17 @@ map() { :; }
 # maybe_background_fetch still runs end-to-end and dedicated tests can
 # observe whether a fetch would have fired.
 _bg_fetch_log="$_testdir/bg_fetch.log"
-_run_bg_fetch() { printf '%s\n' "$1" >>"$_bg_fetch_log"; }
+_run_bg_fetch() { printf '%s %s\n' "$1" "$2" >>"$_bg_fetch_log"; }
+# Stub have_command so tests for the hg/jj branches of maybe_background_fetch
+# pass regardless of whether those binaries are installed on the test host.
+# git is also covered here so that the function-based stubs below take effect
+# for invocation, not the (real) git on PATH.
+have_command() {
+    case "$1" in
+        git|hg|jj|vcs) return 0 ;;
+        *) command -v "$1" >/dev/null 2>&1 ;;
+    esac
+}
 
 # Stub environment functions
 on_my_machine() { true; }
@@ -524,25 +534,47 @@ map() { :; }
 
 ###############
 # maybe_background_fetch: keeps remote refs warm by spawning a detached
-# `git fetch` after a cd into a git repo with working SSH auth. The
+# fetch after a cd into a git/hg/jj repo with working SSH auth. The
 # tests below exercise the gating logic; _run_bg_fetch is stubbed (above)
-# to append to $_bg_fetch_log instead of actually forking git.
+# to append to $_bg_fetch_log instead of actually forking the VCS.
 
 # Helper: reset gating state between tests so each test sees a fresh
 # "PWD just changed" situation.
 _reset_bg_fetch_state() {
     unset _LAST_BG_FETCH_PWD
     : >"$_bg_fetch_log"
+    _fake_vcs_type=
+    _fake_vcs_root=
 }
 
-# Build a fake git repo that responds to `git rev-parse --git-dir` and
-# `git rev-parse --show-toplevel`. We could `git init` for real, but
-# stubbing avoids requiring git on the test host and keeps the test
-# focused on shrc's gating logic.
+# Build fake VCS repos with the marker files maybe_background_fetch
+# stats. We could `git init` / `hg init` for real, but stubbing avoids
+# requiring those binaries on the test host and keeps the tests focused
+# on shrc's gating logic.
 _fake_git_repo="$_testdir/fakegitrepo"
 mkdir -p "$_fake_git_repo/.git"
-# Real `git rev-parse` would resolve $_fake_git_repo/.git as the git
-# dir; the stub mirrors that for the two flags we use.
+_fake_hg_repo="$_testdir/fakehgrepo"
+mkdir -p "$_fake_hg_repo/.hg/store"
+_fake_jj_repo="$_testdir/fakejjrepo"
+mkdir -p "$_fake_jj_repo/.jj/repo/store/git"
+
+# vcs() stub: tests set $_fake_vcs_type and $_fake_vcs_root before calling
+# maybe_background_fetch; the stub returns those for `vcs detect` and
+# `vcs rootdir`. Returning empty for an unset type lets us simulate "not
+# in any VCS repo" without changing PWD.
+_fake_vcs_type=
+_fake_vcs_root=
+vcs() {
+    case "$1" in
+        detect)  printf '%s\n' "$_fake_vcs_type" ;;
+        rootdir) printf '%s\n' "$_fake_vcs_root" ;;
+        *) return 1 ;;
+    esac
+}
+
+# git() stub: real `git rev-parse` would resolve $_fake_git_repo/.git as
+# the git dir; the stub mirrors that for the two flags we use. Tests that
+# want to simulate "not a git repo" override this transiently.
 git() {
     case "$1 $2" in
         "rev-parse --git-dir")        printf '%s\n' "$_fake_git_repo/.git" ;;
@@ -555,60 +587,98 @@ start_test "maybe_background_fetch no-op when PWD unchanged"
 _reset_bg_fetch_state
 PWD="$_fake_git_repo"
 _LAST_BG_FETCH_PWD="$PWD"
+_fake_vcs_type=git
+_fake_vcs_root=$_fake_git_repo
 maybe_background_fetch
 assert_equal "" "$(cat "$_bg_fetch_log")"
 
-start_test "maybe_background_fetch no-op outside any git repo"
+start_test "maybe_background_fetch no-op outside any VCS repo"
 _reset_bg_fetch_state
 PWD="$_testdir/not_a_repo"
 mkdir -p "$PWD"
-# Override git() so rev-parse fails — like running outside a repo.
-git() { return 128; }
+# vcs detect returns empty → not in any tracked repo.
 maybe_background_fetch
 assert_equal "" "$(cat "$_bg_fetch_log")"
-# Restore the fake-git stub for subsequent tests.
-git() {
-    case "$1 $2" in
-        "rev-parse --git-dir")        printf '%s\n' "$_fake_git_repo/.git" ;;
-        "rev-parse --show-toplevel")  printf '%s\n' "$_fake_git_repo" ;;
-        *) command git "$@" ;;
-    esac
-}
 
 start_test "maybe_background_fetch no-op when auth_info reports problems"
 _reset_bg_fetch_state
 PWD="$_fake_git_repo"
+_fake_vcs_type=git
+_fake_vcs_root=$_fake_git_repo
 is_ssh_valid() { false; }   # makes auth_info emit "SSH"
 maybe_background_fetch
 assert_equal "" "$(cat "$_bg_fetch_log")"
 is_ssh_valid() { true; }
 
-start_test "maybe_background_fetch no-op when FETCH_HEAD is recent"
+start_test "maybe_background_fetch git no-op when FETCH_HEAD is recent"
 _reset_bg_fetch_state
 PWD="$_fake_git_repo"
+_fake_vcs_type=git
+_fake_vcs_root=$_fake_git_repo
 touch "$_fake_git_repo/.git/FETCH_HEAD"
 maybe_background_fetch
 assert_equal "" "$(cat "$_bg_fetch_log")"
 
-start_test "maybe_background_fetch fires when FETCH_HEAD is stale"
+start_test "maybe_background_fetch git fires when FETCH_HEAD is stale"
 _reset_bg_fetch_state
 PWD="$_fake_git_repo"
+_fake_vcs_type=git
+_fake_vcs_root=$_fake_git_repo
 # Backdate FETCH_HEAD to two hours ago so the 1h interval check trips.
 touch -d '2 hours ago' "$_fake_git_repo/.git/FETCH_HEAD" 2>/dev/null \
     || touch -t "$(date -u -v-2H +%Y%m%d%H%M.%S 2>/dev/null)" "$_fake_git_repo/.git/FETCH_HEAD"
 maybe_background_fetch
-assert_equal "$_fake_git_repo" "$(cat "$_bg_fetch_log")"
+assert_equal "git $_fake_git_repo" "$(cat "$_bg_fetch_log")"
 
-start_test "maybe_background_fetch fires when FETCH_HEAD missing"
+start_test "maybe_background_fetch git fires when FETCH_HEAD missing"
 _reset_bg_fetch_state
 PWD="$_fake_git_repo"
+_fake_vcs_type=git
+_fake_vcs_root=$_fake_git_repo
 rm -f "$_fake_git_repo/.git/FETCH_HEAD"
 maybe_background_fetch
-assert_equal "$_fake_git_repo" "$(cat "$_bg_fetch_log")"
+assert_equal "git $_fake_git_repo" "$(cat "$_bg_fetch_log")"
+
+start_test "maybe_background_fetch hg fires when 00changelog.i is stale"
+_reset_bg_fetch_state
+PWD="$_fake_hg_repo"
+_fake_vcs_type=hg
+_fake_vcs_root=$_fake_hg_repo
+touch -d '2 hours ago' "$_fake_hg_repo/.hg/store/00changelog.i" 2>/dev/null \
+    || touch -t "$(date -u -v-2H +%Y%m%d%H%M.%S 2>/dev/null)" "$_fake_hg_repo/.hg/store/00changelog.i"
+maybe_background_fetch
+assert_equal "hg $_fake_hg_repo" "$(cat "$_bg_fetch_log")"
+
+start_test "maybe_background_fetch hg no-op when 00changelog.i is recent"
+_reset_bg_fetch_state
+PWD="$_fake_hg_repo"
+_fake_vcs_type=hg
+_fake_vcs_root=$_fake_hg_repo
+touch "$_fake_hg_repo/.hg/store/00changelog.i"
+maybe_background_fetch
+assert_equal "" "$(cat "$_bg_fetch_log")"
+
+start_test "maybe_background_fetch jj fires when FETCH_HEAD missing"
+_reset_bg_fetch_state
+PWD="$_fake_jj_repo"
+_fake_vcs_type=jj
+_fake_vcs_root=$_fake_jj_repo
+rm -f "$_fake_jj_repo/.jj/repo/store/git/FETCH_HEAD"
+maybe_background_fetch
+assert_equal "jj $_fake_jj_repo" "$(cat "$_bg_fetch_log")"
+
+start_test "maybe_background_fetch jj no-op when FETCH_HEAD is recent"
+_reset_bg_fetch_state
+PWD="$_fake_jj_repo"
+_fake_vcs_type=jj
+_fake_vcs_root=$_fake_jj_repo
+touch "$_fake_jj_repo/.jj/repo/store/git/FETCH_HEAD"
+maybe_background_fetch
+assert_equal "" "$(cat "$_bg_fetch_log")"
 
 # Reset for later tests.
-unset -f git
-unset _LAST_BG_FETCH_PWD
+unset -f git vcs
+unset _LAST_BG_FETCH_PWD _fake_vcs_type _fake_vcs_root
 
 ###############
 # VISUAL TEST MODE
