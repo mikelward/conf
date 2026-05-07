@@ -1,7 +1,8 @@
 # Default target: build everything locally (no install). Running `make`
-# with no args fetches the latest vcs submodule HEAD and builds the
-# binaries in-place so subsequent `make test` runs pick them up; it
-# does not touch $HOME or $PREFIX.
+# with no args configures this checkout to recurse into submodules,
+# updates the vcs submodule to the pinned commit recorded by conf, and
+# builds the binaries in-place so subsequent `make test` runs pick
+# them up; it does not touch $HOME or $PREFIX.
 all: vcs-build
 
 install: install-dotfiles install-vcs
@@ -12,32 +13,29 @@ install-dotfiles:
 install-vcs: vcs-build
 	$(MAKE) -C vcs install
 
-# vcs-build is the user-facing "do whatever it takes to get a fresh
-# vcs binary" target: fetch latest main, then build. The recipe
-# sequences the two pieces explicitly via sub-make so `make -j
-# vcs-build` doesn't run `git submodule update --remote` (from
-# vcs-fetch) concurrently with `git submodule update --init` (from
-# the vcs/Makefile sentinel), which would contend on the same
-# .git/modules/vcs lock files.
-vcs-build:
-	$(MAKE) vcs-fetch
+# vcs-build is the user-facing "do whatever it takes to build the
+# pinned vcs binary" target. It does not advance vcs to remote main;
+# changing the pin remains an explicit `git submodule update --remote
+# vcs && git add vcs` workflow so `git status` reports pin drift.
+vcs-build: vcs-sync
 	$(MAKE) vcs/vcs
 
-# vcs-fetch is the only target that does an explicit `--remote` update.
-# It also (idempotently) wires up core.hooksPath so the post-merge /
-# post-rewrite hooks fire and re-fetch on every pull / rebase. The
-# hooks invoke `git submodule update --remote --init vcs` directly
-# (no make round-trip); the parent's `all` target sequences vcs-fetch
-# before vcs/vcs via vcs-build, and explicit `make vcs-fetch` works
-# too -- but `make test` does not depend on vcs-fetch and so doesn't
-# do the --remote update on every test run. (Note: vcs/Makefile's
-# initial-checkout recipe also does a `git submodule update --init`,
-# which fetches the pinned commit on a fresh clone -- so vcs-fetch
-# isn't *literally* the only network-doing target, but it is the only
-# one tracking main HEAD.)
-vcs-fetch:
+# bootstrap/vcs-sync make the submodule workflow repo-local instead of
+# relying on a user's global gitconfig or template hooks. After this
+# has run once in a checkout, plain `git pull` recurses into submodules
+# and the checked-in post-merge/post-rewrite hooks also refresh vcs to
+# the commit recorded by conf.
+bootstrap: vcs-sync
+
+vcs-sync:
 	git config core.hooksPath gittemplates/hooks
-	git submodule update --remote --init vcs
+	git config submodule.recurse true
+	git submodule update --init --recursive vcs
+
+# Backwards-compatible target name for existing muscle memory. Despite
+# the name, this intentionally checks out the recorded submodule pin; it
+# does not fetch or checkout the latest remote branch head.
+vcs-fetch: vcs-sync
 
 # vcs/vcs is a real-file target so depending on it from a test target
 # only triggers a rebuild when the binary itself changed. vcs/Makefile
@@ -49,12 +47,10 @@ vcs/vcs: | vcs/Makefile
 	$(MAKE) -C vcs
 
 # Sentinel for "submodule is checked out". Absent on fresh clone;
-# populated by a direct `git submodule update --init` (no `--remote`)
-# so this rule doesn't race with vcs-fetch's `--remote` update under
-# parallel make. Once vcs-build has run, the subsequent vcs-fetch
-# moves the submodule to the latest main HEAD.
+# populated by a direct `git submodule update --init`, which checks out
+# the commit recorded by conf.
 vcs/Makefile:
-	git submodule update --init vcs
+	git submodule update --init --recursive vcs
 
 # Number of parallel jobs to use for `make test`. Defaults to the CPU count
 # (falling back to 8 if nproc isn't available). Override with e.g.
@@ -225,7 +221,8 @@ $(CACHE)/test-amethyst.stamp: amethyst.yml amethyst_test.sh shrc_test_lib.sh | $
 	@touch $@
 test-amethyst: $(CACHE)/test-amethyst.stamp
 
-.PHONY: all install install-dotfiles install-vcs vcs-build vcs-fetch \
+.PHONY: all install install-dotfiles install-vcs bootstrap \
+	vcs-build vcs-sync vcs-fetch \
 	test test-verbose test-full test-all \
 	test-dash test-bash test-zsh test-prompt test-vcs \
 	test-fish test-nu test-lint \
