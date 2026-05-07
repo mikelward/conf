@@ -226,7 +226,13 @@ $(CACHE)/test-gitconfig.stamp: gitconfig gitconfig_test.sh shrc_test_lib.sh | $(
 	@touch $@
 test-gitconfig: $(CACHE)/test-gitconfig.stamp
 
-$(CACHE)/test-makefile.stamp: Makefile makefile_test.sh shrc_test_lib.sh | $(CACHE)
+# Order-only dep on vcs/Makefile guarantees the submodule is checked
+# out before makefile_test.sh introspects `make -n` / `make -pRrq` --
+# otherwise the assertions about bare `make` not hitting the network
+# would legitimately fail on a fresh checkout where vcs-build's
+# order-only path through vcs/Makefile is still the active recipe.
+$(CACHE)/test-makefile.stamp: Makefile makefile_test.sh shrc_test_lib.sh \
+                              | $(CACHE) vcs/Makefile
 	@bash makefile_test.sh
 	@touch $@
 test-makefile: $(CACHE)/test-makefile.stamp
