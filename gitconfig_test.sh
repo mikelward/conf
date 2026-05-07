@@ -44,6 +44,9 @@ assert_equal \
 start_test "merge.conflictstyle is zdiff3"
 assert_equal \
     "zdiff3" "$(git config --file "$_gitconfig" merge.conflictstyle)"
+start_test "merge.log is true"
+assert_equal \
+    "true" "$(git config --file "$_gitconfig" merge.log)"
 start_test "diff.renames is true"
 assert_equal \
     "true" "$(git config --file "$_gitconfig" diff.renames)"
