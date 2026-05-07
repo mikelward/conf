@@ -101,6 +101,7 @@
     tool = vimdiff
     guitool = meld
     conflictstyle = zdiff3
+    log = true
 
 [rerere]
     enabled = true
