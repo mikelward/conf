@@ -43,6 +43,15 @@ base() { :; }
 # `map` is defined in shrc.vcs via the command dispatch loop; stub it
 # here so preprompt's `map 2>/dev/null` call is a silent no-op by default.
 map() { :; }
+# preprompt now calls maybe_background_fetch on each prompt to keep
+# remote refs warm. The real implementation forks `git fetch` via the
+# helper _run_bg_fetch in a detached subshell, which we don't want
+# during tests (would touch the user's repos and is non-deterministic).
+# Stub the helper to a recorder so the gating logic in
+# maybe_background_fetch still runs end-to-end and dedicated tests can
+# observe whether a fetch would have fired.
+_bg_fetch_log="$_testdir/bg_fetch.log"
+_run_bg_fetch() { printf '%s\n' "$1" >>"$_bg_fetch_log"; }
 
 # Stub environment functions
 on_my_machine() { true; }
@@ -472,7 +481,7 @@ workstation shpool conf main ―――――――――――――――――
 assert_equal "$expected" "$result"
 
 ###############
-start_test "whole prompt: mikel on workstation, shpool, subdir, outgoing, changes, fetch"
+start_test "whole prompt: mikel on workstation, shpool, subdir, outgoing, changes, pull"
 
 _edgedir="$_testdir/edge1"
 mkdir -p "$_edgedir/ui"
@@ -483,7 +492,7 @@ SECONDS=0
 in_shpool() { true; }
 SHPOOL_SESSION_NAME="edge1"
 inside_project() { true; }
-prompt_info() { echo "edge1 ui somebranch * fetch"; }
+prompt_info() { echo "edge1 ui somebranch * pull"; }
 # `map` is what preprompt actually calls (since commit 426dcda replaced
 # the direct `base` call). It's defined in shrc.vcs's command dispatch
 # loop and not extracted by this test, so stub it directly.
@@ -493,7 +502,7 @@ base() { echo "abc1234 Bump targetSdk to 36"; }
 
 result="$(_resolve_cr "$(preprompt)")"
 expected="
-workstation [edge1] edge1 ui somebranch * fetch ――――――――――――――――――――――――――――――――
+workstation [edge1] edge1 ui somebranch * pull ―――――――――――――――――――――――――――――――――
 abc1234 Bump targetSdk to 36"
 assert_equal "$expected" "$result"
 
@@ -512,6 +521,94 @@ vcs() { return 1; }
 outgoing() { return 1; }
 base() { :; }
 map() { :; }
+
+###############
+# maybe_background_fetch: keeps remote refs warm by spawning a detached
+# `git fetch` after a cd into a git repo with working SSH auth. The
+# tests below exercise the gating logic; _run_bg_fetch is stubbed (above)
+# to append to $_bg_fetch_log instead of actually forking git.
+
+# Helper: reset gating state between tests so each test sees a fresh
+# "PWD just changed" situation.
+_reset_bg_fetch_state() {
+    unset _LAST_BG_FETCH_PWD
+    : >"$_bg_fetch_log"
+}
+
+# Build a fake git repo that responds to `git rev-parse --git-dir` and
+# `git rev-parse --show-toplevel`. We could `git init` for real, but
+# stubbing avoids requiring git on the test host and keeps the test
+# focused on shrc's gating logic.
+_fake_git_repo="$_testdir/fakegitrepo"
+mkdir -p "$_fake_git_repo/.git"
+# Real `git rev-parse` would resolve $_fake_git_repo/.git as the git
+# dir; the stub mirrors that for the two flags we use.
+git() {
+    case "$1 $2" in
+        "rev-parse --git-dir")        printf '%s\n' "$_fake_git_repo/.git" ;;
+        "rev-parse --show-toplevel")  printf '%s\n' "$_fake_git_repo" ;;
+        *) command git "$@" ;;
+    esac
+}
+
+start_test "maybe_background_fetch no-op when PWD unchanged"
+_reset_bg_fetch_state
+PWD="$_fake_git_repo"
+_LAST_BG_FETCH_PWD="$PWD"
+maybe_background_fetch
+assert_equal "" "$(cat "$_bg_fetch_log")"
+
+start_test "maybe_background_fetch no-op outside any git repo"
+_reset_bg_fetch_state
+PWD="$_testdir/not_a_repo"
+mkdir -p "$PWD"
+# Override git() so rev-parse fails — like running outside a repo.
+git() { return 128; }
+maybe_background_fetch
+assert_equal "" "$(cat "$_bg_fetch_log")"
+# Restore the fake-git stub for subsequent tests.
+git() {
+    case "$1 $2" in
+        "rev-parse --git-dir")        printf '%s\n' "$_fake_git_repo/.git" ;;
+        "rev-parse --show-toplevel")  printf '%s\n' "$_fake_git_repo" ;;
+        *) command git "$@" ;;
+    esac
+}
+
+start_test "maybe_background_fetch no-op when auth_info reports problems"
+_reset_bg_fetch_state
+PWD="$_fake_git_repo"
+is_ssh_valid() { false; }   # makes auth_info emit "SSH"
+maybe_background_fetch
+assert_equal "" "$(cat "$_bg_fetch_log")"
+is_ssh_valid() { true; }
+
+start_test "maybe_background_fetch no-op when FETCH_HEAD is recent"
+_reset_bg_fetch_state
+PWD="$_fake_git_repo"
+touch "$_fake_git_repo/.git/FETCH_HEAD"
+maybe_background_fetch
+assert_equal "" "$(cat "$_bg_fetch_log")"
+
+start_test "maybe_background_fetch fires when FETCH_HEAD is stale"
+_reset_bg_fetch_state
+PWD="$_fake_git_repo"
+# Backdate FETCH_HEAD to two hours ago so the 1h interval check trips.
+touch -d '2 hours ago' "$_fake_git_repo/.git/FETCH_HEAD" 2>/dev/null \
+    || touch -t "$(date -u -v-2H +%Y%m%d%H%M.%S 2>/dev/null)" "$_fake_git_repo/.git/FETCH_HEAD"
+maybe_background_fetch
+assert_equal "$_fake_git_repo" "$(cat "$_bg_fetch_log")"
+
+start_test "maybe_background_fetch fires when FETCH_HEAD missing"
+_reset_bg_fetch_state
+PWD="$_fake_git_repo"
+rm -f "$_fake_git_repo/.git/FETCH_HEAD"
+maybe_background_fetch
+assert_equal "$_fake_git_repo" "$(cat "$_bg_fetch_log")"
+
+# Reset for later tests.
+unset -f git
+unset _LAST_BG_FETCH_PWD
 
 ###############
 # VISUAL TEST MODE

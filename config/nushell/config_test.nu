@@ -2040,6 +2040,95 @@ except OSError: pass
         rd
         assert equal $env.PWD $proj
     })
+
+    ###############
+    # maybe-background-fetch: nu version. Each test builds a fake git
+    # repo (a directory with .git/ inside it), overrides $env.run-bg-fetch
+    # with a recorder that writes to a file, and asserts whether
+    # maybe-background-fetch decided to fire. We can't intercept the
+    # external `git rev-parse` call cleanly in nu, so the fake repo is a
+    # real directory (`git init`-equivalent stub layout) and we let the
+    # real git binary handle the rev-parse. Skipped if git is missing.
+    (run-test "nu maybe-background-fetch fires when FETCH_HEAD missing" {
+        if not (have-command "git") { return }
+        let base = ($env.HOME | path expand)
+        let proj = ([$base "bgfetch-missing"] | path join)
+        mkdir $proj
+        cd $proj
+        ^git init --quiet --initial-branch=main
+        ^git config commit.gpgsign false
+        let log = ([$proj "fetch.log"] | path join)
+        $env.run-bg-fetch = {|root| $root | save -f $log }
+        $env.is-ssh-valid = {|| true }
+        $env.auth-info = {|| "" }
+        maybe-background-fetch
+        assert (($log | path exists) and ((open $log | str trim) == $proj))
+    })
+
+    (run-test "nu maybe-background-fetch no-op outside git repo" {
+        if not (have-command "git") { return }
+        let base = ($env.HOME | path expand)
+        let dir = ([$base "bgfetch-norepo"] | path join)
+        mkdir $dir
+        cd $dir
+        let log = ([$dir "fetch.log"] | path join)
+        $env.run-bg-fetch = {|root| $root | save -f $log }
+        $env.auth-info = {|| "" }
+        maybe-background-fetch
+        assert (not ($log | path exists))
+    })
+
+    (run-test "nu maybe-background-fetch no-op when auth-info reports problems" {
+        if not (have-command "git") { return }
+        let base = ($env.HOME | path expand)
+        let proj = ([$base "bgfetch-noauth"] | path join)
+        mkdir $proj
+        cd $proj
+        ^git init --quiet --initial-branch=main
+        ^git config commit.gpgsign false
+        let log = ([$proj "fetch.log"] | path join)
+        $env.run-bg-fetch = {|root| $root | save -f $log }
+        # Override auth-info to simulate missing SSH identity.
+        $env.auth-info = {|| "SSH" }
+        maybe-background-fetch
+        assert (not ($log | path exists))
+    })
+
+    (run-test "nu maybe-background-fetch no-op when FETCH_HEAD is recent" {
+        if not (have-command "git") { return }
+        let base = ($env.HOME | path expand)
+        let proj = ([$base "bgfetch-fresh"] | path join)
+        mkdir $proj
+        cd $proj
+        ^git init --quiet --initial-branch=main
+        ^git config commit.gpgsign false
+        # Recent FETCH_HEAD: created just now -> well under 1h.
+        touch ([$proj ".git" "FETCH_HEAD"] | path join)
+        let log = ([$proj "fetch.log"] | path join)
+        $env.run-bg-fetch = {|root| $root | save -f $log }
+        $env.auth-info = {|| "" }
+        maybe-background-fetch
+        assert (not ($log | path exists))
+    })
+
+    (run-test "nu maybe-background-fetch fires when FETCH_HEAD is stale" {
+        if not (have-command "git") { return }
+        let base = ($env.HOME | path expand)
+        let proj = ([$base "bgfetch-stale"] | path join)
+        mkdir $proj
+        cd $proj
+        ^git init --quiet --initial-branch=main
+        ^git config commit.gpgsign false
+        let fh = ([$proj ".git" "FETCH_HEAD"] | path join)
+        touch $fh
+        # Backdate past the 1h interval so the stale-mtime branch trips.
+        ^touch -d "2 hours ago" $fh
+        let log = ([$proj "fetch.log"] | path join)
+        $env.run-bg-fetch = {|root| $root | save -f $log }
+        $env.auth-info = {|| "" }
+        maybe-background-fetch
+        assert (($log | path exists) and ((open $log | str trim) == $proj))
+    })
 ]
 
 for r in $results { print $r }
