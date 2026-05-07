@@ -16,9 +16,11 @@ install-vcs: vcs-build
 # vcs-build is the user-facing "do whatever it takes to build a fresh
 # vcs binary" target. It advances vcs to the configured remote branch;
 # because .gitmodules does not ignore vcs, `git status` reports the
-# submodule as modified when the recorded pin needs committing.
+# submodule as modified when the recorded pin needs committing. Then it
+# delegates directly to the submodule's Makefile so a binary from the
+# previous submodule commit is rebuilt against the advanced sources.
 vcs-build: vcs-sync
-	$(MAKE) vcs/vcs
+	$(MAKE) -C vcs
 
 # bootstrap/vcs-sync make the submodule workflow repo-local instead of
 # relying on a user's global gitconfig or template hooks. After this

@@ -75,6 +75,11 @@ assert_equal "all" "$_default_target"
 _all_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^all:')
 start_test "all depends on vcs-build"
 assert_contains "vcs-build" "$_all_deps"
+_vcs_build_recipe=$(make -C "$_srcdir" -n vcs-build 2>/dev/null)
+start_test "vcs-build delegates directly to the vcs Makefile"
+assert_contains "make -C vcs" "$_vcs_build_recipe"
+start_test "vcs-build does not reuse the parent vcs/vcs freshness check"
+assert_not_contains "make vcs/vcs" "$_vcs_build_recipe"
 _default_recipe=$(make -C "$_srcdir" -n 2>/dev/null)
 start_test "bare make does not run confinst"
 assert_not_contains "confinst" "$_default_recipe"
