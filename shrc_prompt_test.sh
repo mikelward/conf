@@ -658,23 +658,57 @@ touch "$_fake_hg_repo/.hg/store/00changelog.i"
 maybe_background_fetch
 assert_equal "" "$(cat "$_bg_fetch_log")"
 
-start_test "maybe_background_fetch jj fires when FETCH_HEAD missing"
+start_test "maybe_background_fetch jj non-colocated fires when FETCH_HEAD missing"
 _reset_bg_fetch_state
 PWD="$_fake_jj_repo"
 _fake_vcs_type=jj
 _fake_vcs_root=$_fake_jj_repo
+# Non-colocated layout: no top-level `.git`, so the `.jj/repo/store/git/FETCH_HEAD` path is used.
+test -d "$_fake_jj_repo/.git" && rm -rf "$_fake_jj_repo/.git"
 rm -f "$_fake_jj_repo/.jj/repo/store/git/FETCH_HEAD"
 maybe_background_fetch
 assert_equal "jj $_fake_jj_repo" "$(cat "$_bg_fetch_log")"
 
-start_test "maybe_background_fetch jj no-op when FETCH_HEAD is recent"
+start_test "maybe_background_fetch jj non-colocated no-op when FETCH_HEAD is recent"
 _reset_bg_fetch_state
 PWD="$_fake_jj_repo"
 _fake_vcs_type=jj
 _fake_vcs_root=$_fake_jj_repo
+test -d "$_fake_jj_repo/.git" && rm -rf "$_fake_jj_repo/.git"
 touch "$_fake_jj_repo/.jj/repo/store/git/FETCH_HEAD"
 maybe_background_fetch
 assert_equal "" "$(cat "$_bg_fetch_log")"
+
+# Colocated jj layout: `jj git init --colocate` (or a default `jj git
+# init` since modern jj defaults to colocated) puts a real `.git` at
+# the workspace root and `jj git fetch` writes to `.git/FETCH_HEAD`.
+# The non-colocated `.jj/repo/store/git/FETCH_HEAD` path never gets
+# touched in that layout, so the function must prefer the top-level
+# `.git/FETCH_HEAD` when present.
+_fake_jj_colocated="$_testdir/fakejj_colocated"
+mkdir -p "$_fake_jj_colocated/.jj/repo/store/git" "$_fake_jj_colocated/.git"
+
+start_test "maybe_background_fetch jj colocated no-op when .git/FETCH_HEAD recent"
+_reset_bg_fetch_state
+PWD="$_fake_jj_colocated"
+_fake_vcs_type=jj
+_fake_vcs_root=$_fake_jj_colocated
+touch "$_fake_jj_colocated/.git/FETCH_HEAD"
+# Make the non-colocated path stale to prove the colocated one wins.
+touch -d '2 hours ago' "$_fake_jj_colocated/.jj/repo/store/git/FETCH_HEAD" 2>/dev/null \
+    || touch -t "$(date -u -v-2H +%Y%m%d%H%M.%S 2>/dev/null)" "$_fake_jj_colocated/.jj/repo/store/git/FETCH_HEAD"
+maybe_background_fetch
+assert_equal "" "$(cat "$_bg_fetch_log")"
+
+start_test "maybe_background_fetch jj colocated fires when .git/FETCH_HEAD stale"
+_reset_bg_fetch_state
+PWD="$_fake_jj_colocated"
+_fake_vcs_type=jj
+_fake_vcs_root=$_fake_jj_colocated
+touch -d '2 hours ago' "$_fake_jj_colocated/.git/FETCH_HEAD" 2>/dev/null \
+    || touch -t "$(date -u -v-2H +%Y%m%d%H%M.%S 2>/dev/null)" "$_fake_jj_colocated/.git/FETCH_HEAD"
+maybe_background_fetch
+assert_equal "jj $_fake_jj_colocated" "$(cat "$_bg_fetch_log")"
 
 # Reset for later tests.
 unset -f git vcs

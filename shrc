@@ -1230,7 +1230,17 @@ maybe_background_fetch() {
             have_command jj || return
             _root="$(vcs rootdir 2>/dev/null)" || return
             test -n "$_root" || return
-            _fetch_head="$_root/.jj/repo/store/git/FETCH_HEAD"
+            # Colocated workspaces (the default `jj git init` layout)
+            # have a top-level `.git` and `jj git fetch` updates
+            # `$_root/.git/FETCH_HEAD`. Non-colocated workspaces put
+            # the git store under `.jj/repo/store/git/`. Prefer the
+            # colocated path when present so the mtime gate doesn't
+            # always treat colocated repos as stale.
+            if test -d "$_root/.git"; then
+                _fetch_head="$_root/.git/FETCH_HEAD"
+            else
+                _fetch_head="$_root/.jj/repo/store/git/FETCH_HEAD"
+            fi
             ;;
         *) return ;;
     esac

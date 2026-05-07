@@ -1300,7 +1300,18 @@ def maybe-background-fetch [] {
             if not (have-command "jj") { return null }
             let root = (try { ^vcs rootdir | str trim } catch { "" })
             if ($root | is-empty) { return null }
-            { root: $root, fetch_head: ([$root ".jj" "repo" "store" "git" "FETCH_HEAD"] | path join) }
+            # Colocated workspaces (default `jj git init` layout) have
+            # a top-level `.git` and `jj git fetch` updates
+            # `$root/.git/FETCH_HEAD`. Non-colocated workspaces put
+            # the git store under `.jj/repo/store/git/`. Prefer the
+            # colocated path when present.
+            let colocated = ([$root ".git"] | path join)
+            let fh = if ($colocated | path type) == "dir" {
+                ([$colocated "FETCH_HEAD"] | path join)
+            } else {
+                ([$root ".jj" "repo" "store" "git" "FETCH_HEAD"] | path join)
+            }
+            { root: $root, fetch_head: $fh }
         })
         _ => null
     })

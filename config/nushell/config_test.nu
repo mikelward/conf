@@ -2171,15 +2171,14 @@ except OSError: pass
         assert (not ($log | path exists))
     })
 
-    (run-test "nu maybe-background-fetch jj fires when FETCH_HEAD missing" {
+    # Non-colocated jj layout: no top-level `.git` so the function
+    # falls back to `.jj/repo/store/git/FETCH_HEAD`.
+    (run-test "nu maybe-background-fetch jj non-colocated fires when FETCH_HEAD missing" {
         if not ((have-command "vcs") and (have-command "jj")) { return }
         let base = ($env.HOME | path expand)
         let proj = ([$base "bgfetch-jj-missing"] | path join)
-        mkdir $proj
+        mkdir ([$proj ".jj" "repo" "store" "git"] | path join)
         cd $proj
-        with-env { JJ_USER: "test", JJ_EMAIL: "test@test" } {
-            ^jj git init
-        }
         let log = ([$proj "fetch.log"] | path join)
         $env.run-bg-fetch = {|vcs, root| $"($vcs) ($root)" | save -f $log }
         $env.auth-info = {|| "" }
@@ -2187,21 +2186,59 @@ except OSError: pass
         assert (($log | path exists) and ((open $log | str trim) == $"jj ($proj)"))
     })
 
-    (run-test "nu maybe-background-fetch jj no-op when FETCH_HEAD is recent" {
+    (run-test "nu maybe-background-fetch jj non-colocated no-op when FETCH_HEAD recent" {
         if not ((have-command "vcs") and (have-command "jj")) { return }
         let base = ($env.HOME | path expand)
         let proj = ([$base "bgfetch-jj-fresh"] | path join)
-        mkdir $proj
+        mkdir ([$proj ".jj" "repo" "store" "git"] | path join)
         cd $proj
-        with-env { JJ_USER: "test", JJ_EMAIL: "test@test" } {
-            ^jj git init
-        }
         touch ([$proj ".jj" "repo" "store" "git" "FETCH_HEAD"] | path join)
         let log = ([$proj "fetch.log"] | path join)
         $env.run-bg-fetch = {|vcs, root| $"($vcs) ($root)" | save -f $log }
         $env.auth-info = {|| "" }
         maybe-background-fetch
         assert (not ($log | path exists))
+    })
+
+    # Colocated jj layout: `jj git init --colocate` (or a default
+    # `jj git init` since modern jj defaults to colocated) puts a real
+    # `.git` at the workspace root and `jj git fetch` writes to
+    # `.git/FETCH_HEAD`. The function must prefer that path over the
+    # non-colocated `.jj/repo/store/git/FETCH_HEAD`.
+    (run-test "nu maybe-background-fetch jj colocated no-op when .git/FETCH_HEAD recent" {
+        if not ((have-command "vcs") and (have-command "jj")) { return }
+        let base = ($env.HOME | path expand)
+        let proj = ([$base "bgfetch-jj-colocated-fresh"] | path join)
+        mkdir ([$proj ".jj" "repo" "store" "git"] | path join)
+        mkdir ([$proj ".git"] | path join)
+        cd $proj
+        touch ([$proj ".git" "FETCH_HEAD"] | path join)
+        # Make the non-colocated path stale to prove the colocated one wins.
+        let nc_marker = ([$proj ".jj" "repo" "store" "git" "FETCH_HEAD"] | path join)
+        touch $nc_marker
+        ^touch -d "2 hours ago" $nc_marker
+        let log = ([$proj "fetch.log"] | path join)
+        $env.run-bg-fetch = {|vcs, root| $"($vcs) ($root)" | save -f $log }
+        $env.auth-info = {|| "" }
+        maybe-background-fetch
+        assert (not ($log | path exists))
+    })
+
+    (run-test "nu maybe-background-fetch jj colocated fires when .git/FETCH_HEAD stale" {
+        if not ((have-command "vcs") and (have-command "jj")) { return }
+        let base = ($env.HOME | path expand)
+        let proj = ([$base "bgfetch-jj-colocated-stale"] | path join)
+        mkdir ([$proj ".jj" "repo" "store" "git"] | path join)
+        mkdir ([$proj ".git"] | path join)
+        cd $proj
+        let marker = ([$proj ".git" "FETCH_HEAD"] | path join)
+        touch $marker
+        ^touch -d "2 hours ago" $marker
+        let log = ([$proj "fetch.log"] | path join)
+        $env.run-bg-fetch = {|vcs, root| $"($vcs) ($root)" | save -f $log }
+        $env.auth-info = {|| "" }
+        maybe-background-fetch
+        assert (($log | path exists) and ((open $log | str trim) == $"jj ($proj)"))
     })
 ]
 

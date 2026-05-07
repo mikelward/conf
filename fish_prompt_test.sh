@@ -720,7 +720,7 @@ result="$(_fish_run_bg_fetch '
 ')"
 assert_equal "0" "$(printf %s "$result" | grep -c FETCH=)"
 
-start_test "fish maybe_background_fetch jj fires when FETCH_HEAD missing"
+start_test "fish maybe_background_fetch jj non-colocated fires when FETCH_HEAD missing"
 result="$(_fish_run_bg_fetch '
     set -g _fakerepo "'$_testdir'/fish_fakerepo_jj_missing"
     mkdir -p $_fakerepo/.jj/repo/store/git
@@ -733,7 +733,7 @@ result="$(_fish_run_bg_fetch '
 ')"
 assert_contains "FETCH=jj $_testdir/fish_fakerepo_jj_missing" "$result"
 
-start_test "fish maybe_background_fetch jj no-op when FETCH_HEAD recent"
+start_test "fish maybe_background_fetch jj non-colocated no-op when FETCH_HEAD recent"
 result="$(_fish_run_bg_fetch '
     set -g _fakerepo "'$_testdir'/fish_fakerepo_jj_fresh"
     mkdir -p $_fakerepo/.jj/repo/store/git
@@ -746,5 +746,42 @@ result="$(_fish_run_bg_fetch '
     maybe_background_fetch
 ')"
 assert_equal "0" "$(printf %s "$result" | grep -c FETCH=)"
+
+# Colocated jj layout: both `.git` and `.jj` at the workspace root.
+# `jj git fetch` writes to `.git/FETCH_HEAD`; the function must prefer
+# that over `.jj/repo/store/git/FETCH_HEAD`.
+start_test "fish maybe_background_fetch jj colocated no-op when .git/FETCH_HEAD recent"
+result="$(_fish_run_bg_fetch '
+    set -g _fakerepo "'$_testdir'/fish_fakerepo_jj_colocated_fresh"
+    mkdir -p $_fakerepo/.jj/repo/store/git $_fakerepo/.git
+    touch $_fakerepo/.git/FETCH_HEAD
+    # Make the non-colocated path stale to prove the colocated one wins.
+    touch $_fakerepo/.jj/repo/store/git/FETCH_HEAD
+    touch -d "2 hours ago" $_fakerepo/.jj/repo/store/git/FETCH_HEAD 2>/dev/null
+    or touch -t (date -u -v-2H +%Y%m%d%H%M.%S 2>/dev/null) $_fakerepo/.jj/repo/store/git/FETCH_HEAD
+    cd $_fakerepo
+    set -g _fake_vcs_type jj
+    set -g _fake_vcs_root $_fakerepo
+    '"$_fish_bg_fetch_stubs"'
+    set -e _LAST_BG_FETCH_PWD
+    maybe_background_fetch
+')"
+assert_equal "0" "$(printf %s "$result" | grep -c FETCH=)"
+
+start_test "fish maybe_background_fetch jj colocated fires when .git/FETCH_HEAD stale"
+result="$(_fish_run_bg_fetch '
+    set -g _fakerepo "'$_testdir'/fish_fakerepo_jj_colocated_stale"
+    mkdir -p $_fakerepo/.jj/repo/store/git $_fakerepo/.git
+    touch $_fakerepo/.git/FETCH_HEAD
+    touch -d "2 hours ago" $_fakerepo/.git/FETCH_HEAD 2>/dev/null
+    or touch -t (date -u -v-2H +%Y%m%d%H%M.%S 2>/dev/null) $_fakerepo/.git/FETCH_HEAD
+    cd $_fakerepo
+    set -g _fake_vcs_type jj
+    set -g _fake_vcs_root $_fakerepo
+    '"$_fish_bg_fetch_stubs"'
+    set -e _LAST_BG_FETCH_PWD
+    maybe_background_fetch
+')"
+assert_contains "FETCH=jj $_testdir/fish_fakerepo_jj_colocated_stale" "$result"
 
 test_summary "fish_prompt_test"

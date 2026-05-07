@@ -149,7 +149,8 @@ test-zsh: $(CACHE)/test-zsh.stamp
 # test-prompt depends on vcs/vcs because maybe_background_fetch shells
 # out to `vcs detect` / `vcs rootdir` for VCS-aware dispatch; the test
 # stubs those calls but `have_command vcs` still expects the binary
-# on PATH.
+# on PATH. bash is a hard requirement (no skip branch), so the make
+# dep is always reached anyway.
 $(CACHE)/test-prompt.stamp: shrc shrc_test_lib.sh shrc_prompt_test.sh vcs/vcs | $(CACHE)
 	@PATH="$(CURDIR)/vcs:$$PATH" bash shrc_prompt_test.sh
 	@touch $@
@@ -169,9 +170,13 @@ test-vcs: $(CACHE)/test-vcs.stamp
 # so that test-lint stays fish-free and caches normally even when fish
 # isn't installed. Stamp only touched when fish is present so installing
 # fish later re-runs the suite.
+# vcs/vcs is built inside the if-fish branch, not declared as a make
+# prereq, so environments without go/submodules still hit the SKIP
+# branch cleanly when fish is absent.
 $(CACHE)/test-fish.stamp: config/fish/config.fish shrc_test_lib.sh \
-                          fish_test.sh fish_prompt_test.sh vcs/vcs | $(CACHE)
+                          fish_test.sh fish_prompt_test.sh | $(CACHE)
 	@if command -v fish >/dev/null 2>&1; then \
+		$(MAKE) --no-print-directory vcs/vcs && \
 		fish -n config/fish/config.fish && \
 		PATH="$(CURDIR)/vcs:$$PATH" bash fish_test.sh && \
 		PATH="$(CURDIR)/vcs:$$PATH" bash fish_prompt_test.sh && \
@@ -183,8 +188,12 @@ test-fish: $(CACHE)/test-fish.stamp
 
 # Nushell parse + behavioral tests, bundled because both invoke `nu` and
 # share the same skip behavior. Stamp only touched when nu is present.
-$(CACHE)/test-nu.stamp: config/nushell/config.nu config/nushell/config_test.nu vcs/vcs | $(CACHE)
+# vcs/vcs is built inside the if-nu branch, not declared as a make
+# prereq, so environments without go/submodules still hit the SKIP
+# branch cleanly when nu is absent.
+$(CACHE)/test-nu.stamp: config/nushell/config.nu config/nushell/config_test.nu | $(CACHE)
 	@if command -v nu >/dev/null 2>&1; then \
+		$(MAKE) --no-print-directory vcs/vcs && \
 		PATH="$(CURDIR)/vcs:$$PATH" nu --no-config-file --commands 'source config/nushell/config.nu' && \
 		PATH="$(CURDIR)/vcs:$$PATH" nu --no-config-file config/nushell/config_test.nu && \
 		touch $@; \

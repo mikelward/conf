@@ -1036,7 +1036,16 @@ if is_interactive
                 have_command jj; or return
                 set _root (command vcs rootdir 2>/dev/null | string collect)
                 test -n "$_root"; or return
-                set _fetch_head "$_root/.jj/repo/store/git/FETCH_HEAD"
+                # Colocated workspaces (default `jj git init` layout)
+                # have a top-level `.git` and `jj git fetch` updates
+                # `$_root/.git/FETCH_HEAD`. Non-colocated workspaces
+                # put the git store under `.jj/repo/store/git/`.
+                # Prefer the colocated path when present.
+                if test -d "$_root/.git"
+                    set _fetch_head "$_root/.git/FETCH_HEAD"
+                else
+                    set _fetch_head "$_root/.jj/repo/store/git/FETCH_HEAD"
+                end
             case '*'
                 return
         end
