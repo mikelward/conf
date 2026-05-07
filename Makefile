@@ -1,6 +1,6 @@
 # Default target: build everything locally (no install). Running `make`
 # with no args configures this checkout to recurse into submodules,
-# updates the vcs submodule to the pinned commit recorded by conf, and
+# advances the vcs submodule to its configured remote branch, and
 # builds the binaries in-place so subsequent `make test` runs pick
 # them up; it does not touch $HOME or $PREFIX.
 all: vcs-build
@@ -13,10 +13,10 @@ install-dotfiles:
 install-vcs: vcs-build
 	$(MAKE) -C vcs install
 
-# vcs-build is the user-facing "do whatever it takes to build the
-# pinned vcs binary" target. It does not advance vcs to remote main;
-# changing the pin remains an explicit `git submodule update --remote
-# vcs && git add vcs` workflow so `git status` reports pin drift.
+# vcs-build is the user-facing "do whatever it takes to build a fresh
+# vcs binary" target. It advances vcs to the configured remote branch;
+# because .gitmodules does not ignore vcs, `git status` reports the
+# submodule as modified when the recorded pin needs committing.
 vcs-build: vcs-sync
 	$(MAKE) vcs/vcs
 
@@ -24,17 +24,15 @@ vcs-build: vcs-sync
 # relying on a user's global gitconfig or template hooks. After this
 # has run once in a checkout, plain `git pull` recurses into submodules
 # and the checked-in post-merge/post-rewrite hooks also refresh vcs to
-# the commit recorded by conf.
+# its configured remote branch when a pull/rebase updates conf.
 bootstrap: vcs-sync
 
 vcs-sync:
 	git config core.hooksPath gittemplates/hooks
 	git config submodule.recurse true
-	git submodule update --init --recursive vcs
+	git submodule update --remote --init --recursive vcs
 
-# Backwards-compatible target name for existing muscle memory. Despite
-# the name, this intentionally checks out the recorded submodule pin; it
-# does not fetch or checkout the latest remote branch head.
+# Backwards-compatible target name for existing muscle memory.
 vcs-fetch: vcs-sync
 
 # vcs/vcs is a real-file target so depending on it from a test target
@@ -47,10 +45,10 @@ vcs/vcs: | vcs/Makefile
 	$(MAKE) -C vcs
 
 # Sentinel for "submodule is checked out". Absent on fresh clone;
-# populated by a direct `git submodule update --init`, which checks out
-# the commit recorded by conf.
+# populated by a direct remote update so fresh test/build entrypoints
+# use the same up-to-date vcs checkout as `make`.
 vcs/Makefile:
-	git submodule update --init --recursive vcs
+	git submodule update --remote --init --recursive vcs
 
 # Number of parallel jobs to use for `make test`. Defaults to the CPU count
 # (falling back to 8 if nproc isn't available). Override with e.g.

@@ -33,17 +33,16 @@ assert_contains "test-full" "$_targets"
 
 # vcs-sync is the setup target: it wires repo-local config so plain
 # `git pull` recurses into submodules after bootstrap, installs the
-# checked-in hooks, and checks out the pinned vcs submodule commit
-# without advancing to the remote branch head.
+# checked-in hooks, and advances vcs to its configured remote branch.
+# Because .gitmodules does not ignore vcs, git status reports any
+# resulting pin drift.
 _vcs_sync_recipe=$(make -C "$_srcdir" -n vcs-sync 2>/dev/null)
 start_test "vcs-sync enables recursive submodule pulls"
 assert_contains "submodule.recurse true" "$_vcs_sync_recipe"
 start_test "vcs-sync wires up core.hooksPath"
 assert_contains "core.hooksPath gittemplates/hooks" "$_vcs_sync_recipe"
-start_test "vcs-sync checks out the pinned vcs submodule"
-assert_contains "submodule update --init --recursive vcs" "$_vcs_sync_recipe"
-start_test "vcs-sync does not advance vcs to remote HEAD"
-assert_not_contains "--remote" "$_vcs_sync_recipe"
+start_test "vcs-sync updates vcs to its configured remote branch"
+assert_contains "submodule update --remote --init --recursive vcs" "$_vcs_sync_recipe"
 _vcs_fetch_recipe=$(make -C "$_srcdir" -n vcs-fetch 2>/dev/null)
 start_test "vcs-fetch remains a compatibility alias for vcs-sync"
 assert_equal "$_vcs_sync_recipe" "$_vcs_fetch_recipe"
@@ -51,17 +50,15 @@ assert_equal "$_vcs_sync_recipe" "$_vcs_fetch_recipe"
 _gitmodules=$(git config -f "$_srcdir/.gitmodules" --get-regexp '^submodule\.vcs\.' 2>/dev/null)
 start_test "vcs submodule pin drift is visible to git status"
 assert_not_contains "ignore all" "$_gitmodules"
+start_test "vcs submodule tracks main for remote updates"
+assert_contains "branch main" "$_gitmodules"
 
 _post_merge=$(sed -n '1,80p' "$_srcdir/gittemplates/hooks/post-merge")
 _post_rewrite=$(sed -n '1,80p' "$_srcdir/gittemplates/hooks/post-rewrite")
-start_test "post-merge refreshes the pinned vcs submodule"
-assert_contains "submodule update --init --recursive vcs" "$_post_merge"
-start_test "post-merge does not advance vcs to remote HEAD"
-assert_not_contains "--remote" "$_post_merge"
-start_test "post-rewrite refreshes the pinned vcs submodule"
-assert_contains "submodule update --init --recursive vcs" "$_post_rewrite"
-start_test "post-rewrite does not advance vcs to remote HEAD"
-assert_not_contains "--remote" "$_post_rewrite"
+start_test "post-merge refreshes vcs to its remote branch"
+assert_contains "submodule update --remote --init --recursive vcs" "$_post_merge"
+start_test "post-rewrite refreshes vcs to its remote branch"
+assert_contains "submodule update --remote --init --recursive vcs" "$_post_rewrite"
 
 # Bare `make` (no target) must build, not install. Verify the default
 # target is `all`, that `all` depends on vcs-build, and that its recipe

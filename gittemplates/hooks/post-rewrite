@@ -1,11 +1,10 @@
 #!/bin/sh
-# In conf, refresh the ./vcs submodule to the commit recorded by the
-# just-rewritten superproject after a rebase. Skipped on `git commit
-# --amend` to avoid submodule work on every amend. This intentionally
-# avoids branch-head updates so a changed pin stays visible in
-# `git status` until committed.
+# In conf, refresh the ./vcs submodule to its configured remote branch
+# after a rebase. Skipped on `git commit --amend` to avoid submodule
+# work on every amend. Since .gitmodules does not ignore vcs, `git status`
+# reports a changed submodule when the recorded pin needs committing.
 test "$1" = rebase || exit 0
 if test -f .gitmodules &&
         git config -f .gitmodules --get submodule.vcs.path >/dev/null 2>&1; then
-    git submodule update --init --recursive vcs
+    git submodule update --remote --init --recursive vcs
 fi

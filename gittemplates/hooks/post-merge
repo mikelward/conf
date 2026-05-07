@@ -1,8 +1,8 @@
 #!/bin/sh
-# In conf, refresh the ./vcs submodule to the commit recorded by the
-# just-merged superproject. This intentionally avoids branch-head
-# updates so a changed pin stays visible in `git status` until committed.
+# In conf, refresh the ./vcs submodule to its configured remote branch
+# after a pull/merge. Since .gitmodules does not ignore vcs, `git status`
+# reports a changed submodule when the recorded pin needs committing.
 if test -f .gitmodules &&
         git config -f .gitmodules --get submodule.vcs.path >/dev/null 2>&1; then
-    git submodule update --init --recursive vcs
+    git submodule update --remote --init --recursive vcs
 fi
