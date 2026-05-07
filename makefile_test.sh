@@ -80,11 +80,35 @@ start_test "vcs-build delegates directly to the vcs Makefile"
 assert_contains "make -C vcs" "$_vcs_build_recipe"
 start_test "vcs-build does not reuse the parent vcs/vcs freshness check"
 assert_not_contains "make vcs/vcs" "$_vcs_build_recipe"
+# Once the submodule is checked out, vcs-build must not hit the
+# network on every invocation -- staying current is the
+# post-merge/post-rewrite hook chain's job. Verified by checking that
+# no submodule update / hooks-config commands appear in `make -n`'s
+# recipe trace when vcs/Makefile already exists. (`make test` ensures
+# vcs/ is checked out before this test runs.)
 _default_recipe=$(make -C "$_srcdir" -n 2>/dev/null)
 start_test "bare make does not run confinst"
 assert_not_contains "confinst" "$_default_recipe"
 start_test "bare make does not run install-vcs"
 assert_not_contains "install-vcs" "$_default_recipe"
+start_test "bare make does not advance the vcs submodule"
+assert_not_contains "submodule update --remote" "$_default_recipe"
+start_test "bare make does not reconfigure repo hooks"
+assert_not_contains "core.hooksPath" "$_default_recipe"
+
+# install-vcs must explicitly advance vcs to its configured remote
+# branch before installing, so installers always ship the latest even
+# when conf hasn't been pulled recently (the default `make` path
+# deliberately skips that fetch). install-vcs sequences vcs-sync,
+# vcs-build, and `make -C vcs install` via sub-make so `make -j
+# install-vcs` doesn't race the submodule checkout against the build.
+_install_vcs_recipe=$(make -C "$_srcdir" -n install-vcs 2>/dev/null)
+start_test "install-vcs runs vcs-sync to ship the latest vcs"
+assert_contains "submodule update --remote" "$_install_vcs_recipe"
+start_test "install-vcs runs vcs-build"
+assert_contains "make vcs-build" "$_install_vcs_recipe"
+start_test "install-vcs runs the submodule install"
+assert_contains "make -C vcs install" "$_install_vcs_recipe"
 
 start_test "install depends on install-dotfiles"
 _install_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^install:')
