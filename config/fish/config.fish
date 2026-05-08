@@ -983,55 +983,22 @@ if is_interactive
         set current_command
     end
 
-    # How long FETCH_HEAD must be untouched before maybe_background_fetch
-    # will run another git fetch in the same repo. One hour matches the
-    # prompt's {behind} indicator semantics: if auto-fetch is keeping up
-    # the indicator stays quiet, otherwise it nags with "pull". Mirrors
-    # shrc's BG_FETCH_INTERVAL_SECONDS.
-    if not set --query BG_FETCH_INTERVAL_SECONDS
-        set --global BG_FETCH_INTERVAL_SECONDS 3600
-    end
-
-    # If we just cd'd into a git repo with working SSH auth and the
-    # repo's FETCH_HEAD is older than $BG_FETCH_INTERVAL_SECONDS (or
-    # absent), kick off `git fetch` in a detached background job.
-    # Called from fish_prompt. Two gates avoid being noisy: the
-    # PWD-change check (most prompts don't follow a cd) and the
-    # FETCH_HEAD mtime check (avoids re-firing on every cd within the
-    # same repo). The auth gate skips the fetch when auth_info reports
-    # problems so the prompt's {behind} indicator still nags. Mirrors
-    # shrc's maybe_background_fetch; see that function for the rationale
-    # behind each gate.
+    # Spawn a detached background fetch via the vcs binary, which knows
+    # the right fetch command per VCS (git/hg/jj), the per-VCS marker
+    # file to mtime-gate against, and how to detach the spawned process.
+    # Called from fish_prompt; this function only owns:
+    #   - PWD-change gate: most prompts don't follow a cd, so early-return.
+    #   - auth gate: skip when auth_info reports problems so the prompt's
+    #     {behind} indicator still nags.
     function maybe_background_fetch
         if set -q _LAST_BG_FETCH_PWD; and test "$PWD" = "$_LAST_BG_FETCH_PWD"
             return
         end
         set --global _LAST_BG_FETCH_PWD $PWD
-        have_command git; or return
-        set _git_dir (command git rev-parse --git-dir 2>/dev/null | string collect)
-        test -n "$_git_dir"; or return
+        have_command vcs; or return
         set _auth (auth_info | string collect)
         test -z "$_auth"; or return
-        set _fetch_head "$_git_dir/FETCH_HEAD"
-        if test -f "$_fetch_head"
-            set _now (date +%s)
-            set _mtime (stat -c %Y "$_fetch_head" 2>/dev/null)
-            test -z "$_mtime"; and set _mtime (stat -f %m "$_fetch_head" 2>/dev/null)
-            test -n "$_mtime"; and test (math $_now - $_mtime) -lt $BG_FETCH_INTERVAL_SECONDS; and return
-        end
-        set _root (command git rev-parse --show-toplevel 2>/dev/null | string collect)
-        test -n "$_root"; or return
-        _run_bg_fetch $_root
-    end
-
-    # Spawn a detached `git fetch` in $argv[1] (the repo root). Split out
-    # from maybe_background_fetch so tests can intercept the call. The
-    # `&` + `disown` pair detaches the fetch so it doesn't show up in
-    # `jobs` or hold up shell exit. GIT_TERMINAL_PROMPT=0 prevents an
-    # HTTPS-creds prompt from hanging the orphaned process.
-    function _run_bg_fetch
-        env GIT_TERMINAL_PROMPT=0 command git -C $argv[1] fetch --quiet >/dev/null 2>&1 &
-        disown 2>/dev/null
+        vcs auto-fetch >/dev/null 2>&1
     end
 
     function fish_prompt

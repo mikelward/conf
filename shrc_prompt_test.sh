@@ -44,14 +44,21 @@ base() { :; }
 # here so preprompt's `map 2>/dev/null` call is a silent no-op by default.
 map() { :; }
 # preprompt now calls maybe_background_fetch on each prompt to keep
-# remote refs warm. The real implementation forks `git fetch` via the
-# helper _run_bg_fetch in a detached subshell, which we don't want
-# during tests (would touch the user's repos and is non-deterministic).
-# Stub the helper to a recorder so the gating logic in
-# maybe_background_fetch still runs end-to-end and dedicated tests can
-# observe whether a fetch would have fired.
+# remote refs warm. The real implementation invokes `vcs auto-fetch`,
+# which spawns a detached fetch per the cwd's VCS. Stub `vcs` here as a
+# function recorder so the gating logic in maybe_background_fetch still
+# runs end-to-end without invoking a real vcs binary or touching the
+# user's repos. The recorder appends the subcommand to $_bg_fetch_log so
+# tests can observe whether a fetch would have fired; non-auto-fetch
+# `vcs` calls (e.g. from prompt_line) fall through to `return 1`.
 _bg_fetch_log="$_testdir/bg_fetch.log"
-_run_bg_fetch() { printf '%s\n' "$1" >>"$_bg_fetch_log"; }
+vcs() {
+    if test "$1" = "auto-fetch"; then
+        printf 'auto-fetch\n' >>"$_bg_fetch_log"
+        return 0
+    fi
+    return 1
+}
 
 # Stub environment functions
 on_my_machine() { true; }
@@ -517,16 +524,27 @@ in_shpool() { false; }
 on_production_host() { false; }
 inside_project() { false; }
 prompt_info() { :; }
-vcs() { return 1; }
+# Reinstall the auto-fetch recorder; the bare `vcs() { return 1; }` reset
+# above is the prompt-line "no VCS" stub for surrounding tests.
+vcs() {
+    if test "$1" = "auto-fetch"; then
+        printf 'auto-fetch\n' >>"$_bg_fetch_log"
+        return 0
+    fi
+    return 1
+}
 outgoing() { return 1; }
 base() { :; }
 map() { :; }
 
 ###############
-# maybe_background_fetch: keeps remote refs warm by spawning a detached
-# `git fetch` after a cd into a git repo with working SSH auth. The
-# tests below exercise the gating logic; _run_bg_fetch is stubbed (above)
-# to append to $_bg_fetch_log instead of actually forking git.
+# maybe_background_fetch: keeps remote refs warm by invoking `vcs
+# auto-fetch` after a cd to a repo with working SSH auth. Per-VCS
+# detection, marker mtime, and the detached spawn live in the vcs
+# binary; this shell only owns the PWD-change gate and the auth gate.
+# Tests rely on the `vcs` recorder stub installed near the top of the
+# file (appends to $_bg_fetch_log when the auto-fetch subcommand is
+# invoked).
 
 # Helper: reset gating state between tests so each test sees a fresh
 # "PWD just changed" situation.
@@ -535,79 +553,42 @@ _reset_bg_fetch_state() {
     : >"$_bg_fetch_log"
 }
 
-# Build a fake git repo that responds to `git rev-parse --git-dir` and
-# `git rev-parse --show-toplevel`. We could `git init` for real, but
-# stubbing avoids requiring git on the test host and keeps the test
-# focused on shrc's gating logic.
-_fake_git_repo="$_testdir/fakegitrepo"
-mkdir -p "$_fake_git_repo/.git"
-# Real `git rev-parse` would resolve $_fake_git_repo/.git as the git
-# dir; the stub mirrors that for the two flags we use.
-git() {
-    case "$1 $2" in
-        "rev-parse --git-dir")        printf '%s\n' "$_fake_git_repo/.git" ;;
-        "rev-parse --show-toplevel")  printf '%s\n' "$_fake_git_repo" ;;
-        *) command git "$@" ;;
-    esac
-}
+_dummy_pwd="$_testdir/bgfetch-pwd"
+mkdir -p "$_dummy_pwd"
 
 start_test "maybe_background_fetch no-op when PWD unchanged"
 _reset_bg_fetch_state
-PWD="$_fake_git_repo"
+PWD="$_dummy_pwd"
 _LAST_BG_FETCH_PWD="$PWD"
 maybe_background_fetch
 assert_equal "" "$(cat "$_bg_fetch_log")"
 
-start_test "maybe_background_fetch no-op outside any git repo"
+start_test "maybe_background_fetch no-op when vcs is not on PATH"
 _reset_bg_fetch_state
-PWD="$_testdir/not_a_repo"
-mkdir -p "$PWD"
-# Override git() so rev-parse fails — like running outside a repo.
-git() { return 128; }
+PWD="$_dummy_pwd"
+# Stash the recorder, install a have_command that says no for vcs.
+_real_have_command() { command -v "$1" >/dev/null 2>&1; }
+have_command() { test "$1" = vcs && return 1; _real_have_command "$1"; }
 maybe_background_fetch
 assert_equal "" "$(cat "$_bg_fetch_log")"
-# Restore the fake-git stub for subsequent tests.
-git() {
-    case "$1 $2" in
-        "rev-parse --git-dir")        printf '%s\n' "$_fake_git_repo/.git" ;;
-        "rev-parse --show-toplevel")  printf '%s\n' "$_fake_git_repo" ;;
-        *) command git "$@" ;;
-    esac
-}
+# Restore.
+have_command() { _real_have_command "$1"; }
 
 start_test "maybe_background_fetch no-op when auth_info reports problems"
 _reset_bg_fetch_state
-PWD="$_fake_git_repo"
+PWD="$_dummy_pwd"
 is_ssh_valid() { false; }   # makes auth_info emit "SSH"
 maybe_background_fetch
 assert_equal "" "$(cat "$_bg_fetch_log")"
 is_ssh_valid() { true; }
 
-start_test "maybe_background_fetch no-op when FETCH_HEAD is recent"
+start_test "maybe_background_fetch fires when gates pass"
 _reset_bg_fetch_state
-PWD="$_fake_git_repo"
-touch "$_fake_git_repo/.git/FETCH_HEAD"
+PWD="$_dummy_pwd"
 maybe_background_fetch
-assert_equal "" "$(cat "$_bg_fetch_log")"
-
-start_test "maybe_background_fetch fires when FETCH_HEAD is stale"
-_reset_bg_fetch_state
-PWD="$_fake_git_repo"
-# Backdate FETCH_HEAD to two hours ago so the 1h interval check trips.
-touch -d '2 hours ago' "$_fake_git_repo/.git/FETCH_HEAD" 2>/dev/null \
-    || touch -t "$(date -u -v-2H +%Y%m%d%H%M.%S 2>/dev/null)" "$_fake_git_repo/.git/FETCH_HEAD"
-maybe_background_fetch
-assert_equal "$_fake_git_repo" "$(cat "$_bg_fetch_log")"
-
-start_test "maybe_background_fetch fires when FETCH_HEAD missing"
-_reset_bg_fetch_state
-PWD="$_fake_git_repo"
-rm -f "$_fake_git_repo/.git/FETCH_HEAD"
-maybe_background_fetch
-assert_equal "$_fake_git_repo" "$(cat "$_bg_fetch_log")"
+assert_equal "auto-fetch" "$(cat "$_bg_fetch_log")"
 
 # Reset for later tests.
-unset -f git
 unset _LAST_BG_FETCH_PWD
 
 ###############
