@@ -35,12 +35,34 @@ _fish_colors='
     set -g titlefinish ""
 '
 
+# Install a fake `vcs` binary on PATH so `command vcs auto-fetch` (called
+# from maybe_background_fetch) records to a log file instead of running
+# the real binary. Fetch tests clear and read the log to assert whether
+# a fetch fired; non-fetch tests don't care about the log.
+_fish_bg_fetch_log="$_testdir/fish_bg_fetch.log"
+mkdir -p "$_testdir/bin"
+cat >"$_testdir/bin/vcs" <<EOF
+#!/bin/sh
+if test "\$1" = "auto-fetch"; then
+    printf 'auto-fetch\n' >>"$_fish_bg_fetch_log"
+fi
+exit 0
+EOF
+chmod +x "$_testdir/bin/vcs"
+
+# Prepend $_testdir/bin to PATH inside fish so `command vcs` resolves
+# to the recorder. Set as a pre-source preamble fragment so it's in
+# place before config.fish defines maybe_background_fetch.
+_fish_path_setup="set -gx PATH '$_testdir/bin' \$PATH"
+
 # Run a fish snippet with prompt-related functions from config.fish
 # preloaded, using stubs that disable colors and avoid touching the real
 # environment. The snippet runs inside an interactive fish (`fish -i -c`)
 # so that prompt functions defined under `if is_interactive` are available.
 _fish_run() {
-    _fish_run_config "$_fish_colors" "$_fish_colors"'
+    _fish_run_config "$_fish_colors"'
+        '"$_fish_path_setup"'
+    ' "$_fish_colors"'
         function bell; end
         function flash_terminal; end
         function jobs; end
@@ -62,10 +84,6 @@ _fish_run() {
         function projectroot; return 1; end
         function projectname; return 1; end
         function log_history; end
-        # fish_prompt now calls maybe_background_fetch which would fork
-        # `git fetch` if the test PWD happened to be inside a real repo.
-        # Stub it out so prompt tests stay deterministic and offline.
-        function maybe_background_fetch; end
     ' "$1"
 }
 
@@ -554,70 +572,46 @@ fi
 ###############
 # maybe_background_fetch: fish version. The vcs binary owns per-VCS
 # detection, marker mtime, and the detached spawn; this shell only
-# owns the PWD-change gate and the auth gate. Each test runs a fish
-# snippet that overrides `vcs` with a recorder that prints to stdout
-# when called with `auto-fetch`, then asserts on the captured output.
+# owns the PWD-change gate and the auth gate. Each test resets the
+# fake-vcs log (installed at $_testdir/bin/vcs in the preamble), runs
+# a snippet that calls maybe_background_fetch, and asserts on the log.
 
 start_test "fish maybe_background_fetch fires when gates pass"
-result="$(_fish_run '
+: >"$_fish_bg_fetch_log"
+_fish_run '
     cd '$_testdir'
-    function vcs
-        if test "$argv[1]" = "auto-fetch"
-            echo "FETCH=auto-fetch"
-            return
-        end
-        return 1
-    end
     function is_ssh_valid; return 0; end
     set -e _LAST_BG_FETCH_PWD
     maybe_background_fetch
-')"
-assert_contains "FETCH=auto-fetch" "$result"
+' >/dev/null
+assert_equal "auto-fetch" "$(cat "$_fish_bg_fetch_log" 2>/dev/null)"
 
 start_test "fish maybe_background_fetch no-op when PWD unchanged"
-result="$(_fish_run '
+: >"$_fish_bg_fetch_log"
+_fish_run '
     cd '$_testdir'
-    function vcs
-        if test "$argv[1]" = "auto-fetch"
-            echo "FETCH=auto-fetch"
-            return
-        end
-        return 1
-    end
     function is_ssh_valid; return 0; end
     set -g _LAST_BG_FETCH_PWD $PWD
     maybe_background_fetch
-')"
-assert_equal "0" "$(printf %s "$result" | grep -c FETCH=)"
+' >/dev/null
+assert_equal "" "$(cat "$_fish_bg_fetch_log" 2>/dev/null)"
 
 start_test "fish maybe_background_fetch no-op when auth_info reports problems"
-result="$(_fish_run '
+: >"$_fish_bg_fetch_log"
+_fish_run '
     cd '$_testdir'
-    function vcs
-        if test "$argv[1]" = "auto-fetch"
-            echo "FETCH=auto-fetch"
-            return
-        end
-        return 1
-    end
     # SSH invalid -> auth_info emits "SSH" -> fetch should be skipped.
     function is_ssh_valid; return 1; end
     set -e _LAST_BG_FETCH_PWD
     maybe_background_fetch
-')"
-assert_equal "0" "$(printf %s "$result" | grep -c FETCH=)"
+' >/dev/null
+assert_equal "" "$(cat "$_fish_bg_fetch_log" 2>/dev/null)"
 
 start_test "fish maybe_background_fetch no-op when vcs is not available"
-result="$(_fish_run '
+: >"$_fish_bg_fetch_log"
+_fish_run '
     cd '$_testdir'
-    function vcs
-        if test "$argv[1]" = "auto-fetch"
-            echo "FETCH=auto-fetch"
-            return
-        end
-        return 1
-    end
-    # Override the shrc-style have_command stub so vcs reports missing.
+    # Override have_command so vcs reports missing.
     function have_command
         switch $argv[1]
             case vcs; return 1
@@ -627,7 +621,7 @@ result="$(_fish_run '
     function is_ssh_valid; return 0; end
     set -e _LAST_BG_FETCH_PWD
     maybe_background_fetch
-')"
-assert_equal "0" "$(printf %s "$result" | grep -c FETCH=)"
+' >/dev/null
+assert_equal "" "$(cat "$_fish_bg_fetch_log" 2>/dev/null)"
 
 test_summary "fish_prompt_test"

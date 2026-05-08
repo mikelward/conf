@@ -998,7 +998,9 @@ if is_interactive
         have_command vcs; or return
         set _auth (auth_info | string collect)
         test -z "$_auth"; or return
-        vcs auto-fetch >/dev/null 2>&1
+        # `command` skips any `vcs` function wrapper so the call goes
+        # straight to the binary on PATH.
+        command vcs auto-fetch >/dev/null 2>&1
     end
 
     function fish_prompt

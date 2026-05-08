@@ -1191,7 +1191,9 @@ maybe_background_fetch() {
     _LAST_BG_FETCH_PWD="$PWD"
     have_command vcs || return
     test -n "$(auth_info)" && return
-    vcs auto-fetch >/dev/null 2>&1
+    # `command` bypasses the no-op vcs() stub defined above (and any
+    # shrc.vcs wrapper) so the call goes straight to the binary.
+    command vcs auto-fetch >/dev/null 2>&1
 }
 
 # print the hostname and shpool session tag for the preprompt line.

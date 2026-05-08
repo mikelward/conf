@@ -44,21 +44,23 @@ base() { :; }
 # here so preprompt's `map 2>/dev/null` call is a silent no-op by default.
 map() { :; }
 # preprompt now calls maybe_background_fetch on each prompt to keep
-# remote refs warm. The real implementation invokes `vcs auto-fetch`,
-# which spawns a detached fetch per the cwd's VCS. Stub `vcs` here as a
-# function recorder so the gating logic in maybe_background_fetch still
-# runs end-to-end without invoking a real vcs binary or touching the
-# user's repos. The recorder appends the subcommand to $_bg_fetch_log so
-# tests can observe whether a fetch would have fired; non-auto-fetch
-# `vcs` calls (e.g. from prompt_line) fall through to `return 1`.
+# remote refs warm. The real implementation invokes `command vcs
+# auto-fetch`, which spawns a detached fetch per the cwd's VCS. Install
+# a fake `vcs` script on PATH that records auto-fetch invocations to
+# $_bg_fetch_log so the gating logic runs end-to-end without invoking
+# the real binary. `command` bypasses any vcs() shell function, so a
+# script on PATH is the right interception point.
 _bg_fetch_log="$_testdir/bg_fetch.log"
-vcs() {
-    if test "$1" = "auto-fetch"; then
-        printf 'auto-fetch\n' >>"$_bg_fetch_log"
-        return 0
-    fi
-    return 1
-}
+mkdir -p "$_testdir/bin"
+cat >"$_testdir/bin/vcs" <<EOF
+#!/bin/sh
+if test "\$1" = "auto-fetch"; then
+    printf 'auto-fetch\n' >>"$_bg_fetch_log"
+fi
+exit 0
+EOF
+chmod +x "$_testdir/bin/vcs"
+PATH="$_testdir/bin:$PATH"
 
 # Stub environment functions
 on_my_machine() { true; }
@@ -524,15 +526,7 @@ in_shpool() { false; }
 on_production_host() { false; }
 inside_project() { false; }
 prompt_info() { :; }
-# Reinstall the auto-fetch recorder; the bare `vcs() { return 1; }` reset
-# above is the prompt-line "no VCS" stub for surrounding tests.
-vcs() {
-    if test "$1" = "auto-fetch"; then
-        printf 'auto-fetch\n' >>"$_bg_fetch_log"
-        return 0
-    fi
-    return 1
-}
+vcs() { return 1; }
 outgoing() { return 1; }
 base() { :; }
 map() { :; }
