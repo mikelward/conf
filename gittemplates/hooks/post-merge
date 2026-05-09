@@ -1,5 +1,8 @@
 #!/bin/sh
 # In conf, pull the ./vcs clone to its remote HEAD after a pull/merge.
-if git -C vcs rev-parse --git-dir >/dev/null 2>&1; then
+# Test for vcs/.git rather than `git -C vcs rev-parse --git-dir`: the
+# latter walks up and finds the parent conf repo when vcs/ exists as a
+# plain directory, which would silently `pull` from conf.
+if test -e vcs/.git; then
     git -C vcs pull
 fi
