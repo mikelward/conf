@@ -2,6 +2,6 @@
 # In conf, pull the ./vcs clone to its remote HEAD after a rebase.
 # Skipped on `git commit --amend` to avoid a network hit on every amend.
 test "$1" = rebase || exit 0
-if test -d vcs/.git; then
+if git -C vcs rev-parse --git-dir >/dev/null 2>&1; then
     git -C vcs pull
 fi
