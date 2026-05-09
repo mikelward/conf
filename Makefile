@@ -1,10 +1,9 @@
 # Default target: build everything locally (no install). Running `make`
 # with no args builds the binaries in-place so subsequent `make test`
 # runs pick them up; it does not touch $HOME or $PREFIX, and it does
-# not hit the network on a working checkout. Staying current with the
-# vcs submodule's remote branch is the post-merge/post-rewrite hooks'
-# job (wired up on first build via the vcs/Makefile rule below); run
-# `make vcs-sync` for an explicit update.
+# not hit the network on a working checkout. Staying current with vcs
+# is the post-merge/post-rewrite hooks' job; run `make vcs-sync` for
+# an explicit update.
 all: vcs-build
 
 install: install-dotfiles install-vcs
@@ -12,40 +11,36 @@ install: install-dotfiles install-vcs
 install-dotfiles:
 	confinst
 
-# install-vcs explicitly advances vcs to its configured remote branch
-# before building+installing, so an installer always ships the latest
-# even if conf hasn't been pulled recently. The default `make` path
-# (vcs-build alone) skips that fetch. The recipe sequences vcs-sync
-# and vcs-build via sub-make so `make -j install-vcs` doesn't run the
-# submodule checkout concurrently with the build.
+# install-vcs explicitly pulls vcs to its remote HEAD before
+# building+installing, so an installer always ships the latest even if
+# conf hasn't been pulled recently. The recipe sequences vcs-sync and
+# vcs-build via sub-make so `make -j install-vcs` doesn't run the
+# clone/pull concurrently with the build.
 install-vcs:
 	$(MAKE) vcs-sync
 	$(MAKE) vcs-build
 	$(MAKE) -C vcs install
 
 # vcs-build builds the vcs binary from whatever's currently checked
-# out. It does NOT advance vcs to its configured remote branch -- the
-# bootstrap/post-merge/post-rewrite hook chain handles staying current
-# as you `git pull`, and `make vcs-sync` does it explicitly. Order-only
-# dep on vcs/Makefile clones+wires the submodule on a fresh conf
-# checkout. The recipe goes straight to vcs/Makefile rather than via
-# vcs/vcs because vcs/vcs has no source-file deps in this Makefile, so
-# only vcs/Makefile's own freshness checks see the updated sources
-# after a pull.
+# out. It does NOT pull from remote -- the post-merge/post-rewrite
+# hooks handle staying current as you `git pull`, and `make vcs-sync`
+# does it explicitly. Order-only dep on vcs/Makefile clones vcs on a
+# fresh conf checkout. The recipe goes straight to vcs/Makefile rather
+# than via vcs/vcs because vcs/vcs has no source-file deps in this
+# Makefile, so only vcs/Makefile's own freshness checks see the updated
+# sources after a pull.
 vcs-build: | vcs/Makefile
 	$(MAKE) -C vcs
 
-# bootstrap/vcs-sync make the submodule workflow repo-local instead of
-# relying on a user's global gitconfig or template hooks. After this
-# has run once in a checkout, plain `git pull` recurses into submodules
-# and the checked-in post-merge/post-rewrite hooks also refresh vcs to
-# its configured remote branch when a pull/rebase updates conf.
+# bootstrap wires the repo-local hooksPath so post-merge/post-rewrite
+# keep vcs current after every pull/rebase.
 bootstrap: vcs-sync
+
+VCS_URL := https://github.com/mikelward/vcs.git
 
 vcs-sync:
 	git config core.hooksPath gittemplates/hooks
-	git config submodule.recurse true
-	git submodule update --remote --init --recursive vcs
+	@if test -d vcs/.git; then git -C vcs pull; else git clone $(VCS_URL) vcs; fi
 
 # Backwards-compatible target name for existing muscle memory.
 vcs-fetch: vcs-sync
@@ -59,11 +54,9 @@ vcs-fetch: vcs-sync
 vcs/vcs: | vcs/Makefile
 	$(MAKE) -C vcs
 
-# Sentinel for "submodule is checked out". Absent on fresh clone of
-# conf; first `make` triggers this rule, which delegates to vcs-sync
-# so the same single setup path wires hooksPath, submodule.recurse,
-# and the initial submodule checkout. Subsequent `make` invocations
-# see vcs/Makefile already exists and don't re-fetch.
+# Sentinel for "vcs is cloned". Absent on fresh clone of conf; first
+# `make` triggers this rule which clones vcs and wires hooksPath.
+# Subsequent `make` invocations see vcs/Makefile and skip this.
 vcs/Makefile:
 	$(MAKE) vcs-sync
 

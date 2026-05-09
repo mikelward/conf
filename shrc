@@ -730,6 +730,9 @@ pc() {
                 git submodule init
                 git submodule update
             fi
+            if test -d "vcs/.git"; then
+                git -C vcs pull
+            fi
         ) || break
     done
 }

@@ -31,34 +31,23 @@ assert_contains "test" "$_targets"
 start_test "test-full target exists"
 assert_contains "test-full" "$_targets"
 
-# vcs-sync is the setup target: it wires repo-local config so plain
-# `git pull` recurses into submodules after bootstrap, installs the
-# checked-in hooks, and advances vcs to its configured remote branch.
-# Because .gitmodules does not ignore vcs, git status reports any
-# resulting pin drift.
+# vcs-sync is the setup target: it wires repo-local hooksPath and
+# clones vcs (or pulls it) as a plain directory under conf/.
 _vcs_sync_recipe=$(make -C "$_srcdir" -n vcs-sync 2>/dev/null)
-start_test "vcs-sync enables recursive submodule pulls"
-assert_contains "submodule.recurse true" "$_vcs_sync_recipe"
 start_test "vcs-sync wires up core.hooksPath"
 assert_contains "core.hooksPath gittemplates/hooks" "$_vcs_sync_recipe"
-start_test "vcs-sync updates vcs to its configured remote branch"
-assert_contains "submodule update --remote --init --recursive vcs" "$_vcs_sync_recipe"
+start_test "vcs-sync clones or pulls vcs"
+assert_contains "git -C vcs pull" "$_vcs_sync_recipe"
 _vcs_fetch_recipe=$(make -C "$_srcdir" -n vcs-fetch 2>/dev/null)
 start_test "vcs-fetch remains a compatibility alias for vcs-sync"
 assert_equal "$_vcs_sync_recipe" "$_vcs_fetch_recipe"
 
-_gitmodules=$(git config -f "$_srcdir/.gitmodules" --get-regexp '^submodule\.vcs\.' 2>/dev/null)
-start_test "vcs submodule pin drift is visible to git status"
-assert_not_contains "ignore all" "$_gitmodules"
-start_test "vcs submodule tracks main for remote updates"
-assert_contains "branch main" "$_gitmodules"
-
 _post_merge=$(sed -n '1,80p' "$_srcdir/gittemplates/hooks/post-merge")
 _post_rewrite=$(sed -n '1,80p' "$_srcdir/gittemplates/hooks/post-rewrite")
-start_test "post-merge refreshes vcs to its remote branch"
-assert_contains "submodule update --remote --init --recursive vcs" "$_post_merge"
-start_test "post-rewrite refreshes vcs to its remote branch"
-assert_contains "submodule update --remote --init --recursive vcs" "$_post_rewrite"
+start_test "post-merge pulls vcs to its remote HEAD"
+assert_contains "git -C vcs pull" "$_post_merge"
+start_test "post-rewrite pulls vcs to its remote HEAD"
+assert_contains "git -C vcs pull" "$_post_rewrite"
 
 # Bare `make` (no target) must build, not install. Verify the default
 # target is `all`, that `all` depends on vcs-build, and that its recipe
@@ -80,34 +69,33 @@ start_test "vcs-build delegates directly to the vcs Makefile"
 assert_contains "make -C vcs" "$_vcs_build_recipe"
 start_test "vcs-build does not reuse the parent vcs/vcs freshness check"
 assert_not_contains "make vcs/vcs" "$_vcs_build_recipe"
-# Once the submodule is checked out, vcs-build must not hit the
-# network on every invocation -- staying current is the
-# post-merge/post-rewrite hook chain's job. Verified by checking that
-# no submodule update / hooks-config commands appear in `make -n`'s
-# recipe trace when vcs/Makefile already exists. (`make test` ensures
-# vcs/ is checked out before this test runs.)
+# Once vcs is cloned, vcs-build must not hit the network on every
+# invocation -- staying current is the post-merge/post-rewrite hook
+# chain's job. Verified by checking that no clone/pull/hooks-config
+# commands appear in `make -n`'s recipe trace when vcs/Makefile already
+# exists. (`make test` ensures vcs/ is cloned before this test runs.)
 _default_recipe=$(make -C "$_srcdir" -n 2>/dev/null)
 start_test "bare make does not run confinst"
 assert_not_contains "confinst" "$_default_recipe"
 start_test "bare make does not run install-vcs"
 assert_not_contains "install-vcs" "$_default_recipe"
-start_test "bare make does not advance the vcs submodule"
-assert_not_contains "submodule update --remote" "$_default_recipe"
+start_test "bare make does not pull vcs"
+assert_not_contains "git -C vcs pull" "$_default_recipe"
 start_test "bare make does not reconfigure repo hooks"
 assert_not_contains "core.hooksPath" "$_default_recipe"
 
-# install-vcs must explicitly advance vcs to its configured remote
-# branch before installing, so installers always ship the latest even
-# when conf hasn't been pulled recently (the default `make` path
-# deliberately skips that fetch). install-vcs sequences vcs-sync,
-# vcs-build, and `make -C vcs install` via sub-make so `make -j
-# install-vcs` doesn't race the submodule checkout against the build.
+# install-vcs must explicitly pull vcs to its remote HEAD before
+# installing, so installers always ship the latest even when conf
+# hasn't been pulled recently (the default `make` path deliberately
+# skips that fetch). install-vcs sequences vcs-sync, vcs-build, and
+# `make -C vcs install` via sub-make so `make -j install-vcs` doesn't
+# race the clone/pull against the build.
 _install_vcs_recipe=$(make -C "$_srcdir" -n install-vcs 2>/dev/null)
 start_test "install-vcs runs vcs-sync to ship the latest vcs"
-assert_contains "submodule update --remote" "$_install_vcs_recipe"
+assert_contains "git -C vcs pull" "$_install_vcs_recipe"
 start_test "install-vcs runs vcs-build"
 assert_contains "make vcs-build" "$_install_vcs_recipe"
-start_test "install-vcs runs the submodule install"
+start_test "install-vcs runs the vcs install"
 assert_contains "make -C vcs install" "$_install_vcs_recipe"
 
 start_test "install depends on install-dotfiles"
