@@ -14,8 +14,6 @@ vcs() {
     fi
 }
 
-vc() { vcs "$@"; }
-
 cv() {
     command vcs clearcache
 }
@@ -136,6 +134,7 @@ upp() {
   upload
   presubmit
 }
+vc() { count "$@"; }
 for command in absorb add addremove amend annotate at_tip \
     base blame branch branches \
     changed changelog changes checkout commit commitforce copy count describe diffedit diffs diffstat drop \
