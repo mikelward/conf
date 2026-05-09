@@ -38,9 +38,61 @@ start_test "vcs-sync wires up core.hooksPath"
 assert_contains "core.hooksPath gittemplates/hooks" "$_vcs_sync_recipe"
 start_test "vcs-sync clones or pulls vcs"
 assert_contains "git -C vcs pull" "$_vcs_sync_recipe"
+# `git -C vcs rev-parse --git-dir` walks up to the parent conf repo when
+# vcs/ exists as a plain directory, which would silently `pull` from
+# conf instead of cloning vcs. Guard with a vcs/.git existence test.
+start_test "vcs-sync does not rely on git rev-parse for the existence check"
+assert_not_contains "rev-parse" "$_vcs_sync_recipe"
+start_test "vcs-sync guards on vcs/.git so a plain vcs/ dir triggers a clone"
+assert_contains "vcs/.git" "$_vcs_sync_recipe"
 _vcs_fetch_recipe=$(make -C "$_srcdir" -n vcs-fetch 2>/dev/null)
 start_test "vcs-fetch remains a compatibility alias for vcs-sync"
 assert_equal "$_vcs_sync_recipe" "$_vcs_fetch_recipe"
+
+# End-to-end: drive vcs-sync against a fake conf repo whose vcs/ is a
+# plain (non-checkout) directory. The bug was that `git -C vcs rev-parse
+# --git-dir` succeeded by walking up to the parent conf repo, so the
+# recipe took the pull branch and ran `git -C vcs pull` against conf
+# instead of cloning vcs. The fixed recipe must take the clone branch.
+# Stub `git clone` so the test doesn't hit the network: a stub on PATH
+# records its argv to a sentinel file and exits 0 without doing
+# anything, then we assert the sentinel was written.
+start_test "vcs-sync clones when vcs/ exists but is not a git checkout"
+_fake_conf="$_testdir/fake_conf_no_vcs_checkout"
+rm -rf "$_fake_conf"
+mkdir -p "$_fake_conf/vcs"
+(cd "$_fake_conf" && git init -q && git config core.hooksPath gittemplates/hooks)
+# Smoke-check the bug premise: rev-parse from inside vcs/ should walk
+# up and succeed against the parent fake conf repo.
+(cd "$_fake_conf/vcs" && git rev-parse --git-dir >/dev/null 2>&1)
+assert_equal "0" "$?"
+cp "$_srcdir/Makefile" "$_fake_conf/Makefile"
+_stub_bin="$_testdir/vcs_sync_stub_bin"
+mkdir -p "$_stub_bin"
+_clone_log="$_testdir/vcs_sync_clone_called"
+_pull_log="$_testdir/vcs_sync_pull_called"
+rm -f "$_clone_log" "$_pull_log"
+# Wrap git so `git clone ...` and `git -C vcs pull` go to sentinels but
+# everything else (rev-parse, config, etc.) reaches the real git.
+_real_git=$(command -v git)
+cat >"$_stub_bin/git" <<EOF
+#!/bin/sh
+if test "\$1" = clone; then
+    printf '%s\n' "\$*" >"$_clone_log"
+    exit 0
+fi
+if test "\$1" = -C && test "\$2" = vcs && test "\$3" = pull; then
+    printf '%s\n' "\$*" >"$_pull_log"
+    exit 0
+fi
+exec "$_real_git" "\$@"
+EOF
+chmod +x "$_stub_bin/git"
+PATH="$_stub_bin:$PATH" make -C "$_fake_conf" vcs-sync >/dev/null 2>&1
+assert_true test -f "$_clone_log"
+start_test "vcs-sync does not pull when vcs/ is not a git checkout"
+assert_false test -f "$_pull_log"
+rm -rf "$_fake_conf" "$_stub_bin" "$_clone_log" "$_pull_log"
 
 _post_merge=$(sed -n '1,80p' "$_srcdir/gittemplates/hooks/post-merge")
 _post_rewrite=$(sed -n '1,80p' "$_srcdir/gittemplates/hooks/post-rewrite")
@@ -48,6 +100,44 @@ start_test "post-merge pulls vcs to its remote HEAD"
 assert_contains "git -C vcs pull" "$_post_merge"
 start_test "post-rewrite pulls vcs to its remote HEAD"
 assert_contains "git -C vcs pull" "$_post_rewrite"
+# Same parent-discovery guard as in the Makefile recipe -- the hooks
+# must not delegate the existence check to `git rev-parse`. Strip
+# comments before asserting so the rationale comment (which mentions
+# rev-parse) doesn't satisfy assert_not_contains by accident.
+_post_merge_code=$(printf '%s\n' "$_post_merge" | sed 's/[[:space:]]*#.*$//')
+_post_rewrite_code=$(printf '%s\n' "$_post_rewrite" | sed 's/[[:space:]]*#.*$//')
+start_test "post-merge guards on vcs/.git so a plain vcs/ dir is skipped"
+assert_contains "vcs/.git" "$_post_merge_code"
+assert_not_contains "rev-parse" "$_post_merge_code"
+start_test "post-rewrite guards on vcs/.git so a plain vcs/ dir is skipped"
+assert_contains "vcs/.git" "$_post_rewrite_code"
+assert_not_contains "rev-parse" "$_post_rewrite_code"
+
+# End-to-end: run the post-merge hook itself with cwd inside a fake conf
+# whose vcs/ is a plain directory and assert the hook does NOT call
+# `git -C vcs pull`. Same git stub trick as the vcs-sync test above.
+start_test "post-merge does not pull when vcs/ is not a git checkout"
+_fake_conf="$_testdir/fake_conf_post_merge"
+rm -rf "$_fake_conf"
+mkdir -p "$_fake_conf/vcs"
+(cd "$_fake_conf" && git init -q)
+_stub_bin="$_testdir/post_merge_stub_bin"
+mkdir -p "$_stub_bin"
+_pull_log="$_testdir/post_merge_pull_called"
+rm -f "$_pull_log"
+_real_git=$(command -v git)
+cat >"$_stub_bin/git" <<EOF
+#!/bin/sh
+if test "\$1" = -C && test "\$2" = vcs && test "\$3" = pull; then
+    printf '%s\n' "\$*" >"$_pull_log"
+    exit 0
+fi
+exec "$_real_git" "\$@"
+EOF
+chmod +x "$_stub_bin/git"
+(cd "$_fake_conf" && PATH="$_stub_bin:$PATH" sh "$_srcdir/gittemplates/hooks/post-merge")
+assert_false test -f "$_pull_log"
+rm -rf "$_fake_conf" "$_stub_bin" "$_pull_log"
 
 # Bare `make` (no target) must build, not install. Verify the default
 # target is `all`, that `all` depends on vcs-build, and that its recipe
