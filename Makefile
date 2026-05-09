@@ -40,7 +40,7 @@ VCS_URL := https://github.com/mikelward/vcs.git
 
 vcs-sync:
 	git config core.hooksPath gittemplates/hooks
-	@if test -d vcs/.git; then git -C vcs pull; else git clone $(VCS_URL) vcs; fi
+	@if git -C vcs rev-parse --git-dir >/dev/null 2>&1; then git -C vcs pull; else git clone $(VCS_URL) vcs; fi
 
 # Backwards-compatible target name for existing muscle memory.
 vcs-fetch: vcs-sync

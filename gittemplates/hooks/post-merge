@@ -1,5 +1,5 @@
 #!/bin/sh
 # In conf, pull the ./vcs clone to its remote HEAD after a pull/merge.
-if test -d vcs/.git; then
+if git -C vcs rev-parse --git-dir >/dev/null 2>&1; then
     git -C vcs pull
 fi
