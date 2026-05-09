@@ -599,7 +599,7 @@ except OSError: pass
         cd $env.HOME
         assert str contains (render-prompt) "> "
     })
-    (run-test "nu render-prompt as root ends with # prompt" {
+    (run-test "nu render-prompt as root ends with red > prompt" {
         $env.HOSTNAME = "mikel-laptop"
         $env.USERNAME = "mikel"
         $env.UID = 0
@@ -607,7 +607,7 @@ except OSError: pass
         hide-env --ignore-errors SHPOOL_SESSION_NAME
         $env.PATH = []
         cd $env.HOME
-        assert str contains (render-prompt) "# "
+        assert str contains (render-prompt) (red ">")
     })
 
     ###############
@@ -1286,9 +1286,9 @@ except OSError: pass
         $env.UID = 1000
         assert equal (render-transient-prompt) $"(ansi reset)> "
     })
-    (run-test "nu render-transient-prompt shows # for root" {
+    (run-test "nu render-transient-prompt shows red > for root" {
         $env.UID = 0
-        assert equal (render-transient-prompt) $"(ansi reset)# "
+        assert equal (render-transient-prompt) $"(ansi reset)(red '>') "
     })
     (run-test "nu render-transient-prompt starts with ansi reset" {
         # Reedline wraps PROMPT_COMMAND output in a default green
@@ -1647,7 +1647,15 @@ except OSError: pass
         ^chmod +x ($dir | path join "autoshpool")
         "#!/bin/sh" | save ($dir | path join "shpool")
         ^chmod +x ($dir | path join "shpool")
-        let cmd = $"nu --no-config-file -c 'source ($CONFIG); $env.PATH = [\"($dir)\" /usr/bin /bin]; $env.SSH_CONNECTION = \"1.2.3.4 22 5.6.7.8 22\"; hide-env --ignore-errors SHPOOL_SESSION_NAME; maybe-start-shpool-and-exit'"
+        # ssh-add stub: exits 0 so need-auth returns false and config.nu's
+        # interactive auth block does not hang waiting for a passphrase under
+        # the pty. Must be in PATH before `source` so the startup block sees it.
+        "#!/bin/sh\nexit 0" | save ($dir | path join "ssh-add")
+        ^chmod +x ($dir | path join "ssh-add")
+        # Set PATH and SSH_CONNECTION via with-env so they're visible during
+        # source; this prevents the interactive auth block from using the real
+        # ssh-add and hanging on a passphrase prompt.
+        let cmd = $"nu --no-config-file -c 'with-env {PATH: [\"($dir)\" /usr/bin /bin], SSH_CONNECTION: \"1.2.3.4 22 5.6.7.8 22\"} { source ($CONFIG); hide-env --ignore-errors SHPOOL_SESSION_NAME; maybe-start-shpool-and-exit }'"
         ^script -qc $cmd /dev/null out+err> (["/dev/null"] | path join)
         let status = (open $marker | str trim)
         assert equal $status "tty" $"autoshpool stdout should be a tty when nu runs under a pty, got: ($status)"
@@ -1684,7 +1692,7 @@ except OSError: pass
         hide-env --ignore-errors SHPOOL_SESSION_NAME
         $env.on-production-host = {|| false }
         let out = (host-info)
-        assert str contains $out "[root]"
+        assert str contains ($out | ansi strip) "[root]"
         assert str contains $out "laptop"
     })
     (run-test "nu host-info shows yellow shpool warning off shpool" {
