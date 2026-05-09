@@ -18,10 +18,6 @@ cv() {
     command vcs clearcache
 }
 
-rootdir() {
-    command vcs rootdir "$@" 2>/dev/null
-}
-
 vcs_backend() {
     command vcs backend
 }
@@ -99,8 +95,6 @@ allknown() {
     test -z "$unknown"
 }
 
-# create version control functions to do the right thing based on vcs "$PWD"
-# TODO: fork merge, etc.
 ab() { absorb "$@"; }
 ad() { add "$@"; }
 ak() { allknown "$@"; }
@@ -135,24 +129,14 @@ upp() {
   presubmit
 }
 vc() { count "$@"; }
-for command in absorb add addremove amend annotate at_tip \
-    base blame branch branches \
-    changed changelog changes checkout commit commitforce copy count describe diffedit diffs diffstat drop \
-    evolve fastforward fetchtime fix goto graft graph histedit ignore incoming lint map move next outgoing \
-    mergetool pending pick precommit presubmit prev pull push \
-    rebase recommit remove rename resolve restore revert review reword \
-    show split squash status submit submitforce track \
-    unamend uncommit undo unknown untrack upload uploadchain; do
-    # remove any alias created in .shrc
-    case "$(type "$command" 2>/dev/null)" in *alias*)
-        unalias "$command"
-        ;;
-    esac
-    # create the function
-    eval "$command"'() {
-        vcs '"$command"' "$@"
-    }'
-done
+while IFS= read -r command; do
+    case "$(type "$command" 2>/dev/null)" in *alias*) unalias "$command" ;; esac
+    eval "$command"'() { vcs '"$command"' "$@"; }'
+done < <(command vcs --list-commands 2>/dev/null)
+
+rootdir() {
+    command vcs rootdir "$@" 2>/dev/null
+}
 
 clone() {
     case "$1" in
