@@ -551,8 +551,18 @@ except OSError: pass
         mkdir ([$env.HOME "titletest"] | path join)
         cd ([$env.HOME "titletest"] | path join)
         let t = (title)
-        assert str contains $t "main"
+        assert str contains $t "[main]"
         assert (not ($t | str starts-with "laptop "))
+    })
+    # title mirrors host-info's bracketed [session] format
+    (run-test "nu title uses bracketed session tag" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.SHPOOL_SESSION_NAME = "edge1"
+        hide-env --ignore-errors TMUX
+        mkdir ([$env.HOME "titletest"] | path join)
+        cd ([$env.HOME "titletest"] | path join)
+        assert equal (title) "laptop [edge1] titletest"
     })
 
     ###############
@@ -622,6 +632,20 @@ except OSError: pass
         $env.PATH = []
         cd $env.HOME
         assert str contains (render-prompt) "]0;"
+    })
+    (run-test "nu render-prompt clears the warmed session name" {
+        # render-prompt warms $env._SESSION_NAME for the render then hides it
+        # so the cache is scoped to one render, not globally sticky.
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.UID = 1000
+        $env.TERM = "xterm-256color"
+        $env.SHPOOL_SESSION_NAME = "edge1"
+        hide-env --ignore-errors TMUX
+        $env.PATH = []
+        cd $env.HOME
+        render-prompt | ignore
+        assert equal ($env._SESSION_NAME? | default null) null
     })
     (run-test "nu render-prompt includes duration line" {
         $env.HOSTNAME = "mikel-laptop"
@@ -1711,6 +1735,25 @@ except OSError: pass
         $env.on-production-host = {|| false }
         let out = (host-info)
         assert str contains $out $"[(ansi green)edge1(ansi reset)]"
+    })
+    (run-test "nu host-info reuses warmed session name" {
+        # render-prompt warms $env._SESSION_NAME once per render so host-info
+        # and title share a single tmux fork. The warmed "cached" must win
+        # over the live session-name "live".
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.SHPOOL_SESSION_NAME = "live"
+        $env._SESSION_NAME = "cached "
+        $env.on-production-host = {|| false }
+        let out = (host-info)
+        assert str contains ($out | ansi strip) "[cached]"
+    })
+    (run-test "nu prompt-session-name recomputes when env not set" {
+        # The warmed value is render-scoped (render-prompt hides it at the
+        # end), so a direct caller without $env._SESSION_NAME recomputes.
+        $env.SHPOOL_SESSION_NAME = "fresh"
+        hide-env --ignore-errors _SESSION_NAME
+        assert equal (prompt-session-name) "fresh "
     })
     (run-test "nu tilde-pwd at \$HOME" {
         let d = (mktemp -d)

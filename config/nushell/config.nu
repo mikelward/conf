@@ -634,6 +634,18 @@ def session-name [] {
     }
 }
 
+# Resolve the session name for the current prompt. render-prompt warms
+# $env._SESSION_NAME once per render so host-info and title reuse it instead
+# of each forking `tmux display-message`. Falls back to session-name for
+# direct callers (e.g. tests).
+def prompt-session-name [] {
+    if ($env._SESSION_NAME? != null) {
+        $env._SESSION_NAME
+    } else {
+        session-name
+    }
+}
+
 ##################################
 # ENVIRONMENT SETUP
 # Set $PATH and other variables.
@@ -790,15 +802,17 @@ $env.prompt-info = {|flags: list<string>|
 }
 def prompt-info [...flags: string] { do $env.prompt-info $flags }
 
-# print the hostname and shpool session tag for the preprompt line.
-# Hostname is red on production hosts. Shpool tag is a green [session]
-# when attached, or a yellow "shpool" warning when not.
+# print the hostname and session tag for the preprompt line.
+# Hostname is red on production hosts. The session tag is a green [session]
+# when attached to a shpool or tmux session, or a yellow "shpool" warning
+# when not.
 def host-info [] {
     let h = (short-hostname)
     let host = if (on-production-host) { red $h } else { $h }
     let root_info = if (i-am-root) { $"[(red 'root')] " } else { "" }
-    let tag = if (in-shpool) {
-        $" [(green ($env.SHPOOL_SESSION_NAME? | default ""))]"
+    let session = (prompt-session-name | str trim)
+    let tag = if ($session | is-not-empty) {
+        $" [(green $session)]"
     } else {
         $" (yellow "shpool")"
     }
@@ -840,12 +854,17 @@ def --env prompt-line [] {
     if ($authpart | is-empty) { $base } else { $"($base) ($authpart)" }
 }
 
-# print the string that should be used as the xterm title
+# print the string that should be used as the xterm title.
+# Format: "<hostname> [<session>] <project-or-pwd>", matching the
+# bracketed session tag used in host-info. Each leading part is omitted
+# when empty.
 def title [] {
+    let session = (prompt-session-name | str trim)
+    let tag = if ($session | is-not-empty) { $"[($session)] " } else { "" }
     let parts = if (show-hostname-in-title) {
-        [(short-hostname) " " (session-name) (project-or-pwd)]
+        [(short-hostname) " " $tag (project-or-pwd)]
     } else {
-        [(session-name) (project-or-pwd)]
+        [$tag (project-or-pwd)]
     }
     $parts | str join
 }
@@ -906,6 +925,10 @@ def flash-terminal [] {
 # See https://www.nushell.sh/book/coloring_and_theming.html
 def --env render-prompt [] {
     let info = (last-job-info)
+    # Warm the session name once so host-info and title reuse it instead of
+    # each forking `tmux display-message`. Cleared at the end so the cache is
+    # scoped to this render and direct callers stay fresh.
+    $env._SESSION_NAME = (session-name)
     let cols = (try { term size | get columns } catch { 80 })
     let sep = (bar $cols)
     let line = (prompt-line)
@@ -913,6 +936,7 @@ def --env render-prompt [] {
     let cr = (char cr)
     let title_seq = (title-escape (title))
     let bell = (flash-terminal)
+    hide-env --ignore-errors _SESSION_NAME
     $"(ansi reset)($bell)($info)($title_seq)($nl)($sep)($cr)($line) ($nl)((ps1-character)) "
 }
 
