@@ -1920,6 +1920,14 @@ if is_interactive; then
     xevkey() { xev -event keyboard "$@"; }
     xr() { DISPLAY=:0.0 xrandr "$@"; }
 
+    ssh_to() {
+        if have_command rw && test "$#" -eq 1; then
+            rw -r "$@"
+        else
+            shift_options ssh -t "$@"
+        fi
+    }
+
     set_up_ssh_aliases() {
         test -f "$HOME/.ssh/config" || return
         set -f
@@ -1931,7 +1939,7 @@ if is_interactive; then
                     case $_alias in *'*'*|*'?'*|*'-'*)
                         continue;;
                     esac
-                    eval "$_alias"'() { shift_options ssh -t '"$_alias"' "$@"; }'
+                    eval "$_alias"'() { ssh_to '"$_alias"' "$@"; }'
                 done
             esac
         done < "$HOME/.ssh/config"
