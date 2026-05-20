@@ -1169,6 +1169,11 @@ preprompt() {
     current_command=
     SECONDS=0
     maybe_background_fetch
+    # Warm the session name once so host_info and title (run in separate
+    # command-substitution subshells below) reuse it instead of each
+    # forking `tmux display-message`. Unset at the end so the cache is
+    # scoped to this render and direct callers stay fresh.
+    _session_name="$(session_name)"
     set_color 'normal'
     printf '\n'
     bar $((COLUMNS))
@@ -1178,6 +1183,7 @@ preprompt() {
     set_title "$(title)"
     set_prompt
     flash_terminal
+    unset _session_name
 }
 
 # Spawn a detached background fetch via the vcs binary, which knows the
@@ -1199,9 +1205,11 @@ maybe_background_fetch() {
     command vcs auto-fetch >/dev/null 2>&1
 }
 
-# print the hostname and shpool session tag for the preprompt line.
-# Hostname is red on production hosts. Shpool tag is a green [session] when
-# attached, or a yellow "shpool" warning when not.
+# print the hostname and session tag for the preprompt line.
+# Hostname is red on production hosts. The session tag is a green [session]
+# when attached to a shpool or tmux session, or a yellow "shpool" warning
+# when not. The session name comes from session_name (which carries a
+# trailing space for the window title); trim it for the bracketed tag.
 host_info() {
     local _host="$(short_hostname)"
     if on_production_host; then
@@ -1211,9 +1219,11 @@ host_info() {
     if i_am_root; then
         _root_info="[$(red 'root')] "
     fi
+    local _session="$(prompt_session_name)"
+    _session="${_session% }"
     local _tag
-    if in_shpool; then
-        _tag=" [$(green "$SHPOOL_SESSION_NAME")]"
+    if test -n "$_session"; then
+        _tag=" [$(green "$_session")]"
     else
         _tag=" $(yellow shpool)"
     fi
@@ -1417,11 +1427,27 @@ project_or_pwd() {
     fi
 }
 
+# print the current session name (shpool or tmux), with a trailing space.
+# Callers that want a bare name (e.g. for a bracketed tag) trim the space.
 session_name() {
-    if test -n "${SHPOOL_SESSION_NAME:-}"; then
+    if in_shpool; then
         printf '%s ' "$SHPOOL_SESSION_NAME"
-    elif test -n "${TMUX:-}"; then
+    elif inside_tmux; then
         printf '%s ' "$(tmux display-message -p '#S')"
+    fi
+}
+
+# Resolve the session name for the current prompt. preprompt warms
+# _session_name once per render so prompt_line/host_info and set_title/title
+# share a single `tmux display-message` fork instead of forking twice. The
+# variable being set (even to an empty value) means warmed; preprompt unsets
+# it after the render, so direct callers (e.g. basic_prompt, tests) fall back
+# to session_name.
+prompt_session_name() {
+    if test -n "${_session_name+set}"; then
+        printf '%s' "$_session_name"
+    else
+        session_name
     fi
 }
 
@@ -1514,13 +1540,20 @@ scp '"$ssh_opts"' '"$HOSTNAME:${ZDOTDIR:-$HOME}/.zshrc"' "$ZDOTDIR";
 exec zsh -i'
 }
 
-# print the string that should be used as the xterm title
+# print the string that should be used as the xterm title.
+# Format: "<hostname> [<session>] <project-or-pwd>", matching the
+# bracketed session tag used in host_info. Each leading part is omitted
+# when empty.
 title() {
     if show_hostname_in_title; then
         short_hostname
         printf ' '
     fi
-    session_name
+    local _session="$(prompt_session_name)"
+    _session="${_session% }"
+    if test -n "$_session"; then
+        printf '[%s] ' "$_session"
+    fi
     project_or_pwd
 }
 

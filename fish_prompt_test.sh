@@ -335,6 +335,73 @@ result="$(_fish_run '
 ')"
 assert_equal "[root] laptop shpool" "$result"
 
+start_test "fish host_info shows tmux session as [name]"
+# host_info now derives its tag from session_name, so a tmux session
+# (no shpool) is shown as a green [session] just like shpool.
+result="$(_fish_run '
+    set -g HOSTNAME mikel-laptop
+    set -g USERNAME mikel
+    function on_production_host; return 1; end
+    function in_shpool; return 1; end
+    function inside_tmux; return 0; end
+    function tmux; echo work; end
+    host_info
+')"
+assert_equal "laptop [work]" "$result"
+
+###############
+# TEST: title mirrors host_info's bracketed [session] format
+
+start_test "fish title uses bracketed session tag"
+result="$(_fish_run '
+    set -g HOSTNAME mikel-laptop
+    set -g USERNAME mikel
+    set -g SHPOOL_SESSION_NAME mysession
+    function in_shpool; return 0; end
+    function show_hostname_in_title; return 0; end
+    function project_or_pwd; printf proj; end
+    title
+')"
+assert_equal "laptop [mysession] proj" "$result"
+
+start_test "fish title omits session tag when no session"
+result="$(_fish_run '
+    set -g HOSTNAME mikel-laptop
+    set -g USERNAME mikel
+    function in_shpool; return 1; end
+    function inside_tmux; return 1; end
+    function show_hostname_in_title; return 0; end
+    function project_or_pwd; printf proj; end
+    title
+')"
+assert_equal "laptop proj" "$result"
+
+start_test "fish host_info reuses warmed session name"
+# fish_prompt warms $_session_name once per render so host_info and title
+# share a single tmux fork. The warmed "cached" must win over the live
+# session_name "live".
+result="$(_fish_run '
+    set -g HOSTNAME mikel-laptop
+    set -g USERNAME mikel
+    function on_production_host; return 1; end
+    function in_shpool; return 0; end
+    set -g SHPOOL_SESSION_NAME live
+    set -g _session_name "cached "
+    host_info
+')"
+assert_equal "laptop [cached]" "$result"
+
+start_test "fish prompt_session_name recomputes when not warmed"
+# The cache is render-scoped: fish_prompt erases $_session_name after the
+# render, so a direct caller recomputes from session_name.
+result="$(_fish_run '
+    function in_shpool; return 0; end
+    set -g SHPOOL_SESSION_NAME fresh
+    set -e _session_name
+    prompt_session_name
+')"
+assert_equal "fresh " "$result"
+
 ###############
 # TEST: tilde_pwd replaces $HOME with ~
 

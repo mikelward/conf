@@ -191,6 +191,76 @@ result="$(host_info)"
 assert_equal "[root] laptop shpool" "$result"
 i_am_root() { false; }
 
+start_test "host_info shows tmux session as [name]"
+# host_info now derives its tag from session_name, so a tmux session
+# (no shpool) is shown as a green [session] just like shpool.
+inside_tmux() { true; }
+tmux() { printf 'work\n'; }
+result="$(host_info)"
+assert_equal "laptop [work]" "$result"
+inside_tmux() { false; }
+unset -f tmux
+
+###############
+start_test "title uses bracketed session tag"
+# The xterm title mirrors host_info's bracketed [session] format.
+show_hostname_in_title() { true; }
+project_or_pwd() { printf 'proj'; }
+in_shpool() { true; }
+SHPOOL_SESSION_NAME="mysession"
+result="$(title)"
+assert_equal "laptop [mysession] proj" "$result"
+
+start_test "title omits session tag when no session"
+in_shpool() { false; }
+unset SHPOOL_SESSION_NAME
+result="$(title)"
+assert_equal "laptop proj" "$result"
+
+start_test "host_info reuses warmed session name"
+# preprompt warms _session_name once per render so host_info and title
+# share a single tmux fork. host_info must reuse the warmed value rather
+# than re-deriving it (here the warmed "cached" differs from the live
+# session_name "live" to prove the warmed value wins).
+in_shpool() { true; }
+SHPOOL_SESSION_NAME="live"
+_session_name="cached "
+result="$(host_info)"
+assert_equal "laptop [cached]" "$result"
+result="$(title)"
+assert_equal "laptop [cached] proj" "$result"
+unset _session_name SHPOOL_SESSION_NAME
+in_shpool() { false; }
+
+start_test "host_info reuses warmed empty session (no fork)"
+# An empty-but-set _session_name means "warmed, no session"; it must be
+# honored rather than falling back to session_name (which would re-fork).
+in_shpool() { true; }
+SHPOOL_SESSION_NAME="live"
+_session_name=""
+result="$(host_info)"
+assert_equal "laptop shpool" "$result"
+unset _session_name SHPOOL_SESSION_NAME
+in_shpool() { false; }
+
+start_test "prompt_session_name recomputes when not warmed"
+# The cache is render-scoped: preprompt unsets _session_name after the
+# render, so direct callers recompute from session_name.
+unset _session_name
+in_shpool() { true; }
+SHPOOL_SESSION_NAME="fresh"
+result="$(prompt_session_name)"
+assert_equal "fresh " "$result"
+unset SHPOOL_SESSION_NAME
+in_shpool() { false; }
+
+start_test "preprompt unsets the cached session name"
+# preprompt warms the cache for the render then unsets it so it is not
+# globally sticky.
+_session_name="stale "
+preprompt >/dev/null 2>&1
+assert_equal "" "${_session_name+set}"
+
 ###############
 start_test "dir_info uses vcs prompt-info inside a project"
 

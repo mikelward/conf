@@ -1006,6 +1006,10 @@ if is_interactive
     function fish_prompt
         my_set_color 'normal'
         maybe_background_fetch
+        # Warm the session name once so host_info and title reuse it instead
+        # of each forking `tmux display-message`. Erased at the end so the
+        # cache is scoped to this render and direct callers stay fresh.
+        set -g _session_name (session_name | string collect)
         printf '\n'
         bar $COLUMNS
         printf '\r%s \n' (prompt_line | string collect)
@@ -1014,6 +1018,7 @@ if is_interactive
         set_title (title | string collect)
         ps1
         flash_terminal
+        set -e _session_name
     end
 
     # wrapper around `vcs prompt-info` so dir_info (and anything else that
@@ -1022,9 +1027,10 @@ if is_interactive
         command vcs prompt-info $argv
     end
 
-    # print the hostname and shpool session tag for the preprompt line.
-    # Hostname is red on production hosts. Shpool tag is a green [session]
-    # when attached, or a yellow "shpool" warning when not.
+    # print the hostname and session tag for the preprompt line.
+    # Hostname is red on production hosts. The session tag is a green
+    # [session] when attached to a shpool or tmux session, or a yellow
+    # "shpool" warning when not.
     function host_info
         set _host (short_hostname | string collect)
         if on_production_host
@@ -1035,8 +1041,9 @@ if is_interactive
             set _root_info "["(red 'root' | string collect)"] "
         end
         set _tag
-        if in_shpool
-            set _tag " ["(green $SHPOOL_SESSION_NAME | string collect)"]"
+        set _session (prompt_session_name | string trim)
+        if test -n "$_session"
+            set _tag " ["(green $_session | string collect)"]"
         else
             set _tag " "(yellow shpool | string collect)
         end
@@ -1221,12 +1228,26 @@ if is_interactive
         end
     end
 
-    # print the current session name, if any, with a trailing space
+    # print the current session name (shpool or tmux), with a trailing space.
+    # Callers that want a bare name (e.g. for a bracketed tag) trim the space.
     function session_name
-        if test -n "$SHPOOL_SESSION_NAME"
+        if in_shpool
             printf '%s ' $SHPOOL_SESSION_NAME
-        else if test -n "$TMUX"
+        else if inside_tmux
             printf '%s ' (tmux display-message -p '#S' | string collect)
+        end
+    end
+
+    # Resolve the session name for the current prompt. fish_prompt warms
+    # $_session_name once per render so host_info and title reuse it instead
+    # of each forking `tmux display-message`. The variable being set (even
+    # empty) means warmed; fish_prompt erases it after the render, so direct
+    # callers (e.g. tests) fall back to session_name.
+    function prompt_session_name
+        if set -q _session_name
+            printf '%s' $_session_name
+        else
+            session_name
         end
     end
 
@@ -1392,13 +1413,19 @@ scp $ssh_opts "'$HOSTNAME:$ZDOTDIR/.zshrc'" "$ZDOTDIR";
 exec zsh -i'
     end
 
-    # print the string that should be used as the xterm title
+    # print the string that should be used as the xterm title.
+    # Format: "<hostname> [<session>] <project-or-pwd>", matching the
+    # bracketed session tag used in host_info. Each leading part is omitted
+    # when empty.
     function title
         if show_hostname_in_title
             short_hostname
             printf ' '
         end
-        session_name
+        set _session (prompt_session_name | string trim)
+        if test -n "$_session"
+            printf '[%s] ' $_session
+        end
         project_or_pwd
     end
 
