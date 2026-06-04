@@ -1185,6 +1185,18 @@ except OSError: pass
     })
 
     ###############
+    # ssh-client-host
+    (run-test "nu ssh-client-host returns LC_CLIENT_HOST when set" {
+        $env.LC_CLIENT_HOST = "laptop"
+        assert equal (ssh-client-host) "laptop"
+    })
+    (run-test "nu ssh-client-host empty when not an ssh session" {
+        hide-env --ignore-errors LC_CLIENT_HOST
+        hide-env --ignore-errors SSH_CONNECTION
+        assert equal (ssh-client-host) ""
+    })
+
+    ###############
     # inside-tmux
     (run-test "nu inside-tmux true when TMUX set" {
         $env.TMUX = "/tmp/tmux-1000/default"

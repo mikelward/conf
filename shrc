@@ -250,6 +250,33 @@ connected_remotely() {
     connected_via_ssh
 }
 
+# print the connecting SSH client's hostname (best effort), or nothing and
+# return non-zero if this isn't an SSH session. Tries, in order:
+#   1. LC_CLIENT_HOST, smuggled through by our ssh_to (servers commonly
+#      AcceptEnv LC_*, so it usually survives without server-side config)
+#   2. reverse DNS of the client IP from SSH_CONNECTION
+#   3. the raw client IP
+ssh_client_host() {
+    if test -n "${LC_CLIENT_HOST:-}"; then
+        puts "$LC_CLIENT_HOST"
+        return 0
+    fi
+    connected_via_ssh || return 1
+    local _ip="${SSH_CONNECTION%% *}"
+    local _name=
+    if have_command getent; then
+        _name="$(getent hosts "$_ip" 2>/dev/null | { gets _addr _name _rest && puts "$_name"; })"
+    fi
+    if test -z "$_name" && have_command dig; then
+        _name="$(dig +short -x "$_ip" 2>/dev/null | { gets _name && puts "${_name%.}"; })"
+    fi
+    if test -n "$_name"; then
+        puts "${_name%%.*}"
+    else
+        puts "$_ip"
+    fi
+}
+
 # return true if this is inside a VCS workspace/source root
 inside_project() {
     test -n "$(projectroot)"
@@ -1921,10 +1948,19 @@ if is_interactive; then
     xr() { DISPLAY=:0.0 xrandr "$@"; }
 
     ssh_to() {
+        # tell the remote host who is connecting via LC_CLIENT_HOST; set it
+        # before the branch so both the rw and ssh paths carry it. The export
+        # is confined to a subshell so it never leaks into the interactive
+        # shell (zsh keeps a prefix assignment to a function around, unlike
+        # bash). ssh only forwards env vars it's told to, so request it
+        # explicitly; SendEnv is additive, so the usual LANG/LC_* forwarding
+        # is left intact.
+        local _client_host
+        _client_host="$(short_hostname)"
         if have_command rw && test "$#" -eq 1; then
-            rw -r "$@"
+            ( export LC_CLIENT_HOST="$_client_host"; rw -r "$@" )
         else
-            shift_options ssh -t "$@"
+            ( export LC_CLIENT_HOST="$_client_host"; shift_options ssh -t -oSendEnv=LC_CLIENT_HOST "$@" )
         fi
     }
 

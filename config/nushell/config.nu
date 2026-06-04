@@ -171,6 +171,36 @@ def connected-remotely [] {
     connected-via-ssh
 }
 
+# print the connecting SSH client's hostname (best effort), or an empty string
+# if this isn't an SSH session. Tries, in order:
+#   1. LC_CLIENT_HOST, smuggled through by ssh_to in the bash/zsh/fish configs
+#      (servers commonly AcceptEnv LC_*, so it usually survives without
+#      server-side config)
+#   2. reverse DNS of the client IP from SSH_CONNECTION
+#   3. the raw client IP
+def ssh-client-host [] {
+    let smuggled = ($env.LC_CLIENT_HOST? | default "")
+    if ($smuggled | is-not-empty) {
+        return $smuggled
+    }
+    if not (connected-via-ssh) {
+        return ""
+    }
+    let ip = ($env.SSH_CONNECTION | split row " " | first)
+    mut name = ""
+    if (which getent | is-not-empty) {
+        $name = (try { ^getent hosts $ip | split row --regex '\s+' | get 1 } catch { "" })
+    }
+    if ($name | is-empty) and (which dig | is-not-empty) {
+        $name = (try { ^dig +short -x $ip | lines | first | str trim --right --char '.' } catch { "" })
+    }
+    if ($name | is-empty) {
+        $ip
+    } else {
+        $name | split row "." | first
+    }
+}
+
 # return true if the current shell is attached to shpool
 def in-shpool [] {
     is-env-set "SHPOOL_SESSION_NAME"
