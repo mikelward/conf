@@ -356,4 +356,70 @@ assert_contains \
 
 rm -rf "$_find_up_dir"
 
+###############
+# TEST: jd/hd/gd & mjd/mhd/mgd run autoshpool after the underlying
+# command succeeds, and skip it when the command fails.
+
+start_test "fish jd runs jjd then autoshpool"
+result="$(_fish_run '
+    function jjd; echo "jjd $argv"; end
+    function autoshpool; echo autoshpool; end
+    jd repo
+')"
+assert_equal "jjd repo
+autoshpool" "$result"
+
+start_test "fish hd runs hgd then autoshpool"
+result="$(_fish_run '
+    function hgd; echo "hgd $argv"; end
+    function autoshpool; echo autoshpool; end
+    hd repo
+')"
+assert_equal "hgd repo
+autoshpool" "$result"
+
+start_test "fish gd runs gitd then autoshpool"
+result="$(_fish_run '
+    function gitd; echo "gitd $argv"; end
+    function autoshpool; echo autoshpool; end
+    gd repo
+')"
+assert_equal "gitd repo
+autoshpool" "$result"
+
+start_test "fish mjd runs jjd -f then autoshpool"
+result="$(_fish_run '
+    function jjd; echo "jjd $argv"; end
+    function autoshpool; echo autoshpool; end
+    mjd repo
+')"
+assert_equal "jjd -f repo
+autoshpool" "$result"
+
+start_test "fish mhd runs hgd -f then autoshpool"
+result="$(_fish_run '
+    function hgd; echo "hgd $argv"; end
+    function autoshpool; echo autoshpool; end
+    mhd repo
+')"
+assert_equal "hgd -f repo
+autoshpool" "$result"
+
+start_test "fish mgd runs gitd -f then autoshpool"
+result="$(_fish_run '
+    function gitd; echo "gitd $argv"; end
+    function autoshpool; echo autoshpool; end
+    mgd repo
+')"
+assert_equal "gitd -f repo
+autoshpool" "$result"
+
+start_test "fish mjd skips autoshpool when jjd fails"
+result="$(_fish_run '
+    function jjd; echo "jjd $argv"; return 1; end
+    function autoshpool; echo autoshpool; end
+    mjd repo
+')"
+assert_equal "jjd -f repo" "$result"
+
 test_summary "fish_test"

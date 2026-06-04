@@ -39,7 +39,73 @@ def run-test [label: string, body: closure]: nothing -> string {
     }
 }
 
+# Create fake jjd/hgd/gitd/autoshpool on a fresh bin dir that log their
+# invocation ("<cmd> <args>") to $calls, prepend that dir to PATH, and
+# return nothing. With --fail the three vcs-dir commands exit non-zero so
+# the wrappers' success gate (jjd ... && autoshpool) can be exercised.
+# Used to verify the clone-then-shpool wrappers only run autoshpool when
+# the underlying command succeeds. Plain (non-$"") strings so the shell's
+# $* / $@ aren't treated as nu interpolation.
+def --env fake-vcs-bin [calls: string, --fail] {
+    let bin = (mktemp -d)
+    let rc = (if $fail { "1" } else { "0" })
+    for c in [jjd hgd gitd] {
+        ("#!/bin/sh\necho \"" + $c + " $*\" >> \"" + $calls + "\"\nexit " + $rc + "\n") | save -f ($bin | path join $c)
+        ^chmod +x ($bin | path join $c)
+    }
+    ("#!/bin/sh\necho \"autoshpool $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "autoshpool")
+    ^chmod +x ($bin | path join "autoshpool")
+    $env.PATH = ([$bin] ++ $env.PATH)
+}
+
 let results = [
+    ###############
+    # jd/hd/gd & mjd/mhd/mgd run autoshpool after the underlying command
+    # succeeds, and skip it when the command fails.
+    (run-test "nu jd runs jjd then autoshpool" {
+        let calls = (mktemp -t "vcs-calls.XXXXXX")
+        fake-vcs-bin $calls
+        jd repo
+        assert equal (open $calls | str trim) "jjd repo\nautoshpool"
+    })
+    (run-test "nu hd runs hgd then autoshpool" {
+        let calls = (mktemp -t "vcs-calls.XXXXXX")
+        fake-vcs-bin $calls
+        hd repo
+        assert equal (open $calls | str trim) "hgd repo\nautoshpool"
+    })
+    (run-test "nu gd runs gitd then autoshpool" {
+        let calls = (mktemp -t "vcs-calls.XXXXXX")
+        fake-vcs-bin $calls
+        gd repo
+        assert equal (open $calls | str trim) "gitd repo\nautoshpool"
+    })
+    (run-test "nu mjd runs jjd -f then autoshpool" {
+        let calls = (mktemp -t "vcs-calls.XXXXXX")
+        fake-vcs-bin $calls
+        mjd repo
+        assert equal (open $calls | str trim) "jjd -f repo\nautoshpool"
+    })
+    (run-test "nu mhd runs hgd -f then autoshpool" {
+        let calls = (mktemp -t "vcs-calls.XXXXXX")
+        fake-vcs-bin $calls
+        mhd repo
+        assert equal (open $calls | str trim) "hgd -f repo\nautoshpool"
+    })
+    (run-test "nu mgd runs gitd -f then autoshpool" {
+        let calls = (mktemp -t "vcs-calls.XXXXXX")
+        fake-vcs-bin $calls
+        mgd repo
+        assert equal (open $calls | str trim) "gitd -f repo\nautoshpool"
+    })
+    (run-test "nu mjd skips autoshpool when jjd fails" {
+        let calls = (mktemp -t "vcs-calls.XXXXXX")
+        fake-vcs-bin --fail $calls
+        mjd repo
+        assert equal (open $calls | str trim) "jjd -f repo"
+    })
+
+
     ###############
     # bar prints N separator characters
     (run-test "nu bar prints N separators" { assert equal (bar 5) "―――――" })

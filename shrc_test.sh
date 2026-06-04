@@ -821,6 +821,82 @@ assert_true test -f "$_returned"
 start_test "maybe_start_shpool_and_exit does not call autoshpool when not wanted"
 assert_false test -f "$_autoshpool_calls"
 
+# Test jd/hd/gd & mjd/mhd/mgd. These live in shrc's interactive block as
+# indented one-liners, so extract_func (which anchors on a column-0
+# name()) can't reach them. Pull each one out by name, strip the leading
+# indentation, and eval it. Fails loudly if the line is gone so a rename
+# doesn't silently fall through to a system command.
+_extract_oneliner() {
+    local _def
+    _def=$(sed -n "s/^[[:space:]]*\($1() {.*}\)\$/\1/p" "$_srcdir/shrc")
+    if test -z "$_def"; then
+        echo "FAIL: could not find one-liner '$1' in shrc" >&2
+        failures=$((failures + 1))
+        return 1
+    fi
+    eval "$_def"
+}
+
+_vcsdir_calls="$_testdir/vcsdir_calls"
+# Record the underlying command + args, then autoshpool, in call order.
+jjd()  { echo "jjd $*"  >> "$_vcsdir_calls"; return 0; }
+hgd()  { echo "hgd $*"  >> "$_vcsdir_calls"; return 0; }
+gitd() { echo "gitd $*" >> "$_vcsdir_calls"; return 0; }
+autoshpool() { echo "autoshpool $*" >> "$_vcsdir_calls"; return 0; }
+
+_extract_oneliner jd
+_extract_oneliner hd
+_extract_oneliner gd
+_extract_oneliner mjd
+_extract_oneliner mhd
+_extract_oneliner mgd
+
+start_test "jd runs jjd then autoshpool"
+rm -f "$_vcsdir_calls"
+jd repo
+assert_equal "jjd repo
+autoshpool " "$(cat "$_vcsdir_calls")"
+
+start_test "hd runs hgd then autoshpool"
+rm -f "$_vcsdir_calls"
+hd repo
+assert_equal "hgd repo
+autoshpool " "$(cat "$_vcsdir_calls")"
+
+start_test "gd runs gitd then autoshpool"
+rm -f "$_vcsdir_calls"
+gd repo
+assert_equal "gitd repo
+autoshpool " "$(cat "$_vcsdir_calls")"
+
+start_test "mjd runs jjd -f then autoshpool"
+rm -f "$_vcsdir_calls"
+mjd repo
+assert_equal "jjd -f repo
+autoshpool " "$(cat "$_vcsdir_calls")"
+
+start_test "mhd runs hgd -f then autoshpool"
+rm -f "$_vcsdir_calls"
+mhd repo
+assert_equal "hgd -f repo
+autoshpool " "$(cat "$_vcsdir_calls")"
+
+start_test "mgd runs gitd -f then autoshpool"
+rm -f "$_vcsdir_calls"
+mgd repo
+assert_equal "gitd -f repo
+autoshpool " "$(cat "$_vcsdir_calls")"
+
+start_test "mjd does not run autoshpool when jjd fails"
+rm -f "$_vcsdir_calls"
+jjd() { echo "jjd $*" >> "$_vcsdir_calls"; return 1; }
+_extract_oneliner mjd
+mjd repo
+assert_equal "jjd -f repo" "$(cat "$_vcsdir_calls")"
+
+unset -f jjd hgd gitd autoshpool jd hd gd mjd mhd mgd _extract_oneliner
+rm -f "$_vcsdir_calls"
+
 # Re-source shrc so the real connected_remotely / inside_project are
 # restored for later tests, replacing the stubs left over from the
 # shpool block above. The SHRC_LOAD_FUNCTIONS_ONLY gate keeps the

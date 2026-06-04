@@ -865,8 +865,17 @@ if is_interactive
     end
     alias lss='lssock'
     alias j='jobs'
-    alias jd='jjd'
-    alias mjd='jjd -f'
+    # Clone/cd into a repo, then start a shpool session matching the
+    # new vcs rootdir. autoshpool only runs if the underlying command
+    # succeeds, so a failed clone/cd doesn't spawn a stray session.
+    # Functions rather than aliases so `and autoshpool` runs after the
+    # command instead of having $argv appended to it.
+    function jd; jjd $argv; and autoshpool; end
+    function hd; hgd $argv; and autoshpool; end
+    function gd; gitd $argv; and autoshpool; end
+    function mjd; jjd -f $argv; and autoshpool; end
+    function mhd; hgd -f $argv; and autoshpool; end
+    function mgd; gitd -f $argv; and autoshpool; end
     alias m='make -f .Makefile'
     alias ml='m lint'
     # shadows magtape command, but who uses that?
