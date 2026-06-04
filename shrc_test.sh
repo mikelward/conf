@@ -673,6 +673,29 @@ assert_true test -f "$_returned"
 unset -f autoshpool
 rm -f "$_autoshpool_calls" "$_returned"
 
+# Test shpoollist
+# Stub shpool to record what it was called with
+_shpool_calls="$_testdir/shpool_calls"
+shpool() {
+    echo "shpool $*" >> "$_shpool_calls"
+}
+
+start_test "shpoollist calls shpool list"
+rm -f "$_shpool_calls"
+shpoollist
+result="$(cat "$_shpool_calls" 2>/dev/null)"
+assert_equal "shpool list" "$result"
+
+start_test "shpoollist passes extra arguments through"
+rm -f "$_shpool_calls"
+shpoollist --json
+result="$(cat "$_shpool_calls" 2>/dev/null)"
+assert_equal "shpool list --json" "$result"
+
+# Clean up
+unset -f shpool
+rm -f "$_shpool_calls"
+
 # Test maybe_start_shpool_and_exit
 _autoshpool_calls="$_testdir/autoshpool_calls"
 _returned="$_testdir/shpool_returned"
