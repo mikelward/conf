@@ -934,22 +934,20 @@ if is_interactive
     alias xr='DISPLAY=:0.0 xrandr'
 
     # ssh to a host from ~/.ssh/config, telling the remote who is connecting
-    # via LC_CLIENT_HOST (read back with ssh_client_host). Exported so it
-    # reaches ssh/rw and their children, then erased so it doesn't linger in
-    # the interactive shell. Set before the branch so both paths carry it;
-    # SendEnv is additive, so the usual LANG/LC_* forwarding is left intact.
+    # via LC_CLIENT_HOST (read back with ssh_client_host). set -lx keeps the
+    # override function-local and exported: it reaches ssh/rw and their
+    # children, is restored when ssh_to returns (so a LC_CLIENT_HOST inherited
+    # from an inbound SSH session survives chained hops), and never leaks into
+    # the interactive shell -- matching the subshell-confined bash/zsh path.
+    # Set before the branch so both paths carry it; SendEnv is additive, so
+    # the usual LANG/LC_* forwarding is left intact.
     function ssh_to
-        set -gx LC_CLIENT_HOST (short_hostname | string collect)
-        set _status 0
+        set -lx LC_CLIENT_HOST (short_hostname | string collect)
         if have_command rw; and test (count $argv) -eq 1
             rw -r $argv
-            set _status $status
         else
             shift_options ssh -t -oSendEnv=LC_CLIENT_HOST $argv
-            set _status $status
         end
-        set -e LC_CLIENT_HOST
-        return $_status
     end
 
     function set_up_ssh_aliases
