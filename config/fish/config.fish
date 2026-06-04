@@ -647,10 +647,6 @@ function switchshpool
     autoshpool switch $argv[1]; and exit
 end
 
-function shpoollist
-    shpool list $argv
-end
-
 function maybe_start_shpool_and_exit
     if not in_shpool; and want_shpool; and have_command shpool
         autoshpool; and exit

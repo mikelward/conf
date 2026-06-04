@@ -1034,8 +1034,6 @@ fi # SHRC_LOAD_FUNCTIONS_ONLY guard (env-setup block)
 
 switchshpool() { autoshpool switch "$1" && exit; }
 
-shpoollist() { shpool list "$@"; }
-
 maybe_start_shpool_and_exit() {
     if ! in_shpool && want_shpool && have_command shpool; then
         autoshpool && exit

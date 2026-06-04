@@ -1223,13 +1223,12 @@ def clone [url: string, ...args: string] {
 
 #######################
 # SHPOOL ALIASES
-# Thin aliases over `shpool`. Aliases rather than `def` wrappers so flags
-# pass through to ^shpool without nushell's parser catching them (same
-# rationale as the VCS aliases above). Mirrors shrc/fish.
+# Short aliases for the `shpoollist` helper. Aliases rather than `def`
+# wrappers so flags pass through without nushell's parser catching them
+# (same rationale as the VCS aliases above). Mirrors shrc/fish.
 
-alias shpoollist = ^shpool list
-alias lsp        = ^shpool list
-alias shpls      = ^shpool list
+alias lsp   = ^shpoollist
+alias shpls = ^shpoollist
 
 ######################
 # INTERACTIVE: PROMPT / HOOKS
