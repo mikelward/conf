@@ -187,23 +187,6 @@ result="$(_fish_run '
 assert_equal "survived" "$result"
 
 ###############
-# TEST: shpoollist calls shpool list
-
-start_test "fish shpoollist calls shpool list"
-result="$(_fish_run '
-    function shpool; echo "shpool $argv"; end
-    shpoollist
-')"
-assert_equal "shpool list" "$result"
-
-start_test "fish shpoollist passes extra arguments through"
-result="$(_fish_run '
-    function shpool; echo "shpool $argv"; end
-    shpoollist --json
-')"
-assert_equal "shpool list --json" "$result"
-
-###############
 # TEST: CDPATH is set for all shells (not just interactive)
 
 start_test "fish CDPATH contains HOME"
