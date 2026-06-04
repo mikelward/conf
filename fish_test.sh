@@ -222,6 +222,18 @@ result="$(_fish_run '
 ')"
 assert_equal "after=[]" "$result"
 
+start_test "fish ssh_to restores an inherited LC_CLIENT_HOST"
+result="$(_fish_run '
+    set -gx LC_CLIENT_HOST inbound
+    function short_hostname; echo clienthost; end
+    function have_command; test $argv[1] = ssh; end
+    function ssh; echo "ssh saw $LC_CLIENT_HOST"; end
+    ssh_to myhost
+    echo "after=[$LC_CLIENT_HOST]"
+')"
+assert_contains "ssh saw clienthost" "$result"
+assert_contains "after=[inbound]" "$result"
+
 start_test "fish want_shpool false when not remote and not in project"
 result="$(_fish_run '
     function projectroot; return 1; end

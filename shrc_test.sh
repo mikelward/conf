@@ -670,6 +670,19 @@ result="$(
 )"
 assert_equal "after=[]" "$result"
 
+start_test "ssh_to preserves an inherited LC_CLIENT_HOST"
+result="$(
+    eval "$_ssh_to_def"
+    short_hostname() { puts "clienthost"; }
+    have_command() { return 1; }
+    ssh() { puts "ssh saw $LC_CLIENT_HOST"; }
+    export LC_CLIENT_HOST="inbound"
+    ssh_to myhost
+    puts "after=[${LC_CLIENT_HOST:-}]"
+)"
+assert_contains "ssh saw clienthost" "$result"
+assert_contains "after=[inbound]" "$result"
+
 unset _ssh_to_def
 
 start_test "inside_tmux with TMUX set"
