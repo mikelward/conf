@@ -1052,6 +1052,19 @@ def lss [...args] { lssock ...$args }
 
 def j [] { job list }
 
+# Clone/cd into a repo, then start a shpool session matching the new
+# vcs rootdir. autoshpool only runs if the underlying command succeeds
+# (a non-zero external exit throws, which the try/catch turns into
+# $ok = false), so a failed clone/cd doesn't spawn a stray session.
+# `--wrapped` so flags pass through to the underlying command instead
+# of nushell's parser catching them on the wrapper.
+def --wrapped jd  [...args] { if (try { ^jjd  ...$args;    true } catch { false }) { ^autoshpool } }
+def --wrapped hd  [...args] { if (try { ^hgd  ...$args;    true } catch { false }) { ^autoshpool } }
+def --wrapped gd  [...args] { if (try { ^gitd ...$args;    true } catch { false }) { ^autoshpool } }
+def --wrapped mjd [...args] { if (try { ^jjd  -f ...$args; true } catch { false }) { ^autoshpool } }
+def --wrapped mhd [...args] { if (try { ^hgd  -f ...$args; true } catch { false }) { ^autoshpool } }
+def --wrapped mgd [...args] { if (try { ^gitd -f ...$args; true } catch { false }) { ^autoshpool } }
+
 def m [...args] { ^make -f .Makefile ...$args }
 def ml [] { m lint }
 def mt [] { m test }

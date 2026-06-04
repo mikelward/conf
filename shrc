@@ -1885,8 +1885,15 @@ if is_interactive; then
     lss() { lssock "$@"; }
     lsp() { shpoollist "$@"; }
     j() { jobs "$@"; }
-    jd() { jjd "$@"; }
-    mjd() { jjd -f "$@"; }
+    # Clone/cd into a repo, then start a shpool session matching the
+    # new vcs rootdir. autoshpool only runs if the underlying command
+    # succeeds, so a failed clone/cd doesn't spawn a stray session.
+    jd() { jjd "$@" && autoshpool; }
+    hd() { hgd "$@" && autoshpool; }
+    gd() { gitd "$@" && autoshpool; }
+    mjd() { jjd -f "$@" && autoshpool; }
+    mhd() { hgd -f "$@" && autoshpool; }
+    mgd() { gitd -f "$@" && autoshpool; }
     m() { make -f .Makefile "$@"; }
     ml() { m lint; }
     # shadows magtape command, but who uses that?
