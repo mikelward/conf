@@ -647,6 +647,10 @@ function switchshpool
     autoshpool switch $argv[1]; and exit
 end
 
+function shpoollist
+    shpool list $argv
+end
+
 function maybe_start_shpool_and_exit
     if not in_shpool; and want_shpool; and have_command shpool
         autoshpool; and exit
@@ -829,6 +833,7 @@ if is_interactive
     alias la='l -a'
     alias latest='recent -1'
     alias lc='l -C'
+    alias lsp='shpoollist'
     function lssock
         lsof -a -n -P -i $argv
     end
@@ -867,6 +872,7 @@ if is_interactive
     alias s='subl'
     alias sa='shpool attach'
     alias sd='shpool detach'
+    alias shpls='shpoollist'
     alias shpoolswitch='switchshpool'
     alias shsw='switchshpool'
     alias spa='shpool attach'

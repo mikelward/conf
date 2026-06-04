@@ -1221,6 +1221,16 @@ def clone [url: string, ...args: string] {
     }
 }
 
+#######################
+# SHPOOL ALIASES
+# Thin aliases over `shpool`. Aliases rather than `def` wrappers so flags
+# pass through to ^shpool without nushell's parser catching them (same
+# rationale as the VCS aliases above). Mirrors shrc/fish.
+
+alias shpoollist = ^shpool list
+alias lsp        = ^shpool list
+alias shpls      = ^shpool list
+
 ######################
 # INTERACTIVE: PROMPT / HOOKS
 # Install the prompt closures on the first interactive run. Nushell reads

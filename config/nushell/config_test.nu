@@ -1685,6 +1685,27 @@ except OSError: pass
         assert equal $status "tty" $"autoshpool stdout should be a tty when nu runs under a pty, got: ($status)"
     })
 
+    # shpoollist alias runs `shpool list`, passing args through.
+    (run-test "nu shpoollist alias runs shpool list" {
+        let dir = (mktemp -d)
+        let marker = ($dir | path join "args")
+        # Stub shpool that records the args it was called with.
+        $"#!/bin/sh\necho \"$@\" > ($marker)" | save ($dir | path join "shpool")
+        ^chmod +x ($dir | path join "shpool")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        shpoollist
+        assert equal (open $marker | str trim) "list"
+    })
+    (run-test "nu lsp alias runs shpool list" {
+        let dir = (mktemp -d)
+        let marker = ($dir | path join "args")
+        $"#!/bin/sh\necho \"$@\" > ($marker)" | save ($dir | path join "shpool")
+        ^chmod +x ($dir | path join "shpool")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        lsp
+        assert equal (open $marker | str trim) "list"
+    })
+
     # TODO: add package manager wrapper tests (update, search, install,
     # versions, upgrade, etc.) once the defs are moved out of `if` blocks.
     # Nushell scopes `def` inside `if`, so the current yum/apt-get

@@ -1034,6 +1034,8 @@ fi # SHRC_LOAD_FUNCTIONS_ONLY guard (env-setup block)
 
 switchshpool() { autoshpool switch "$1" && exit; }
 
+shpoollist() { shpool list "$@"; }
+
 maybe_start_shpool_and_exit() {
     if ! in_shpool && want_shpool && have_command shpool; then
         autoshpool && exit
@@ -1856,6 +1858,7 @@ if is_interactive; then
         lsof -a -n -P -i "$@"
     }
     lss() { lssock "$@"; }
+    lsp() { shpoollist "$@"; }
     j() { jobs "$@"; }
     jd() { jjd "$@"; }
     mjd() { jjd -f "$@"; }
@@ -1891,6 +1894,7 @@ if is_interactive; then
     s() { subl "$@"; }
     sa() { shpool attach "$@"; }
     sd() { shpool detach "$@"; }
+    shpls() { shpoollist "$@"; }
     shpoolswitch() { switchshpool "$@"; }
     shsw() { switchshpool "$@"; }
     spa() { shpool attach "$@"; }
