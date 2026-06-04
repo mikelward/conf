@@ -601,6 +601,77 @@ start_test "connected_remotely without SSH_CONNECTION"
 unset SSH_CONNECTION
 assert_false connected_remotely
 
+###############
+# SSH CLIENT HOST
+
+start_test "ssh_client_host returns LC_CLIENT_HOST when set"
+result="$(LC_CLIENT_HOST="laptop" SSH_CONNECTION="" ssh_client_host)"
+assert_equal "laptop" "$result"
+
+start_test "ssh_client_host fails when not an ssh session"
+unset LC_CLIENT_HOST SSH_CONNECTION
+assert_false ssh_client_host
+
+start_test "ssh_client_host reverse-resolves the client IP"
+result="$(
+    unset LC_CLIENT_HOST
+    SSH_CONNECTION="1.2.3.4 5555 10.0.0.1 22"
+    have_command() { test "$1" = getent; }
+    getent() { printf '%s\n' "1.2.3.4   client.example.com   alias"; }
+    ssh_client_host
+)"
+assert_equal "client" "$result"
+
+start_test "ssh_client_host falls back to the client IP"
+result="$(
+    unset LC_CLIENT_HOST
+    SSH_CONNECTION="1.2.3.4 5555 10.0.0.1 22"
+    have_command() { return 1; }
+    ssh_client_host
+)"
+assert_equal "1.2.3.4" "$result"
+
+# ssh_to lives in shrc's interactive block (indented, and skipped under
+# SHRC_LOAD_FUNCTIONS_ONLY), so the whole-file source above did not define
+# it. Pull it out directly and de-indent so we can exercise it here.
+_ssh_to_def="$(sed -n '/^    ssh_to() {/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
+
+start_test "ssh_to sends client host via LC_CLIENT_HOST and SendEnv"
+result="$(
+    eval "$_ssh_to_def"
+    short_hostname() { puts "clienthost"; }
+    have_command() { return 1; }   # no rw -> ssh path
+    ssh() { puts "ssh LC_CLIENT_HOST=$LC_CLIENT_HOST args=$*"; }
+    ssh_to myhost
+)"
+assert_contains "LC_CLIENT_HOST=clienthost" "$result"
+assert_contains "-oSendEnv=LC_CLIENT_HOST" "$result"
+assert_contains "myhost" "$result"
+
+start_test "ssh_to rw path also sets LC_CLIENT_HOST"
+result="$(
+    eval "$_ssh_to_def"
+    short_hostname() { puts "clienthost"; }
+    have_command() { test "$1" = rw; }   # rw available, single arg -> rw path
+    rw() { puts "rw LC_CLIENT_HOST=$LC_CLIENT_HOST args=$*"; }
+    ssh_to myhost
+)"
+assert_contains "rw LC_CLIENT_HOST=clienthost" "$result"
+assert_contains "args=-r myhost" "$result"
+
+start_test "ssh_to does not leak LC_CLIENT_HOST into the shell"
+result="$(
+    eval "$_ssh_to_def"
+    short_hostname() { puts "clienthost"; }
+    have_command() { return 1; }
+    ssh() { :; }
+    ssh_to myhost
+    puts "after=[${LC_CLIENT_HOST:-}]"
+)"
+assert_equal "after=[]" "$result"
+
+unset _ssh_to_def
+
 start_test "inside_tmux with TMUX set"
 TMUX="/tmp/tmux-1000/default,12345,0"
 assert_true inside_tmux

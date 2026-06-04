@@ -126,6 +126,36 @@ function connected_remotely
     connected_via_ssh
 end
 
+# print the connecting SSH client's hostname (best effort), or nothing and
+# return non-zero if this isn't an SSH session. Tries, in order:
+#   1. LC_CLIENT_HOST, smuggled through by ssh_to (servers commonly
+#      AcceptEnv LC_*, so it usually survives without server-side config)
+#   2. reverse DNS of the client IP from SSH_CONNECTION
+#   3. the raw client IP
+function ssh_client_host
+    if test -n "$LC_CLIENT_HOST"
+        printf '%s\n' $LC_CLIENT_HOST
+        return 0
+    end
+    connected_via_ssh; or return 1
+    set _ip (string split ' ' $SSH_CONNECTION)[1]
+    set _name ""
+    if have_command getent
+        set _fields (getent hosts $_ip 2>/dev/null | string match --all --regex '\S+')
+        if test (count $_fields) -ge 2
+            set _name $_fields[2]
+        end
+    end
+    if test -z "$_name"; and have_command dig
+        set _name (dig +short -x $_ip 2>/dev/null | head -1 | string replace --regex '\.$' '')
+    end
+    if test -n "$_name"
+        printf '%s\n' (string split '.' $_name)[1]
+    else
+        printf '%s\n' $_ip
+    end
+end
+
 # return true if this is inside a VCS workspace/source root
 function inside_project
     set _root (projectroot | string collect)
@@ -903,6 +933,25 @@ if is_interactive
     alias xevkey='xev -event keyboard'
     alias xr='DISPLAY=:0.0 xrandr'
 
+    # ssh to a host from ~/.ssh/config, telling the remote who is connecting
+    # via LC_CLIENT_HOST (read back with ssh_client_host). Exported so it
+    # reaches ssh/rw and their children, then erased so it doesn't linger in
+    # the interactive shell. Set before the branch so both paths carry it;
+    # SendEnv is additive, so the usual LANG/LC_* forwarding is left intact.
+    function ssh_to
+        set -gx LC_CLIENT_HOST (short_hostname | string collect)
+        set _status 0
+        if have_command rw; and test (count $argv) -eq 1
+            rw -r $argv
+            set _status $status
+        else
+            shift_options ssh -t -oSendEnv=LC_CLIENT_HOST $argv
+            set _status $status
+        end
+        set -e LC_CLIENT_HOST
+        return $_status
+    end
+
     function set_up_ssh_aliases
         set _ssh_config $HOME/.ssh/config
         test -f $_ssh_config; or return
@@ -916,7 +965,7 @@ if is_interactive
                 case '*\**' '*\?*' '*-*'
                     continue
                 end
-                eval "function $_alias; shift_options ssh -t $_alias \$argv; end"
+                eval "function $_alias; ssh_to $_alias \$argv; end"
             end
         end <$_ssh_config
     end

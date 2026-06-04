@@ -153,6 +153,75 @@ result="$(_fish_run '
 ')"
 assert_equal "yes" "$result"
 
+###############
+# TEST: ssh_client_host (reader) and ssh_to (sender)
+
+start_test "fish ssh_client_host returns LC_CLIENT_HOST when set"
+result="$(_fish_run '
+    set -gx LC_CLIENT_HOST laptop
+    ssh_client_host
+')"
+assert_equal "laptop" "$result"
+
+start_test "fish ssh_client_host empty when not an ssh session"
+result="$(_fish_run '
+    set -e LC_CLIENT_HOST
+    set -e SSH_CONNECTION
+    set _h (ssh_client_host)
+    echo "[$_h]"
+')"
+assert_equal "[]" "$result"
+
+start_test "fish ssh_client_host reverse-resolves the client IP"
+result="$(_fish_run '
+    set -e LC_CLIENT_HOST
+    set -gx SSH_CONNECTION "1.2.3.4 5555 10.0.0.1 22"
+    function have_command; test $argv[1] = getent; end
+    function getent; printf "%s\n" "1.2.3.4   client.example.com   alias"; end
+    ssh_client_host
+')"
+assert_equal "client" "$result"
+
+start_test "fish ssh_client_host falls back to the client IP"
+result="$(_fish_run '
+    set -e LC_CLIENT_HOST
+    set -gx SSH_CONNECTION "1.2.3.4 5555 10.0.0.1 22"
+    function have_command; return 1; end
+    ssh_client_host
+')"
+assert_equal "1.2.3.4" "$result"
+
+start_test "fish ssh_to sends client host via LC_CLIENT_HOST and SendEnv"
+result="$(_fish_run '
+    function short_hostname; echo clienthost; end
+    function have_command; test $argv[1] = ssh; end
+    function ssh; echo "ssh LC_CLIENT_HOST=$LC_CLIENT_HOST args=$argv"; end
+    ssh_to myhost
+')"
+assert_contains "LC_CLIENT_HOST=clienthost" "$result"
+assert_contains "-oSendEnv=LC_CLIENT_HOST" "$result"
+assert_contains "myhost" "$result"
+
+start_test "fish ssh_to rw path also sets LC_CLIENT_HOST"
+result="$(_fish_run '
+    function short_hostname; echo clienthost; end
+    function have_command; test $argv[1] = rw; end
+    function rw; echo "rw LC_CLIENT_HOST=$LC_CLIENT_HOST args=$argv"; end
+    ssh_to myhost
+')"
+assert_contains "rw LC_CLIENT_HOST=clienthost" "$result"
+assert_contains "args=-r myhost" "$result"
+
+start_test "fish ssh_to does not leak LC_CLIENT_HOST"
+result="$(_fish_run '
+    function short_hostname; echo clienthost; end
+    function have_command; test $argv[1] = ssh; end
+    function ssh; true; end
+    ssh_to myhost
+    echo "after=[$LC_CLIENT_HOST]"
+')"
+assert_equal "after=[]" "$result"
+
 start_test "fish want_shpool false when not remote and not in project"
 result="$(_fish_run '
     function projectroot; return 1; end
