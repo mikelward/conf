@@ -1,0 +1,7 @@
+[keys.normal]
+"^" = "goto_first_nonwhitespace"
+"$" = "goto_line_end"
+
+[keys.select]
+"^" = "goto_first_nonwhitespace"
+"$" = "goto_line_end"
