@@ -422,4 +422,22 @@ result="$(_fish_run '
 ')"
 assert_equal "jjd -f repo" "$result"
 
+###############
+# TEST: FAILSAFE=1 bails out of config.fish before defining functions
+# Mirrors shrc's FAILSAFE=1 escape hatch.
+
+start_test "fish FAILSAFE=1 prints failsafe mode and skips heavy setup"
+_failsafe_out="$(HOME=$_testdir/fakehome FAILSAFE=1 run_with_timeout 15 \
+    fish --no-config -c "source $_config; echo AFTER; functions --query autoshpool; and echo autoshpool-defined" 2>&1)"
+assert_contains "failsafe mode" "$_failsafe_out"
+assert_contains "AFTER" "$_failsafe_out"
+# `asp` / wrappers like `jd` are defined past the early-return point.
+assert_not_contains "autoshpool-defined" "$_failsafe_out"
+
+start_test "fish FAILSAFE unset loads config.fish normally"
+_failsafe_out="$(HOME=$_testdir/fakehome run_with_timeout 15 \
+    fish --no-config -c "source $_config; echo AFTER" 2>&1)"
+assert_not_contains "failsafe mode" "$_failsafe_out"
+assert_contains "AFTER" "$_failsafe_out"
+
 test_summary "fish_test"

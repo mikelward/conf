@@ -123,13 +123,13 @@ $(CACHE):
 # driver. shrc_test.sh runs under bash and zsh (the two shells whose
 # functions we actually care about). The dash target only runs
 # shrc_dash_test.sh, which regression-tests that sourcing shrc under
-# dash falls into the basic-mode short-circuit cleanly -- we don't try
+# dash falls into the failsafe-mode short-circuit cleanly -- we don't try
 # to make every shrc function work under dash semantics. test-prompt
 # and test-vcs are bash-only because their drivers use bash/zsh-only
 # syntax (here-strings, arrays).
 
 # shrc_dash_test.sh sources `shrc` under dash and symlinks shrc.vcs into
-# $HOME/.shrc.vcs to regression-test the basic-mode short-circuit, so
+# $HOME/.shrc.vcs to regression-test the failsafe-mode short-circuit, so
 # both files belong in the stamp deps even though dash never sources
 # shrc.vcs as a normal user.
 $(CACHE)/test-dash.stamp: shrc shrc.vcs shrc_test_lib.sh shrc_dash_test.sh | $(CACHE)

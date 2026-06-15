@@ -1200,4 +1200,33 @@ assert_equal "fail" "$result"
 rm -rf "$_extract_selftest_dir"
 unset -f _extract_selftest
 
+###############
+# FAILSAFE escape hatch
+# Under bash/zsh, sourcing shrc with FAILSAFE=1 should hit the same
+# early bail-out as plain sh / dash: emit "failsafe mode" on stderr, set a
+# minimal PS1, and return before the autoshpool / interactive block
+# runs. Run in a fresh interpreter so we don't pollute the test's own
+# shell with the early-return prompt.
+
+if test "$_real_shell" = bash || test "$_real_shell" = zsh; then
+    start_test "FAILSAFE=1 triggers failsafe mode and returns early"
+    _failsafe_out=$(FAILSAFE=1 HOME="$_testdir" \
+        "$_real_shell" -c '. "$1"; echo AFTER; type asp 2>&1 || true' \
+        -- "$_srcdir/shrc" 2>&1)
+    assert_contains "failsafe mode" "$_failsafe_out"
+    assert_contains "AFTER" "$_failsafe_out"
+    # Interactive aliases (e.g. `asp`) are defined after the early-return
+    # point, so they must not exist when failsafe fires.
+    assert_not_contains "asp is a function" "$_failsafe_out"
+
+    start_test "FAILSAFE unset loads shrc normally"
+    _failsafe_out=$(HOME="$_testdir" \
+        "$_real_shell" -c '. "$1"; echo AFTER' \
+        -- "$_srcdir/shrc" 2>&1)
+    assert_not_contains "failsafe mode" "$_failsafe_out"
+    assert_contains "AFTER" "$_failsafe_out"
+else
+    skip_block "FAILSAFE tests: dash/sh already take the failsafe branch"
+fi
+
 test_summary "$_real_shell shrc_test"

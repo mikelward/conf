@@ -1,7 +1,7 @@
 #!/bin/dash
 #
 # End-to-end test that sourcing shrc under a real dash subshell falls
-# into the basic-mode short-circuit cleanly -- no syntax error, no
+# into the failsafe-mode short-circuit cleanly -- no syntax error, no
 # bashism blowup. shrc functions aren't expected to work under dash
 # (the bash/zsh-only test suite lives in shrc_test.sh), this file only
 # guards the "user accidentally invoked sh/dash" path.
@@ -12,7 +12,7 @@
 
 # A symlinked .shrc.vcs in $HOME used to surface a syntax-error
 # regression here (shrc.vcs uses bash-only declare/array syntax). The
-# basic-mode short-circuit at the top of shrc returns long before
+# failsafe-mode short-circuit at the top of shrc returns long before
 # reaching the .shrc.vcs sourcing now, so this test mostly catches
 # stray bashisms that slip in *above* the short-circuit.
 start_test "shrc sources cleanly under dash despite .shrc.vcs present"

@@ -8,6 +8,15 @@
 #
 # Mikel Ward <mikel@mikelward.com>
 
+# Cross-shell failsafe escape hatch. Mirrors shrc's FAILSAFE=1 check and
+# the equivalent in config.fish: bail out before defining commands,
+# setting up the prompt, or jumping into shpool, so a misbehaving rc
+# (e.g. an autoshpool loop) can be recovered from with `FAILSAFE=1 nu`.
+if ($env.FAILSAFE? | default "0") == "1" {
+    print --stderr "failsafe mode"
+    return
+}
+
 ###############
 # ENVIRONMENT
 

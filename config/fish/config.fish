@@ -2,6 +2,18 @@
 #
 # Mikel Ward <mikel@mikelward.com>
 
+# Cross-shell failsafe escape hatch. Mirrors shrc's FAILSAFE=1 check
+# and the equivalent in config.nu: bail out before defining functions,
+# setting up the prompt, or jumping into shpool, so a misbehaving rc
+# (e.g. an autoshpool loop) can be recovered from with `FAILSAFE=1 fish`.
+if test "$FAILSAFE" = 1
+    echo failsafe mode >&2
+    function fish_prompt
+        echo (basename $PWD)'$ '
+    end
+    return
+end
+
 # standardize on bash-like variables that everyone assumes are preset
 set USERNAME (id -un)
 set HOSTNAME (hostname --fqdn)
