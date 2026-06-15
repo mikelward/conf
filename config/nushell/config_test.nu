@@ -881,6 +881,13 @@ except OSError: pass
         fake-shpool-on-path
         assert (not (want-shpool))
     })
+    (run-test "nu want-shpool false when inside tmux" {
+        $env.TMUX = "/tmp/tmux-fake/default,12345,0"
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        $env.stdin-is-tty = {|| true }
+        fake-shpool-on-path
+        assert (not (want-shpool))
+    })
     (run-test "nu projectname picks up projectroot override" {
         $env.projectroot = {|| "/srv/code/myrepo" }
         assert equal (projectname) "myrepo"

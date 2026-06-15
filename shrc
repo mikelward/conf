@@ -308,6 +308,7 @@ want_shpool() {
     if test "${WANT_SHPOOL:-1}" = 0; then return 1; fi
     if ! stdin_is_tty; then return 1; fi
     if in_shpool; then return 1; fi
+    if inside_tmux; then return 1; fi
     if ! have_command shpool; then return 1; fi
     connected_remotely || inside_project
 }

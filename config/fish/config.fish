@@ -194,6 +194,7 @@ function want_shpool
     test "$WANT_SHPOOL" = 0; and return 1
     stdin_is_tty; or return 1
     in_shpool; and return 1
+    inside_tmux; and return 1
     have_command shpool; or return 1
     connected_remotely; or inside_project
 end

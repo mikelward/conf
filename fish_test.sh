@@ -297,6 +297,17 @@ result="$(_fish_run '
 ')"
 assert_equal "no" "$result"
 
+start_test "fish want_shpool false when inside tmux"
+result="$(_fish_run '
+    set -gx TMUX /tmp/tmux-fake/default,12345,0
+    set -gx SSH_CONNECTION "1.2.3.4 1 2.3.4.5 22"
+    function projectroot; echo /some/project; end
+    function have_command; return 0; end
+    function stdin_is_tty; return 0; end
+    if want_shpool; echo yes; else; echo no; end
+')"
+assert_equal "no" "$result"
+
 ###############
 # TEST: maybe_start_shpool_and_exit is a no-op when shpool is not installed
 
