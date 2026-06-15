@@ -360,6 +360,25 @@ def --wrapped sessionlist [...args] {
     }
 }
 
+# Kill a (named) session using the preferred backend. tmux takes the target
+# via -t (a bare name isn't a positional argument), so translate a session
+# name; no name kills the current session. shpool kills names positionally.
+def --wrapped sessionkill [...args] {
+    match (session-backend) {
+        "tmux" => {
+            # --wrapped types the spread args as glob, so coerce before the
+            # flag check.
+            if ($args | length) > 0 and (not (($args.0 | into string) | str starts-with "-")) {
+                ^tmux kill-session -t $args.0 ...($args | skip 1)
+            } else {
+                ^tmux kill-session ...$args
+            }
+        }
+        "shpool" => { ^shpool kill ...$args }
+        _ => { }
+    }
+}
+
 # return true if the current user is root
 def i-am-root [] {
     ($env.UID? | default 1000) == 0
@@ -1427,6 +1446,13 @@ alias sls = sessionlist
 alias sw  = switchsession
 alias sws = switchsession
 alias tsw = switchsession
+
+# ss<verb> session family (same dispatchers, "session"-prefixed spelling).
+alias ssa = autosession
+alias ssd = sessiondetach
+alias ssk = sessionkill
+alias ssl = sessionlist
+alias ssw = switchsession
 
 ######################
 # INTERACTIVE: PROMPT / HOOKS

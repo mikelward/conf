@@ -493,6 +493,38 @@ result="$(_fish_run '
 ')"
 assert_equal "shpoollist-called" "$result"
 
+start_test "fish sessionkill routes a named tmux kill through -t"
+result="$(_fish_run '
+    function session_backend; echo tmux; end
+    function tmux; echo "tmux $argv"; end
+    sessionkill work
+')"
+assert_equal "tmux kill-session -t work" "$result"
+
+start_test "fish sessionkill with no name kills the current tmux session"
+result="$(_fish_run '
+    function session_backend; echo tmux; end
+    function tmux; echo "tmux $argv"; end
+    sessionkill
+')"
+assert_equal "tmux kill-session" "$result"
+
+start_test "fish sessionkill forwards tmux flags after the name"
+result="$(_fish_run '
+    function session_backend; echo tmux; end
+    function tmux; echo "tmux $argv"; end
+    sessionkill work -a
+')"
+assert_equal "tmux kill-session -t work -a" "$result"
+
+start_test "fish sessionkill runs shpool kill on the shpool backend"
+result="$(_fish_run '
+    function session_backend; echo shpool; end
+    function shpool; echo "shpool $argv"; end
+    sessionkill work
+')"
+assert_equal "shpool kill work" "$result"
+
 ###############
 # TEST: maybe_start_session_and_exit prefers tmux, falls back to shpool
 
