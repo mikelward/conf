@@ -16,9 +16,14 @@
 # env sanitization (most sshd configs AcceptEnv LC_*).
 # ~/.failsafe is a persistent opt-in: `touch ~/.failsafe` to keep every
 # new shell in failsafe mode without having to re-set the env var.
-if (($env.FAILSAFE? | default "0") == "1")
+# Outer parens wrap the multi-line condition: nu's parser otherwise
+# treats `if (cond)` followed by a newline as a complete `if` missing a
+# block.
+if (
+    (($env.FAILSAFE? | default "0") == "1")
     or (($env.LC_FAILSAFE? | default "0") == "1")
-    or (($env.HOME | path join ".failsafe") | path exists) {
+    or (($env.HOME | path join ".failsafe") | path exists)
+) {
     print --stderr "failsafe mode"
     return
 }
@@ -245,11 +250,21 @@ def want-shpool [] {
     (connected-remotely) or (inside-project)
 }
 
+# Wrap the external autoshpool binary so every invocation stamps
+# SHPOOL_INITIAL_PWD with the PWD at call time. The spawned in-shpool
+# shell then cd's to that directory (see the top-level in-shpool block
+# below), so `cd repo; jd ...` lands the new session in the repo rather
+# than in the outer shell's startup dir. Mirrors shrc's autoshpool() and
+# config.fish's `function autoshpool`.
+def --wrapped autoshpool [...args] {
+    with-env { SHPOOL_INITIAL_PWD: $env.PWD } { ^autoshpool ...$args }
+}
+
 # start shpool if this session warrants it, then exit the current shell.
 # Mirrors shrc's maybe_start_shpool_and_exit.
 def maybe-start-shpool-and-exit [] {
     if (want-shpool) {
-        let ok = (try { ^autoshpool; true } catch { false })
+        let ok = (try { autoshpool; true } catch { false })
         if $ok { exit }
     }
 }
@@ -1087,12 +1102,12 @@ def j [] { job list }
 # $ok = false), so a failed clone/cd doesn't spawn a stray session.
 # `--wrapped` so flags pass through to the underlying command instead
 # of nushell's parser catching them on the wrapper.
-def --wrapped jd  [...args] { if (try { ^jjd  ...$args;    true } catch { false }) { ^autoshpool } }
-def --wrapped hd  [...args] { if (try { ^hgd  ...$args;    true } catch { false }) { ^autoshpool } }
-def --wrapped gd  [...args] { if (try { ^gitd ...$args;    true } catch { false }) { ^autoshpool } }
-def --wrapped mjd [...args] { if (try { ^jjd  -f ...$args; true } catch { false }) { ^autoshpool } }
-def --wrapped mhd [...args] { if (try { ^hgd  -f ...$args; true } catch { false }) { ^autoshpool } }
-def --wrapped mgd [...args] { if (try { ^gitd -f ...$args; true } catch { false }) { ^autoshpool } }
+def --wrapped jd  [...args] { if (try { ^jjd  ...$args;    true } catch { false }) { autoshpool } }
+def --wrapped hd  [...args] { if (try { ^hgd  ...$args;    true } catch { false }) { autoshpool } }
+def --wrapped gd  [...args] { if (try { ^gitd ...$args;    true } catch { false }) { autoshpool } }
+def --wrapped mjd [...args] { if (try { ^jjd  -f ...$args; true } catch { false }) { autoshpool } }
+def --wrapped mhd [...args] { if (try { ^hgd  -f ...$args; true } catch { false }) { autoshpool } }
+def --wrapped mgd [...args] { if (try { ^gitd -f ...$args; true } catch { false }) { autoshpool } }
 
 def m [...args] { ^make -f .Makefile ...$args }
 def ml [] { m lint }
@@ -1373,7 +1388,17 @@ $env.config = ($env.config | upsert hooks.env_change.PWD [{|before, after|
 # Maybe attach to shpool instead of running a bare nu interactively.
 # Skipped in non-interactive mode so the test suite stays quiet. Mirrors
 # shrc's `maybe_start_shpool_and_exit` call on startup.
+#
+# When entering a shpool session, the autoshpool wrapper has stamped
+# SHPOOL_INITIAL_PWD onto the env; cd to it (so the spawned shell lands
+# in the user's caller PWD, not shpool's daemon PWD) and clear the var
+# so it doesn't leak into later sessions. Mirrors shrc's `if in_shpool
+# && test -n "$SHPOOL_INITIAL_PWD"` block.
 if (is-interactive) {
+    if (in-shpool) and (($env.SHPOOL_INITIAL_PWD? | default "") | is-not-empty) {
+        cd $env.SHPOOL_INITIAL_PWD
+        hide-env SHPOOL_INITIAL_PWD
+    }
     maybe-start-shpool-and-exit
 }
 

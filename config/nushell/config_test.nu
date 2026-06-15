@@ -115,6 +115,40 @@ let results = [
         assert equal (open $calls | str trim) "jjd -f repo"
     })
 
+    ###############
+    # autoshpool wrapper stamps SHPOOL_INITIAL_PWD with the PWD at
+    # invocation time so the spawned shpool shell can cd back to where
+    # the user actually was.
+    (run-test "nu autoshpool stamps SHPOOL_INITIAL_PWD onto invocation" {
+        let calls = (mktemp -t "vcs-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"SHPOOL_INITIAL_PWD=$SHPOOL_INITIAL_PWD\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "autoshpool")
+        ^chmod +x ($bin | path join "autoshpool")
+        $env.PATH = ([$bin] ++ $env.PATH)
+        let pwd_dir = (mktemp -d -t "pwd-dir.XXXXXX")
+        cd $pwd_dir
+        autoshpool
+        assert equal (open $calls | str trim) $"SHPOOL_INITIAL_PWD=($pwd_dir)"
+    })
+    (run-test "nu autoshpool forwards args to the binary" {
+        let calls = (mktemp -t "vcs-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"args=$*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "autoshpool")
+        ^chmod +x ($bin | path join "autoshpool")
+        $env.PATH = ([$bin] ++ $env.PATH)
+        autoshpool switch mysession
+        assert equal (open $calls | str trim) "args=switch mysession"
+    })
+    (run-test "nu autoshpool does not leak SHPOOL_INITIAL_PWD to caller" {
+        let bin = (mktemp -d)
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autoshpool")
+        ^chmod +x ($bin | path join "autoshpool")
+        $env.PATH = ([$bin] ++ $env.PATH)
+        hide-env --ignore-errors SHPOOL_INITIAL_PWD
+        autoshpool
+        assert (not (is-env-set "SHPOOL_INITIAL_PWD"))
+    })
+
 
     ###############
     # bar prints N separator characters
@@ -2245,35 +2279,48 @@ except OSError: pass
         assert (not ($log | path exists))
     })
 
-    # FAILSAFE=1 cross-shell escape hatch: config.nu should print "basic
-    # mode" on stderr and bail before defining any of its helper commands.
-    (run-test "nu FAILSAFE=1 bails before defining helpers" {
-        let r = (with-env {FAILSAFE: "1", HOME: $env.HOME} {
-            ^nu --no-config-file -c $"source ($CONFIG); print AFTER; if (which prepend-path | is-not-empty) { print prepend-path-defined }"
+    # FAILSAFE=1 cross-shell escape hatch: config.nu should print
+    # "failsafe mode" on stderr and bail before running the heavy
+    # startup path. In nu, `def` is parse-time so helper *commands*
+    # still parse into existence; we instead probe a runtime
+    # side-effect: $env.HISTORY_FILE is assigned in the env block
+    # right after the failsafe-return. We pre-seed it with a sentinel
+    # so an inherited value doesn't masquerade as "set by config.nu" --
+    # if config.nu actually ran that line it would overwrite the
+    # sentinel with the $HOME/.history path.
+    #
+    # The inner command needs to read $env.HISTORY_FILE in the *child*
+    # nu, but $"..." would resolve it in the parent. We build the
+    # command with plain string concat so the $env reference lands
+    # verbatim in the child.
+    (run-test "nu FAILSAFE=1 bails before heavy startup runs" {
+        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let r = (with-env {FAILSAFE: "1", HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
+            ^nu --no-config-file -c $cmd
         } | complete)
         assert ($r.stderr | str contains "failsafe mode") $"expected failsafe mode on stderr, got: ($r.stderr)"
-        assert ($r.stdout | str contains "AFTER") $"sourcing should return, not exit shell; got stdout=($r.stdout)"
-        assert (not ($r.stdout | str contains "prepend-path-defined")) $"FAILSAFE should skip helper defs; got stdout=($r.stdout)"
+        assert ($r.stdout | str contains "HISTORY_FILE=SENTINEL") $"FAILSAFE should skip the heavy startup that overwrites HISTORY_FILE; got stdout=($r.stdout)"
     })
 
     (run-test "nu FAILSAFE unset loads config.nu normally" {
-        let r = (with-env {HOME: $env.HOME} {
-            ^nu --no-config-file -c $"source ($CONFIG); print AFTER; if (which prepend-path | is-not-empty) { print prepend-path-defined }"
+        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let r = (with-env {HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
+            ^nu --no-config-file -c $cmd
         } | complete)
         assert (not ($r.stderr | str contains "failsafe mode")) $"failsafe mode should not print when FAILSAFE unset; got: ($r.stderr)"
-        assert ($r.stdout | str contains "AFTER")
-        assert ($r.stdout | str contains "prepend-path-defined") $"helpers should be defined without FAILSAFE; got stdout=($r.stdout)"
+        assert (not ($r.stdout | str contains "HISTORY_FILE=SENTINEL")) $"startup should overwrite HISTORY_FILE without FAILSAFE; got stdout=($r.stdout)"
+        assert ($r.stdout | str contains ".history") $"HISTORY_FILE should point under HOME/.history; got stdout=($r.stdout)"
     })
 
     # LC_FAILSAFE=1 is the ssh-survivable alias (most sshd configs
     # AcceptEnv LC_*), so `LC_FAILSAFE=1 ssh host` reaches the remote.
     (run-test "nu LC_FAILSAFE=1 also triggers failsafe mode" {
-        let r = (with-env {LC_FAILSAFE: "1", HOME: $env.HOME} {
-            ^nu --no-config-file -c $"source ($CONFIG); print AFTER; if (which prepend-path | is-not-empty) { print prepend-path-defined }"
+        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let r = (with-env {LC_FAILSAFE: "1", HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
+            ^nu --no-config-file -c $cmd
         } | complete)
         assert ($r.stderr | str contains "failsafe mode") $"expected failsafe mode on stderr, got: ($r.stderr)"
-        assert ($r.stdout | str contains "AFTER")
-        assert (not ($r.stdout | str contains "prepend-path-defined"))
+        assert ($r.stdout | str contains "HISTORY_FILE=SENTINEL")
     })
 
     # ~/.failsafe is a persistent opt-in: presence of the file alone
@@ -2281,12 +2328,12 @@ except OSError: pass
     (run-test "nu ~/.failsafe file triggers failsafe mode" {
         let fhome = (mktemp -d)
         touch ($fhome | path join ".failsafe")
-        let r = (with-env {HOME: $fhome} {
-            ^nu --no-config-file -c $"source ($CONFIG); print AFTER; if (which prepend-path | is-not-empty) { print prepend-path-defined }"
+        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let r = (with-env {HOME: $fhome, HISTORY_FILE: "SENTINEL"} {
+            ^nu --no-config-file -c $cmd
         } | complete)
         assert ($r.stderr | str contains "failsafe mode") $"expected failsafe mode on stderr, got: ($r.stderr)"
-        assert ($r.stdout | str contains "AFTER")
-        assert (not ($r.stdout | str contains "prepend-path-defined"))
+        assert ($r.stdout | str contains "HISTORY_FILE=SENTINEL")
     })
 ]
 
