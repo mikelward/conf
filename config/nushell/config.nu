@@ -369,7 +369,7 @@ def --wrapped sessionkill [...args] {
             # --wrapped types the spread args as glob, so coerce before the
             # flag check.
             if ($args | length) > 0 and (not (($args.0 | into string) | str starts-with "-")) {
-                ^tmux kill-session -t $args.0
+                ^tmux kill-session -t $args.0 ...($args | skip 1)
             } else {
                 ^tmux kill-session ...$args
             }

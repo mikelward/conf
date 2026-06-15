@@ -1142,6 +1142,15 @@ rm -f "$_dispatch_calls"
 )
 assert_equal "tmux kill-session" "$(cat "$_dispatch_calls" 2>/dev/null)"
 
+start_test "sessionkill forwards tmux flags after the name"
+rm -f "$_dispatch_calls"
+(
+    session_backend() { echo tmux; }
+    tmux() { echo "tmux $*" >> "$_dispatch_calls"; }
+    sessionkill work -a
+)
+assert_equal "tmux kill-session -t work -a" "$(cat "$_dispatch_calls" 2>/dev/null)"
+
 start_test "sessionkill runs shpool kill on the shpool backend"
 rm -f "$_dispatch_calls"
 (

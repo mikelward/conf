@@ -797,7 +797,7 @@ function sessionkill
     switch (session_backend)
     case tmux
         if test (count $argv) -gt 0; and not string match -q -- '-*' $argv[1]
-            tmux kill-session -t $argv[1]
+            tmux kill-session -t $argv[1] $argv[2..]
         else
             tmux kill-session $argv
         end

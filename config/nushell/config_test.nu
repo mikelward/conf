@@ -1204,6 +1204,17 @@ except OSError: pass
         sessionkill
         assert equal (open $calls | str trim) "tmux kill-session"
     })
+    (run-test "nu sessionkill forwards tmux flags after the name" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"tmux $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "tmux")
+        ^chmod +x ($bin | path join "tmux")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autotmux")
+        ^chmod +x ($bin | path join "autotmux")
+        $env.PATH = [$bin]
+        sessionkill work -a
+        assert equal (open $calls | str trim) "tmux kill-session -t work -a"
+    })
     (run-test "nu sessionkill runs shpool kill on the shpool backend" {
         let calls = (mktemp -t "sess-calls.XXXXXX")
         let bin = (mktemp -d)

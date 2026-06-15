@@ -509,6 +509,14 @@ result="$(_fish_run '
 ')"
 assert_equal "tmux kill-session" "$result"
 
+start_test "fish sessionkill forwards tmux flags after the name"
+result="$(_fish_run '
+    function session_backend; echo tmux; end
+    function tmux; echo "tmux $argv"; end
+    sessionkill work -a
+')"
+assert_equal "tmux kill-session -t work -a" "$result"
+
 start_test "fish sessionkill runs shpool kill on the shpool backend"
 result="$(_fish_run '
     function session_backend; echo shpool; end

@@ -1168,7 +1168,11 @@ sessionkill() {
         tmux)
             case "${1:-}" in
                 ''|-*) tmux kill-session "$@" ;;
-                *)     tmux kill-session -t "$1" ;;
+                *)
+                    local _target="$1"
+                    shift
+                    tmux kill-session -t "$_target" "$@"
+                    ;;
             esac
             ;;
         shpool) shpool kill "$@" ;;
