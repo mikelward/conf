@@ -2268,6 +2268,19 @@ except OSError: pass
         assert ($r.stdout | str contains "AFTER")
         assert (not ($r.stdout | str contains "prepend-path-defined"))
     })
+
+    # ~/.failsafe is a persistent opt-in: presence of the file alone
+    # forces failsafe mode for every new shell.
+    (run-test "nu ~/.failsafe file triggers failsafe mode" {
+        let fhome = (mktemp -d)
+        touch ($fhome | path join ".failsafe")
+        let r = (with-env {HOME: $fhome} {
+            ^nu --no-config-file -c $"source ($CONFIG); print AFTER; if (which prepend-path | is-not-empty) { print prepend-path-defined }"
+        } | complete)
+        assert ($r.stderr | str contains "failsafe mode") $"expected failsafe mode on stderr, got: ($r.stderr)"
+        assert ($r.stdout | str contains "AFTER")
+        assert (not ($r.stdout | str contains "prepend-path-defined"))
+    })
 ]
 
 for r in $results { print $r }

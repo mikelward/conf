@@ -14,7 +14,11 @@
 # (e.g. an autoshpool loop) can be recovered from with `FAILSAFE=1 nu`.
 # LC_FAILSAFE=1 is accepted as an alias so the flag survives sshd's
 # env sanitization (most sshd configs AcceptEnv LC_*).
-if (($env.FAILSAFE? | default "0") == "1") or (($env.LC_FAILSAFE? | default "0") == "1") {
+# ~/.failsafe is a persistent opt-in: `touch ~/.failsafe` to keep every
+# new shell in failsafe mode without having to re-set the env var.
+if (($env.FAILSAFE? | default "0") == "1")
+    or (($env.LC_FAILSAFE? | default "0") == "1")
+    or (($env.HOME | path join ".failsafe") | path exists) {
     print --stderr "failsafe mode"
     return
 }
