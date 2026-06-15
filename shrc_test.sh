@@ -1070,6 +1070,60 @@ rm -f "$_dispatch_calls"
 )
 assert_equal "switchshpool work" "$(cat "$_dispatch_calls" 2>/dev/null)"
 
+start_test "sessionattach runs tmux attach on the tmux backend"
+rm -f "$_dispatch_calls"
+(
+    session_backend() { echo tmux; }
+    tmux() { echo "tmux $*" >> "$_dispatch_calls"; }
+    sessionattach work
+)
+assert_equal "tmux attach work" "$(cat "$_dispatch_calls" 2>/dev/null)"
+
+start_test "sessionattach runs shpool attach on the shpool backend"
+rm -f "$_dispatch_calls"
+(
+    session_backend() { echo shpool; }
+    shpool() { echo "shpool $*" >> "$_dispatch_calls"; }
+    sessionattach work
+)
+assert_equal "shpool attach work" "$(cat "$_dispatch_calls" 2>/dev/null)"
+
+start_test "sessiondetach runs tmux detach on the tmux backend"
+rm -f "$_dispatch_calls"
+(
+    session_backend() { echo tmux; }
+    tmux() { echo "tmux $*" >> "$_dispatch_calls"; }
+    sessiondetach
+)
+assert_equal "tmux detach" "$(cat "$_dispatch_calls" 2>/dev/null)"
+
+start_test "sessiondetach runs shpool detach on the shpool backend"
+rm -f "$_dispatch_calls"
+(
+    session_backend() { echo shpool; }
+    shpool() { echo "shpool $*" >> "$_dispatch_calls"; }
+    sessiondetach
+)
+assert_equal "shpool detach" "$(cat "$_dispatch_calls" 2>/dev/null)"
+
+start_test "sessionlist runs tmuxlist on the tmux backend"
+rm -f "$_dispatch_calls"
+(
+    session_backend() { echo tmux; }
+    tmuxlist() { echo "tmuxlist $*" >> "$_dispatch_calls"; }
+    sessionlist
+)
+assert_equal "tmuxlist " "$(cat "$_dispatch_calls" 2>/dev/null)"
+
+start_test "sessionlist runs shpoollist on the shpool backend"
+rm -f "$_dispatch_calls"
+(
+    session_backend() { echo shpool; }
+    shpoollist() { echo "shpoollist $*" >> "$_dispatch_calls"; }
+    sessionlist
+)
+assert_equal "shpoollist " "$(cat "$_dispatch_calls" 2>/dev/null)"
+
 unset -f have_command
 rm -f "$_dispatch_calls"
 SHRC_LOAD_FUNCTIONS_ONLY=1 . "$_srcdir/shrc"
