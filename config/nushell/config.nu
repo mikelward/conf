@@ -279,13 +279,16 @@ def inside-tmux [] {
 }
 
 # return true if we should auto-start tmux in this session. tmux is the
-# default session manager; the gating mirrors want-shpool.
+# default session manager; the gating mirrors want-shpool. We require the
+# autotmux helper too, not just tmux, so a machine that has tmux but hasn't
+# picked up autotmux yet falls through to the shpool path.
 def want-tmux [] {
     if (($env.WANT_TMUX? | default "1") == "0") { return false }
     if (not (stdin-is-tty)) { return false }
     if (inside-tmux) { return false }
     if (in-shpool) { return false }
     if (not (have-command "tmux")) { return false }
+    if (not (have-command "autotmux")) { return false }
     (connected-remotely) or (inside-project)
 }
 
@@ -299,7 +302,7 @@ def --wrapped autotmux [...args] {
 # "" when neither is enabled/installed. tmux wins when both WANT_TMUX and
 # WANT_SHPOOL are enabled and present; set WANT_TMUX=0 to fall back to shpool.
 def session-backend [] {
-    if (($env.WANT_TMUX? | default "1") != "0") and (have-command "tmux") {
+    if (($env.WANT_TMUX? | default "1") != "0") and (have-command "tmux") and (have-command "autotmux") {
         "tmux"
     } else if (($env.WANT_SHPOOL? | default "1") != "0") and (have-command "shpool") {
         "shpool"

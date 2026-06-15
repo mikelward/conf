@@ -319,13 +319,17 @@ inside_tmux() {
 
 # return true if we should auto-start tmux in this session. tmux is the
 # default session manager; the gating mirrors want_shpool so the two can
-# share maybe_start_session_and_exit.
+# share maybe_start_session_and_exit. We require the autotmux helper too,
+# not just tmux: a machine that has tmux but hasn't picked up autotmux yet
+# must fall through to the shpool path rather than trying to run a missing
+# autotmux.
 want_tmux() {
     if test "${WANT_TMUX:-1}" = 0; then return 1; fi
     if ! stdin_is_tty; then return 1; fi
     if inside_tmux; then return 1; fi
     if in_shpool; then return 1; fi
     if ! have_command tmux; then return 1; fi
+    if ! have_command autotmux; then return 1; fi
     connected_remotely || inside_project
 }
 
@@ -1107,7 +1111,7 @@ switchshpool() { autoshpool switch "$1" && exit; }
 # WANT_SHPOOL are enabled and the binaries are present; set WANT_TMUX=0 to fall
 # back to shpool.
 session_backend() {
-    if test "${WANT_TMUX:-1}" != 0 && have_command tmux; then
+    if test "${WANT_TMUX:-1}" != 0 && have_command tmux && have_command autotmux; then
         puts tmux
     elif test "${WANT_SHPOOL:-1}" != 0 && have_command shpool; then
         puts shpool

@@ -205,13 +205,16 @@ function inside_tmux
 end
 
 # return true if we should auto-start tmux in this session. tmux is the
-# default session manager; the gating mirrors want_shpool.
+# default session manager; the gating mirrors want_shpool. We require the
+# autotmux helper too, not just tmux, so a machine that has tmux but hasn't
+# picked up autotmux yet falls through to the shpool path.
 function want_tmux
     test "$WANT_TMUX" = 0; and return 1
     stdin_is_tty; or return 1
     inside_tmux; and return 1
     in_shpool; and return 1
     have_command tmux; or return 1
+    have_command autotmux; or return 1
     connected_remotely; or inside_project
 end
 
@@ -729,7 +732,7 @@ end
 # empty when neither is enabled/installed. tmux wins when both WANT_TMUX and
 # WANT_SHPOOL are enabled and present; set WANT_TMUX=0 to fall back to shpool.
 function session_backend
-    if test "$WANT_TMUX" != 0; and have_command tmux
+    if test "$WANT_TMUX" != 0; and have_command tmux; and have_command autotmux
         echo tmux
     else if test "$WANT_SHPOOL" != 0; and have_command shpool
         echo shpool
