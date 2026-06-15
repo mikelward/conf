@@ -360,6 +360,15 @@ def --wrapped sessionlist [...args] {
     }
 }
 
+# Kill a (named) session using the preferred backend.
+def --wrapped sessionkill [...args] {
+    match (session-backend) {
+        "tmux" => { ^tmux kill-session ...$args }
+        "shpool" => { ^shpool kill ...$args }
+        _ => { }
+    }
+}
+
 # return true if the current user is root
 def i-am-root [] {
     ($env.UID? | default 1000) == 0
@@ -1427,6 +1436,13 @@ alias sls = sessionlist
 alias sw  = switchsession
 alias sws = switchsession
 alias tsw = switchsession
+
+# ss<verb> session family (same dispatchers, "session"-prefixed spelling).
+alias ssa = autosession
+alias ssd = sessiondetach
+alias ssk = sessionkill
+alias ssl = sessionlist
+alias ssw = switchsession
 
 ######################
 # INTERACTIVE: PROMPT / HOOKS

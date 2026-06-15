@@ -1124,6 +1124,24 @@ rm -f "$_dispatch_calls"
 )
 assert_equal "shpoollist " "$(cat "$_dispatch_calls" 2>/dev/null)"
 
+start_test "sessionkill runs tmux kill-session on the tmux backend"
+rm -f "$_dispatch_calls"
+(
+    session_backend() { echo tmux; }
+    tmux() { echo "tmux $*" >> "$_dispatch_calls"; }
+    sessionkill work
+)
+assert_equal "tmux kill-session work" "$(cat "$_dispatch_calls" 2>/dev/null)"
+
+start_test "sessionkill runs shpool kill on the shpool backend"
+rm -f "$_dispatch_calls"
+(
+    session_backend() { echo shpool; }
+    shpool() { echo "shpool $*" >> "$_dispatch_calls"; }
+    sessionkill work
+)
+assert_equal "shpool kill work" "$(cat "$_dispatch_calls" 2>/dev/null)"
+
 unset -f have_command
 rm -f "$_dispatch_calls"
 SHRC_LOAD_FUNCTIONS_ONLY=1 . "$_srcdir/shrc"

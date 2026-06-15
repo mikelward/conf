@@ -1160,6 +1160,14 @@ sessionlist() {
     esac
 }
 
+# Kill a (named) session using the preferred backend.
+sessionkill() {
+    case "$(session_backend)" in
+        tmux)   tmux kill-session "$@" ;;
+        shpool) shpool kill "$@" ;;
+    esac
+}
+
 maybe_start_session_and_exit() {
     if want_tmux; then
         autotmux && exit
@@ -2054,6 +2062,12 @@ if is_interactive; then
     sps() { switchshpool "$@"; }
     sr() { ssh -l root "$@"; }
     ssp() { switchshpool "$@"; }
+    # ss<verb> session family: backend-agnostic, route through session_backend.
+    ssa() { autosession "$@"; }
+    ssd() { sessiondetach "$@"; }
+    ssk() { sessionkill "$@"; }
+    ssl() { sessionlist "$@"; }
+    ssw() { switchsession "$@"; }
     # generic switch verbs follow the default backend (tmux unless WANT_TMUX=0)
     sw() { switchsession "$@"; }
     sws() { switchsession "$@"; }

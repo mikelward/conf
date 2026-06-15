@@ -790,6 +790,16 @@ function sessionlist
     end
 end
 
+# Kill a (named) session using the preferred backend.
+function sessionkill
+    switch (session_backend)
+    case tmux
+        tmux kill-session $argv
+    case shpool
+        shpool kill $argv
+    end
+end
+
 function maybe_start_session_and_exit
     if want_tmux
         autotmux; and exit
@@ -1068,6 +1078,12 @@ if is_interactive
     alias sps='switchshpool'
     alias sr='ssh -l root'
     alias ssp='switchshpool'
+    # ss<verb> session family: backend-agnostic, route through session_backend.
+    alias ssa='autosession'
+    alias ssd='sessiondetach'
+    alias ssk='sessionkill'
+    alias ssl='sessionlist'
+    alias ssw='switchsession'
     # generic switch verbs follow the default backend (tmux unless WANT_TMUX=0)
     alias sw='switchsession'
     alias sws='switchsession'

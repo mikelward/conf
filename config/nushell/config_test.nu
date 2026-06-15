@@ -1182,6 +1182,27 @@ except OSError: pass
         sessionlist
         assert equal (open $calls | str trim) "shpoollist-called"
     })
+    (run-test "nu sessionkill runs tmux kill-session on the tmux backend" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"tmux $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "tmux")
+        ^chmod +x ($bin | path join "tmux")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autotmux")
+        ^chmod +x ($bin | path join "autotmux")
+        $env.PATH = [$bin]
+        sessionkill work
+        assert equal (open $calls | str trim) "tmux kill-session work"
+    })
+    (run-test "nu sessionkill runs shpool kill on the shpool backend" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"shpool $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "shpool")
+        ^chmod +x ($bin | path join "shpool")
+        $env.WANT_TMUX = "0"
+        $env.PATH = [$bin]
+        sessionkill work
+        assert equal (open $calls | str trim) "shpool kill work"
+    })
 
     ###############
     # maybe-start-session-and-exit is a no-op without any backend on PATH
