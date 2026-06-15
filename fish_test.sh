@@ -493,13 +493,21 @@ result="$(_fish_run '
 ')"
 assert_equal "shpoollist-called" "$result"
 
-start_test "fish sessionkill runs tmux kill-session on the tmux backend"
+start_test "fish sessionkill routes a named tmux kill through -t"
 result="$(_fish_run '
     function session_backend; echo tmux; end
     function tmux; echo "tmux $argv"; end
     sessionkill work
 ')"
-assert_equal "tmux kill-session work" "$result"
+assert_equal "tmux kill-session -t work" "$result"
+
+start_test "fish sessionkill with no name kills the current tmux session"
+result="$(_fish_run '
+    function session_backend; echo tmux; end
+    function tmux; echo "tmux $argv"; end
+    sessionkill
+')"
+assert_equal "tmux kill-session" "$result"
 
 start_test "fish sessionkill runs shpool kill on the shpool backend"
 result="$(_fish_run '

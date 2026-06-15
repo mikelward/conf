@@ -1160,10 +1160,17 @@ sessionlist() {
     esac
 }
 
-# Kill a (named) session using the preferred backend.
+# Kill a (named) session using the preferred backend. tmux takes the target
+# via -t (a bare name isn't a positional argument), so translate a session
+# name; no name kills the current session. shpool kills names positionally.
 sessionkill() {
     case "$(session_backend)" in
-        tmux)   tmux kill-session "$@" ;;
+        tmux)
+            case "${1:-}" in
+                ''|-*) tmux kill-session "$@" ;;
+                *)     tmux kill-session -t "$1" ;;
+            esac
+            ;;
         shpool) shpool kill "$@" ;;
     esac
 }

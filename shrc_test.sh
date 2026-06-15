@@ -1124,14 +1124,23 @@ rm -f "$_dispatch_calls"
 )
 assert_equal "shpoollist " "$(cat "$_dispatch_calls" 2>/dev/null)"
 
-start_test "sessionkill runs tmux kill-session on the tmux backend"
+start_test "sessionkill routes a named tmux kill through -t"
 rm -f "$_dispatch_calls"
 (
     session_backend() { echo tmux; }
     tmux() { echo "tmux $*" >> "$_dispatch_calls"; }
     sessionkill work
 )
-assert_equal "tmux kill-session work" "$(cat "$_dispatch_calls" 2>/dev/null)"
+assert_equal "tmux kill-session -t work" "$(cat "$_dispatch_calls" 2>/dev/null)"
+
+start_test "sessionkill with no name kills the current tmux session"
+rm -f "$_dispatch_calls"
+(
+    session_backend() { echo tmux; }
+    tmux() { echo "tmux $*" >> "$_dispatch_calls"; }
+    sessionkill
+)
+assert_equal "tmux kill-session" "$(cat "$_dispatch_calls" 2>/dev/null)"
 
 start_test "sessionkill runs shpool kill on the shpool backend"
 rm -f "$_dispatch_calls"

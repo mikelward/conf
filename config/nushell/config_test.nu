@@ -1182,7 +1182,7 @@ except OSError: pass
         sessionlist
         assert equal (open $calls | str trim) "shpoollist-called"
     })
-    (run-test "nu sessionkill runs tmux kill-session on the tmux backend" {
+    (run-test "nu sessionkill routes a named tmux kill through -t" {
         let calls = (mktemp -t "sess-calls.XXXXXX")
         let bin = (mktemp -d)
         ("#!/bin/sh\necho \"tmux $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "tmux")
@@ -1191,7 +1191,18 @@ except OSError: pass
         ^chmod +x ($bin | path join "autotmux")
         $env.PATH = [$bin]
         sessionkill work
-        assert equal (open $calls | str trim) "tmux kill-session work"
+        assert equal (open $calls | str trim) "tmux kill-session -t work"
+    })
+    (run-test "nu sessionkill with no name kills the current tmux session" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"tmux $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "tmux")
+        ^chmod +x ($bin | path join "tmux")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autotmux")
+        ^chmod +x ($bin | path join "autotmux")
+        $env.PATH = [$bin]
+        sessionkill
+        assert equal (open $calls | str trim) "tmux kill-session"
     })
     (run-test "nu sessionkill runs shpool kill on the shpool backend" {
         let calls = (mktemp -t "sess-calls.XXXXXX")

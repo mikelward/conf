@@ -790,11 +790,17 @@ function sessionlist
     end
 end
 
-# Kill a (named) session using the preferred backend.
+# Kill a (named) session using the preferred backend. tmux takes the target
+# via -t (a bare name isn't a positional argument), so translate a session
+# name; no name kills the current session. shpool kills names positionally.
 function sessionkill
     switch (session_backend)
     case tmux
-        tmux kill-session $argv
+        if test (count $argv) -gt 0; and not string match -q -- '-*' $argv[1]
+            tmux kill-session -t $argv[1]
+        else
+            tmux kill-session $argv
+        end
     case shpool
         shpool kill $argv
     end
