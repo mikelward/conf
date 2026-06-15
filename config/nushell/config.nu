@@ -260,10 +260,14 @@ def --wrapped autoshpool [...args] {
     with-env { SHPOOL_INITIAL_PWD: $env.PWD } { ^autoshpool ...$args }
 }
 
-# start shpool if this session warrants it, then exit the current shell.
-# Mirrors shrc's maybe_start_shpool_and_exit.
-def maybe-start-shpool-and-exit [] {
-    if (want-shpool) {
+# start the preferred session manager if this session warrants it, then exit
+# the current shell. tmux is the default; shpool is the fallback when
+# want-tmux is false. Mirrors shrc's maybe_start_session_and_exit.
+def maybe-start-session-and-exit [] {
+    if (want-tmux) {
+        let ok = (try { autotmux; true } catch { false })
+        if $ok { exit }
+    } else if (want-shpool) {
         let ok = (try { autoshpool; true } catch { false })
         if $ok { exit }
     }
@@ -272,6 +276,58 @@ def maybe-start-shpool-and-exit [] {
 # return true if inside tmux
 def inside-tmux [] {
     is-env-set "TMUX"
+}
+
+# return true if we should auto-start tmux in this session. tmux is the
+# default session manager; the gating mirrors want-shpool.
+def want-tmux [] {
+    if (($env.WANT_TMUX? | default "1") == "0") { return false }
+    if (not (stdin-is-tty)) { return false }
+    if (inside-tmux) { return false }
+    if (in-shpool) { return false }
+    if (not (have-command "tmux")) { return false }
+    (connected-remotely) or (inside-project)
+}
+
+# Wrap the external autotmux binary. Unlike autoshpool there's no
+# SHPOOL_INITIAL_PWD to stamp -- tmux uses the caller's PWD natively.
+def --wrapped autotmux [...args] {
+    ^autotmux ...$args
+}
+
+# Name of the preferred session manager: "tmux" (the default), "shpool", or
+# "" when neither is enabled/installed. tmux wins when both WANT_TMUX and
+# WANT_SHPOOL are enabled and present; set WANT_TMUX=0 to fall back to shpool.
+def session-backend [] {
+    if (($env.WANT_TMUX? | default "1") != "0") and (have-command "tmux") {
+        "tmux"
+    } else if (($env.WANT_SHPOOL? | default "1") != "0") and (have-command "shpool") {
+        "shpool"
+    } else {
+        ""
+    }
+}
+
+# Attach to (or create) this project's session using the preferred backend.
+def --wrapped autosession [...args] {
+    match (session-backend) {
+        "tmux" => { autotmux ...$args }
+        "shpool" => { autoshpool ...$args }
+        _ => { }
+    }
+}
+
+# Switch to a session using the preferred backend. tmux switches in place
+# (autotmux switch); shpool requests a switch and exits the current shell.
+def --wrapped switchsession [...args] {
+    match (session-backend) {
+        "tmux" => { autotmux switch ...$args }
+        "shpool" => {
+            let ok = (try { autoshpool switch ...$args; true } catch { false })
+            if $ok { exit }
+        }
+        _ => { }
+    }
 }
 
 # return true if the current user is root
@@ -457,7 +513,7 @@ def find-project-root [markers: list<string>] {
 # Overridable: set $env.projectroot = {|| ... } in an autoload file to
 # plug in custom detection (workspace markers, monorepo layouts, ...).
 # Other config.nu callers (inside-project, buildroot, projectname,
-# want-shpool, maybe-start-shpool-and-exit, ...) dispatch through $env
+# want-shpool, maybe-start-session-and-exit, ...) dispatch through $env
 # so the override propagates through the whole chain.
 $env.projectroot = {||
     # Try `vcs rootdir` directly: it's the common case (vcs ships with
@@ -1096,18 +1152,18 @@ def lss [...args] { lssock ...$args }
 
 def j [] { job list }
 
-# Clone/cd into a repo, then start a shpool session matching the new
-# vcs rootdir. autoshpool only runs if the underlying command succeeds
-# (a non-zero external exit throws, which the try/catch turns into
-# $ok = false), so a failed clone/cd doesn't spawn a stray session.
-# `--wrapped` so flags pass through to the underlying command instead
-# of nushell's parser catching them on the wrapper.
-def --wrapped jd  [...args] { if (try { ^jjd  ...$args;    true } catch { false }) { autoshpool } }
-def --wrapped hd  [...args] { if (try { ^hgd  ...$args;    true } catch { false }) { autoshpool } }
-def --wrapped gd  [...args] { if (try { ^gitd ...$args;    true } catch { false }) { autoshpool } }
-def --wrapped mjd [...args] { if (try { ^jjd  -f ...$args; true } catch { false }) { autoshpool } }
-def --wrapped mhd [...args] { if (try { ^hgd  -f ...$args; true } catch { false }) { autoshpool } }
-def --wrapped mgd [...args] { if (try { ^gitd -f ...$args; true } catch { false }) { autoshpool } }
+# Clone/cd into a repo, then start a session (tmux by default, shpool when
+# WANT_TMUX=0) matching the new vcs rootdir. autosession only runs if the
+# underlying command succeeds (a non-zero external exit throws, which the
+# try/catch turns into $ok = false), so a failed clone/cd doesn't spawn a
+# stray session. `--wrapped` so flags pass through to the underlying command
+# instead of nushell's parser catching them on the wrapper.
+def --wrapped jd  [...args] { if (try { ^jjd  ...$args;    true } catch { false }) { autosession } }
+def --wrapped hd  [...args] { if (try { ^hgd  ...$args;    true } catch { false }) { autosession } }
+def --wrapped gd  [...args] { if (try { ^gitd ...$args;    true } catch { false }) { autosession } }
+def --wrapped mjd [...args] { if (try { ^jjd  -f ...$args; true } catch { false }) { autosession } }
+def --wrapped mhd [...args] { if (try { ^hgd  -f ...$args; true } catch { false }) { autosession } }
+def --wrapped mgd [...args] { if (try { ^gitd -f ...$args; true } catch { false }) { autosession } }
 
 def m [...args] { ^make -f .Makefile ...$args }
 def ml [] { m lint }
@@ -1317,6 +1373,17 @@ def clone [url: string, ...args: string] {
 alias lsp   = ^shpoollist
 alias shpls = ^shpoollist
 
+#######################
+# TMUX ALIASES
+# tmux equivalents of the shpool helpers. tmux is the default session
+# manager (see session-backend / maybe-start-session-and-exit); the shpool
+# aliases above stay for when WANT_TMUX=0 selects shpool.
+
+alias atm = ^autotmux
+alias ta  = ^tmux attach
+alias td  = ^tmux detach
+alias tls = ^tmux list-sessions -F '#{session_name}'
+
 ######################
 # INTERACTIVE: PROMPT / HOOKS
 # Install the prompt closures on the first interactive run. Nushell reads
@@ -1385,9 +1452,10 @@ $env.config = ($env.config | upsert hooks.env_change.PWD [{|before, after|
     maybe-background-fetch
 }])
 
-# Maybe attach to shpool instead of running a bare nu interactively.
-# Skipped in non-interactive mode so the test suite stays quiet. Mirrors
-# shrc's `maybe_start_shpool_and_exit` call on startup.
+# Maybe attach to a session manager (tmux by default, shpool fallback)
+# instead of running a bare nu interactively. Skipped in non-interactive
+# mode so the test suite stays quiet. Mirrors shrc's
+# `maybe_start_session_and_exit` call on startup.
 #
 # When entering a shpool session, the autoshpool wrapper has stamped
 # SHPOOL_INITIAL_PWD onto the env; cd to it (so the spawned shell lands
@@ -1399,7 +1467,7 @@ if (is-interactive) {
         cd $env.SHPOOL_INITIAL_PWD
         hide-env SHPOOL_INITIAL_PWD
     }
-    maybe-start-shpool-and-exit
+    maybe-start-session-and-exit
 }
 
 # Log session start to $env.HISTORY_FILE, matching shrc/fish.

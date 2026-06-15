@@ -317,6 +317,18 @@ inside_tmux() {
     test -n "${TMUX:-}"
 }
 
+# return true if we should auto-start tmux in this session. tmux is the
+# default session manager; the gating mirrors want_shpool so the two can
+# share maybe_start_session_and_exit.
+want_tmux() {
+    if test "${WANT_TMUX:-1}" = 0; then return 1; fi
+    if ! stdin_is_tty; then return 1; fi
+    if inside_tmux; then return 1; fi
+    if in_shpool; then return 1; fi
+    if ! have_command tmux; then return 1; fi
+    connected_remotely || inside_project
+}
+
 # returns whether an SSH key is loaded
 is_ssh_valid() {
     ssh-add -L >/dev/null 2>&1
@@ -1090,8 +1102,39 @@ autoshpool() { SHPOOL_INITIAL_PWD="$PWD" command autoshpool "$@"; }
 
 switchshpool() { autoshpool switch "$1" && exit; }
 
-maybe_start_shpool_and_exit() {
-    if want_shpool; then
+# Name of the preferred session manager: "tmux" (the default), "shpool", or
+# empty when neither is enabled/installed. tmux wins when both WANT_TMUX and
+# WANT_SHPOOL are enabled and the binaries are present; set WANT_TMUX=0 to fall
+# back to shpool.
+session_backend() {
+    if test "${WANT_TMUX:-1}" != 0 && have_command tmux; then
+        puts tmux
+    elif test "${WANT_SHPOOL:-1}" != 0 && have_command shpool; then
+        puts shpool
+    fi
+}
+
+# Attach to (or create) this project's session using the preferred backend.
+autosession() {
+    case "$(session_backend)" in
+        tmux)   autotmux "$@" ;;
+        shpool) autoshpool "$@" ;;
+    esac
+}
+
+# Switch to a session using the preferred backend. tmux switches in place
+# (autotmux switch); shpool requests a switch and exits the current shell.
+switchsession() {
+    case "$(session_backend)" in
+        tmux)   autotmux switch "$1" ;;
+        shpool) switchshpool "$1" ;;
+    esac
+}
+
+maybe_start_session_and_exit() {
+    if want_tmux; then
+        autotmux && exit
+    elif want_shpool; then
         autoshpool && exit
     fi
 }
@@ -1819,7 +1862,7 @@ if is_interactive; then
         cd "$SHPOOL_INITIAL_PWD"
         SHPOOL_INITIAL_PWD=
     fi
-    maybe_start_shpool_and_exit
+    maybe_start_session_and_exit
 
     log_history "New session as $USERNAME: $0 $*"
 
@@ -1836,6 +1879,7 @@ if is_interactive; then
     #alias '?'='path_or_empty'
     alias @='path_or_empty'
     asp() { autoshpool "$@"; }
+    atm() { autotmux "$@"; }
     attach() { shpool attach "$@"; }
     bindkeys() { daemon xbindkeys "$@"; }
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.go,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}"
@@ -1922,15 +1966,16 @@ if is_interactive; then
     lss() { lssock "$@"; }
     lsp() { shpoollist "$@"; }
     j() { jobs "$@"; }
-    # Clone/cd into a repo, then start a shpool session matching the
-    # new vcs rootdir. autoshpool only runs if the underlying command
-    # succeeds, so a failed clone/cd doesn't spawn a stray session.
-    jd() { jjd "$@" && autoshpool; }
-    hd() { hgd "$@" && autoshpool; }
-    gd() { gitd "$@" && autoshpool; }
-    mjd() { jjd -f "$@" && autoshpool; }
-    mhd() { hgd -f "$@" && autoshpool; }
-    mgd() { gitd -f "$@" && autoshpool; }
+    # Clone/cd into a repo, then start a session (tmux by default, shpool
+    # when WANT_TMUX=0) matching the new vcs rootdir. autosession only runs
+    # if the underlying command succeeds, so a failed clone/cd doesn't spawn
+    # a stray session.
+    jd() { jjd "$@" && autosession; }
+    hd() { hgd "$@" && autosession; }
+    gd() { gitd "$@" && autosession; }
+    mjd() { jjd -f "$@" && autosession; }
+    mhd() { hgd -f "$@" && autosession; }
+    mgd() { gitd -f "$@" && autosession; }
     m() { make -f .Makefile "$@"; }
     ml() { m lint; }
     # shadows magtape command, but who uses that?
@@ -1972,9 +2017,17 @@ if is_interactive; then
     sps() { switchshpool "$@"; }
     sr() { ssh -l root "$@"; }
     ssp() { switchshpool "$@"; }
-    sw() { switchshpool "$@"; }
-    switch() { switchshpool "$@"; }
+    # generic switch verbs follow the default backend (tmux unless WANT_TMUX=0)
+    sw() { switchsession "$@"; }
+    switch() { switchsession "$@"; }
     swsh() { switchshpool "$@"; }
+    # tmux equivalents of the shpool helpers. tmux is the default session
+    # manager (see session_backend / maybe_start_session_and_exit); the
+    # shpool-named aliases stay for when WANT_TMUX=0 selects shpool.
+    ta() { tmux attach "$@"; }
+    td() { tmux detach "$@"; }
+    tls() { tmux list-sessions -F '#{session_name}' "$@"; }
+    tsw() { switchsession "$@"; }
     symlink() { ln --symbolic --relative "$@"; }
     t() { tail "$@"; }
     tf() { t -f "$@"; }

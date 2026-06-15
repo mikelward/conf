@@ -204,6 +204,17 @@ function inside_tmux
     test -n "$TMUX"
 end
 
+# return true if we should auto-start tmux in this session. tmux is the
+# default session manager; the gating mirrors want_shpool.
+function want_tmux
+    test "$WANT_TMUX" = 0; and return 1
+    stdin_is_tty; or return 1
+    inside_tmux; and return 1
+    in_shpool; and return 1
+    have_command tmux; or return 1
+    connected_remotely; or inside_project
+end
+
 # print an error message
 function error
     printf '%s\n' "$argv" >&2
@@ -714,8 +725,42 @@ function switchshpool
     autoshpool switch $argv[1]; and exit
 end
 
-function maybe_start_shpool_and_exit
-    if want_shpool
+# Name of the preferred session manager: "tmux" (the default), "shpool", or
+# empty when neither is enabled/installed. tmux wins when both WANT_TMUX and
+# WANT_SHPOOL are enabled and present; set WANT_TMUX=0 to fall back to shpool.
+function session_backend
+    if test "$WANT_TMUX" != 0; and have_command tmux
+        echo tmux
+    else if test "$WANT_SHPOOL" != 0; and have_command shpool
+        echo shpool
+    end
+end
+
+# Attach to (or create) this project's session using the preferred backend.
+function autosession
+    switch (session_backend)
+    case tmux
+        autotmux $argv
+    case shpool
+        autoshpool $argv
+    end
+end
+
+# Switch to a session using the preferred backend. tmux switches in place
+# (autotmux switch); shpool requests a switch and exits the current shell.
+function switchsession
+    switch (session_backend)
+    case tmux
+        autotmux switch $argv[1]
+    case shpool
+        switchshpool $argv[1]
+    end
+end
+
+function maybe_start_session_and_exit
+    if want_tmux
+        autotmux; and exit
+    else if want_shpool
         autoshpool; and exit
     end
 end
@@ -768,7 +813,7 @@ if is_interactive
         cd $SHPOOL_INITIAL_PWD
         set --erase SHPOOL_INITIAL_PWD
     end
-    maybe_start_shpool_and_exit
+    maybe_start_session_and_exit
 
     log_history "New session as $USERNAME: $0 $argv"
 
@@ -859,6 +904,7 @@ if is_interactive
     #alias '?'='path_or_empty'
     alias @='path_or_empty'
     alias asp='autoshpool'
+    alias atm='autotmux'
     alias attach='shpool attach'
     alias detach='shpool detach'
     alias bindkeys='daemon xbindkeys'
@@ -931,17 +977,17 @@ if is_interactive
     end
     alias lss='lssock'
     alias j='jobs'
-    # Clone/cd into a repo, then start a shpool session matching the
-    # new vcs rootdir. autoshpool only runs if the underlying command
-    # succeeds, so a failed clone/cd doesn't spawn a stray session.
-    # Functions rather than aliases so `and autoshpool` runs after the
-    # command instead of having $argv appended to it.
-    function jd; jjd $argv; and autoshpool; end
-    function hd; hgd $argv; and autoshpool; end
-    function gd; gitd $argv; and autoshpool; end
-    function mjd; jjd -f $argv; and autoshpool; end
-    function mhd; hgd -f $argv; and autoshpool; end
-    function mgd; gitd -f $argv; and autoshpool; end
+    # Clone/cd into a repo, then start a session (tmux by default, shpool
+    # when WANT_TMUX=0) matching the new vcs rootdir. autosession only runs
+    # if the underlying command succeeds, so a failed clone/cd doesn't spawn
+    # a stray session. Functions rather than aliases so `and autosession`
+    # runs after the command instead of having $argv appended to it.
+    function jd; jjd $argv; and autosession; end
+    function hd; hgd $argv; and autosession; end
+    function gd; gitd $argv; and autosession; end
+    function mjd; jjd -f $argv; and autosession; end
+    function mhd; hgd -f $argv; and autosession; end
+    function mgd; gitd -f $argv; and autosession; end
     alias m='make -f .Makefile'
     alias ml='m lint'
     # shadows magtape command, but who uses that?
@@ -982,12 +1028,20 @@ if is_interactive
     alias sps='switchshpool'
     alias sr='ssh -l root'
     alias ssp='switchshpool'
-    alias sw='switchshpool'
+    # generic switch verb follows the default backend (tmux unless WANT_TMUX=0)
+    alias sw='switchsession'
     alias swsh='switchshpool'
     alias symlink='ln -sr'
     alias t='tail'
+    # tmux equivalents of the shpool helpers. tmux is the default session
+    # manager (see session_backend / maybe_start_session_and_exit); the
+    # shpool-named aliases stay for when WANT_TMUX=0 selects shpool.
+    alias ta='tmux attach'
+    alias td='tmux detach'
     alias tf='t -f'
     alias tl='t -f /var/log/syslog'
+    alias tls='tmux list-sessions -F "#{session_name}"'
+    alias tsw='switchsession'
     alias today='date +"%Y-%m-%d"'
     alias ts='t -f /var/log/syslog'
     alias userctl='systemctl --user'
