@@ -179,8 +179,18 @@ function in_shpool
     test -n "$SHPOOL_SESSION_NAME"
 end
 
-# return true if we should try to run shpool
+# return true if stdin is connected to a tty. Pulled out as a helper
+# so tests can stub it without rigging up a pty.
+function stdin_is_tty
+    isatty stdin
+end
+
+# return true if we should auto-start shpool in this session
 function want_shpool
+    test "$WANT_SHPOOL" = 0; and return 1
+    stdin_is_tty; or return 1
+    in_shpool; and return 1
+    have_command shpool; or return 1
     connected_remotely; or inside_project
 end
 
@@ -690,7 +700,7 @@ function switchshpool
 end
 
 function maybe_start_shpool_and_exit
-    if not in_shpool; and want_shpool; and have_command shpool
+    if want_shpool
         autoshpool; and exit
     end
 end

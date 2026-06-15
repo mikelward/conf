@@ -220,15 +220,28 @@ def inside-project [] {
     ((projectroot) | is-not-empty)
 }
 
-# return true if we should try to run shpool
+# return true if stdin is connected to a tty. Uses nu's built-in
+# `is-terminal --stdin`, which is portable across platforms (GNU
+# `tty --silent` does not exist on macOS/BSD).
+#
+# Overridable: set $env.stdin-is-tty = {|| ... } to plug in a custom
+# probe (the test suite uses this to avoid rigging up a real pty).
+$env.stdin-is-tty = {|| is-terminal --stdin }
+def stdin-is-tty [] { do $env.stdin-is-tty }
+
+# return true if we should auto-start shpool in this session
 def want-shpool [] {
+    if (($env.WANT_SHPOOL? | default "1") == "0") { return false }
+    if (not (stdin-is-tty)) { return false }
+    if (in-shpool) { return false }
+    if (not (have-command "shpool")) { return false }
     (connected-remotely) or (inside-project)
 }
 
 # start shpool if this session warrants it, then exit the current shell.
 # Mirrors shrc's maybe_start_shpool_and_exit.
 def maybe-start-shpool-and-exit [] {
-    if (not (in-shpool)) and (want-shpool) and (have-command "shpool") {
+    if (want-shpool) {
         let ok = (try { ^autoshpool; true } catch { false })
         if $ok { exit }
     }

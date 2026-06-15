@@ -58,6 +58,16 @@ def --env fake-vcs-bin [calls: string, --fail] {
     $env.PATH = ([$bin] ++ $env.PATH)
 }
 
+# Add a fake shpool to PATH so `have-command "shpool"` (called from
+# want-shpool) returns true under the test env, where the real shpool
+# isn't installed.
+def --env fake-shpool-on-path [] {
+    let bin = (mktemp -d)
+    "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
+    ^chmod +x ($bin | path join "shpool")
+    $env.PATH = ([$bin] ++ $env.PATH)
+}
+
 let results = [
     ###############
     # jd/hd/gd & mjd/mhd/mgd run autoshpool after the underlying command
@@ -837,10 +847,14 @@ except OSError: pass
     (run-test "nu want-shpool false when not remote and not in project" {
         $env.projectroot = {|| "" }
         hide-env --ignore-errors SSH_CONNECTION
+        $env.stdin-is-tty = {|| true }
+        fake-shpool-on-path
         assert (not (want-shpool))
     })
     (run-test "nu want-shpool true when remote" {
         $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        $env.stdin-is-tty = {|| true }
+        fake-shpool-on-path
         assert (want-shpool)
     })
     (run-test "nu inside-project true when projectroot override returns non-empty" {
@@ -850,7 +864,22 @@ except OSError: pass
     (run-test "nu want-shpool true when projectroot override is non-empty" {
         $env.projectroot = {|| "/fake/project" }
         hide-env --ignore-errors SSH_CONNECTION
+        $env.stdin-is-tty = {|| true }
+        fake-shpool-on-path
         assert (want-shpool)
+    })
+    (run-test "nu want-shpool false when WANT_SHPOOL=0" {
+        $env.WANT_SHPOOL = "0"
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        $env.stdin-is-tty = {|| true }
+        fake-shpool-on-path
+        assert (not (want-shpool))
+    })
+    (run-test "nu want-shpool false when stdin is not a tty" {
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        $env.stdin-is-tty = {|| false }
+        fake-shpool-on-path
+        assert (not (want-shpool))
     })
     (run-test "nu projectname picks up projectroot override" {
         $env.projectroot = {|| "/srv/code/myrepo" }
@@ -1632,7 +1661,10 @@ except OSError: pass
 
     ###############
     # maybe-start-shpool-and-exit: stub autoshpool
+    # want-shpool now also requires stdin to be a tty; stub that helper to
+    # return true in these tests since the test process has no pty.
     (run-test "nu maybe-start-shpool-and-exit calls autoshpool when warranted" {
+        $env.stdin-is-tty = {|| true }
         let dir = (mktemp -d)
         let marker = ($dir | path join "called")
         # Stub autoshpool that records it was called but exits non-zero
@@ -1670,6 +1702,7 @@ except OSError: pass
         ^chmod +x ($dir | path join "shpool")
         let r = (nu --no-config-file -c $"
             source ($CONFIG)
+            $env.stdin-is-tty = {|| true }
             $env.PATH = [($dir) /usr/bin /bin]
             $env.SSH_CONNECTION = '1.2.3.4 22 5.6.7.8 22'
             hide-env --ignore-errors SHPOOL_SESSION_NAME
@@ -1689,6 +1722,7 @@ except OSError: pass
         ^chmod +x ($dir | path join "shpool")
         let r = (nu --no-config-file -c $"
             source ($CONFIG)
+            $env.stdin-is-tty = {|| true }
             $env.PATH = [($dir) /usr/bin /bin]
             $env.SSH_CONNECTION = '1.2.3.4 22 5.6.7.8 22'
             hide-env --ignore-errors SHPOOL_SESSION_NAME
@@ -1711,6 +1745,7 @@ except OSError: pass
         ^chmod +x ($dir | path join "shpool")
         let r = (nu --no-config-file -c $"
             source ($CONFIG)
+            $env.stdin-is-tty = {|| true }
             $env.PATH = [($dir) /usr/bin /bin]
             $env.SSH_CONNECTION = '1.2.3.4 22 5.6.7.8 22'
             hide-env --ignore-errors SHPOOL_SESSION_NAME
@@ -1728,6 +1763,7 @@ except OSError: pass
         ^chmod +x ($dir | path join "shpool")
         let r = (nu --no-config-file -c $"
             source ($CONFIG)
+            $env.stdin-is-tty = {|| true }
             $env.PATH = [($dir) /usr/bin /bin]
             $env.SSH_CONNECTION = '1.2.3.4 22 5.6.7.8 22'
             hide-env --ignore-errors SHPOOL_SESSION_NAME

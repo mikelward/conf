@@ -234,6 +234,11 @@ result="$(_fish_run '
 assert_contains "ssh saw clienthost" "$result"
 assert_contains "after=[inbound]" "$result"
 
+# want_shpool now also requires `have_command shpool`, `stdin_is_tty`,
+# and `! in_shpool`. The "true" cases stub have_command to return success
+# for shpool and stdin_is_tty to return true (the fish snippet runs with
+# stdin redirected from /dev/null). _fish_run's default have_command
+# refuses shpool, so the "false" case already exercises that branch.
 start_test "fish want_shpool false when not remote and not in project"
 result="$(_fish_run '
     function projectroot; return 1; end
@@ -245,6 +250,8 @@ start_test "fish want_shpool true when remote"
 result="$(_fish_run '
     set -gx SSH_CONNECTION "1.2.3.4 1 2.3.4.5 22"
     function projectroot; return 1; end
+    function have_command; return 0; end
+    function stdin_is_tty; return 0; end
     if want_shpool; echo yes; else; echo no; end
 ')"
 assert_equal "yes" "$result"
@@ -252,9 +259,43 @@ assert_equal "yes" "$result"
 start_test "fish want_shpool true when inside project"
 result="$(_fish_run '
     function projectroot; echo /some/project; end
+    function have_command; return 0; end
+    function stdin_is_tty; return 0; end
     if want_shpool; echo yes; else; echo no; end
 ')"
 assert_equal "yes" "$result"
+
+start_test "fish want_shpool false when WANT_SHPOOL=0"
+result="$(_fish_run '
+    set -gx WANT_SHPOOL 0
+    set -gx SSH_CONNECTION "1.2.3.4 1 2.3.4.5 22"
+    function projectroot; echo /some/project; end
+    function have_command; return 0; end
+    function stdin_is_tty; return 0; end
+    if want_shpool; echo yes; else; echo no; end
+')"
+assert_equal "no" "$result"
+
+start_test "fish want_shpool false when already in shpool"
+result="$(_fish_run '
+    set -gx SHPOOL_SESSION_NAME main
+    set -gx SSH_CONNECTION "1.2.3.4 1 2.3.4.5 22"
+    function projectroot; echo /some/project; end
+    function have_command; return 0; end
+    function stdin_is_tty; return 0; end
+    if want_shpool; echo yes; else; echo no; end
+')"
+assert_equal "no" "$result"
+
+start_test "fish want_shpool false when stdin is not a tty"
+result="$(_fish_run '
+    set -gx SSH_CONNECTION "1.2.3.4 1 2.3.4.5 22"
+    function projectroot; echo /some/project; end
+    function have_command; return 0; end
+    function stdin_is_tty; return 1; end
+    if want_shpool; echo yes; else; echo no; end
+')"
+assert_equal "no" "$result"
 
 ###############
 # TEST: maybe_start_shpool_and_exit is a no-op when shpool is not installed
