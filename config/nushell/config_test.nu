@@ -2201,6 +2201,26 @@ except OSError: pass
         maybe-background-fetch
         assert (not ($log | path exists))
     })
+
+    # FAILSAFE=1 cross-shell escape hatch: config.nu should print "basic
+    # mode" on stderr and bail before defining any of its helper commands.
+    (run-test "nu FAILSAFE=1 bails before defining helpers" {
+        let r = (with-env {FAILSAFE: "1", HOME: $env.HOME} {
+            ^nu --no-config-file -c $"source ($CONFIG); print AFTER; if (which prepend-path | is-not-empty) { print prepend-path-defined }"
+        } | complete)
+        assert ($r.stderr | str contains "failsafe mode") $"expected failsafe mode on stderr, got: ($r.stderr)"
+        assert ($r.stdout | str contains "AFTER") $"sourcing should return, not exit shell; got stdout=($r.stdout)"
+        assert (not ($r.stdout | str contains "prepend-path-defined")) $"FAILSAFE should skip helper defs; got stdout=($r.stdout)"
+    })
+
+    (run-test "nu FAILSAFE unset loads config.nu normally" {
+        let r = (with-env {HOME: $env.HOME} {
+            ^nu --no-config-file -c $"source ($CONFIG); print AFTER; if (which prepend-path | is-not-empty) { print prepend-path-defined }"
+        } | complete)
+        assert (not ($r.stderr | str contains "failsafe mode")) $"failsafe mode should not print when FAILSAFE unset; got: ($r.stderr)"
+        assert ($r.stdout | str contains "AFTER")
+        assert ($r.stdout | str contains "prepend-path-defined") $"helpers should be defined without FAILSAFE; got stdout=($r.stdout)"
+    })
 ]
 
 for r in $results { print $r }

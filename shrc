@@ -44,8 +44,12 @@ is_sh() {
 # shrc under a shell that can't run the bash/zsh-heavy code below, give
 # them a basic prompt and bail. The shrc functions aren't expected to
 # work under dash; this is purely about not crashing on source.
-if is_sh || is_dash; then
-    echo basic mode >&2
+# FAILSAFE=1 forces the same bail-out under bash/zsh as a cross-shell
+# escape hatch when the full rc is misbehaving (e.g. autoshpool loops).
+# The variable is shared with config.fish and config.nu so one flag
+# disables the heavy startup path everywhere.
+if is_sh || is_dash || test "${FAILSAFE:-0}" = 1; then
+    echo failsafe mode >&2
     PS1='
 $(basename "$PWD")$ '
     return
