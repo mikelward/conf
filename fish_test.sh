@@ -309,15 +309,153 @@ result="$(_fish_run '
 assert_equal "no" "$result"
 
 ###############
-# TEST: maybe_start_shpool_and_exit is a no-op when shpool is not installed
+# TEST: want_tmux gating (mirrors want_shpool but on the tmux binary)
 
-start_test "fish maybe_start_shpool_and_exit no-op without shpool"
+start_test "fish want_tmux true when remote"
+result="$(_fish_run '
+    set -gx SSH_CONNECTION "1.2.3.4 1 2.3.4.5 22"
+    function projectroot; return 1; end
+    function have_command; return 0; end
+    function stdin_is_tty; return 0; end
+    if want_tmux; echo yes; else; echo no; end
+')"
+assert_equal "yes" "$result"
+
+start_test "fish want_tmux true when inside project"
+result="$(_fish_run '
+    function projectroot; echo /some/project; end
+    function have_command; return 0; end
+    function stdin_is_tty; return 0; end
+    if want_tmux; echo yes; else; echo no; end
+')"
+assert_equal "yes" "$result"
+
+start_test "fish want_tmux false when not remote and not in project"
 result="$(_fish_run '
     function projectroot; return 1; end
-    maybe_start_shpool_and_exit
+    function have_command; return 0; end
+    function stdin_is_tty; return 0; end
+    if want_tmux; echo yes; else; echo no; end
+')"
+assert_equal "no" "$result"
+
+start_test "fish want_tmux false when WANT_TMUX=0"
+result="$(_fish_run '
+    set -gx WANT_TMUX 0
+    set -gx SSH_CONNECTION "1.2.3.4 1 2.3.4.5 22"
+    function projectroot; echo /some/project; end
+    function have_command; return 0; end
+    function stdin_is_tty; return 0; end
+    if want_tmux; echo yes; else; echo no; end
+')"
+assert_equal "no" "$result"
+
+start_test "fish want_tmux false when tmux not installed"
+result="$(_fish_run '
+    set -gx SSH_CONNECTION "1.2.3.4 1 2.3.4.5 22"
+    function projectroot; echo /some/project; end
+    function have_command; return 1; end
+    function stdin_is_tty; return 0; end
+    if want_tmux; echo yes; else; echo no; end
+')"
+assert_equal "no" "$result"
+
+start_test "fish want_tmux false when already inside tmux"
+result="$(_fish_run '
+    set -gx TMUX /tmp/tmux-fake/default,12345,0
+    set -gx SSH_CONNECTION "1.2.3.4 1 2.3.4.5 22"
+    function projectroot; echo /some/project; end
+    function have_command; return 0; end
+    function stdin_is_tty; return 0; end
+    if want_tmux; echo yes; else; echo no; end
+')"
+assert_equal "no" "$result"
+
+start_test "fish want_tmux false when inside shpool"
+result="$(_fish_run '
+    set -gx SHPOOL_SESSION_NAME main
+    set -gx SSH_CONNECTION "1.2.3.4 1 2.3.4.5 22"
+    function projectroot; echo /some/project; end
+    function have_command; return 0; end
+    function stdin_is_tty; return 0; end
+    if want_tmux; echo yes; else; echo no; end
+')"
+assert_equal "no" "$result"
+
+start_test "fish want_tmux false when stdin is not a tty"
+result="$(_fish_run '
+    set -gx SSH_CONNECTION "1.2.3.4 1 2.3.4.5 22"
+    function projectroot; echo /some/project; end
+    function have_command; return 0; end
+    function stdin_is_tty; return 1; end
+    if want_tmux; echo yes; else; echo no; end
+')"
+assert_equal "no" "$result"
+
+###############
+# TEST: session_backend picks tmux by default, shpool as fallback
+
+start_test "fish session_backend prefers tmux when both available"
+result="$(_fish_run '
+    function have_command; return 0; end
+    session_backend
+')"
+assert_equal "tmux" "$result"
+
+start_test "fish session_backend uses shpool when WANT_TMUX=0"
+result="$(_fish_run '
+    set -gx WANT_TMUX 0
+    function have_command; return 0; end
+    session_backend
+')"
+assert_equal "shpool" "$result"
+
+start_test "fish session_backend uses shpool when tmux missing"
+result="$(_fish_run '
+    function have_command; test $argv[1] = shpool; end
+    session_backend
+')"
+assert_equal "shpool" "$result"
+
+start_test "fish session_backend empty when nothing available"
+result="$(_fish_run '
+    function have_command; return 1; end
+    set _b (session_backend)
+    echo "[$_b]"
+')"
+assert_equal "[]" "$result"
+
+###############
+# TEST: maybe_start_session_and_exit prefers tmux, falls back to shpool
+
+start_test "fish maybe_start_session_and_exit no-op without a backend"
+result="$(_fish_run '
+    function projectroot; return 1; end
+    maybe_start_session_and_exit
     echo survived
 ')"
 assert_equal "survived" "$result"
+
+start_test "fish maybe_start_session_and_exit prefers tmux"
+result="$(_fish_run '
+    function want_tmux; return 0; end
+    function want_shpool; return 0; end
+    function autotmux; echo autotmux-called; end
+    function autoshpool; echo autoshpool-called; end
+    maybe_start_session_and_exit
+    echo after
+')"
+assert_equal "autotmux-called" "$result"
+
+start_test "fish maybe_start_session_and_exit falls back to shpool when want_tmux false"
+result="$(_fish_run '
+    function want_tmux; return 1; end
+    function want_shpool; return 0; end
+    function autoshpool; echo autoshpool-called; end
+    maybe_start_session_and_exit
+    echo after
+')"
+assert_equal "autoshpool-called" "$result"
 
 ###############
 # TEST: CDPATH is set for all shells (not just interactive)
@@ -409,67 +547,67 @@ assert_contains \
 rm -rf "$_find_up_dir"
 
 ###############
-# TEST: jd/hd/gd & mjd/mhd/mgd run autoshpool after the underlying
+# TEST: jd/hd/gd & mjd/mhd/mgd run autosession after the underlying
 # command succeeds, and skip it when the command fails.
 
-start_test "fish jd runs jjd then autoshpool"
+start_test "fish jd runs jjd then autosession"
 result="$(_fish_run '
     function jjd; echo "jjd $argv"; end
-    function autoshpool; echo autoshpool; end
+    function autosession; echo autosession; end
     jd repo
 ')"
 assert_equal "jjd repo
-autoshpool" "$result"
+autosession" "$result"
 
-start_test "fish hd runs hgd then autoshpool"
+start_test "fish hd runs hgd then autosession"
 result="$(_fish_run '
     function hgd; echo "hgd $argv"; end
-    function autoshpool; echo autoshpool; end
+    function autosession; echo autosession; end
     hd repo
 ')"
 assert_equal "hgd repo
-autoshpool" "$result"
+autosession" "$result"
 
-start_test "fish gd runs gitd then autoshpool"
+start_test "fish gd runs gitd then autosession"
 result="$(_fish_run '
     function gitd; echo "gitd $argv"; end
-    function autoshpool; echo autoshpool; end
+    function autosession; echo autosession; end
     gd repo
 ')"
 assert_equal "gitd repo
-autoshpool" "$result"
+autosession" "$result"
 
-start_test "fish mjd runs jjd -f then autoshpool"
+start_test "fish mjd runs jjd -f then autosession"
 result="$(_fish_run '
     function jjd; echo "jjd $argv"; end
-    function autoshpool; echo autoshpool; end
+    function autosession; echo autosession; end
     mjd repo
 ')"
 assert_equal "jjd -f repo
-autoshpool" "$result"
+autosession" "$result"
 
-start_test "fish mhd runs hgd -f then autoshpool"
+start_test "fish mhd runs hgd -f then autosession"
 result="$(_fish_run '
     function hgd; echo "hgd $argv"; end
-    function autoshpool; echo autoshpool; end
+    function autosession; echo autosession; end
     mhd repo
 ')"
 assert_equal "hgd -f repo
-autoshpool" "$result"
+autosession" "$result"
 
-start_test "fish mgd runs gitd -f then autoshpool"
+start_test "fish mgd runs gitd -f then autosession"
 result="$(_fish_run '
     function gitd; echo "gitd $argv"; end
-    function autoshpool; echo autoshpool; end
+    function autosession; echo autosession; end
     mgd repo
 ')"
 assert_equal "gitd -f repo
-autoshpool" "$result"
+autosession" "$result"
 
-start_test "fish mjd skips autoshpool when jjd fails"
+start_test "fish mjd skips autosession when jjd fails"
 result="$(_fish_run '
     function jjd; echo "jjd $argv"; return 1; end
-    function autoshpool; echo autoshpool; end
+    function autosession; echo autosession; end
     mjd repo
 ')"
 assert_equal "jjd -f repo" "$result"

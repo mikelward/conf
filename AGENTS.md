@@ -7,6 +7,7 @@
 - In `shrc` and `shrc.*`, use existing helper functions such as `error`, `warn`, `have_command`, `is_function`, `gets`, and `puts`.
 - When parsing options, support long flags in both `--option argument` and `--option=argument` formats.
 - Preserve feature parity between `shrc` (bash/zsh), `config/fish/config.fish`, and `config/nushell/config.nu`. When adding or changing functionality in one shell config, apply the equivalent change to the others (bash, zsh, fish, and nushell).
+- Session-manager startup lives behind `want_tmux`/`want_shpool`, `session_backend`, and the `autosession`/`autotmux`/`autoshpool` wrappers (tmux is the default; shpool is the fallback when `WANT_TMUX=0`). Keep this logic in parity across all three shells.
 
 ## Testing
 

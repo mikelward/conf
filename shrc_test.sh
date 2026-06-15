@@ -775,9 +775,60 @@ connected_remotely() { true; }
 assert_false want_shpool
 inside_tmux() { false; }
 
+# want_tmux mirrors want_shpool but gates on the tmux binary. Reuse the
+# in_shpool / inside_tmux / stdin_is_tty stubs from above; only the
+# looked-up command name differs.
+have_command() { test "$1" = tmux; }
+
+start_test "want_tmux when connected remotely"
+connected_remotely() { true; }
+inside_project() { false; }
+assert_true want_tmux
+
+start_test "want_tmux when inside project"
+connected_remotely() { false; }
+inside_project() { true; }
+assert_true want_tmux
+
+start_test "want_tmux when neither remote nor inside project"
+connected_remotely() { false; }
+inside_project() { false; }
+assert_false want_tmux
+
+start_test "want_tmux false when WANT_TMUX=0"
+connected_remotely() { true; }
+inside_project() { true; }
+WANT_TMUX=0
+assert_false want_tmux
+unset WANT_TMUX
+
+start_test "want_tmux false when tmux not installed"
+have_command() { false; }
+connected_remotely() { true; }
+assert_false want_tmux
+have_command() { test "$1" = tmux; }
+
+start_test "want_tmux false when already inside tmux"
+inside_tmux() { true; }
+connected_remotely() { true; }
+assert_false want_tmux
+inside_tmux() { false; }
+
+start_test "want_tmux false when inside shpool"
+in_shpool() { true; }
+connected_remotely() { true; }
+assert_false want_tmux
+in_shpool() { false; }
+
+start_test "want_tmux false when stdin is not a tty"
+stdin_is_tty() { false; }
+connected_remotely() { true; }
+assert_false want_tmux
+stdin_is_tty() { true; }
+
 # Restore real in_shpool / inside_tmux / have_command / stdin_is_tty so
 # later tests use the real implementations (the
-# maybe_start_shpool_and_exit block re-stubs them inside its own
+# maybe_start_session_and_exit block re-stubs them inside its own
 # subshells).
 unset -f in_shpool inside_tmux have_command stdin_is_tty
 SHRC_LOAD_FUNCTIONS_ONLY=1 . "$_srcdir/shrc"
@@ -868,47 +919,148 @@ assert_equal "" "${SHPOOL_INITIAL_PWD-}"
 
 rm -rf "$_fake_bin" "$_autoshpool_env" "$_pwd_dir"
 
-# Test maybe_start_shpool_and_exit. All the "should we even try" gating
-# (in_shpool / have_command / WANT_SHPOOL) now lives in want_shpool, so
-# these tests only stub want_shpool itself.
+# Test maybe_start_session_and_exit. The "should we even try" gating lives
+# in want_tmux / want_shpool, so these tests stub those directly. tmux is
+# the default backend; shpool is the fallback when want_tmux is false.
 _autoshpool_calls="$_testdir/autoshpool_calls"
+_autotmux_calls="$_testdir/autotmux_calls"
 _returned="$_testdir/shpool_returned"
 
-start_test "maybe_start_shpool_and_exit exits when autoshpool succeeds"
-rm -f "$_autoshpool_calls" "$_returned"
+start_test "maybe_start_session_and_exit starts tmux when want_tmux true"
+rm -f "$_autoshpool_calls" "$_autotmux_calls" "$_returned"
 (
+    want_tmux() { true; }
     want_shpool() { true; }
+    autotmux() { echo "autotmux $*" >> "$_autotmux_calls"; return 0; }
     autoshpool() { echo "autoshpool $*" >> "$_autoshpool_calls"; return 0; }
-    maybe_start_shpool_and_exit
+    maybe_start_session_and_exit
     echo yes > "$_returned"
 )
 assert_false test -f "$_returned"
 
-start_test "maybe_start_shpool_and_exit calls autoshpool with no args"
-result="$(cat "$_autoshpool_calls" 2>/dev/null)"
-assert_equal "autoshpool " "$result"
+start_test "maybe_start_session_and_exit prefers tmux over shpool"
+assert_equal "autotmux " "$(cat "$_autotmux_calls" 2>/dev/null)"
+assert_false test -f "$_autoshpool_calls"
 
-start_test "maybe_start_shpool_and_exit does not exit when autoshpool fails"
+start_test "maybe_start_session_and_exit does not exit when autotmux fails"
+rm -f "$_autotmux_calls" "$_returned"
+(
+    want_tmux() { true; }
+    autotmux() { return 1; }
+    maybe_start_session_and_exit
+    echo yes > "$_returned"
+)
+assert_true test -f "$_returned"
+
+start_test "maybe_start_session_and_exit falls back to shpool when want_tmux false"
 rm -f "$_autoshpool_calls" "$_returned"
 (
+    want_tmux() { false; }
+    want_shpool() { true; }
+    autoshpool() { echo "autoshpool $*" >> "$_autoshpool_calls"; return 0; }
+    maybe_start_session_and_exit
+    echo yes > "$_returned"
+)
+assert_false test -f "$_returned"
+
+start_test "maybe_start_session_and_exit calls autoshpool with no args on fallback"
+assert_equal "autoshpool " "$(cat "$_autoshpool_calls" 2>/dev/null)"
+
+start_test "maybe_start_session_and_exit does not exit when shpool fallback fails"
+rm -f "$_autoshpool_calls" "$_returned"
+(
+    want_tmux() { false; }
     want_shpool() { true; }
     autoshpool() { return 1; }
-    maybe_start_shpool_and_exit
+    maybe_start_session_and_exit
     echo yes > "$_returned"
 )
 assert_true test -f "$_returned"
 
-start_test "maybe_start_shpool_and_exit skips when want_shpool false"
-rm -f "$_autoshpool_calls" "$_returned"
+start_test "maybe_start_session_and_exit skips when neither backend wanted"
+rm -f "$_autoshpool_calls" "$_autotmux_calls" "$_returned"
 (
+    want_tmux() { false; }
     want_shpool() { false; }
+    autotmux() { echo "autotmux $*" >> "$_autotmux_calls"; return 0; }
     autoshpool() { echo "autoshpool $*" >> "$_autoshpool_calls"; return 0; }
-    maybe_start_shpool_and_exit
+    maybe_start_session_and_exit
     echo yes > "$_returned"
 )
 assert_true test -f "$_returned"
-start_test "maybe_start_shpool_and_exit does not call autoshpool when want_shpool false"
+
+start_test "maybe_start_session_and_exit starts no backend when neither wanted"
+assert_false test -f "$_autotmux_calls"
 assert_false test -f "$_autoshpool_calls"
+
+# Test session_backend / autosession / switchsession dispatch. session_backend
+# names the preferred manager; the wrappers route to the matching binary.
+_dispatch_calls="$_testdir/dispatch_calls"
+have_command() { case "$1" in tmux|shpool) return 0;; *) return 1;; esac; }
+
+start_test "session_backend prefers tmux when both available"
+assert_equal "tmux" "$(session_backend)"
+
+start_test "session_backend uses shpool when WANT_TMUX=0"
+WANT_TMUX=0
+assert_equal "shpool" "$(session_backend)"
+unset WANT_TMUX
+
+start_test "session_backend uses shpool when tmux missing"
+have_command() { test "$1" = shpool; }
+assert_equal "shpool" "$(session_backend)"
+have_command() { case "$1" in tmux|shpool) return 0;; *) return 1;; esac; }
+
+start_test "session_backend empty when nothing available"
+have_command() { false; }
+assert_equal "" "$(session_backend)"
+have_command() { case "$1" in tmux|shpool) return 0;; *) return 1;; esac; }
+
+start_test "session_backend empty when both backends opted out"
+WANT_TMUX=0
+WANT_SHPOOL=0
+assert_equal "" "$(session_backend)"
+unset WANT_TMUX WANT_SHPOOL
+
+start_test "autosession runs autotmux on the tmux backend"
+rm -f "$_dispatch_calls"
+(
+    session_backend() { echo tmux; }
+    autotmux() { echo "autotmux $*" >> "$_dispatch_calls"; }
+    autosession
+)
+assert_equal "autotmux " "$(cat "$_dispatch_calls" 2>/dev/null)"
+
+start_test "autosession runs autoshpool on the shpool backend"
+rm -f "$_dispatch_calls"
+(
+    session_backend() { echo shpool; }
+    autoshpool() { echo "autoshpool $*" >> "$_dispatch_calls"; }
+    autosession
+)
+assert_equal "autoshpool " "$(cat "$_dispatch_calls" 2>/dev/null)"
+
+start_test "switchsession runs autotmux switch on the tmux backend"
+rm -f "$_dispatch_calls"
+(
+    session_backend() { echo tmux; }
+    autotmux() { echo "autotmux $*" >> "$_dispatch_calls"; }
+    switchsession work
+)
+assert_equal "autotmux switch work" "$(cat "$_dispatch_calls" 2>/dev/null)"
+
+start_test "switchsession runs switchshpool on the shpool backend"
+rm -f "$_dispatch_calls"
+(
+    session_backend() { echo shpool; }
+    switchshpool() { echo "switchshpool $*" >> "$_dispatch_calls"; }
+    switchsession work
+)
+assert_equal "switchshpool work" "$(cat "$_dispatch_calls" 2>/dev/null)"
+
+unset -f have_command
+rm -f "$_dispatch_calls"
+SHRC_LOAD_FUNCTIONS_ONLY=1 . "$_srcdir/shrc"
 
 # Test jd/hd/gd & mjd/mhd/mgd. These live in shrc's interactive block as
 # indented one-liners, so extract_func (which anchors on a column-0
@@ -927,11 +1079,11 @@ _extract_oneliner() {
 }
 
 _vcsdir_calls="$_testdir/vcsdir_calls"
-# Record the underlying command + args, then autoshpool, in call order.
+# Record the underlying command + args, then autosession, in call order.
 jjd()  { echo "jjd $*"  >> "$_vcsdir_calls"; return 0; }
 hgd()  { echo "hgd $*"  >> "$_vcsdir_calls"; return 0; }
 gitd() { echo "gitd $*" >> "$_vcsdir_calls"; return 0; }
-autoshpool() { echo "autoshpool $*" >> "$_vcsdir_calls"; return 0; }
+autosession() { echo "autosession $*" >> "$_vcsdir_calls"; return 0; }
 
 _extract_oneliner jd
 _extract_oneliner hd
@@ -940,50 +1092,50 @@ _extract_oneliner mjd
 _extract_oneliner mhd
 _extract_oneliner mgd
 
-start_test "jd runs jjd then autoshpool"
+start_test "jd runs jjd then autosession"
 rm -f "$_vcsdir_calls"
 jd repo
 assert_equal "jjd repo
-autoshpool " "$(cat "$_vcsdir_calls")"
+autosession " "$(cat "$_vcsdir_calls")"
 
-start_test "hd runs hgd then autoshpool"
+start_test "hd runs hgd then autosession"
 rm -f "$_vcsdir_calls"
 hd repo
 assert_equal "hgd repo
-autoshpool " "$(cat "$_vcsdir_calls")"
+autosession " "$(cat "$_vcsdir_calls")"
 
-start_test "gd runs gitd then autoshpool"
+start_test "gd runs gitd then autosession"
 rm -f "$_vcsdir_calls"
 gd repo
 assert_equal "gitd repo
-autoshpool " "$(cat "$_vcsdir_calls")"
+autosession " "$(cat "$_vcsdir_calls")"
 
-start_test "mjd runs jjd -f then autoshpool"
+start_test "mjd runs jjd -f then autosession"
 rm -f "$_vcsdir_calls"
 mjd repo
 assert_equal "jjd -f repo
-autoshpool " "$(cat "$_vcsdir_calls")"
+autosession " "$(cat "$_vcsdir_calls")"
 
-start_test "mhd runs hgd -f then autoshpool"
+start_test "mhd runs hgd -f then autosession"
 rm -f "$_vcsdir_calls"
 mhd repo
 assert_equal "hgd -f repo
-autoshpool " "$(cat "$_vcsdir_calls")"
+autosession " "$(cat "$_vcsdir_calls")"
 
-start_test "mgd runs gitd -f then autoshpool"
+start_test "mgd runs gitd -f then autosession"
 rm -f "$_vcsdir_calls"
 mgd repo
 assert_equal "gitd -f repo
-autoshpool " "$(cat "$_vcsdir_calls")"
+autosession " "$(cat "$_vcsdir_calls")"
 
-start_test "mjd does not run autoshpool when jjd fails"
+start_test "mjd does not run autosession when jjd fails"
 rm -f "$_vcsdir_calls"
 jjd() { echo "jjd $*" >> "$_vcsdir_calls"; return 1; }
 _extract_oneliner mjd
 mjd repo
 assert_equal "jjd -f repo" "$(cat "$_vcsdir_calls")"
 
-unset -f jjd hgd gitd autoshpool jd hd gd mjd mhd mgd _extract_oneliner
+unset -f jjd hgd gitd autosession jd hd gd mjd mhd mgd _extract_oneliner
 rm -f "$_vcsdir_calls"
 
 # Re-source shrc so the real connected_remotely / inside_project are

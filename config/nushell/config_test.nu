@@ -39,12 +39,14 @@ def run-test [label: string, body: closure]: nothing -> string {
     }
 }
 
-# Create fake jjd/hgd/gitd/autoshpool on a fresh bin dir that log their
-# invocation ("<cmd> <args>") to $calls, prepend that dir to PATH, and
+# Create fake jjd/hgd/gitd/autoshpool/autotmux on a fresh bin dir that log
+# their invocation ("<cmd> <args>") to $calls, prepend that dir to PATH, and
 # return nothing. With --fail the three vcs-dir commands exit non-zero so
-# the wrappers' success gate (jjd ... && autoshpool) can be exercised.
-# Used to verify the clone-then-shpool wrappers only run autoshpool when
-# the underlying command succeeds. Plain (non-$"") strings so the shell's
+# the wrappers' success gate (jjd ... && autosession) can be exercised.
+# Used to verify the clone-then-session wrappers only run autosession when
+# the underlying command succeeds. A fake tmux is added too so
+# session-backend resolves to tmux (the default) deterministically, even on
+# hosts without a real tmux. Plain (non-$"") strings so the shell's
 # $* / $@ aren't treated as nu interpolation.
 def --env fake-vcs-bin [calls: string, --fail] {
     let bin = (mktemp -d)
@@ -55,6 +57,10 @@ def --env fake-vcs-bin [calls: string, --fail] {
     }
     ("#!/bin/sh\necho \"autoshpool $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "autoshpool")
     ^chmod +x ($bin | path join "autoshpool")
+    ("#!/bin/sh\necho \"autotmux $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "autotmux")
+    ^chmod +x ($bin | path join "autotmux")
+    "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "tmux")
+    ^chmod +x ($bin | path join "tmux")
     $env.PATH = ([$bin] ++ $env.PATH)
 }
 
@@ -68,47 +74,57 @@ def --env fake-shpool-on-path [] {
     $env.PATH = ([$bin] ++ $env.PATH)
 }
 
+# Add a fake tmux to PATH so `have-command "tmux"` (called from want-tmux /
+# session-backend) returns true deterministically.
+def --env fake-tmux-on-path [] {
+    let bin = (mktemp -d)
+    "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "tmux")
+    ^chmod +x ($bin | path join "tmux")
+    $env.PATH = ([$bin] ++ $env.PATH)
+}
+
 let results = [
     ###############
-    # jd/hd/gd & mjd/mhd/mgd run autoshpool after the underlying command
-    # succeeds, and skip it when the command fails.
-    (run-test "nu jd runs jjd then autoshpool" {
+    # jd/hd/gd & mjd/mhd/mgd run autosession after the underlying command
+    # succeeds, and skip it when the command fails. fake-vcs-bin makes the
+    # default backend resolve to tmux, so autosession runs autotmux.
+    (run-test "nu jd runs jjd then autotmux" {
         let calls = (mktemp -t "vcs-calls.XXXXXX")
         fake-vcs-bin $calls
         jd repo
-        assert equal (open $calls | str trim) "jjd repo\nautoshpool"
+        assert equal (open $calls | str trim) "jjd repo\nautotmux"
     })
-    (run-test "nu hd runs hgd then autoshpool" {
+    (run-test "nu hd runs hgd then autotmux" {
         let calls = (mktemp -t "vcs-calls.XXXXXX")
         fake-vcs-bin $calls
         hd repo
-        assert equal (open $calls | str trim) "hgd repo\nautoshpool"
+        assert equal (open $calls | str trim) "hgd repo\nautotmux"
     })
-    (run-test "nu gd runs gitd then autoshpool" {
+    (run-test "nu gd runs gitd then autotmux" {
         let calls = (mktemp -t "vcs-calls.XXXXXX")
         fake-vcs-bin $calls
         gd repo
-        assert equal (open $calls | str trim) "gitd repo\nautoshpool"
+        assert equal (open $calls | str trim) "gitd repo\nautotmux"
     })
-    (run-test "nu mjd runs jjd -f then autoshpool" {
+    (run-test "nu mjd runs jjd -f then autotmux" {
         let calls = (mktemp -t "vcs-calls.XXXXXX")
         fake-vcs-bin $calls
         mjd repo
-        assert equal (open $calls | str trim) "jjd -f repo\nautoshpool"
+        assert equal (open $calls | str trim) "jjd -f repo\nautotmux"
     })
-    (run-test "nu mhd runs hgd -f then autoshpool" {
+    (run-test "nu mhd runs hgd -f then autotmux" {
         let calls = (mktemp -t "vcs-calls.XXXXXX")
         fake-vcs-bin $calls
         mhd repo
-        assert equal (open $calls | str trim) "hgd -f repo\nautoshpool"
+        assert equal (open $calls | str trim) "hgd -f repo\nautotmux"
     })
-    (run-test "nu mgd runs gitd -f then autoshpool" {
+    (run-test "nu mgd runs gitd -f then autotmux" {
         let calls = (mktemp -t "vcs-calls.XXXXXX")
         fake-vcs-bin $calls
         mgd repo
-        assert equal (open $calls | str trim) "gitd -f repo\nautoshpool"
+        assert equal (open $calls | str trim) "gitd -f repo\nautotmux"
     })
-    (run-test "nu mjd skips autoshpool when jjd fails" {
+    (run-test "nu mjd skips autosession when jjd fails" {
         let calls = (mktemp -t "vcs-calls.XXXXXX")
         fake-vcs-bin --fail $calls
         mjd repo
@@ -542,7 +558,7 @@ try: os.close(fd)
 except OSError: pass
 ' | save --force $driver
         # Run nu with the real config loaded. Force SHPOOL_SESSION_NAME
-        # so maybe-start-shpool-and-exit is skipped (in-shpool returns
+        # so maybe-start-session-and-exit is skipped (in-shpool returns
         # true). Use COLUMNS/LINES so term size doesn't block. Send
         # the command, then exit.
         with-env {
@@ -932,12 +948,144 @@ except OSError: pass
     })
 
     ###############
-    # maybe-start-shpool-and-exit is a no-op without shpool on PATH
-    (run-test "nu maybe-start-shpool-and-exit no-op without shpool" {
+    # want-tmux gating (mirrors want-shpool but on the tmux binary)
+    (run-test "nu want-tmux true when remote" {
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        $env.stdin-is-tty = {|| true }
+        fake-tmux-on-path
+        assert (want-tmux)
+    })
+    (run-test "nu want-tmux true when inside project" {
+        $env.projectroot = {|| "/fake/project" }
+        hide-env --ignore-errors SSH_CONNECTION
+        $env.stdin-is-tty = {|| true }
+        fake-tmux-on-path
+        assert (want-tmux)
+    })
+    (run-test "nu want-tmux false when not remote and not in project" {
+        $env.projectroot = {|| "" }
+        hide-env --ignore-errors SSH_CONNECTION
+        $env.stdin-is-tty = {|| true }
+        fake-tmux-on-path
+        assert (not (want-tmux))
+    })
+    (run-test "nu want-tmux false when WANT_TMUX=0" {
+        $env.WANT_TMUX = "0"
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        $env.stdin-is-tty = {|| true }
+        fake-tmux-on-path
+        assert (not (want-tmux))
+    })
+    (run-test "nu want-tmux false when tmux not installed" {
+        $env.PATH = []
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        $env.stdin-is-tty = {|| true }
+        assert (not (want-tmux))
+    })
+    (run-test "nu want-tmux false when already inside tmux" {
+        $env.TMUX = "/tmp/tmux-fake/default,12345,0"
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        $env.stdin-is-tty = {|| true }
+        fake-tmux-on-path
+        assert (not (want-tmux))
+    })
+    (run-test "nu want-tmux false when inside shpool" {
+        $env.SHPOOL_SESSION_NAME = "main"
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        $env.stdin-is-tty = {|| true }
+        fake-tmux-on-path
+        assert (not (want-tmux))
+    })
+    (run-test "nu want-tmux false when stdin is not a tty" {
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        $env.stdin-is-tty = {|| false }
+        fake-tmux-on-path
+        assert (not (want-tmux))
+    })
+
+    ###############
+    # session-backend picks tmux by default, shpool as fallback
+    (run-test "nu session-backend prefers tmux when both available" {
+        fake-tmux-on-path
+        fake-shpool-on-path
+        assert equal (session-backend) "tmux"
+    })
+    (run-test "nu session-backend uses shpool when WANT_TMUX=0" {
+        $env.WANT_TMUX = "0"
+        fake-tmux-on-path
+        fake-shpool-on-path
+        assert equal (session-backend) "shpool"
+    })
+    (run-test "nu session-backend uses shpool when tmux missing" {
+        let bin = (mktemp -d)
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
+        ^chmod +x ($bin | path join "shpool")
+        $env.PATH = [$bin]
+        assert equal (session-backend) "shpool"
+    })
+    (run-test "nu session-backend empty when nothing available" {
+        $env.PATH = []
+        assert equal (session-backend) ""
+    })
+
+    ###############
+    # autosession / switchsession dispatch to the preferred backend
+    (run-test "nu autosession runs autotmux on the tmux backend" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"autotmux $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "autotmux")
+        ^chmod +x ($bin | path join "autotmux")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "tmux")
+        ^chmod +x ($bin | path join "tmux")
+        $env.PATH = [$bin]
+        autosession
+        assert equal (open $calls | str trim) "autotmux"
+    })
+    (run-test "nu autosession runs autoshpool on the shpool backend" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"autoshpool $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "autoshpool")
+        ^chmod +x ($bin | path join "autoshpool")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
+        ^chmod +x ($bin | path join "shpool")
+        $env.WANT_TMUX = "0"
+        $env.PATH = [$bin]
+        autosession
+        assert equal (open $calls | str trim) "autoshpool"
+    })
+    (run-test "nu switchsession runs autotmux switch on the tmux backend" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"autotmux $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "autotmux")
+        ^chmod +x ($bin | path join "autotmux")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "tmux")
+        ^chmod +x ($bin | path join "tmux")
+        $env.PATH = [$bin]
+        switchsession work
+        assert equal (open $calls | str trim) "autotmux switch work"
+    })
+    (run-test "nu switchsession runs autoshpool switch on the shpool backend" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        # autoshpool exits non-zero so switchsession's `if $ok { exit }` does
+        # not terminate the test process, while still recording the call.
+        ("#!/bin/sh\necho \"autoshpool $*\" >> \"" + $calls + "\"\nexit 1\n") | save -f ($bin | path join "autoshpool")
+        ^chmod +x ($bin | path join "autoshpool")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
+        ^chmod +x ($bin | path join "shpool")
+        $env.WANT_TMUX = "0"
+        $env.PATH = [$bin]
+        switchsession work
+        assert equal (open $calls | str trim) "autoshpool switch work"
+    })
+
+    ###############
+    # maybe-start-session-and-exit is a no-op without any backend on PATH
+    (run-test "nu maybe-start-session-and-exit no-op without a backend" {
         $env.PATH = []
         $env.SSH_CONNECTION = "1.2.3.4 22"
         hide-env --ignore-errors SHPOOL_SESSION_NAME
-        maybe-start-shpool-and-exit
+        maybe-start-session-and-exit
         # no crash/exit is the assertion
     })
 
@@ -1701,11 +1849,13 @@ except OSError: pass
     })
 
     ###############
-    # maybe-start-shpool-and-exit: stub autoshpool
-    # want-shpool now also requires stdin to be a tty; stub that helper to
+    # maybe-start-session-and-exit, shpool fallback path: stub autoshpool.
+    # WANT_TMUX=0 forces the shpool branch even though /usr/bin/tmux is on
+    # PATH. want-shpool also requires stdin to be a tty; stub that helper to
     # return true in these tests since the test process has no pty.
-    (run-test "nu maybe-start-shpool-and-exit calls autoshpool when warranted" {
+    (run-test "nu maybe-start-session-and-exit calls autoshpool when warranted" {
         $env.stdin-is-tty = {|| true }
+        $env.WANT_TMUX = "0"
         let dir = (mktemp -d)
         let marker = ($dir | path join "called")
         # Stub autoshpool that records it was called but exits non-zero
@@ -1718,10 +1868,10 @@ except OSError: pass
         $env.PATH = [$dir "/usr/bin" "/bin"]
         $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
         hide-env --ignore-errors SHPOOL_SESSION_NAME
-        maybe-start-shpool-and-exit
+        maybe-start-session-and-exit
         assert ($marker | path exists) "autoshpool should have been called"
     })
-    (run-test "nu maybe-start-shpool-and-exit skips when already in shpool" {
+    (run-test "nu maybe-start-session-and-exit skips when already in shpool" {
         let dir = (mktemp -d)
         let marker = ($dir | path join "called")
         $"#!/bin/sh\ntouch ($marker)" | save ($dir | path join "autoshpool")
@@ -1731,10 +1881,10 @@ except OSError: pass
         $env.PATH = [$dir "/usr/bin" "/bin"]
         $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
         $env.SHPOOL_SESSION_NAME = "already"
-        maybe-start-shpool-and-exit
+        maybe-start-session-and-exit
         assert (not ($marker | path exists)) "autoshpool should NOT have been called"
     })
-    (run-test "nu maybe-start-shpool-and-exit exits on autoshpool success" {
+    (run-test "nu maybe-start-session-and-exit exits on autoshpool success" {
         # Run in a sub-nu because exit terminates the process.
         let dir = (mktemp -d)
         "#!/bin/sh\nexit 0" | save ($dir | path join "autoshpool")
@@ -1744,16 +1894,17 @@ except OSError: pass
         let r = (nu --no-config-file -c $"
             source ($CONFIG)
             $env.stdin-is-tty = {|| true }
+            $env.WANT_TMUX = '0'
             $env.PATH = [($dir) /usr/bin /bin]
             $env.SSH_CONNECTION = '1.2.3.4 22 5.6.7.8 22'
             hide-env --ignore-errors SHPOOL_SESSION_NAME
-            maybe-start-shpool-and-exit
+            maybe-start-session-and-exit
             print 'did-not-exit'
         " | str trim)
         # If autoshpool succeeds, exit is called and 'did-not-exit' is never printed.
         assert (not ($r | str contains "did-not-exit"))
     })
-    (run-test "nu maybe-start-shpool-and-exit does not exit on autoshpool failure" {
+    (run-test "nu maybe-start-session-and-exit does not exit on autoshpool failure" {
         # Non-zero exit from autoshpool must not kill the shell, so the
         # user can see the error and fix it.
         let dir = (mktemp -d)
@@ -1764,22 +1915,23 @@ except OSError: pass
         let r = (nu --no-config-file -c $"
             source ($CONFIG)
             $env.stdin-is-tty = {|| true }
+            $env.WANT_TMUX = '0'
             $env.PATH = [($dir) /usr/bin /bin]
             $env.SSH_CONNECTION = '1.2.3.4 22 5.6.7.8 22'
             hide-env --ignore-errors SHPOOL_SESSION_NAME
-            maybe-start-shpool-and-exit
+            maybe-start-session-and-exit
             print 'did-not-exit'
         " | str trim)
         assert ($r | str contains "did-not-exit") $"autoshpool failure must not exit the shell: got ($r)"
     })
-    (run-test "nu maybe-start-shpool-and-exit inherits stdout to autoshpool" {
+    (run-test "nu maybe-start-session-and-exit inherits stdout to autoshpool" {
         # Regression: previously used `^autoshpool | complete`, which
         # captured stdout/stderr and broke interactive `shpool attach`
         # (it would hang waiting to use the terminal).
         let dir = (mktemp -d)
         # Stub prints a unique marker to stdout. If stdio is inherited,
         # the marker reaches the sub-nu's stdout; if it's piped/captured,
-        # it's swallowed inside maybe-start-shpool-and-exit.
+        # it's swallowed inside maybe-start-session-and-exit.
         "#!/bin/sh\necho MARKER_STDOUT_XYZ\nexit 1" | save ($dir | path join "autoshpool")
         ^chmod +x ($dir | path join "autoshpool")
         "#!/bin/sh" | save ($dir | path join "shpool")
@@ -1787,14 +1939,15 @@ except OSError: pass
         let r = (nu --no-config-file -c $"
             source ($CONFIG)
             $env.stdin-is-tty = {|| true }
+            $env.WANT_TMUX = '0'
             $env.PATH = [($dir) /usr/bin /bin]
             $env.SSH_CONNECTION = '1.2.3.4 22 5.6.7.8 22'
             hide-env --ignore-errors SHPOOL_SESSION_NAME
-            maybe-start-shpool-and-exit
+            maybe-start-session-and-exit
         " | complete)
         assert ($r.stdout | str contains "MARKER_STDOUT_XYZ") $"stub stdout should pass through: ($r.stdout)"
     })
-    (run-test "nu maybe-start-shpool-and-exit inherits stderr to autoshpool" {
+    (run-test "nu maybe-start-session-and-exit inherits stderr to autoshpool" {
         # stderr inheritance matters too: shpool prints status and errors
         # to stderr; capturing it would hide them from the user.
         let dir = (mktemp -d)
@@ -1805,14 +1958,15 @@ except OSError: pass
         let r = (nu --no-config-file -c $"
             source ($CONFIG)
             $env.stdin-is-tty = {|| true }
+            $env.WANT_TMUX = '0'
             $env.PATH = [($dir) /usr/bin /bin]
             $env.SSH_CONNECTION = '1.2.3.4 22 5.6.7.8 22'
             hide-env --ignore-errors SHPOOL_SESSION_NAME
-            maybe-start-shpool-and-exit
+            maybe-start-session-and-exit
         " | complete)
         assert ($r.stderr | str contains "MARKER_STDERR_XYZ") $"stub stderr should pass through: ($r.stderr)"
     })
-    (run-test "nu maybe-start-shpool-and-exit inherits a tty to autoshpool when one is present" {
+    (run-test "nu maybe-start-session-and-exit inherits a tty to autoshpool when one is present" {
         # Real regression: with `| complete`, autoshpool's stdout was a
         # pipe, so shpool attach saw no tty and hung. Spawn sub-nu under
         # `script` (pty) and have the stub record whether its stdout is
@@ -1834,10 +1988,51 @@ except OSError: pass
         # Set PATH and SSH_CONNECTION via with-env so they're visible during
         # source; this prevents the interactive auth block from using the real
         # ssh-add and hanging on a passphrase prompt.
-        let cmd = $"nu --no-config-file -c 'with-env {PATH: [\"($dir)\" /usr/bin /bin], SSH_CONNECTION: \"1.2.3.4 22 5.6.7.8 22\"} { source ($CONFIG); hide-env --ignore-errors SHPOOL_SESSION_NAME; maybe-start-shpool-and-exit }'"
+        let cmd = $"nu --no-config-file -c 'with-env {PATH: [\"($dir)\" /usr/bin /bin], SSH_CONNECTION: \"1.2.3.4 22 5.6.7.8 22\", WANT_TMUX: \"0\"} { source ($CONFIG); hide-env --ignore-errors SHPOOL_SESSION_NAME; maybe-start-session-and-exit }'"
         ^script -qc $cmd /dev/null out+err> (["/dev/null"] | path join)
         let status = (open $marker | str trim)
         assert equal $status "tty" $"autoshpool stdout should be a tty when nu runs under a pty, got: ($status)"
+    })
+
+    ###############
+    # maybe-start-session-and-exit, default tmux path: stub autotmux.
+    (run-test "nu maybe-start-session-and-exit calls autotmux when warranted" {
+        $env.stdin-is-tty = {|| true }
+        let dir = (mktemp -d)
+        let marker = ($dir | path join "called")
+        # autotmux records the call but exits non-zero so the test process
+        # doesn't actually exit.
+        $"#!/bin/sh\ntouch ($marker)\nexit 1" | save ($dir | path join "autotmux")
+        ^chmod +x ($dir | path join "autotmux")
+        "#!/bin/sh" | save ($dir | path join "tmux")
+        ^chmod +x ($dir | path join "tmux")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        hide-env --ignore-errors TMUX
+        maybe-start-session-and-exit
+        assert ($marker | path exists) "autotmux should have been called"
+    })
+    (run-test "nu maybe-start-session-and-exit prefers tmux over shpool" {
+        $env.stdin-is-tty = {|| true }
+        let dir = (mktemp -d)
+        let tmux_marker = ($dir | path join "tmux-called")
+        let shpool_marker = ($dir | path join "shpool-called")
+        $"#!/bin/sh\ntouch ($tmux_marker)\nexit 1" | save ($dir | path join "autotmux")
+        ^chmod +x ($dir | path join "autotmux")
+        $"#!/bin/sh\ntouch ($shpool_marker)\nexit 1" | save ($dir | path join "autoshpool")
+        ^chmod +x ($dir | path join "autoshpool")
+        "#!/bin/sh" | save ($dir | path join "tmux")
+        ^chmod +x ($dir | path join "tmux")
+        "#!/bin/sh" | save ($dir | path join "shpool")
+        ^chmod +x ($dir | path join "shpool")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        hide-env --ignore-errors TMUX
+        maybe-start-session-and-exit
+        assert ($tmux_marker | path exists) "autotmux should have been called"
+        assert (not ($shpool_marker | path exists)) "autoshpool should NOT have been called"
     })
 
     # TODO: add package manager wrapper tests (update, search, install,
