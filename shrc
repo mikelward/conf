@@ -291,8 +291,18 @@ in_shpool() {
     test -n "${SHPOOL_SESSION_NAME:-}"
 }
 
-# return true if we should try to run shpool
+# return true if stdin is connected to a tty. Pulled out as a helper
+# so tests can stub it without rigging up a pty.
+stdin_is_tty() {
+    test -t 0
+}
+
+# return true if we should auto-start shpool in this session
 want_shpool() {
+    if test "${WANT_SHPOOL:-1}" = 0; then return 1; fi
+    if ! stdin_is_tty; then return 1; fi
+    if in_shpool; then return 1; fi
+    if ! have_command shpool; then return 1; fi
     connected_remotely || inside_project
 }
 
@@ -1066,7 +1076,7 @@ fi # SHRC_LOAD_FUNCTIONS_ONLY guard (env-setup block)
 switchshpool() { autoshpool switch "$1" && exit; }
 
 maybe_start_shpool_and_exit() {
-    if ! in_shpool && want_shpool && have_command shpool; then
+    if want_shpool; then
         autoshpool && exit
     fi
 }

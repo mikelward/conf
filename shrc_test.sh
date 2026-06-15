@@ -710,6 +710,13 @@ assert_false in_shpool
 ###############
 # SHPOOL FUNCTIONS
 
+# want_shpool now folds in `! in_shpool`, `have_command shpool`, the
+# `stdin_is_tty` check, and the WANT_SHPOOL=0 opt-out, so each block
+# sets all five gating stubs.
+in_shpool() { false; }
+have_command() { test "$1" = shpool; }
+stdin_is_tty() { true; }
+
 start_test "want_shpool when connected remotely"
 connected_remotely() { true; }
 inside_project() { false; }
@@ -729,6 +736,42 @@ start_test "want_shpool when neither remote nor inside project"
 connected_remotely() { false; }
 inside_project() { false; }
 assert_false want_shpool
+
+start_test "want_shpool false when WANT_SHPOOL=0"
+connected_remotely() { true; }
+inside_project() { true; }
+WANT_SHPOOL=0
+assert_false want_shpool
+unset WANT_SHPOOL
+
+start_test "want_shpool true when WANT_SHPOOL unset"
+unset WANT_SHPOOL
+connected_remotely() { true; }
+inside_project() { false; }
+assert_true want_shpool
+
+start_test "want_shpool false when already in shpool"
+in_shpool() { true; }
+connected_remotely() { true; }
+assert_false want_shpool
+in_shpool() { false; }
+
+start_test "want_shpool false when shpool not installed"
+have_command() { false; }
+connected_remotely() { true; }
+assert_false want_shpool
+have_command() { test "$1" = shpool; }
+
+start_test "want_shpool false when stdin is not a tty"
+stdin_is_tty() { false; }
+connected_remotely() { true; }
+assert_false want_shpool
+
+# Restore real in_shpool / have_command / stdin_is_tty so later tests use
+# the real implementations (the maybe_start_shpool_and_exit block
+# re-stubs them inside its own subshells).
+unset -f in_shpool have_command stdin_is_tty
+SHRC_LOAD_FUNCTIONS_ONLY=1 . "$_srcdir/shrc"
 
 # Test switchshpool
 # Stub autoshpool to record what it was called with
@@ -763,17 +806,16 @@ assert_true test -f "$_returned"
 unset -f autoshpool
 rm -f "$_autoshpool_calls" "$_returned"
 
-# Test maybe_start_shpool_and_exit
+# Test maybe_start_shpool_and_exit. All the "should we even try" gating
+# (in_shpool / have_command / WANT_SHPOOL) now lives in want_shpool, so
+# these tests only stub want_shpool itself.
 _autoshpool_calls="$_testdir/autoshpool_calls"
 _returned="$_testdir/shpool_returned"
 
-# When not in shpool, want shpool, shpool available → calls autoshpool and exits
 start_test "maybe_start_shpool_and_exit exits when autoshpool succeeds"
 rm -f "$_autoshpool_calls" "$_returned"
 (
-    in_shpool() { false; }
     want_shpool() { true; }
-    have_command() { test "$1" = "shpool"; }
     autoshpool() { echo "autoshpool $*" >> "$_autoshpool_calls"; return 0; }
     maybe_start_shpool_and_exit
     echo yes > "$_returned"
@@ -784,47 +826,26 @@ start_test "maybe_start_shpool_and_exit calls autoshpool with no args"
 result="$(cat "$_autoshpool_calls" 2>/dev/null)"
 assert_equal "autoshpool " "$result"
 
-# When autoshpool fails → does not exit
 start_test "maybe_start_shpool_and_exit does not exit when autoshpool fails"
 rm -f "$_autoshpool_calls" "$_returned"
 (
-    in_shpool() { false; }
     want_shpool() { true; }
-    have_command() { test "$1" = "shpool"; }
     autoshpool() { return 1; }
     maybe_start_shpool_and_exit
     echo yes > "$_returned"
 )
 assert_true test -f "$_returned"
 
-# When already in shpool → does not call autoshpool
-start_test "maybe_start_shpool_and_exit skips when already in shpool"
+start_test "maybe_start_shpool_and_exit skips when want_shpool false"
 rm -f "$_autoshpool_calls" "$_returned"
 (
-    in_shpool() { true; }
-    want_shpool() { true; }
-    have_command() { test "$1" = "shpool"; }
-    autoshpool() { echo "autoshpool $*" >> "$_autoshpool_calls"; return 0; }
-    maybe_start_shpool_and_exit
-    echo yes > "$_returned"
-)
-assert_true test -f "$_returned"
-start_test "maybe_start_shpool_and_exit does not call autoshpool when in shpool"
-assert_false test -f "$_autoshpool_calls"
-
-# When don't want shpool → does not call autoshpool
-start_test "maybe_start_shpool_and_exit skips when not wanted"
-rm -f "$_autoshpool_calls" "$_returned"
-(
-    in_shpool() { false; }
     want_shpool() { false; }
-    have_command() { test "$1" = "shpool"; }
     autoshpool() { echo "autoshpool $*" >> "$_autoshpool_calls"; return 0; }
     maybe_start_shpool_and_exit
     echo yes > "$_returned"
 )
 assert_true test -f "$_returned"
-start_test "maybe_start_shpool_and_exit does not call autoshpool when not wanted"
+start_test "maybe_start_shpool_and_exit does not call autoshpool when want_shpool false"
 assert_false test -f "$_autoshpool_calls"
 
 # Test jd/hd/gd & mjd/mhd/mgd. These live in shrc's interactive block as
