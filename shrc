@@ -49,9 +49,12 @@ is_sh() {
 # LC_FAILSAFE=1 is accepted as an alias: openssh strips most env vars
 # but most sshd configs AcceptEnv LC_*, so `LC_FAILSAFE=1 ssh host`
 # lights up failsafe mode on the remote shell.
+# ~/.failsafe is a persistent opt-in: `touch ~/.failsafe` to keep every
+# new shell in failsafe mode without having to re-set the env var.
 if is_sh || is_dash \
     || test "${FAILSAFE:-0}" = 1 \
-    || test "${LC_FAILSAFE:-0}" = 1; then
+    || test "${LC_FAILSAFE:-0}" = 1 \
+    || test -e "$HOME/.failsafe"; then
     echo failsafe mode >&2
     PS1='
 $(basename "$PWD")$ '

@@ -1255,6 +1255,26 @@ if test "$_real_shell" = bash || test "$_real_shell" = zsh; then
         -- "$_srcdir/shrc" 2>&1)
     assert_contains "failsafe mode" "$_failsafe_out"
     assert_contains "AFTER" "$_failsafe_out"
+
+    # ~/.failsafe is a persistent opt-in: presence of the file alone
+    # forces failsafe mode for every new shell.
+    _failsafe_home="$_testdir/failsafe_home"
+    mkdir -p "$_failsafe_home"
+    touch "$_failsafe_home/.failsafe"
+    start_test "~/.failsafe file triggers failsafe mode"
+    _failsafe_out=$(HOME="$_failsafe_home" \
+        "$_real_shell" -c '. "$1"; echo AFTER' \
+        -- "$_srcdir/shrc" 2>&1)
+    assert_contains "failsafe mode" "$_failsafe_out"
+    assert_contains "AFTER" "$_failsafe_out"
+
+    start_test "absent ~/.failsafe leaves shrc in normal mode"
+    rm -f "$_failsafe_home/.failsafe"
+    _failsafe_out=$(HOME="$_failsafe_home" \
+        "$_real_shell" -c '. "$1"; echo AFTER' \
+        -- "$_srcdir/shrc" 2>&1)
+    assert_not_contains "failsafe mode" "$_failsafe_out"
+    assert_contains "AFTER" "$_failsafe_out"
 else
     skip_block "FAILSAFE tests: dash/sh already take the failsafe branch"
 fi

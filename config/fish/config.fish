@@ -8,7 +8,9 @@
 # (e.g. an autoshpool loop) can be recovered from with `FAILSAFE=1 fish`.
 # LC_FAILSAFE=1 is accepted as an alias so the flag survives sshd's
 # env sanitization (most sshd configs AcceptEnv LC_*).
-if test "$FAILSAFE" = 1; or test "$LC_FAILSAFE" = 1
+# ~/.failsafe is a persistent opt-in: `touch ~/.failsafe` to keep every
+# new shell in failsafe mode without having to re-set the env var.
+if test "$FAILSAFE" = 1; or test "$LC_FAILSAFE" = 1; or test -e $HOME/.failsafe
     echo failsafe mode >&2
     function fish_prompt
         echo (basename $PWD)'$ '

@@ -489,4 +489,15 @@ _failsafe_out="$(HOME=$_testdir/fakehome LC_FAILSAFE=1 run_with_timeout 15 \
 assert_contains "failsafe mode" "$_failsafe_out"
 assert_contains "AFTER" "$_failsafe_out"
 
+# ~/.failsafe file is a persistent opt-in: presence of the file alone
+# forces failsafe mode for every new shell.
+_fish_failsafe_home="$_testdir/fish_failsafe_home"
+mkdir -p "$_fish_failsafe_home"
+touch "$_fish_failsafe_home/.failsafe"
+start_test "fish ~/.failsafe file triggers failsafe mode"
+_failsafe_out="$(HOME=$_fish_failsafe_home run_with_timeout 15 \
+    fish --no-config -c "source $_config; echo AFTER" 2>&1)"
+assert_contains "failsafe mode" "$_failsafe_out"
+assert_contains "AFTER" "$_failsafe_out"
+
 test_summary "fish_test"
