@@ -6,7 +6,9 @@
 # and the equivalent in config.nu: bail out before defining functions,
 # setting up the prompt, or jumping into shpool, so a misbehaving rc
 # (e.g. an autoshpool loop) can be recovered from with `FAILSAFE=1 fish`.
-if test "$FAILSAFE" = 1
+# LC_FAILSAFE=1 is accepted as an alias so the flag survives sshd's
+# env sanitization (most sshd configs AcceptEnv LC_*).
+if test "$FAILSAFE" = 1; or test "$LC_FAILSAFE" = 1
     echo failsafe mode >&2
     function fish_prompt
         echo (basename $PWD)'$ '

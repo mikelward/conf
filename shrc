@@ -46,9 +46,12 @@ is_sh() {
 # work under dash; this is purely about not crashing on source.
 # FAILSAFE=1 forces the same bail-out under bash/zsh as a cross-shell
 # escape hatch when the full rc is misbehaving (e.g. autoshpool loops).
-# The variable is shared with config.fish and config.nu so one flag
-# disables the heavy startup path everywhere.
-if is_sh || is_dash || test "${FAILSAFE:-0}" = 1; then
+# LC_FAILSAFE=1 is accepted as an alias: openssh strips most env vars
+# but most sshd configs AcceptEnv LC_*, so `LC_FAILSAFE=1 ssh host`
+# lights up failsafe mode on the remote shell.
+if is_sh || is_dash \
+    || test "${FAILSAFE:-0}" = 1 \
+    || test "${LC_FAILSAFE:-0}" = 1; then
     echo failsafe mode >&2
     PS1='
 $(basename "$PWD")$ '

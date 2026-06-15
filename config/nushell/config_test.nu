@@ -2257,6 +2257,17 @@ except OSError: pass
         assert ($r.stdout | str contains "AFTER")
         assert ($r.stdout | str contains "prepend-path-defined") $"helpers should be defined without FAILSAFE; got stdout=($r.stdout)"
     })
+
+    # LC_FAILSAFE=1 is the ssh-survivable alias (most sshd configs
+    # AcceptEnv LC_*), so `LC_FAILSAFE=1 ssh host` reaches the remote.
+    (run-test "nu LC_FAILSAFE=1 also triggers failsafe mode" {
+        let r = (with-env {LC_FAILSAFE: "1", HOME: $env.HOME} {
+            ^nu --no-config-file -c $"source ($CONFIG); print AFTER; if (which prepend-path | is-not-empty) { print prepend-path-defined }"
+        } | complete)
+        assert ($r.stderr | str contains "failsafe mode") $"expected failsafe mode on stderr, got: ($r.stderr)"
+        assert ($r.stdout | str contains "AFTER")
+        assert (not ($r.stdout | str contains "prepend-path-defined"))
+    })
 ]
 
 for r in $results { print $r }
