@@ -683,6 +683,42 @@ function maybe_start_shpool_and_exit
     end
 end
 
+# ssh to a host from ~/.ssh/config, telling the remote who is connecting
+# via LC_CLIENT_HOST (read back with ssh_client_host). set -lx keeps the
+# override function-local and exported: it reaches ssh/rw and their
+# children, is restored when ssh_to returns (so a LC_CLIENT_HOST inherited
+# from an inbound SSH session survives chained hops), and never leaks into
+# the interactive shell -- matching the subshell-confined bash/zsh path.
+# Set before the branch so both paths carry it; SendEnv is additive, so
+# the usual LANG/LC_* forwarding is left intact.
+function ssh_to
+    set -lx LC_CLIENT_HOST (short_hostname | string collect)
+    if have_command rw; and test (count $argv) -eq 1
+        rw -r $argv
+    else
+        shift_options ssh -t -oSendEnv=LC_CLIENT_HOST $argv
+    end
+end
+
+function set_up_ssh_aliases
+    set _ssh_config $HOME/.ssh/config
+    test -f $_ssh_config; or return 0
+
+    while read _line
+        set _match (string match --regex '^[[:space:]]*[Hh]ost[[:space:]]+(.*)$' -- $_line)
+        test -n "$_match"; or continue
+        set _hosts (string replace --all --regex '[[:space:]]+' ' ' -- $_match[2] | string trim | string split --no-empty ' ')
+        for _alias in $_hosts
+            switch $_alias
+            case '*\**' '*\?*' '*-*'
+                continue
+            end
+            eval "function $_alias; ssh_to $_alias \$argv; end"
+        end
+    end <$_ssh_config
+end
+set_up_ssh_aliases
+
 #########################
 # INTERACTIVE SHELL SETUP
 # Set up the prompt, title, key bindings, etc.
@@ -941,42 +977,6 @@ if is_interactive
     end
     alias xevkey='xev -event keyboard'
     alias xr='DISPLAY=:0.0 xrandr'
-
-    # ssh to a host from ~/.ssh/config, telling the remote who is connecting
-    # via LC_CLIENT_HOST (read back with ssh_client_host). set -lx keeps the
-    # override function-local and exported: it reaches ssh/rw and their
-    # children, is restored when ssh_to returns (so a LC_CLIENT_HOST inherited
-    # from an inbound SSH session survives chained hops), and never leaks into
-    # the interactive shell -- matching the subshell-confined bash/zsh path.
-    # Set before the branch so both paths carry it; SendEnv is additive, so
-    # the usual LANG/LC_* forwarding is left intact.
-    function ssh_to
-        set -lx LC_CLIENT_HOST (short_hostname | string collect)
-        if have_command rw; and test (count $argv) -eq 1
-            rw -r $argv
-        else
-            shift_options ssh -t -oSendEnv=LC_CLIENT_HOST $argv
-        end
-    end
-
-    function set_up_ssh_aliases
-        set _ssh_config $HOME/.ssh/config
-        test -f $_ssh_config; or return
-
-        while read _line
-            set _match (string match --regex '^[[:space:]]*[Hh]ost[[:space:]]+(.*)$' -- $_line)
-            test -n "$_match"; or continue
-            set _hosts (string replace --all --regex '[[:space:]]+' ' ' -- $_match[2] | string trim | string split --no-empty ' ')
-            for _alias in $_hosts
-                switch $_alias
-                case '*\**' '*\?*' '*-*'
-                    continue
-                end
-                eval "function $_alias; ssh_to $_alias \$argv; end"
-            end
-        end <$_ssh_config
-    end
-    set_up_ssh_aliases
 
     # in case root isn't available, fall back to sudo
     if not have_command root

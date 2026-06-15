@@ -631,14 +631,8 @@ result="$(
 )"
 assert_equal "1.2.3.4" "$result"
 
-# ssh_to lives in shrc's interactive block (indented, and skipped under
-# SHRC_LOAD_FUNCTIONS_ONLY), so the whole-file source above did not define
-# it. Pull it out directly and de-indent so we can exercise it here.
-_ssh_to_def="$(sed -n '/^    ssh_to() {/,/^    }/p' "$_srcdir/shrc" | sed 's/^    //')"
-
 start_test "ssh_to sends client host via LC_CLIENT_HOST and SendEnv"
 result="$(
-    eval "$_ssh_to_def"
     short_hostname() { puts "clienthost"; }
     have_command() { return 1; }   # no rw -> ssh path
     ssh() { puts "ssh LC_CLIENT_HOST=$LC_CLIENT_HOST args=$*"; }
@@ -650,7 +644,6 @@ assert_contains "myhost" "$result"
 
 start_test "ssh_to rw path also sets LC_CLIENT_HOST"
 result="$(
-    eval "$_ssh_to_def"
     short_hostname() { puts "clienthost"; }
     have_command() { test "$1" = rw; }   # rw available, single arg -> rw path
     rw() { puts "rw LC_CLIENT_HOST=$LC_CLIENT_HOST args=$*"; }
@@ -661,7 +654,6 @@ assert_contains "args=-r myhost" "$result"
 
 start_test "ssh_to does not leak LC_CLIENT_HOST into the shell"
 result="$(
-    eval "$_ssh_to_def"
     short_hostname() { puts "clienthost"; }
     have_command() { return 1; }
     ssh() { :; }
@@ -672,7 +664,6 @@ assert_equal "after=[]" "$result"
 
 start_test "ssh_to preserves an inherited LC_CLIENT_HOST"
 result="$(
-    eval "$_ssh_to_def"
     short_hostname() { puts "clienthost"; }
     have_command() { return 1; }
     ssh() { puts "ssh saw $LC_CLIENT_HOST"; }
@@ -683,7 +674,22 @@ result="$(
 assert_contains "ssh saw clienthost" "$result"
 assert_contains "after=[inbound]" "$result"
 
-unset _ssh_to_def
+# set_up_ssh_aliases is inside the SHRC_LOAD_FUNCTIONS_ONLY guard, so
+# extract it directly to exercise the no-config branch.
+_set_up_ssh_aliases_def="$(sed -n '/^set_up_ssh_aliases() {/,/^}/p' "$_srcdir/shrc")"
+
+start_test "set_up_ssh_aliases returns 0 when ~/.ssh/config is missing"
+result="$(
+    eval "$_set_up_ssh_aliases_def"
+    HOME="$(mktemp -d)"
+    set -e
+    set_up_ssh_aliases
+    puts ok
+    rm -rf "$HOME"
+)"
+assert_equal "ok" "$result"
+
+unset _set_up_ssh_aliases_def
 
 start_test "inside_tmux with TMUX set"
 TMUX="/tmp/tmux-1000/default,12345,0"
