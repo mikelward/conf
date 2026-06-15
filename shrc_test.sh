@@ -814,6 +814,59 @@ assert_true test -f "$_returned"
 # Clean up
 unset -f autoshpool
 rm -f "$_autoshpool_calls" "$_returned"
+# Re-source shrc to reinstate the real autoshpool wrapper (the stubs
+# above replaced it). The next batch of tests stubs autoshpool again
+# inside their own subshells, so the restored wrapper doesn't leak.
+SHRC_LOAD_FUNCTIONS_ONLY=1 . "$_srcdir/shrc"
+
+# Test the autoshpool wrapper. The wrapper sets SHPOOL_INITIAL_PWD to
+# the PWD at invocation time so the spawned in-shpool shell can cd
+# there. Drive the real wrapper (not a stub) by putting a fake
+# autoshpool script on PATH; `command autoshpool` in the wrapper
+# resolves to the fake, which records what env it saw.
+_fake_bin="$_testdir/fake_bin"
+_autoshpool_env="$_testdir/autoshpool_env"
+mkdir -p "$_fake_bin"
+cat > "$_fake_bin/autoshpool" <<'EOF'
+#!/bin/sh
+printf 'SHPOOL_INITIAL_PWD=%s\nargs=%s\n' "${SHPOOL_INITIAL_PWD-unset}" "$*" \
+    >> "$AUTOSHPOOL_ENV_LOG"
+EOF
+chmod +x "$_fake_bin/autoshpool"
+
+start_test "autoshpool is defined as a function by shrc"
+assert_true is_function autoshpool
+
+start_test "autoshpool wrapper stamps current PWD onto SHPOOL_INITIAL_PWD"
+rm -f "$_autoshpool_env"
+_pwd_dir="$_testdir/pwd_dir"
+mkdir -p "$_pwd_dir"
+(
+    cd "$_pwd_dir"
+    PATH="$_fake_bin:$PATH" AUTOSHPOOL_ENV_LOG="$_autoshpool_env" autoshpool
+)
+assert_equal "SHPOOL_INITIAL_PWD=$_pwd_dir
+args=" "$(cat "$_autoshpool_env")"
+
+start_test "autoshpool wrapper forwards args to the binary"
+rm -f "$_autoshpool_env"
+(
+    cd "$_pwd_dir"
+    PATH="$_fake_bin:$PATH" AUTOSHPOOL_ENV_LOG="$_autoshpool_env" \
+        autoshpool switch mysession
+)
+assert_equal "SHPOOL_INITIAL_PWD=$_pwd_dir
+args=switch mysession" "$(cat "$_autoshpool_env")"
+
+start_test "autoshpool wrapper does not leak SHPOOL_INITIAL_PWD to caller"
+unset SHPOOL_INITIAL_PWD
+(
+    cd "$_pwd_dir"
+    PATH="$_fake_bin:$PATH" AUTOSHPOOL_ENV_LOG="$_autoshpool_env" autoshpool
+)
+assert_equal "" "${SHPOOL_INITIAL_PWD-}"
+
+rm -rf "$_fake_bin" "$_autoshpool_env" "$_pwd_dir"
 
 # Test maybe_start_shpool_and_exit. All the "should we even try" gating
 # (in_shpool / have_command / WANT_SHPOOL) now lives in want_shpool, so

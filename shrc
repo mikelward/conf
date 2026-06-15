@@ -1080,6 +1080,14 @@ fi
 
 fi # SHRC_LOAD_FUNCTIONS_ONLY guard (env-setup block)
 
+# Stamp the current PWD onto SHPOOL_INITIAL_PWD for every autoshpool
+# invocation so the spawned shpool shell cd's back to where the user
+# actually was. Without this, SHPOOL_INITIAL_PWD would only carry the
+# outer shell's startup PWD, so `cd repo && autoshpool` would land the
+# session in the startup dir instead of the repo. `command` bypasses the
+# wrapper itself to avoid recursion.
+autoshpool() { SHPOOL_INITIAL_PWD="$PWD" command autoshpool "$@"; }
+
 switchshpool() { autoshpool switch "$1" && exit; }
 
 maybe_start_shpool_and_exit() {
@@ -1740,27 +1748,6 @@ set_color() {
 escape_start=
 escape_end=
 
-terminal_supports_bracketed_paste() {
-    case $TERM in rxvt-unicode|xterm)
-        true;;
-    *)
-        false;;
-    esac
-}
-
-enable_bracketed_paste() {
-    if terminal_supports_bracketed_paste; then
-        printf '\e[?2004h'
-    fi
-}
-
-disable_bracketed_paste() {
-    if terminal_supports_bracketed_paste; then
-        printf '\e[?2004l'
-    fi
-}
-
-
 #########################
 # INTERACTIVE SHELL SETUP
 # Set up the prompt, title, key bindings, etc.
@@ -1825,19 +1812,12 @@ set_up_ssh_aliases() {
 set_up_ssh_aliases
 
 if is_interactive; then
-    if in_shpool; then
-        # Prevent shpool from clearing the screen during startup.
-        # This ensures we can see any motd, errors, etc.
-        clear() {
-            unset -f clear
-        }
-        if test -n "$SHPOOL_INITIAL_PWD"; then
-            cd "$SHPOOL_INITIAL_PWD"
-            SHPOOL_INITIAL_PWD=
-        fi
-    else
-        # This will be overridden by autoshpool.
-        export SHPOOL_INITIAL_PWD="$PWD"
+    # The autoshpool wrapper stamps SHPOOL_INITIAL_PWD with the PWD at
+    # invocation time; the spawned in-shpool shell cd's there and clears
+    # it so it doesn't leak into later sessions.
+    if in_shpool && test -n "$SHPOOL_INITIAL_PWD"; then
+        cd "$SHPOOL_INITIAL_PWD"
+        SHPOOL_INITIAL_PWD=
     fi
     maybe_start_shpool_and_exit
 
@@ -2134,14 +2114,12 @@ if is_interactive; then
         }
         zle_line_init() {
             zle_keymap
-            enable_bracketed_paste
         }
         zle_keymap_select() {
             zle_keymap
         }
         zle_line_finish() {
             zle_keymap
-            disable_bracketed_paste
         }
         zle -N zle-line-init zle_line_init
         zle -N zle-keymap-select zle_keymap_select
@@ -2269,41 +2247,12 @@ if is_interactive; then
         # try to differentiate between Esc vi command and Alt+something
         KEYTIMEOUT=1
 
-        # enable support for xterm bracketed paste
-
-        # switch to the paste keymap
-        start_paste() {
-            bindkey -A main previous
-            bindkey -A paste main
-        }
-        # strip a single final newline and switch back to the previous keymap
-        end_paste() {
-            LBUFFER="${LBUFFER%
-}"
-            bindkey -A previous main
-        }
-        # associate the bindkey widgets with the corresponding functions
-        zle -N start-paste start_paste
-        zle -N end-paste end_paste
-        # .safe is self-insert except for ^J and ^M
-        bindkey -N paste .safe
-        # make newlines not act like Enter
-        # (have it insert a newline, not do accept-line)
-        bindkey -M paste '^J' self-insert
-        # make pasted newlines appear as newlines
-        # (terminal sends ^M but zsh wants ^J)
-        bindkey -M paste -s '^M' '^J'
-        # start pasting when seeing the start escape sequence
-        bindkey -M emacs '^[[200~' start-paste
-        bindkey -M viins '^[[200~' start-paste
-        bindkey -M vicmd '^[[200~' start-paste
-        # end pasting when seeing the finish escape sequence
-        bindkey -M paste '^[[201~' end-paste
-        # translate some hard-to-spot Unicode characters to ASCII
-        bindkey -M paste -s '“' '"'
-        bindkey -M paste -s '”' '"'
-        bindkey -M paste -s '…' '...'
-        bindkey -M paste -s ' ' ' '
+        # zsh's built-in `bracketed-paste` widget handles xterm bracketed
+        # paste correctly: it emits `\e[?2004h`/`\e[?2004l` automatically
+        # and inserts the bracketed text as literal data without running
+        # it. The previous custom paste keymap could wedge the shell in
+        # "paste mode" if a stray `\e[200~` arrived without a matching
+        # `\e[201~`, leaving typed commands echoed but never executed.
 
         ;;
     bash)

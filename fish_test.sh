@@ -475,6 +475,34 @@ result="$(_fish_run '
 assert_equal "jjd -f repo" "$result"
 
 ###############
+# TEST: fish autoshpool wrapper stamps SHPOOL_INITIAL_PWD onto each
+# invocation so the spawned shpool shell cd's back to the user's PWD
+# at invocation time rather than the outer shell's startup PWD.
+
+start_test "fish autoshpool wrapper stamps current PWD onto SHPOOL_INITIAL_PWD"
+_fake_bin="$_testdir/fake_bin"
+_autoshpool_env="$_testdir/autoshpool_env"
+mkdir -p "$_fake_bin"
+cat > "$_fake_bin/autoshpool" <<'EOF'
+#!/bin/sh
+printf 'SHPOOL_INITIAL_PWD=%s\nargs=%s\n' "${SHPOOL_INITIAL_PWD-unset}" "$*" \
+    >> "$AUTOSHPOOL_ENV_LOG"
+EOF
+chmod +x "$_fake_bin/autoshpool"
+rm -f "$_autoshpool_env"
+_pwd_dir="$_testdir/pwd_dir"
+mkdir -p "$_pwd_dir"
+_fish_run "
+    set PATH $_fake_bin \$PATH
+    set --export AUTOSHPOOL_ENV_LOG $_autoshpool_env
+    cd $_pwd_dir
+    autoshpool switch mysession
+" >/dev/null
+assert_equal "SHPOOL_INITIAL_PWD=$_pwd_dir
+args=switch mysession" "$(cat "$_autoshpool_env")"
+rm -rf "$_fake_bin" "$_autoshpool_env" "$_pwd_dir"
+
+###############
 # TEST: FAILSAFE=1 bails out of config.fish before defining functions
 # Mirrors shrc's FAILSAFE=1 escape hatch.
 
@@ -488,9 +516,12 @@ assert_not_contains "autoshpool-defined" "$_failsafe_out"
 
 start_test "fish FAILSAFE unset loads config.fish normally"
 _failsafe_out="$(HOME=$_testdir/fakehome run_with_timeout 15 \
-    fish --no-config -c "source $_config; echo AFTER" 2>&1)"
+    fish --no-config -c "source $_config; echo AFTER; functions --query autoshpool; and echo autoshpool-defined" 2>&1)"
 assert_not_contains "failsafe mode" "$_failsafe_out"
 assert_contains "AFTER" "$_failsafe_out"
+# The autoshpool wrapper lives past the failsafe early-return, so a
+# normal load defines it.
+assert_contains "autoshpool-defined" "$_failsafe_out"
 
 # LC_FAILSAFE=1 is the ssh-survivable alias (most sshd configs
 # AcceptEnv LC_*), so `LC_FAILSAFE=1 ssh host` reaches the remote.
