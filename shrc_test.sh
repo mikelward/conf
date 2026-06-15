@@ -710,10 +710,11 @@ assert_false in_shpool
 ###############
 # SHPOOL FUNCTIONS
 
-# want_shpool now folds in `! in_shpool`, `have_command shpool`, the
-# `stdin_is_tty` check, and the WANT_SHPOOL=0 opt-out, so each block
-# sets all five gating stubs.
+# want_shpool folds in `! in_shpool`, `! inside_tmux`,
+# `have_command shpool`, the `stdin_is_tty` check, and the
+# WANT_SHPOOL=0 opt-out, so each block sets all six gating stubs.
 in_shpool() { false; }
+inside_tmux() { false; }
 have_command() { test "$1" = shpool; }
 stdin_is_tty() { true; }
 
@@ -766,11 +767,19 @@ start_test "want_shpool false when stdin is not a tty"
 stdin_is_tty() { false; }
 connected_remotely() { true; }
 assert_false want_shpool
+stdin_is_tty() { true; }
 
-# Restore real in_shpool / have_command / stdin_is_tty so later tests use
-# the real implementations (the maybe_start_shpool_and_exit block
-# re-stubs them inside its own subshells).
-unset -f in_shpool have_command stdin_is_tty
+start_test "want_shpool false when inside tmux"
+inside_tmux() { true; }
+connected_remotely() { true; }
+assert_false want_shpool
+inside_tmux() { false; }
+
+# Restore real in_shpool / inside_tmux / have_command / stdin_is_tty so
+# later tests use the real implementations (the
+# maybe_start_shpool_and_exit block re-stubs them inside its own
+# subshells).
+unset -f in_shpool inside_tmux have_command stdin_is_tty
 SHRC_LOAD_FUNCTIONS_ONLY=1 . "$_srcdir/shrc"
 
 # Test switchshpool

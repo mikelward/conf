@@ -240,6 +240,7 @@ def want-shpool [] {
     if (($env.WANT_SHPOOL? | default "1") == "0") { return false }
     if (not (stdin-is-tty)) { return false }
     if (in-shpool) { return false }
+    if (inside-tmux) { return false }
     if (not (have-command "shpool")) { return false }
     (connected-remotely) or (inside-project)
 }
