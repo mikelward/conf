@@ -481,4 +481,12 @@ _failsafe_out="$(HOME=$_testdir/fakehome run_with_timeout 15 \
 assert_not_contains "failsafe mode" "$_failsafe_out"
 assert_contains "AFTER" "$_failsafe_out"
 
+# LC_FAILSAFE=1 is the ssh-survivable alias (most sshd configs
+# AcceptEnv LC_*), so `LC_FAILSAFE=1 ssh host` reaches the remote.
+start_test "fish LC_FAILSAFE=1 also triggers failsafe mode"
+_failsafe_out="$(HOME=$_testdir/fakehome LC_FAILSAFE=1 run_with_timeout 15 \
+    fish --no-config -c "source $_config; echo AFTER" 2>&1)"
+assert_contains "failsafe mode" "$_failsafe_out"
+assert_contains "AFTER" "$_failsafe_out"
+
 test_summary "fish_test"

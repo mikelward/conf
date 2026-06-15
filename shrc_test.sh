@@ -1246,6 +1246,15 @@ if test "$_real_shell" = bash || test "$_real_shell" = zsh; then
         -- "$_srcdir/shrc" 2>&1)
     assert_not_contains "failsafe mode" "$_failsafe_out"
     assert_contains "AFTER" "$_failsafe_out"
+
+    # LC_FAILSAFE=1 is the ssh-survivable alias (most sshd configs
+    # AcceptEnv LC_*), so `LC_FAILSAFE=1 ssh host` reaches the remote.
+    start_test "LC_FAILSAFE=1 also triggers failsafe mode"
+    _failsafe_out=$(LC_FAILSAFE=1 HOME="$_testdir" \
+        "$_real_shell" -c '. "$1"; echo AFTER' \
+        -- "$_srcdir/shrc" 2>&1)
+    assert_contains "failsafe mode" "$_failsafe_out"
+    assert_contains "AFTER" "$_failsafe_out"
 else
     skip_block "FAILSAFE tests: dash/sh already take the failsafe branch"
 fi
