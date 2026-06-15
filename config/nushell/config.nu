@@ -1387,6 +1387,11 @@ alias ta  = ^tmux attach
 alias td  = ^tmux detach
 alias tls = ^tmux list-sessions -F '#{session_name}'
 
+# Generic switch shortcuts follow the default backend (tmux unless
+# WANT_TMUX=0), matching shrc/fish. tsw is the tmux-flavoured spelling.
+alias sw  = switchsession
+alias tsw = switchsession
+
 ######################
 # INTERACTIVE: PROMPT / HOOKS
 # Install the prompt closures on the first interactive run. Nushell reads

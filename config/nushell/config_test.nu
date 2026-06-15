@@ -1101,6 +1101,17 @@ except OSError: pass
         switchsession work
         assert equal (open $calls | str trim) "autoshpool switch work"
     })
+    (run-test "nu sw alias routes through switchsession to autotmux" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"autotmux $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "autotmux")
+        ^chmod +x ($bin | path join "autotmux")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "tmux")
+        ^chmod +x ($bin | path join "tmux")
+        $env.PATH = [$bin]
+        sw work
+        assert equal (open $calls | str trim) "autotmux switch work"
+    })
 
     ###############
     # maybe-start-session-and-exit is a no-op without any backend on PATH
