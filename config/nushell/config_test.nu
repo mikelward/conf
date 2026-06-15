@@ -74,12 +74,15 @@ def --env fake-shpool-on-path [] {
     $env.PATH = ([$bin] ++ $env.PATH)
 }
 
-# Add a fake tmux to PATH so `have-command "tmux"` (called from want-tmux /
-# session-backend) returns true deterministically.
+# Add fake tmux and autotmux to PATH so `have-command "tmux"` and
+# `have-command "autotmux"` (both checked by want-tmux / session-backend)
+# return true deterministically.
 def --env fake-tmux-on-path [] {
     let bin = (mktemp -d)
     "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "tmux")
     ^chmod +x ($bin | path join "tmux")
+    "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autotmux")
+    ^chmod +x ($bin | path join "autotmux")
     $env.PATH = ([$bin] ++ $env.PATH)
 }
 
@@ -982,6 +985,16 @@ except OSError: pass
         $env.stdin-is-tty = {|| true }
         assert (not (want-tmux))
     })
+    (run-test "nu want-tmux false when autotmux not installed" {
+        # tmux present but autotmux missing must not select the tmux path.
+        let bin = (mktemp -d)
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "tmux")
+        ^chmod +x ($bin | path join "tmux")
+        $env.PATH = [$bin]
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        $env.stdin-is-tty = {|| true }
+        assert (not (want-tmux))
+    })
     (run-test "nu want-tmux false when already inside tmux" {
         $env.TMUX = "/tmp/tmux-fake/default,12345,0"
         $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
@@ -1018,6 +1031,16 @@ except OSError: pass
     })
     (run-test "nu session-backend uses shpool when tmux missing" {
         let bin = (mktemp -d)
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
+        ^chmod +x ($bin | path join "shpool")
+        $env.PATH = [$bin]
+        assert equal (session-backend) "shpool"
+    })
+    (run-test "nu session-backend uses shpool when autotmux missing" {
+        # tmux present but autotmux missing falls back to shpool.
+        let bin = (mktemp -d)
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "tmux")
+        ^chmod +x ($bin | path join "tmux")
         "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
         ^chmod +x ($bin | path join "shpool")
         $env.PATH = [$bin]

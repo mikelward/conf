@@ -775,10 +775,10 @@ connected_remotely() { true; }
 assert_false want_shpool
 inside_tmux() { false; }
 
-# want_tmux mirrors want_shpool but gates on the tmux binary. Reuse the
-# in_shpool / inside_tmux / stdin_is_tty stubs from above; only the
-# looked-up command name differs.
-have_command() { test "$1" = tmux; }
+# want_tmux mirrors want_shpool but gates on both the tmux and autotmux
+# binaries. Reuse the in_shpool / inside_tmux / stdin_is_tty stubs from
+# above; only the looked-up command names differ.
+have_command() { case "$1" in tmux|autotmux) return 0 ;; *) return 1 ;; esac; }
 
 start_test "want_tmux when connected remotely"
 connected_remotely() { true; }
@@ -806,7 +806,13 @@ start_test "want_tmux false when tmux not installed"
 have_command() { false; }
 connected_remotely() { true; }
 assert_false want_tmux
+have_command() { case "$1" in tmux|autotmux) return 0 ;; *) return 1 ;; esac; }
+
+start_test "want_tmux false when autotmux not installed"
 have_command() { test "$1" = tmux; }
+connected_remotely() { true; }
+assert_false want_tmux
+have_command() { case "$1" in tmux|autotmux) return 0 ;; *) return 1 ;; esac; }
 
 start_test "want_tmux false when already inside tmux"
 inside_tmux() { true; }
@@ -994,9 +1000,10 @@ assert_false test -f "$_autotmux_calls"
 assert_false test -f "$_autoshpool_calls"
 
 # Test session_backend / autosession / switchsession dispatch. session_backend
-# names the preferred manager; the wrappers route to the matching binary.
+# names the preferred manager; the wrappers route to the matching binary. The
+# tmux branch requires both tmux and autotmux.
 _dispatch_calls="$_testdir/dispatch_calls"
-have_command() { case "$1" in tmux|shpool) return 0;; *) return 1;; esac; }
+have_command() { case "$1" in tmux|autotmux|shpool) return 0;; *) return 1;; esac; }
 
 start_test "session_backend prefers tmux when both available"
 assert_equal "tmux" "$(session_backend)"
@@ -1009,12 +1016,17 @@ unset WANT_TMUX
 start_test "session_backend uses shpool when tmux missing"
 have_command() { test "$1" = shpool; }
 assert_equal "shpool" "$(session_backend)"
+have_command() { case "$1" in tmux|autotmux|shpool) return 0;; *) return 1;; esac; }
+
+start_test "session_backend uses shpool when autotmux missing"
 have_command() { case "$1" in tmux|shpool) return 0;; *) return 1;; esac; }
+assert_equal "shpool" "$(session_backend)"
+have_command() { case "$1" in tmux|autotmux|shpool) return 0;; *) return 1;; esac; }
 
 start_test "session_backend empty when nothing available"
 have_command() { false; }
 assert_equal "" "$(session_backend)"
-have_command() { case "$1" in tmux|shpool) return 0;; *) return 1;; esac; }
+have_command() { case "$1" in tmux|autotmux|shpool) return 0;; *) return 1;; esac; }
 
 start_test "session_backend empty when both backends opted out"
 WANT_TMUX=0

@@ -360,6 +360,16 @@ result="$(_fish_run '
 ')"
 assert_equal "no" "$result"
 
+start_test "fish want_tmux false when autotmux not installed"
+result="$(_fish_run '
+    set -gx SSH_CONNECTION "1.2.3.4 1 2.3.4.5 22"
+    function projectroot; echo /some/project; end
+    function have_command; test $argv[1] = tmux; end
+    function stdin_is_tty; return 0; end
+    if want_tmux; echo yes; else; echo no; end
+')"
+assert_equal "no" "$result"
+
 start_test "fish want_tmux false when already inside tmux"
 result="$(_fish_run '
     set -gx TMUX /tmp/tmux-fake/default,12345,0
@@ -413,6 +423,13 @@ assert_equal "shpool" "$result"
 start_test "fish session_backend uses shpool when tmux missing"
 result="$(_fish_run '
     function have_command; test $argv[1] = shpool; end
+    session_backend
+')"
+assert_equal "shpool" "$result"
+
+start_test "fish session_backend uses shpool when autotmux missing"
+result="$(_fish_run '
+    function have_command; contains $argv[1] tmux shpool; end
     session_backend
 ')"
 assert_equal "shpool" "$result"
