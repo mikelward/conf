@@ -1765,7 +1765,43 @@ esac
 # point. Functions defined *inside* the `if is_interactive` block (zsh
 # ZLE widgets, key bindings, etc.) aren't covered by tests, so it's
 # fine that they don't get loaded for the test shell.
+ssh_to() {
+    # tell the remote host who is connecting via LC_CLIENT_HOST; set it
+    # before the branch so both the rw and ssh paths carry it. The export
+    # is confined to a subshell so it never leaks into the interactive
+    # shell (zsh keeps a prefix assignment to a function around, unlike
+    # bash). ssh only forwards env vars it's told to, so request it
+    # explicitly; SendEnv is additive, so the usual LANG/LC_* forwarding
+    # is left intact.
+    local _client_host
+    _client_host="$(short_hostname)"
+    if have_command rw && test "$#" -eq 1; then
+        ( export LC_CLIENT_HOST="$_client_host"; rw -r "$@" )
+    else
+        ( export LC_CLIENT_HOST="$_client_host"; shift_options ssh -t -oSendEnv=LC_CLIENT_HOST "$@" )
+    fi
+}
+
 if test -z "${SHRC_LOAD_FUNCTIONS_ONLY:-}"; then
+
+set_up_ssh_aliases() {
+    test -f "$HOME/.ssh/config" || return 0
+    set -f
+    local _field1 _rest
+    while gets _field1 _rest; do
+        case "$_field1" in [Hh]ost)
+            local _alias
+            for _alias in $_rest; do
+                case $_alias in *'*'*|*'?'*|*'-'*)
+                    continue;;
+                esac
+                eval "$_alias"'() { ssh_to '"$_alias"' "$@"; }'
+            done
+        esac
+    done < "$HOME/.ssh/config"
+    set +f
+}
+set_up_ssh_aliases
 
 if is_interactive; then
     if in_shpool; then
@@ -1955,42 +1991,6 @@ if is_interactive; then
     xa() { while command fg; do :; done; _exit; }
     xevkey() { xev -event keyboard "$@"; }
     xr() { DISPLAY=:0.0 xrandr "$@"; }
-
-    ssh_to() {
-        # tell the remote host who is connecting via LC_CLIENT_HOST; set it
-        # before the branch so both the rw and ssh paths carry it. The export
-        # is confined to a subshell so it never leaks into the interactive
-        # shell (zsh keeps a prefix assignment to a function around, unlike
-        # bash). ssh only forwards env vars it's told to, so request it
-        # explicitly; SendEnv is additive, so the usual LANG/LC_* forwarding
-        # is left intact.
-        local _client_host
-        _client_host="$(short_hostname)"
-        if have_command rw && test "$#" -eq 1; then
-            ( export LC_CLIENT_HOST="$_client_host"; rw -r "$@" )
-        else
-            ( export LC_CLIENT_HOST="$_client_host"; shift_options ssh -t -oSendEnv=LC_CLIENT_HOST "$@" )
-        fi
-    }
-
-    set_up_ssh_aliases() {
-        test -f "$HOME/.ssh/config" || return
-        set -f
-        local _field1 _rest
-        while gets _field1 _rest; do
-            case "$_field1" in [Hh]ost)
-                local _alias
-                for _alias in $_rest; do
-                    case $_alias in *'*'*|*'?'*|*'-'*)
-                        continue;;
-                    esac
-                    eval "$_alias"'() { ssh_to '"$_alias"' "$@"; }'
-                done
-            esac
-        done < "$HOME/.ssh/config"
-        set +f
-    }
-    set_up_ssh_aliases
 
     # enable colors in commands that support it
     # (ls is done above)
