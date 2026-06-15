@@ -1135,6 +1135,31 @@ switchsession() {
     esac
 }
 
+# Attach to a (named) session using the preferred backend.
+sessionattach() {
+    case "$(session_backend)" in
+        tmux)   tmux attach "$@" ;;
+        shpool) shpool attach "$@" ;;
+    esac
+}
+
+# Detach the current session using the preferred backend.
+sessiondetach() {
+    case "$(session_backend)" in
+        tmux)   tmux detach "$@" ;;
+        shpool) shpool detach "$@" ;;
+    esac
+}
+
+# List sessions using the preferred backend (the vcs-aware tmuxlist /
+# shpoollist helpers).
+sessionlist() {
+    case "$(session_backend)" in
+        tmux)   tmuxlist "$@" ;;
+        shpool) shpoollist "$@" ;;
+    esac
+}
+
 maybe_start_session_and_exit() {
     if want_tmux; then
         autotmux && exit
@@ -1882,9 +1907,14 @@ if is_interactive; then
 
     #alias '?'='path_or_empty'
     alias @='path_or_empty'
+    # Backend-agnostic session verbs (route through session_backend, which
+    # defaults to tmux). as/sw/sls/sa/sd/attach/detach work whatever the
+    # active backend is; the asp/atm and sp*/t* spellings below force a
+    # specific backend.
+    as() { autosession "$@"; }
     asp() { autoshpool "$@"; }
     atm() { autotmux "$@"; }
-    attach() { shpool attach "$@"; }
+    attach() { sessionattach "$@"; }
     bindkeys() { daemon xbindkeys "$@"; }
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.go,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}"
     code_includes="$(eval echo --include=$code_patterns)"
@@ -1919,7 +1949,7 @@ if is_interactive; then
         pkill "$1"
         (setsid "$1"&)
     }
-    detach() { shpool detach "$@"; }
+    detach() { sessiondetach "$@"; }
     diga() { dig +noall +answer +search "$@"; }
     digs() { dig +short +search "$@"; }
     download() { cd "$HOME/Downloads"; wget "$@"; }
@@ -1969,6 +1999,7 @@ if is_interactive; then
     }
     lss() { lssock "$@"; }
     lsp() { shpoollist "$@"; }
+    sls() { sessionlist "$@"; }
     j() { jobs "$@"; }
     # Clone/cd into a repo, then start a session (tmux by default, shpool
     # when WANT_TMUX=0) matching the new vcs rootdir. autosession only runs
@@ -2010,11 +2041,13 @@ if is_interactive; then
     rh() { gh "$@" | tail -n 20; }
     q() { xa "$@"; }
     s() { subl "$@"; }
-    sa() { shpool attach "$@"; }
-    sd() { shpool detach "$@"; }
+    # sa/sd/sps/ssp are backend-agnostic (route through session_backend).
+    sa() { sessionattach "$@"; }
+    sd() { sessiondetach "$@"; }
     shpls() { shpoollist "$@"; }
     shpoolswitch() { switchshpool "$@"; }
     shsw() { switchshpool "$@"; }
+    # sp* force shpool, mirroring the t* tmux spellings below.
     spa() { shpool attach "$@"; }
     spd() { shpool detach "$@"; }
     spell() { aspell -a "$@"; }
@@ -2023,11 +2056,11 @@ if is_interactive; then
     ssp() { switchshpool "$@"; }
     # generic switch verbs follow the default backend (tmux unless WANT_TMUX=0)
     sw() { switchsession "$@"; }
+    sws() { switchsession "$@"; }
     switch() { switchsession "$@"; }
     swsh() { switchshpool "$@"; }
-    # tmux equivalents of the shpool helpers. tmux is the default session
-    # manager (see session_backend / maybe_start_session_and_exit); the
-    # shpool-named aliases stay for when WANT_TMUX=0 selects shpool.
+    # tmux-specific spellings, mirroring the sp* shpool ones. tmux is the
+    # default backend (see session_backend / maybe_start_session_and_exit).
     ta() { tmux attach "$@"; }
     td() { tmux detach "$@"; }
     tls() { tmux list-sessions -F '#{session_name}' "$@"; }

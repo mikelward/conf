@@ -443,6 +443,57 @@ result="$(_fish_run '
 assert_equal "[]" "$result"
 
 ###############
+# TEST: sessionattach / sessiondetach / sessionlist dispatch to the backend
+
+start_test "fish sessionattach runs tmux attach on the tmux backend"
+result="$(_fish_run '
+    function session_backend; echo tmux; end
+    function tmux; echo "tmux $argv"; end
+    sessionattach work
+')"
+assert_equal "tmux attach work" "$result"
+
+start_test "fish sessionattach runs shpool attach on the shpool backend"
+result="$(_fish_run '
+    function session_backend; echo shpool; end
+    function shpool; echo "shpool $argv"; end
+    sessionattach work
+')"
+assert_equal "shpool attach work" "$result"
+
+start_test "fish sessiondetach runs tmux detach on the tmux backend"
+result="$(_fish_run '
+    function session_backend; echo tmux; end
+    function tmux; echo "tmux $argv"; end
+    sessiondetach
+')"
+assert_equal "tmux detach" "$result"
+
+start_test "fish sessiondetach runs shpool detach on the shpool backend"
+result="$(_fish_run '
+    function session_backend; echo shpool; end
+    function shpool; echo "shpool $argv"; end
+    sessiondetach
+')"
+assert_equal "shpool detach" "$result"
+
+start_test "fish sessionlist runs tmuxlist on the tmux backend"
+result="$(_fish_run '
+    function session_backend; echo tmux; end
+    function tmuxlist; echo tmuxlist-called; end
+    sessionlist
+')"
+assert_equal "tmuxlist-called" "$result"
+
+start_test "fish sessionlist runs shpoollist on the shpool backend"
+result="$(_fish_run '
+    function session_backend; echo shpool; end
+    function shpoollist; echo shpoollist-called; end
+    sessionlist
+')"
+assert_equal "shpoollist-called" "$result"
+
+###############
 # TEST: maybe_start_session_and_exit prefers tmux, falls back to shpool
 
 start_test "fish maybe_start_session_and_exit no-op without a backend"

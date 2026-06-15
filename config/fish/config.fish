@@ -760,6 +760,36 @@ function switchsession
     end
 end
 
+# Attach to a (named) session using the preferred backend.
+function sessionattach
+    switch (session_backend)
+    case tmux
+        tmux attach $argv
+    case shpool
+        shpool attach $argv
+    end
+end
+
+# Detach the current session using the preferred backend.
+function sessiondetach
+    switch (session_backend)
+    case tmux
+        tmux detach $argv
+    case shpool
+        shpool detach $argv
+    end
+end
+
+# List sessions using the preferred backend (tmuxlist / shpoollist).
+function sessionlist
+    switch (session_backend)
+    case tmux
+        tmuxlist $argv
+    case shpool
+        shpoollist $argv
+    end
+end
+
 function maybe_start_session_and_exit
     if want_tmux
         autotmux; and exit
@@ -906,10 +936,14 @@ if is_interactive
 
     #alias '?'='path_or_empty'
     alias @='path_or_empty'
+    # Backend-agnostic session verbs (route through session_backend, which
+    # defaults to tmux). as/sw/sls/sa/sd/attach/detach work whatever the
+    # active backend is; the asp/atm and sp*/t* spellings force a backend.
+    alias as='autosession'
     alias asp='autoshpool'
     alias atm='autotmux'
-    alias attach='shpool attach'
-    alias detach='shpool detach'
+    alias attach='sessionattach'
+    alias detach='sessiondetach'
     alias bindkeys='daemon xbindkeys'
     set code_patterns "*.c" "*.h" "*.cc" "*.cpp" "*.hh" "*.coffee" "*.go" "*.hs" "*.java" "*.js" "*.pl" "*.py" "*.sh" "*.rb" "*.swig" "*.ts"
     set code_includes "--include="$code_patterns
@@ -975,6 +1009,7 @@ if is_interactive
     alias latest='recent -1'
     alias lc='l -C'
     alias lsp='shpoollist'
+    alias sls='sessionlist'
     function lssock
         lsof -a -n -P -i $argv
     end
@@ -1020,25 +1055,27 @@ if is_interactive
     end
     alias q='xa'
     alias s='subl'
-    alias sa='shpool attach'
-    alias sd='shpool detach'
+    # sa/sd/sps/ssp are backend-agnostic (route through session_backend).
+    alias sa='sessionattach'
+    alias sd='sessiondetach'
     alias shpls='shpoollist'
     alias shpoolswitch='switchshpool'
     alias shsw='switchshpool'
+    # sp* force shpool, mirroring the t* tmux spellings below.
     alias spa='shpool attach'
     alias spd='shpool detach'
     alias spell='aspell -a'
     alias sps='switchshpool'
     alias sr='ssh -l root'
     alias ssp='switchshpool'
-    # generic switch verb follows the default backend (tmux unless WANT_TMUX=0)
+    # generic switch verbs follow the default backend (tmux unless WANT_TMUX=0)
     alias sw='switchsession'
+    alias sws='switchsession'
     alias swsh='switchshpool'
     alias symlink='ln -sr'
     alias t='tail'
-    # tmux equivalents of the shpool helpers. tmux is the default session
-    # manager (see session_backend / maybe_start_session_and_exit); the
-    # shpool-named aliases stay for when WANT_TMUX=0 selects shpool.
+    # tmux-specific spellings, mirroring the sp* shpool ones. tmux is the
+    # default backend (see session_backend / maybe_start_session_and_exit).
     alias ta='tmux attach'
     alias td='tmux detach'
     alias tf='t -f'

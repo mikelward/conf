@@ -1114,6 +1114,76 @@ except OSError: pass
     })
 
     ###############
+    # sessionattach / sessiondetach / sessionlist dispatch to the backend
+    (run-test "nu sessionattach runs tmux attach on the tmux backend" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"tmux $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "tmux")
+        ^chmod +x ($bin | path join "tmux")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autotmux")
+        ^chmod +x ($bin | path join "autotmux")
+        $env.PATH = [$bin]
+        sessionattach work
+        assert equal (open $calls | str trim) "tmux attach work"
+    })
+    (run-test "nu sessionattach runs shpool attach on the shpool backend" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"shpool $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "shpool")
+        ^chmod +x ($bin | path join "shpool")
+        $env.WANT_TMUX = "0"
+        $env.PATH = [$bin]
+        sessionattach work
+        assert equal (open $calls | str trim) "shpool attach work"
+    })
+    (run-test "nu sessiondetach runs tmux detach on the tmux backend" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"tmux $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "tmux")
+        ^chmod +x ($bin | path join "tmux")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autotmux")
+        ^chmod +x ($bin | path join "autotmux")
+        $env.PATH = [$bin]
+        sessiondetach
+        assert equal (open $calls | str trim) "tmux detach"
+    })
+    (run-test "nu sessiondetach runs shpool detach on the shpool backend" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"shpool $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "shpool")
+        ^chmod +x ($bin | path join "shpool")
+        $env.WANT_TMUX = "0"
+        $env.PATH = [$bin]
+        sessiondetach
+        assert equal (open $calls | str trim) "shpool detach"
+    })
+    (run-test "nu sessionlist runs tmuxlist on the tmux backend" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho tmuxlist-called >> \"" + $calls + "\"\n") | save -f ($bin | path join "tmuxlist")
+        ^chmod +x ($bin | path join "tmuxlist")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "tmux")
+        ^chmod +x ($bin | path join "tmux")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autotmux")
+        ^chmod +x ($bin | path join "autotmux")
+        $env.PATH = [$bin]
+        sessionlist
+        assert equal (open $calls | str trim) "tmuxlist-called"
+    })
+    (run-test "nu sessionlist runs shpoollist on the shpool backend" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho shpoollist-called >> \"" + $calls + "\"\n") | save -f ($bin | path join "shpoollist")
+        ^chmod +x ($bin | path join "shpoollist")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
+        ^chmod +x ($bin | path join "shpool")
+        $env.WANT_TMUX = "0"
+        $env.PATH = [$bin]
+        sessionlist
+        assert equal (open $calls | str trim) "shpoollist-called"
+    })
+
+    ###############
     # maybe-start-session-and-exit is a no-op without any backend on PATH
     (run-test "nu maybe-start-session-and-exit no-op without a backend" {
         $env.PATH = []

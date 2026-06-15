@@ -333,6 +333,33 @@ def --wrapped switchsession [...args] {
     }
 }
 
+# Attach to a (named) session using the preferred backend.
+def --wrapped sessionattach [...args] {
+    match (session-backend) {
+        "tmux" => { ^tmux attach ...$args }
+        "shpool" => { ^shpool attach ...$args }
+        _ => { }
+    }
+}
+
+# Detach the current session using the preferred backend.
+def --wrapped sessiondetach [...args] {
+    match (session-backend) {
+        "tmux" => { ^tmux detach ...$args }
+        "shpool" => { ^shpool detach ...$args }
+        _ => { }
+    }
+}
+
+# List sessions using the preferred backend (tmuxlist / shpoollist).
+def --wrapped sessionlist [...args] {
+    match (session-backend) {
+        "tmux" => { ^tmuxlist ...$args }
+        "shpool" => { ^shpoollist ...$args }
+        _ => { }
+    }
+}
+
 # return true if the current user is root
 def i-am-root [] {
     ($env.UID? | default 1000) == 0
@@ -1387,9 +1414,18 @@ alias ta  = ^tmux attach
 alias td  = ^tmux detach
 alias tls = ^tmux list-sessions -F '#{session_name}'
 
-# Generic switch shortcuts follow the default backend (tmux unless
-# WANT_TMUX=0), matching shrc/fish. tsw is the tmux-flavoured spelling.
+#######################
+# SESSION ALIASES
+# Backend-agnostic shortcuts that route through session-backend (tmux unless
+# WANT_TMUX=0), matching shrc/fish. tsw is the tmux-flavoured switch spelling;
+# the shpool/tmux-named aliases above force a specific backend.
+
+alias as  = autosession
+alias sa  = sessionattach
+alias sd  = sessiondetach
+alias sls = sessionlist
 alias sw  = switchsession
+alias sws = switchsession
 alias tsw = switchsession
 
 ######################
