@@ -700,6 +700,16 @@ case '*'
     set --export LS_COLORS 'no=00:fi=00:di=00;34:ln=00;35:so=00;00:bd=00;00:cd=00;00:or=00;31:pi=00;00:ex=00;32'
 end
 
+# Stamp the current PWD onto SHPOOL_INITIAL_PWD for every autoshpool
+# invocation so the spawned shpool shell cd's back to where the user
+# actually was. Without this, SHPOOL_INITIAL_PWD would only carry the
+# outer shell's startup PWD, so `cd repo; and autoshpool` would land
+# the session in the startup dir instead of the repo. `command`
+# bypasses the wrapper itself to avoid recursion.
+function autoshpool
+    SHPOOL_INITIAL_PWD=$PWD command autoshpool $argv
+end
+
 function switchshpool
     autoshpool switch $argv[1]; and exit
 end
@@ -751,19 +761,12 @@ set_up_ssh_aliases
 # Set up the prompt, title, key bindings, etc.
 
 if is_interactive
-    if in_shpool
-        # Prevent shpool from clearing the screen during startup.
-        # This ensures we can see any motd, errors, etc.
-        function clear
-            functions --erase clear
-        end
-        if test -n "$SHPOOL_INITIAL_PWD"
-            cd $SHPOOL_INITIAL_PWD
-            set --erase SHPOOL_INITIAL_PWD
-        end
-    else
-        # This will be overridden by autoshpool.
-        set --export SHPOOL_INITIAL_PWD $PWD
+    # The autoshpool wrapper stamps SHPOOL_INITIAL_PWD with the PWD at
+    # invocation time; the spawned in-shpool shell cd's there and clears
+    # it so it doesn't leak into later sessions.
+    if in_shpool; and test -n "$SHPOOL_INITIAL_PWD"
+        cd $SHPOOL_INITIAL_PWD
+        set --erase SHPOOL_INITIAL_PWD
     end
     maybe_start_shpool_and_exit
 
