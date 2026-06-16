@@ -1594,12 +1594,16 @@ on_dev_host() {
     esac
 }
 
-# print information about all shell jobs
+# print information about all shell jobs on a single line.
 # intended to be used in the preprompt
 job_info() {
-        jobs |
+        local _out
+        _out="$(jobs |
             sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /' |
-            grep -v '(pwd now:'
+            grep -v '(pwd now:' |
+            tr '\n' ' ')"
+        _out="${_out% }"
+        test -n "$_out" && printf '%s\n' "$_out"
 }
 
 short_pwd() {
