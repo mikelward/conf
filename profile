@@ -26,9 +26,11 @@ is_zsh() {
 # variable assignments only; `set -a` auto-exports them so the file can use
 # the bare `VAR=val` format that gcloud and other tools expect.
 if test -z "${DOTENV_SOURCED:-}" && test -f "$HOME/.env"; then
+    case $- in *a*) _dotenv_had_a=1;; *) _dotenv_had_a=0;; esac
     set -a
     . "$HOME/.env"
-    set +a
+    test "$_dotenv_had_a" = 1 || set +a
+    unset _dotenv_had_a
     export DOTENV_SOURCED=1
 fi
 
