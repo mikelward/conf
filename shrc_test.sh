@@ -1115,14 +1115,16 @@ rm -f "$_dispatch_calls"
 )
 assert_equal "tmux new-session -s work" "$(cat "$_dispatch_calls" 2>/dev/null)"
 
-start_test "sessionmake runs shpool attach on the shpool backend"
+start_test "sessionmake runs shpool attach (stamping PWD) on the shpool backend"
 rm -f "$_dispatch_calls"
 (
     session_backend() { echo shpool; }
-    shpool() { echo "shpool $*" >> "$_dispatch_calls"; }
+    # record the stamped SHPOOL_INITIAL_PWD too: a freshly created shpool
+    # session must open in the caller's dir, not the outer shell's startup dir.
+    shpool() { echo "shpool $* pwd=$SHPOOL_INITIAL_PWD" >> "$_dispatch_calls"; }
     sessionmake work
 )
-assert_equal "shpool attach work" "$(cat "$_dispatch_calls" 2>/dev/null)"
+assert_equal "shpool attach work pwd=$PWD" "$(cat "$_dispatch_calls" 2>/dev/null)"
 
 start_test "sessionlist runs tmuxlist on the tmux backend"
 rm -f "$_dispatch_calls"
@@ -1256,10 +1258,14 @@ rm -f "$_detach_calls"
 makesession work
 assert_equal "sessionmake work" "$(cat "$_detach_calls")"
 
-start_test "makeshpool runs shpool attach"
+start_test "makeshpool runs shpool attach and stamps SHPOOL_INITIAL_PWD"
 rm -f "$_detach_calls"
+# redefine the shpool stub to also capture the stamped PWD (only makeshpool
+# sets it; detach* above intentionally don't). Safe to redefine here: no later
+# test in this block reuses the shpool stub.
+shpool() { echo "shpool $* pwd=$SHPOOL_INITIAL_PWD" >> "$_detach_calls"; }
 makeshpool work
-assert_equal "shpool attach work" "$(cat "$_detach_calls")"
+assert_equal "shpool attach work pwd=$PWD" "$(cat "$_detach_calls")"
 
 start_test "maketmux runs tmux new-session"
 rm -f "$_detach_calls"

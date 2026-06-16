@@ -485,13 +485,20 @@ result="$(_fish_run '
 ')"
 assert_equal "tmux new-session -s work" "$result"
 
-start_test "fish sessionmake runs shpool attach on the shpool backend"
+start_test "fish sessionmake runs shpool attach (stamping PWD) on the shpool backend"
 result="$(_fish_run '
     function session_backend; echo shpool; end
-    function shpool; echo "shpool $argv"; end
+    function shpool; echo "shpool $argv pwd=$SHPOOL_INITIAL_PWD"; end
     sessionmake work
 ')"
-assert_equal "shpool attach work" "$result"
+assert_equal "shpool attach work pwd=$PWD" "$result"
+
+start_test "fish makeshpool runs shpool attach and stamps SHPOOL_INITIAL_PWD"
+result="$(_fish_run '
+    function shpool; echo "shpool $argv pwd=$SHPOOL_INITIAL_PWD"; end
+    makeshpool work
+')"
+assert_equal "shpool attach work pwd=$PWD" "$result"
 
 start_test "fish sessionlist runs tmuxlist on the tmux backend"
 result="$(_fish_run '

@@ -783,12 +783,15 @@ end
 # Create (and attach to) a named session using the preferred backend. tmux
 # starts a fresh session with the given name; shpool's attach creates the
 # session when it doesn't exist yet, so the same verb makes a session on both.
+# Stamp SHPOOL_INITIAL_PWD so a freshly created shpool session lands in the
+# caller's directory rather than the outer shell's startup dir (same reason as
+# the autoshpool wrapper above); tmux uses the caller's PWD natively.
 function sessionmake
     switch (session_backend)
     case tmux
         tmux new-session -s $argv
     case shpool
-        shpool attach $argv
+        SHPOOL_INITIAL_PWD=$PWD shpool attach $argv
     end
 end
 
@@ -1081,7 +1084,9 @@ if is_interactive
     alias spa='shpool attach'
     alias spd='shpool detach'
     alias detachshpool='shpool detach'
-    alias makeshpool='shpool attach'
+    # function rather than an alias so it can stamp SHPOOL_INITIAL_PWD, so a
+    # newly created session opens in $PWD (see sessionmake / autoshpool).
+    function makeshpool; SHPOOL_INITIAL_PWD=$PWD shpool attach $argv; end
     alias spell='aspell -a'
     alias sps='switchshpool'
     alias sr='ssh -l root'

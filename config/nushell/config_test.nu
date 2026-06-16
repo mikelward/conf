@@ -1168,15 +1168,26 @@ except OSError: pass
         sessionmake work
         assert equal (open $calls | str trim) "tmux new-session -s work"
     })
-    (run-test "nu sessionmake runs shpool attach on the shpool backend" {
+    (run-test "nu sessionmake runs shpool attach (stamping PWD) on the shpool backend" {
         let calls = (mktemp -t "sess-calls.XXXXXX")
         let bin = (mktemp -d)
-        ("#!/bin/sh\necho \"shpool $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "shpool")
+        # record the stamped SHPOOL_INITIAL_PWD too: a freshly created shpool
+        # session must open in the caller's dir, not the startup dir.
+        ("#!/bin/sh\necho \"shpool $* pwd=$SHPOOL_INITIAL_PWD\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "shpool")
         ^chmod +x ($bin | path join "shpool")
         $env.WANT_TMUX = "0"
         $env.PATH = [$bin]
         sessionmake work
-        assert equal (open $calls | str trim) "shpool attach work"
+        assert equal (open $calls | str trim) ("shpool attach work pwd=" + $env.PWD)
+    })
+    (run-test "nu makeshpool runs shpool attach and stamps SHPOOL_INITIAL_PWD" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"shpool $* pwd=$SHPOOL_INITIAL_PWD\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "shpool")
+        ^chmod +x ($bin | path join "shpool")
+        $env.PATH = [$bin]
+        makeshpool work
+        assert equal (open $calls | str trim) ("shpool attach work pwd=" + $env.PWD)
     })
     (run-test "nu sessionlist runs tmuxlist on the tmux backend" {
         let calls = (mktemp -t "sess-calls.XXXXXX")
