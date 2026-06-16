@@ -1157,6 +1157,27 @@ except OSError: pass
         sessiondetach
         assert equal (open $calls | str trim) "shpool detach"
     })
+    (run-test "nu sessionmake runs tmux new-session on the tmux backend" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"tmux $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "tmux")
+        ^chmod +x ($bin | path join "tmux")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autotmux")
+        ^chmod +x ($bin | path join "autotmux")
+        $env.PATH = [$bin]
+        sessionmake work
+        assert equal (open $calls | str trim) "tmux new-session -s work"
+    })
+    (run-test "nu sessionmake runs shpool attach on the shpool backend" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"shpool $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "shpool")
+        ^chmod +x ($bin | path join "shpool")
+        $env.WANT_TMUX = "0"
+        $env.PATH = [$bin]
+        sessionmake work
+        assert equal (open $calls | str trim) "shpool attach work"
+    })
     (run-test "nu sessionlist runs tmuxlist on the tmux backend" {
         let calls = (mktemp -t "sess-calls.XXXXXX")
         let bin = (mktemp -d)

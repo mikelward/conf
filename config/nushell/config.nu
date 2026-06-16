@@ -351,6 +351,17 @@ def --wrapped sessiondetach [...args] {
     }
 }
 
+# Create (and attach to) a named session using the preferred backend. tmux
+# starts a fresh session with the given name; shpool's attach creates the
+# session when it doesn't exist yet, so the same verb makes a session on both.
+def --wrapped sessionmake [...args] {
+    match (session-backend) {
+        "tmux" => { ^tmux new-session -s ...$args }
+        "shpool" => { ^shpool attach ...$args }
+        _ => { }
+    }
+}
+
 # List sessions using the preferred backend (tmuxlist / shpoollist).
 def --wrapped sessionlist [...args] {
     match (session-backend) {
@@ -1402,6 +1413,8 @@ def clone [url: string, ...args: string] {
 
 alias lsp   = ^shpoollist
 alias shpls = ^shpoollist
+alias detachshpool = ^shpool detach
+alias makeshpool = ^shpool attach
 
 #######################
 # TMUX ALIASES
@@ -1412,6 +1425,8 @@ alias shpls = ^shpoollist
 alias atm = ^autotmux
 alias ta  = ^tmux attach
 alias td  = ^tmux detach
+alias detachtmux = ^tmux detach
+alias maketmux = ^tmux new-session -s
 alias tls = ^tmux list-sessions -F '#{session_name}'
 
 #######################
@@ -1423,6 +1438,8 @@ alias tls = ^tmux list-sessions -F '#{session_name}'
 alias as  = autosession
 alias sa  = sessionattach
 alias sd  = sessiondetach
+alias detachsession = sessiondetach
+alias makesession = sessionmake
 alias sls = sessionlist
 alias sw  = switchsession
 alias sws = switchsession

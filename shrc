@@ -1151,6 +1151,16 @@ sessiondetach() {
     esac
 }
 
+# Create (and attach to) a named session using the preferred backend. tmux
+# starts a fresh session with the given name; shpool's attach creates the
+# session when it doesn't exist yet, so the same verb makes a session on both.
+sessionmake() {
+    case "$(session_backend)" in
+        tmux)   tmux new-session -s "$@" ;;
+        shpool) shpool attach "$@" ;;
+    esac
+}
+
 # List sessions using the preferred backend (the vcs-aware tmuxlist /
 # shpoollist helpers).
 sessionlist() {
@@ -1950,6 +1960,7 @@ if is_interactive; then
         (setsid "$1"&)
     }
     detach() { sessiondetach "$@"; }
+    detachsession() { sessiondetach "$@"; }
     diga() { dig +noall +answer +search "$@"; }
     digs() { dig +short +search "$@"; }
     download() { cd "$HOME/Downloads"; wget "$@"; }
@@ -2012,6 +2023,9 @@ if is_interactive; then
     mhd() { hgd -f "$@" && autosession; }
     mgd() { gitd -f "$@" && autosession; }
     m() { make -f .Makefile "$@"; }
+    # make a named session via the default backend; makeshpool/maketmux below
+    # force a specific one (mirroring the sp*/t* spellings).
+    makesession() { sessionmake "$@"; }
     ml() { m lint; }
     # shadows magtape command, but who uses that?
     mt() { m test; }
@@ -2050,6 +2064,8 @@ if is_interactive; then
     # sp* force shpool, mirroring the t* tmux spellings below.
     spa() { shpool attach "$@"; }
     spd() { shpool detach "$@"; }
+    detachshpool() { shpool detach "$@"; }
+    makeshpool() { shpool attach "$@"; }
     spell() { aspell -a "$@"; }
     sps() { switchshpool "$@"; }
     sr() { ssh -l root "$@"; }
@@ -2063,6 +2079,8 @@ if is_interactive; then
     # default backend (see session_backend / maybe_start_session_and_exit).
     ta() { tmux attach "$@"; }
     td() { tmux detach "$@"; }
+    detachtmux() { tmux detach "$@"; }
+    maketmux() { tmux new-session -s "$@"; }
     tls() { tmux list-sessions -F '#{session_name}' "$@"; }
     tsw() { switchsession "$@"; }
     symlink() { ln --symbolic --relative "$@"; }

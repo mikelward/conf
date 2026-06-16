@@ -780,6 +780,18 @@ function sessiondetach
     end
 end
 
+# Create (and attach to) a named session using the preferred backend. tmux
+# starts a fresh session with the given name; shpool's attach creates the
+# session when it doesn't exist yet, so the same verb makes a session on both.
+function sessionmake
+    switch (session_backend)
+    case tmux
+        tmux new-session -s $argv
+    case shpool
+        shpool attach $argv
+    end
+end
+
 # List sessions using the preferred backend (tmuxlist / shpoollist).
 function sessionlist
     switch (session_backend)
@@ -944,6 +956,7 @@ if is_interactive
     alias atm='autotmux'
     alias attach='sessionattach'
     alias detach='sessiondetach'
+    alias detachsession='sessiondetach'
     alias bindkeys='daemon xbindkeys'
     set code_patterns "*.c" "*.h" "*.cc" "*.cpp" "*.hh" "*.coffee" "*.go" "*.hs" "*.java" "*.js" "*.pl" "*.py" "*.sh" "*.rb" "*.swig" "*.ts"
     set code_includes "--include="$code_patterns
@@ -1027,6 +1040,9 @@ if is_interactive
     function mhd; hgd -f $argv; and autosession; end
     function mgd; gitd -f $argv; and autosession; end
     alias m='make -f .Makefile'
+    # make a named session via the default backend; makeshpool/maketmux below
+    # force a specific one (mirroring the sp*/t* spellings).
+    alias makesession='sessionmake'
     alias ml='m lint'
     # shadows magtape command, but who uses that?
     alias mt='m test'
@@ -1064,6 +1080,8 @@ if is_interactive
     # sp* force shpool, mirroring the t* tmux spellings below.
     alias spa='shpool attach'
     alias spd='shpool detach'
+    alias detachshpool='shpool detach'
+    alias makeshpool='shpool attach'
     alias spell='aspell -a'
     alias sps='switchshpool'
     alias sr='ssh -l root'
@@ -1078,6 +1096,8 @@ if is_interactive
     # default backend (see session_backend / maybe_start_session_and_exit).
     alias ta='tmux attach'
     alias td='tmux detach'
+    alias detachtmux='tmux detach'
+    alias maketmux='tmux new-session -s'
     alias tf='t -f'
     alias tl='t -f /var/log/syslog'
     alias tls='tmux list-sessions -F "#{session_name}"'

@@ -477,6 +477,22 @@ result="$(_fish_run '
 ')"
 assert_equal "shpool detach" "$result"
 
+start_test "fish sessionmake runs tmux new-session on the tmux backend"
+result="$(_fish_run '
+    function session_backend; echo tmux; end
+    function tmux; echo "tmux $argv"; end
+    sessionmake work
+')"
+assert_equal "tmux new-session -s work" "$result"
+
+start_test "fish sessionmake runs shpool attach on the shpool backend"
+result="$(_fish_run '
+    function session_backend; echo shpool; end
+    function shpool; echo "shpool $argv"; end
+    sessionmake work
+')"
+assert_equal "shpool attach work" "$result"
+
 start_test "fish sessionlist runs tmuxlist on the tmux backend"
 result="$(_fish_run '
     function session_backend; echo tmux; end
