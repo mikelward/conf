@@ -1154,10 +1154,13 @@ sessiondetach() {
 # Create (and attach to) a named session using the preferred backend. tmux
 # starts a fresh session with the given name; shpool's attach creates the
 # session when it doesn't exist yet, so the same verb makes a session on both.
+# Stamp SHPOOL_INITIAL_PWD so a freshly created shpool session lands in the
+# caller's directory rather than the outer shell's startup dir (same reason as
+# the autoshpool wrapper above); tmux uses the caller's PWD natively.
 sessionmake() {
     case "$(session_backend)" in
         tmux)   tmux new-session -s "$@" ;;
-        shpool) shpool attach "$@" ;;
+        shpool) SHPOOL_INITIAL_PWD="$PWD" shpool attach "$@" ;;
     esac
 }
 
@@ -2065,7 +2068,9 @@ if is_interactive; then
     spa() { shpool attach "$@"; }
     spd() { shpool detach "$@"; }
     detachshpool() { shpool detach "$@"; }
-    makeshpool() { shpool attach "$@"; }
+    # stamp SHPOOL_INITIAL_PWD so a newly created session opens in $PWD (see
+    # sessionmake / the autoshpool wrapper).
+    makeshpool() { SHPOOL_INITIAL_PWD="$PWD" shpool attach "$@"; }
     spell() { aspell -a "$@"; }
     sps() { switchshpool "$@"; }
     sr() { ssh -l root "$@"; }

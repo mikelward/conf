@@ -354,10 +354,13 @@ def --wrapped sessiondetach [...args] {
 # Create (and attach to) a named session using the preferred backend. tmux
 # starts a fresh session with the given name; shpool's attach creates the
 # session when it doesn't exist yet, so the same verb makes a session on both.
+# Stamp SHPOOL_INITIAL_PWD so a freshly created shpool session lands in the
+# caller's directory rather than the outer shell's startup dir (same reason as
+# the autoshpool wrapper above); tmux uses the caller's PWD natively.
 def --wrapped sessionmake [...args] {
     match (session-backend) {
         "tmux" => { ^tmux new-session -s ...$args }
-        "shpool" => { ^shpool attach ...$args }
+        "shpool" => { with-env { SHPOOL_INITIAL_PWD: $env.PWD } { ^shpool attach ...$args } }
         _ => { }
     }
 }
@@ -1414,7 +1417,9 @@ def clone [url: string, ...args: string] {
 alias lsp   = ^shpoollist
 alias shpls = ^shpoollist
 alias detachshpool = ^shpool detach
-alias makeshpool = ^shpool attach
+# def rather than an alias so it can stamp SHPOOL_INITIAL_PWD, so a newly
+# created session opens in $PWD (see sessionmake / autoshpool).
+def --wrapped makeshpool [...args] { with-env { SHPOOL_INITIAL_PWD: $env.PWD } { ^shpool attach ...$args } }
 
 #######################
 # TMUX ALIASES
