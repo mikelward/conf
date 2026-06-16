@@ -1106,6 +1106,24 @@ rm -f "$_dispatch_calls"
 )
 assert_equal "shpool detach" "$(cat "$_dispatch_calls" 2>/dev/null)"
 
+start_test "sessionmake runs tmux new-session on the tmux backend"
+rm -f "$_dispatch_calls"
+(
+    session_backend() { echo tmux; }
+    tmux() { echo "tmux $*" >> "$_dispatch_calls"; }
+    sessionmake work
+)
+assert_equal "tmux new-session -s work" "$(cat "$_dispatch_calls" 2>/dev/null)"
+
+start_test "sessionmake runs shpool attach on the shpool backend"
+rm -f "$_dispatch_calls"
+(
+    session_backend() { echo shpool; }
+    shpool() { echo "shpool $*" >> "$_dispatch_calls"; }
+    sessionmake work
+)
+assert_equal "shpool attach work" "$(cat "$_dispatch_calls" 2>/dev/null)"
+
 start_test "sessionlist runs tmuxlist on the tmux backend"
 rm -f "$_dispatch_calls"
 (
@@ -1201,8 +1219,57 @@ _extract_oneliner mjd
 mjd repo
 assert_equal "jjd -f repo" "$(cat "$_vcsdir_calls")"
 
+# detach* / make* are longer-form spellings of the session verbs, living in
+# the interactive block. Pull each out and confirm it routes to the right
+# backend: the *session spellings go through the backend-agnostic helpers
+# (sessiondetach / sessionmake), the *shpool / *tmux spellings straight to
+# their backends.
+_detach_calls="$_testdir/detach_calls"
+sessiondetach() { echo "sessiondetach $*" >> "$_detach_calls"; }
+sessionmake() { echo "sessionmake $*" >> "$_detach_calls"; }
+shpool() { echo "shpool $*" >> "$_detach_calls"; }
+tmux() { echo "tmux $*" >> "$_detach_calls"; }
+_extract_oneliner detachsession
+_extract_oneliner detachshpool
+_extract_oneliner detachtmux
+_extract_oneliner makesession
+_extract_oneliner makeshpool
+_extract_oneliner maketmux
+
+start_test "detachsession routes through sessiondetach"
+rm -f "$_detach_calls"
+detachsession work
+assert_equal "sessiondetach work" "$(cat "$_detach_calls")"
+
+start_test "detachshpool runs shpool detach"
+rm -f "$_detach_calls"
+detachshpool
+assert_equal "shpool detach" "$(cat "$_detach_calls")"
+
+start_test "detachtmux runs tmux detach"
+rm -f "$_detach_calls"
+detachtmux
+assert_equal "tmux detach" "$(cat "$_detach_calls")"
+
+start_test "makesession routes through sessionmake"
+rm -f "$_detach_calls"
+makesession work
+assert_equal "sessionmake work" "$(cat "$_detach_calls")"
+
+start_test "makeshpool runs shpool attach"
+rm -f "$_detach_calls"
+makeshpool work
+assert_equal "shpool attach work" "$(cat "$_detach_calls")"
+
+start_test "maketmux runs tmux new-session"
+rm -f "$_detach_calls"
+maketmux work
+assert_equal "tmux new-session -s work" "$(cat "$_detach_calls")"
+
 unset -f jjd hgd gitd autosession jd hd gd mjd mhd mgd _extract_oneliner
-rm -f "$_vcsdir_calls"
+unset -f sessiondetach sessionmake shpool tmux
+unset -f detachsession detachshpool detachtmux makesession makeshpool maketmux
+rm -f "$_vcsdir_calls" "$_detach_calls"
 
 # Re-source shrc so the real connected_remotely / inside_project are
 # restored for later tests, replacing the stubs left over from the
