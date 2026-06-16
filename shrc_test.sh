@@ -1114,36 +1114,55 @@ start_test "profile wraps ~/.env sourcing in set -a / set +a"
 assert_true grep -qF 'set -a' "$_srcdir/profile"
 assert_true grep -qF 'set +a' "$_srcdir/profile"
 
+# Run the exact dotenv-sourcing guard from zshenv/profile, so the tests
+# below exercise the real wrapper instead of an inline copy that can drift.
+_run_dotenv_guard() {
+    if test -z "${DOTENV_SOURCED:-}" && test -f "$_dotenv"; then
+        case $- in *a*) _dotenv_had_a=1;; *) _dotenv_had_a=0;; esac
+        set -a
+        . "$_dotenv"
+        test "$_dotenv_had_a" = 1 || set +a
+        unset _dotenv_had_a
+        export DOTENV_SOURCED=1
+    fi
+}
+
 start_test "set -a around ~/.env exports bare VAR=val to children"
 _dotenv="$_testdir/dotenv_bare"
 printf 'BARE_VAR=hello\n' > "$_dotenv"
 _dotenv_bare_result=$(
     unset DOTENV_SOURCED BARE_VAR
-    if test -z "${DOTENV_SOURCED:-}" && test -f "$_dotenv"; then
-        set -a
-        . "$_dotenv"
-        set +a
-        export DOTENV_SOURCED=1
-    fi
+    _run_dotenv_guard
     sh -c 'echo "$BARE_VAR"'
 )
 assert_equal "hello" "$_dotenv_bare_result"
 
-start_test "set +a restores allexport state after ~/.env sourcing"
+start_test "~/.env sourcing leaves allexport off when caller had it off"
 _dotenv="$_testdir/dotenv_bare"
 printf 'BARE_VAR=hello\n' > "$_dotenv"
-_dotenv_allexport=$(
+_dotenv_allexport_off=$(
     unset DOTENV_SOURCED BARE_VAR
-    if test -z "${DOTENV_SOURCED:-}" && test -f "$_dotenv"; then
-        set -a
-        . "$_dotenv"
-        set +a
-        export DOTENV_SOURCED=1
-    fi
+    _run_dotenv_guard
     LATER_VAR=world
     sh -c 'echo "${LATER_VAR:-unset}"'
 )
-assert_equal "unset" "$_dotenv_allexport"
+assert_equal "unset" "$_dotenv_allexport_off"
+
+# Regression: if the caller already had `set -a` on (e.g. `bash -a -l`), the
+# guard must NOT turn it off, or later assignments would silently stop
+# propagating to children.
+start_test "~/.env sourcing preserves allexport when caller had it on"
+_dotenv="$_testdir/dotenv_bare"
+printf 'BARE_VAR=hello\n' > "$_dotenv"
+_dotenv_allexport_on=$(
+    unset DOTENV_SOURCED BARE_VAR
+    set -a
+    _run_dotenv_guard
+    LATER_VAR=world
+    sh -c 'echo "${LATER_VAR:-unset}"'
+    set +a
+)
+assert_equal "world" "$_dotenv_allexport_on"
 
 # Test session_backend / autosession / switchsession dispatch. session_backend
 # names the preferred manager; the wrappers route to the matching binary. The
