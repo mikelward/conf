@@ -322,7 +322,20 @@ result="$(_fish_run '
     function in_shpool; return 0; end
     host_info
 ')"
-assert_equal "laptop [edge1]" "$result"
+assert_equal "laptop edge1" "$result"
+
+start_test "fish host_info warning honours SESSION_BACKEND"
+# Outside any session the yellow warning names the wanted backend
+# ($SESSION_BACKEND), defaulting to shpool.
+result="$(_fish_run '
+    set -g HOSTNAME mikel-laptop
+    set -g USERNAME mikel
+    set -g SESSION_BACKEND tmux
+    function on_production_host; return 1; end
+    function in_shpool; return 1; end
+    host_info
+')"
+assert_equal "laptop tmux" "$result"
 
 start_test "fish host_info prepends [root] when root"
 result="$(_fish_run '
@@ -335,9 +348,9 @@ result="$(_fish_run '
 ')"
 assert_equal "[root] laptop shpool" "$result"
 
-start_test "fish host_info shows tmux session as [name]"
+start_test "fish host_info shows tmux session as name"
 # host_info now derives its tag from session_name, so a tmux session
-# (no shpool) is shown as a green [session] just like shpool.
+# (no shpool) is shown as a green session name just like shpool.
 result="$(_fish_run '
     set -g HOSTNAME mikel-laptop
     set -g USERNAME mikel
@@ -347,12 +360,12 @@ result="$(_fish_run '
     function tmux; echo work; end
     host_info
 ')"
-assert_equal "laptop [work]" "$result"
+assert_equal "laptop work" "$result"
 
 ###############
-# TEST: title mirrors host_info's bracketed [session] format
+# TEST: title mirrors host_info's session format
 
-start_test "fish title uses bracketed session tag"
+start_test "fish title uses session tag"
 result="$(_fish_run '
     set -g HOSTNAME mikel-laptop
     set -g USERNAME mikel
@@ -362,7 +375,7 @@ result="$(_fish_run '
     function project_or_pwd; printf proj; end
     title
 ')"
-assert_equal "laptop [mysession] proj" "$result"
+assert_equal "laptop mysession proj" "$result"
 
 start_test "fish title omits session tag when no session"
 result="$(_fish_run '
@@ -389,7 +402,7 @@ result="$(_fish_run '
     set -g _session_name "cached "
     host_info
 ')"
-assert_equal "laptop [cached]" "$result"
+assert_equal "laptop cached" "$result"
 
 start_test "fish prompt_session_name recomputes when not warmed"
 # The cache is render-scoped: fish_prompt erases $_session_name after the
@@ -555,7 +568,7 @@ result="$(_fish_run '
 ')"
 result="$(_resolve_cr "$result")"
 expected="
-workstation [edge1] edge1 ui somebranch * pull ―――――――――――――――――――――――――――――――――
+workstation edge1 edge1 ui somebranch * pull ―――――――――――――――――――――――――――――――――――
 $_ps1char "
 assert_equal "$expected" "$result"
 

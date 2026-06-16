@@ -181,9 +181,18 @@ start_test "host_info in shpool"
 in_shpool() { true; }
 SHPOOL_SESSION_NAME="mysession"
 result="$(host_info)"
-assert_equal "laptop [mysession]" "$result"
+assert_equal "laptop mysession" "$result"
 in_shpool() { false; }
 unset SHPOOL_SESSION_NAME
+
+start_test "host_info warning honours SESSION_BACKEND"
+# Outside any session the yellow warning names the wanted backend
+# ($SESSION_BACKEND), defaulting to shpool.
+in_shpool() { false; }
+SESSION_BACKEND="tmux"
+result="$(host_info)"
+assert_equal "laptop tmux" "$result"
+unset SESSION_BACKEND
 
 start_test "host_info prepends [root] when root"
 i_am_root() { true; }
@@ -191,25 +200,25 @@ result="$(host_info)"
 assert_equal "[root] laptop shpool" "$result"
 i_am_root() { false; }
 
-start_test "host_info shows tmux session as [name]"
+start_test "host_info shows tmux session as name"
 # host_info now derives its tag from session_name, so a tmux session
-# (no shpool) is shown as a green [session] just like shpool.
+# (no shpool) is shown as a green session name just like shpool.
 inside_tmux() { true; }
 tmux() { printf 'work\n'; }
 result="$(host_info)"
-assert_equal "laptop [work]" "$result"
+assert_equal "laptop work" "$result"
 inside_tmux() { false; }
 unset -f tmux
 
 ###############
-start_test "title uses bracketed session tag"
-# The xterm title mirrors host_info's bracketed [session] format.
+start_test "title uses session tag"
+# The xterm title mirrors host_info's session format.
 show_hostname_in_title() { true; }
 project_or_pwd() { printf 'proj'; }
 in_shpool() { true; }
 SHPOOL_SESSION_NAME="mysession"
 result="$(title)"
-assert_equal "laptop [mysession] proj" "$result"
+assert_equal "laptop mysession proj" "$result"
 
 start_test "title omits session tag when no session"
 in_shpool() { false; }
@@ -226,9 +235,9 @@ in_shpool() { true; }
 SHPOOL_SESSION_NAME="live"
 _session_name="cached "
 result="$(host_info)"
-assert_equal "laptop [cached]" "$result"
+assert_equal "laptop cached" "$result"
 result="$(title)"
-assert_equal "laptop [cached] proj" "$result"
+assert_equal "laptop cached proj" "$result"
 unset _session_name SHPOOL_SESSION_NAME
 in_shpool() { false; }
 
@@ -581,7 +590,7 @@ base() { echo "abc1234 Bump targetSdk to 36"; }
 
 result="$(_resolve_cr "$(preprompt)")"
 expected="
-workstation [edge1] edge1 ui somebranch * pull ―――――――――――――――――――――――――――――――――
+workstation edge1 edge1 ui somebranch * pull ―――――――――――――――――――――――――――――――――――
 abc1234 Bump targetSdk to 36"
 assert_equal "$expected" "$result"
 

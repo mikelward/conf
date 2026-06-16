@@ -680,18 +680,19 @@ except OSError: pass
         mkdir ([$env.HOME "titletest"] | path join)
         cd ([$env.HOME "titletest"] | path join)
         let t = (title)
-        assert str contains $t "[main]"
+        assert str contains $t "main"
+        assert (not ($t | str contains "[main]"))
         assert (not ($t | str starts-with "laptop "))
     })
-    # title mirrors host-info's bracketed [session] format
-    (run-test "nu title uses bracketed session tag" {
+    # title mirrors host-info's session format
+    (run-test "nu title uses session tag" {
         $env.HOSTNAME = "mikel-laptop"
         $env.USERNAME = "mikel"
         $env.SHPOOL_SESSION_NAME = "edge1"
         hide-env --ignore-errors TMUX
         mkdir ([$env.HOME "titletest"] | path join)
         cd ([$env.HOME "titletest"] | path join)
-        assert equal (title) "laptop [edge1] titletest"
+        assert equal (title) "laptop edge1 titletest"
     })
 
     ###############
@@ -2266,18 +2267,32 @@ except OSError: pass
         $env.HOSTNAME = "mikel-laptop"
         $env.USERNAME = "mikel"
         hide-env --ignore-errors SHPOOL_SESSION_NAME
+        hide-env --ignore-errors SESSION_BACKEND
         $env.on-production-host = {|| false }
         let out = (host-info)
         assert str contains $out "shpool"
         assert str contains $out (ansi yellow)
     })
-    (run-test "nu host-info shows [session] in shpool" {
+    (run-test "nu host-info warning honours SESSION_BACKEND" {
+        # Outside any session the yellow warning names the wanted backend
+        # ($SESSION_BACKEND), defaulting to shpool.
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.SESSION_BACKEND = "tmux"
+        $env.on-production-host = {|| false }
+        let out = (host-info)
+        assert str contains ($out | ansi strip) "tmux"
+        assert str contains $out (ansi yellow)
+    })
+    (run-test "nu host-info shows session name in shpool" {
         $env.HOSTNAME = "mikel-laptop"
         $env.USERNAME = "mikel"
         $env.SHPOOL_SESSION_NAME = "edge1"
         $env.on-production-host = {|| false }
         let out = (host-info)
-        assert str contains $out $"[(ansi green)edge1(ansi reset)]"
+        assert str contains $out $"(ansi green)edge1(ansi reset)"
+        assert (not ($out | ansi strip | str contains "[edge1]"))
     })
     (run-test "nu host-info reuses warmed session name" {
         # render-prompt warms $env._SESSION_NAME once per render so host-info
@@ -2289,7 +2304,8 @@ except OSError: pass
         $env._SESSION_NAME = "cached "
         $env.on-production-host = {|| false }
         let out = (host-info)
-        assert str contains ($out | ansi strip) "[cached]"
+        assert str contains ($out | ansi strip) "cached"
+        assert (not ($out | ansi strip | str contains "[cached]"))
     })
     (run-test "nu prompt-session-name recomputes when env not set" {
         # The warmed value is render-scoped (render-prompt hides it at the
