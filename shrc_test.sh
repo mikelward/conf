@@ -926,15 +926,16 @@ assert_equal "" "${SHPOOL_INITIAL_PWD-}"
 rm -rf "$_fake_bin" "$_autoshpool_env" "$_pwd_dir"
 
 # Test maybe_start_session_and_exit. The "should we even try" gating lives
-# in want_tmux / want_shpool, so these tests stub those directly. tmux is
-# the default backend; shpool is the fallback when want_tmux is false.
+# in want_tmux / want_shpool; the dispatch picks the backend named by
+# session_backend (shpool by default, tmux as the fallback).
 _autoshpool_calls="$_testdir/autoshpool_calls"
 _autotmux_calls="$_testdir/autotmux_calls"
 _returned="$_testdir/shpool_returned"
 
-start_test "maybe_start_session_and_exit starts tmux when want_tmux true"
+start_test "maybe_start_session_and_exit starts shpool when shpool is preferred"
 rm -f "$_autoshpool_calls" "$_autotmux_calls" "$_returned"
 (
+    session_backend() { echo shpool; }
     want_tmux() { true; }
     want_shpool() { true; }
     autotmux() { echo "autotmux $*" >> "$_autotmux_calls"; return 0; }
@@ -944,38 +945,14 @@ rm -f "$_autoshpool_calls" "$_autotmux_calls" "$_returned"
 )
 assert_false test -f "$_returned"
 
-start_test "maybe_start_session_and_exit prefers tmux over shpool"
-assert_equal "autotmux " "$(cat "$_autotmux_calls" 2>/dev/null)"
-assert_false test -f "$_autoshpool_calls"
-
-start_test "maybe_start_session_and_exit does not exit when autotmux fails"
-rm -f "$_autotmux_calls" "$_returned"
-(
-    want_tmux() { true; }
-    autotmux() { return 1; }
-    maybe_start_session_and_exit
-    echo yes > "$_returned"
-)
-assert_true test -f "$_returned"
-
-start_test "maybe_start_session_and_exit falls back to shpool when want_tmux false"
-rm -f "$_autoshpool_calls" "$_returned"
-(
-    want_tmux() { false; }
-    want_shpool() { true; }
-    autoshpool() { echo "autoshpool $*" >> "$_autoshpool_calls"; return 0; }
-    maybe_start_session_and_exit
-    echo yes > "$_returned"
-)
-assert_false test -f "$_returned"
-
-start_test "maybe_start_session_and_exit calls autoshpool with no args on fallback"
+start_test "maybe_start_session_and_exit prefers shpool over tmux"
 assert_equal "autoshpool " "$(cat "$_autoshpool_calls" 2>/dev/null)"
+assert_false test -f "$_autotmux_calls"
 
-start_test "maybe_start_session_and_exit does not exit when shpool fallback fails"
+start_test "maybe_start_session_and_exit does not exit when autoshpool fails"
 rm -f "$_autoshpool_calls" "$_returned"
 (
-    want_tmux() { false; }
+    session_backend() { echo shpool; }
     want_shpool() { true; }
     autoshpool() { return 1; }
     maybe_start_session_and_exit
@@ -983,11 +960,38 @@ rm -f "$_autoshpool_calls" "$_returned"
 )
 assert_true test -f "$_returned"
 
-start_test "maybe_start_session_and_exit skips when neither backend wanted"
+start_test "maybe_start_session_and_exit falls back to tmux when session_backend is tmux"
+rm -f "$_autotmux_calls" "$_returned"
+(
+    session_backend() { echo tmux; }
+    want_tmux() { true; }
+    want_shpool() { false; }
+    autotmux() { echo "autotmux $*" >> "$_autotmux_calls"; return 0; }
+    maybe_start_session_and_exit
+    echo yes > "$_returned"
+)
+assert_false test -f "$_returned"
+
+start_test "maybe_start_session_and_exit calls autotmux with no args on fallback"
+assert_equal "autotmux " "$(cat "$_autotmux_calls" 2>/dev/null)"
+
+start_test "maybe_start_session_and_exit does not exit when tmux fallback fails"
+rm -f "$_autotmux_calls" "$_returned"
+(
+    session_backend() { echo tmux; }
+    want_tmux() { true; }
+    autotmux() { return 1; }
+    maybe_start_session_and_exit
+    echo yes > "$_returned"
+)
+assert_true test -f "$_returned"
+
+start_test "maybe_start_session_and_exit skips when session_backend is empty"
 rm -f "$_autoshpool_calls" "$_autotmux_calls" "$_returned"
 (
-    want_tmux() { false; }
-    want_shpool() { false; }
+    session_backend() { echo ""; }
+    want_tmux() { true; }
+    want_shpool() { true; }
     autotmux() { echo "autotmux $*" >> "$_autotmux_calls"; return 0; }
     autoshpool() { echo "autoshpool $*" >> "$_autoshpool_calls"; return 0; }
     maybe_start_session_and_exit
@@ -995,8 +999,22 @@ rm -f "$_autoshpool_calls" "$_autotmux_calls" "$_returned"
 )
 assert_true test -f "$_returned"
 
-start_test "maybe_start_session_and_exit starts no backend when neither wanted"
+start_test "maybe_start_session_and_exit starts no backend when none selected"
 assert_false test -f "$_autotmux_calls"
+assert_false test -f "$_autoshpool_calls"
+
+# want_* still gates: an opted-out backend doesn't auto-start even when
+# session_backend names it (e.g. inside_tmux is true).
+start_test "maybe_start_session_and_exit skips shpool when want_shpool false"
+rm -f "$_autoshpool_calls" "$_returned"
+(
+    session_backend() { echo shpool; }
+    want_shpool() { false; }
+    autoshpool() { echo "autoshpool $*" >> "$_autoshpool_calls"; return 0; }
+    maybe_start_session_and_exit
+    echo yes > "$_returned"
+)
+assert_true test -f "$_returned"
 assert_false test -f "$_autoshpool_calls"
 
 ######################################
@@ -1170,17 +1188,17 @@ assert_equal "world" "$_dotenv_allexport_on"
 _dispatch_calls="$_testdir/dispatch_calls"
 have_command() { case "$1" in tmux|autotmux|shpool) return 0;; *) return 1;; esac; }
 
-start_test "session_backend prefers tmux when both available"
+start_test "session_backend prefers shpool when both available"
+assert_equal "shpool" "$(session_backend)"
+
+start_test "session_backend uses tmux when WANT_SHPOOL=0"
+WANT_SHPOOL=0
 assert_equal "tmux" "$(session_backend)"
+unset WANT_SHPOOL
 
-start_test "session_backend uses shpool when WANT_TMUX=0"
-WANT_TMUX=0
-assert_equal "shpool" "$(session_backend)"
-unset WANT_TMUX
-
-start_test "session_backend uses shpool when tmux missing"
-have_command() { test "$1" = shpool; }
-assert_equal "shpool" "$(session_backend)"
+start_test "session_backend uses tmux when shpool missing"
+have_command() { case "$1" in tmux|autotmux) return 0;; *) return 1;; esac; }
+assert_equal "tmux" "$(session_backend)"
 have_command() { case "$1" in tmux|autotmux|shpool) return 0;; *) return 1;; esac; }
 
 start_test "session_backend uses shpool when autotmux missing"
@@ -1198,6 +1216,33 @@ WANT_TMUX=0
 WANT_SHPOOL=0
 assert_equal "" "$(session_backend)"
 unset WANT_TMUX WANT_SHPOOL
+
+# SESSION_BACKEND=tmux flips the preference: tmux wins when both are available,
+# shpool is the fallback if tmux is missing.
+start_test "session_backend prefers tmux when SESSION_BACKEND=tmux"
+SESSION_BACKEND=tmux
+assert_equal "tmux" "$(session_backend)"
+unset SESSION_BACKEND
+
+start_test "session_backend SESSION_BACKEND=tmux falls back to shpool when tmux missing"
+SESSION_BACKEND=tmux
+have_command() { test "$1" = shpool; }
+assert_equal "shpool" "$(session_backend)"
+have_command() { case "$1" in tmux|autotmux|shpool) return 0;; *) return 1;; esac; }
+unset SESSION_BACKEND
+
+# SESSION_BACKEND=shpool matches the default ordering: shpool wins.
+start_test "session_backend prefers shpool when SESSION_BACKEND=shpool"
+SESSION_BACKEND=shpool
+assert_equal "shpool" "$(session_backend)"
+unset SESSION_BACKEND
+
+# WANT_*=0 still wins even when SESSION_BACKEND names that backend.
+start_test "session_backend honours WANT_TMUX=0 over SESSION_BACKEND=tmux"
+SESSION_BACKEND=tmux
+WANT_TMUX=0
+assert_equal "shpool" "$(session_backend)"
+unset SESSION_BACKEND WANT_TMUX
 
 start_test "autosession runs autotmux on the tmux backend"
 rm -f "$_dispatch_calls"
@@ -1452,8 +1497,9 @@ assert_equal "switched
 stayed" "$(cat "$_alias_calls")"
 
 # The *s scripts dispatch on $SESSION_BACKEND (falling back to tmux), so cs/ds/ms
-# pass session_backend's choice (which honours WANT_TMUX) as SESSION_BACKEND, or
-# a WANT_TMUX=0 user outside a session would be handed tmux.
+# pass session_backend's choice (which honours WANT_SHPOOL/WANT_TMUX and the
+# $SESSION_BACKEND preference) as SESSION_BACKEND, or a WANT_SHPOOL=0 user
+# outside a session would be handed the scripts' default.
 start_test "cs passes session_backend to the script as SESSION_BACKEND"
 rm -f "$_alias_calls"
 (

@@ -44,9 +44,9 @@ def run-test [label: string, body: closure]: nothing -> string {
 # return nothing. With --fail the three vcs-dir commands exit non-zero so
 # the wrappers' success gate (jjd ... && autosession) can be exercised.
 # Used to verify the clone-then-session wrappers only run autosession when
-# the underlying command succeeds. A fake tmux is added too so
-# session-backend resolves to tmux (the default) deterministically, even on
-# hosts without a real tmux. Plain (non-$"") strings so the shell's
+# the underlying command succeeds. A fake shpool is added too so
+# session-backend resolves to shpool (the default) deterministically, even
+# on hosts without a real shpool. Plain (non-$"") strings so the shell's
 # $* / $@ aren't treated as nu interpolation.
 def --env fake-vcs-bin [calls: string, --fail] {
     let bin = (mktemp -d)
@@ -59,8 +59,8 @@ def --env fake-vcs-bin [calls: string, --fail] {
     ^chmod +x ($bin | path join "autoshpool")
     ("#!/bin/sh\necho \"autotmux $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "autotmux")
     ^chmod +x ($bin | path join "autotmux")
-    "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "tmux")
-    ^chmod +x ($bin | path join "tmux")
+    "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
+    ^chmod +x ($bin | path join "shpool")
     $env.PATH = ([$bin] ++ $env.PATH)
 }
 
@@ -90,42 +90,42 @@ let results = [
     ###############
     # jd/hd/gd & mjd/mhd/mgd run autosession after the underlying command
     # succeeds, and skip it when the command fails. fake-vcs-bin makes the
-    # default backend resolve to tmux, so autosession runs autotmux.
-    (run-test "nu jd runs jjd then autotmux" {
+    # default backend resolve to shpool, so autosession runs autoshpool.
+    (run-test "nu jd runs jjd then autoshpool" {
         let calls = (mktemp -t "vcs-calls.XXXXXX")
         fake-vcs-bin $calls
         jd repo
-        assert equal (open $calls | str trim) "jjd repo\nautotmux"
+        assert equal (open $calls | str trim) "jjd repo\nautoshpool"
     })
-    (run-test "nu hd runs hgd then autotmux" {
+    (run-test "nu hd runs hgd then autoshpool" {
         let calls = (mktemp -t "vcs-calls.XXXXXX")
         fake-vcs-bin $calls
         hd repo
-        assert equal (open $calls | str trim) "hgd repo\nautotmux"
+        assert equal (open $calls | str trim) "hgd repo\nautoshpool"
     })
-    (run-test "nu gd runs gitd then autotmux" {
+    (run-test "nu gd runs gitd then autoshpool" {
         let calls = (mktemp -t "vcs-calls.XXXXXX")
         fake-vcs-bin $calls
         gd repo
-        assert equal (open $calls | str trim) "gitd repo\nautotmux"
+        assert equal (open $calls | str trim) "gitd repo\nautoshpool"
     })
-    (run-test "nu mjd runs jjd -f then autotmux" {
+    (run-test "nu mjd runs jjd -f then autoshpool" {
         let calls = (mktemp -t "vcs-calls.XXXXXX")
         fake-vcs-bin $calls
         mjd repo
-        assert equal (open $calls | str trim) "jjd -f repo\nautotmux"
+        assert equal (open $calls | str trim) "jjd -f repo\nautoshpool"
     })
-    (run-test "nu mhd runs hgd -f then autotmux" {
+    (run-test "nu mhd runs hgd -f then autoshpool" {
         let calls = (mktemp -t "vcs-calls.XXXXXX")
         fake-vcs-bin $calls
         mhd repo
-        assert equal (open $calls | str trim) "hgd -f repo\nautotmux"
+        assert equal (open $calls | str trim) "hgd -f repo\nautoshpool"
     })
-    (run-test "nu mgd runs gitd -f then autotmux" {
+    (run-test "nu mgd runs gitd -f then autoshpool" {
         let calls = (mktemp -t "vcs-calls.XXXXXX")
         fake-vcs-bin $calls
         mgd repo
-        assert equal (open $calls | str trim) "gitd -f repo\nautotmux"
+        assert equal (open $calls | str trim) "gitd -f repo\nautoshpool"
     })
     (run-test "nu mjd skips autosession when jjd fails" {
         let calls = (mktemp -t "vcs-calls.XXXXXX")
@@ -1018,24 +1018,26 @@ except OSError: pass
     })
 
     ###############
-    # session-backend picks tmux by default, shpool as fallback
-    (run-test "nu session-backend prefers tmux when both available" {
+    # session-backend picks shpool by default, tmux as fallback
+    (run-test "nu session-backend prefers shpool when both available" {
+        fake-tmux-on-path
+        fake-shpool-on-path
+        assert equal (session-backend) "shpool"
+    })
+    (run-test "nu session-backend uses tmux when WANT_SHPOOL=0" {
+        $env.WANT_SHPOOL = "0"
         fake-tmux-on-path
         fake-shpool-on-path
         assert equal (session-backend) "tmux"
     })
-    (run-test "nu session-backend uses shpool when WANT_TMUX=0" {
-        $env.WANT_TMUX = "0"
-        fake-tmux-on-path
-        fake-shpool-on-path
-        assert equal (session-backend) "shpool"
-    })
-    (run-test "nu session-backend uses shpool when tmux missing" {
+    (run-test "nu session-backend uses tmux when shpool missing" {
         let bin = (mktemp -d)
-        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
-        ^chmod +x ($bin | path join "shpool")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "tmux")
+        ^chmod +x ($bin | path join "tmux")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autotmux")
+        ^chmod +x ($bin | path join "autotmux")
         $env.PATH = [$bin]
-        assert equal (session-backend) "shpool"
+        assert equal (session-backend) "tmux"
     })
     (run-test "nu session-backend uses shpool when autotmux missing" {
         # tmux present but autotmux missing falls back to shpool.
@@ -1050,6 +1052,28 @@ except OSError: pass
     (run-test "nu session-backend empty when nothing available" {
         $env.PATH = []
         assert equal (session-backend) ""
+    })
+    # SESSION_BACKEND=tmux flips the preference: tmux preferred, shpool fallback.
+    (run-test "nu session-backend prefers tmux when SESSION_BACKEND=tmux" {
+        $env.SESSION_BACKEND = "tmux"
+        fake-tmux-on-path
+        fake-shpool-on-path
+        assert equal (session-backend) "tmux"
+    })
+    (run-test "nu session-backend SESSION_BACKEND=tmux falls back to shpool when tmux missing" {
+        $env.SESSION_BACKEND = "tmux"
+        let bin = (mktemp -d)
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
+        ^chmod +x ($bin | path join "shpool")
+        $env.PATH = [$bin]
+        assert equal (session-backend) "shpool"
+    })
+    (run-test "nu session-backend honours WANT_TMUX=0 over SESSION_BACKEND=tmux" {
+        $env.SESSION_BACKEND = "tmux"
+        $env.WANT_TMUX = "0"
+        fake-tmux-on-path
+        fake-shpool-on-path
+        assert equal (session-backend) "shpool"
     })
 
     ###############
@@ -1233,9 +1257,10 @@ except OSError: pass
         } | complete)
         assert ($out.stdout | str contains "stayed")
     })
-    # cs/ds/ms pass session-backend's choice (which honours WANT_TMUX) as
-    # SESSION_BACKEND so the *s scripts don't fall back to tmux for a shpool
-    # user. WANT_TMUX=0 with shpool on PATH resolves to shpool.
+    # cs/ds/ms pass session-backend's choice (which honours WANT_SHPOOL/
+    # WANT_TMUX and the $SESSION_BACKEND preference) as SESSION_BACKEND so
+    # the *s scripts don't fall back to tmux for a WANT_SHPOOL=0 user. With
+    # shpool on PATH session-backend resolves to shpool by default.
     (run-test "nu cs passes session-backend to the script as SESSION_BACKEND" {
         let calls = (mktemp -t "sess-calls.XXXXXX")
         let bin = (mktemp -d)
@@ -2207,8 +2232,31 @@ except OSError: pass
         maybe-start-session-and-exit
         assert ($marker | path exists) "autotmux should have been called"
     })
-    (run-test "nu maybe-start-session-and-exit prefers tmux over shpool" {
+    (run-test "nu maybe-start-session-and-exit prefers shpool over tmux" {
         $env.stdin-is-tty = {|| true }
+        let dir = (mktemp -d)
+        let tmux_marker = ($dir | path join "tmux-called")
+        let shpool_marker = ($dir | path join "shpool-called")
+        $"#!/bin/sh\ntouch ($tmux_marker)\nexit 1" | save ($dir | path join "autotmux")
+        ^chmod +x ($dir | path join "autotmux")
+        $"#!/bin/sh\ntouch ($shpool_marker)\nexit 1" | save ($dir | path join "autoshpool")
+        ^chmod +x ($dir | path join "autoshpool")
+        "#!/bin/sh" | save ($dir | path join "tmux")
+        ^chmod +x ($dir | path join "tmux")
+        "#!/bin/sh" | save ($dir | path join "shpool")
+        ^chmod +x ($dir | path join "shpool")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        hide-env --ignore-errors TMUX
+        maybe-start-session-and-exit
+        assert ($shpool_marker | path exists) "autoshpool should have been called"
+        assert (not ($tmux_marker | path exists)) "autotmux should NOT have been called"
+    })
+    # SESSION_BACKEND=tmux flips startup preference too.
+    (run-test "nu maybe-start-session-and-exit honours SESSION_BACKEND=tmux" {
+        $env.stdin-is-tty = {|| true }
+        $env.SESSION_BACKEND = "tmux"
         let dir = (mktemp -d)
         let tmux_marker = ($dir | path join "tmux-called")
         let shpool_marker = ($dir | path join "shpool-called")
@@ -2292,12 +2340,14 @@ except OSError: pass
     (run-test "nu host-info warning falls back to session-backend" {
         # With no $SESSION_BACKEND, the warning names the backend the gating
         # would actually start (session-backend). Fake tmux + autotmux on
-        # PATH so session-backend picks tmux (the default).
+        # PATH with WANT_SHPOOL=0 so session-backend picks tmux as the
+        # fallback (shpool is the default, but opted out here).
         $env.HOSTNAME = "mikel-laptop"
         $env.USERNAME = "mikel"
         hide-env --ignore-errors SHPOOL_SESSION_NAME
         hide-env --ignore-errors SESSION_BACKEND
         hide-env --ignore-errors WANT_TMUX
+        $env.WANT_SHPOOL = "0"
         let bindir = (mktemp -d)
         for cmd in [tmux autotmux] {
             let p = ([$bindir $cmd] | path join)

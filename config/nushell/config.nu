@@ -261,15 +261,24 @@ def --wrapped autoshpool [...args] {
 }
 
 # start the preferred session manager if this session warrants it, then exit
-# the current shell. tmux is the default; shpool is the fallback when
-# want-tmux is false. Mirrors shrc's maybe_start_session_and_exit.
+# the current shell. shpool is the default; tmux is the fallback when
+# want-shpool is false (or $SESSION_BACKEND=tmux flips the preference).
+# Mirrors shrc's maybe_start_session_and_exit.
 def maybe-start-session-and-exit [] {
-    if (want-tmux) {
-        let ok = (try { autotmux; true } catch { false })
-        if $ok { exit }
-    } else if (want-shpool) {
-        let ok = (try { autoshpool; true } catch { false })
-        if $ok { exit }
+    match (session-backend) {
+        "shpool" => {
+            if (want-shpool) {
+                let ok = (try { autoshpool; true } catch { false })
+                if $ok { exit }
+            }
+        }
+        "tmux" => {
+            if (want-tmux) {
+                let ok = (try { autotmux; true } catch { false })
+                if $ok { exit }
+            }
+        }
+        _ => { }
     }
 }
 
@@ -278,10 +287,11 @@ def inside-tmux [] {
     is-env-set "TMUX"
 }
 
-# return true if we should auto-start tmux in this session. tmux is the
-# default session manager; the gating mirrors want-shpool. We require the
-# autotmux helper too, not just tmux, so a machine that has tmux but hasn't
-# picked up autotmux yet falls through to the shpool path.
+# return true if we should auto-start tmux in this session. shpool is the
+# default session manager; tmux is the fallback when shpool isn't installed
+# or WANT_SHPOOL=0. The gating mirrors want-shpool. We require the autotmux
+# helper too, not just tmux, so a machine that has tmux but hasn't picked up
+# autotmux yet falls through to the shpool path.
 def want-tmux [] {
     if (($env.WANT_TMUX? | default "1") == "0") { return false }
     if (not (stdin-is-tty)) { return false }
@@ -298,16 +308,30 @@ def --wrapped autotmux [...args] {
     ^autotmux ...$args
 }
 
-# Name of the preferred session manager: "tmux" (the default), "shpool", or
-# "" when neither is enabled/installed. tmux wins when both WANT_TMUX and
-# WANT_SHPOOL are enabled and present; set WANT_TMUX=0 to fall back to shpool.
+# Name of the preferred session manager: "shpool" (the default when both are
+# available), "tmux" (the fallback), or "" when neither is enabled/installed.
+# $SESSION_BACKEND flips the preference: set it to "tmux" to prefer tmux with
+# shpool as the fallback, or "shpool" (the default when unset) to prefer shpool
+# with tmux as the fallback. The WANT_TMUX=0 / WANT_SHPOOL=0 opt-outs still
+# disable each backend regardless of the preference.
 def session-backend [] {
-    if (($env.WANT_TMUX? | default "1") != "0") and (have-command "tmux") and (have-command "autotmux") {
-        "tmux"
-    } else if (($env.WANT_SHPOOL? | default "1") != "0") and (have-command "shpool") {
-        "shpool"
+    let pref = ($env.SESSION_BACKEND? | default "shpool")
+    if $pref == "tmux" {
+        if (($env.WANT_TMUX? | default "1") != "0") and (have-command "tmux") and (have-command "autotmux") {
+            "tmux"
+        } else if (($env.WANT_SHPOOL? | default "1") != "0") and (have-command "shpool") {
+            "shpool"
+        } else {
+            ""
+        }
     } else {
-        ""
+        if (($env.WANT_SHPOOL? | default "1") != "0") and (have-command "shpool") {
+            "shpool"
+        } else if (($env.WANT_TMUX? | default "1") != "0") and (have-command "tmux") and (have-command "autotmux") {
+            "tmux"
+        } else {
+            ""
+        }
     }
 }
 
@@ -962,7 +986,7 @@ def prompt-info [...flags: string] { do $env.prompt-info $flags }
 # Hostname is red on production hosts. The session tag is a green session
 # name when attached to a shpool or tmux session, or a yellow warning naming
 # the backend that would start when not: $SESSION_BACKEND if set, else the
-# session-backend the gating would pick (tmux by default), falling back to
+# session-backend the gating would pick (shpool by default), falling back to
 # shpool.
 def host-info [] {
     let h = (short-hostname)
@@ -1182,8 +1206,9 @@ def lss [...args] { lssock ...$args }
 
 def j [] { job list }
 
-# Clone/cd into a repo, then start a session (tmux by default, shpool when
-# WANT_TMUX=0) matching the new vcs rootdir. autosession only runs if the
+# Clone/cd into a repo, then start a session (shpool by default, tmux when
+# WANT_SHPOOL=0 or shpool is missing) matching the new vcs rootdir.
+# autosession only runs if the
 # underlying command succeeds (a non-zero external exit throws, which the
 # try/catch turns into $ok = false), so a failed clone/cd doesn't spawn a
 # stray session. `--wrapped` so flags pass through to the underlying command
@@ -1406,9 +1431,11 @@ def clone [url: string, ...args: string] {
 # SHPOOL_INITIAL_PWD. Mirrors shrc/fish.
 #
 # cs/ds/ms are defs, not aliases, so they can pass session-backend (which
-# honours WANT_TMUX) as SESSION_BACKEND: the *s scripts dispatch on
+# honours WANT_SHPOOL/WANT_TMUX and the $SESSION_BACKEND preference) as
+# SESSION_BACKEND: the *s scripts dispatch on
 # $TMUX/$SHPOOL_SESSION_NAME/$SESSION_BACKEND then fall back to tmux, so an
-# opted-in shpool user (WANT_TMUX=0) outside a session would otherwise get tmux.
+# opted-in tmux user (WANT_SHPOOL=0) outside a session would otherwise get
+# the scripts' default.
 # When session-backend is empty and we aren't in a session, they no-op rather
 # than trigger that fallback (see skip-session-script).
 # cs additionally exits the shell after a shpool switch (the script detaches us
@@ -1523,7 +1550,7 @@ $env.config = ($env.config | upsert hooks.env_change.PWD [{|before, after|
     maybe-background-fetch
 }])
 
-# Maybe attach to a session manager (tmux by default, shpool fallback)
+# Maybe attach to a session manager (shpool by default, tmux fallback)
 # instead of running a bare nu interactively. Skipped in non-interactive
 # mode so the test suite stays quiet. Mirrors shrc's
 # `maybe_start_session_and_exit` call on startup.

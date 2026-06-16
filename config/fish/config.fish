@@ -204,10 +204,11 @@ function inside_tmux
     test -n "$TMUX"
 end
 
-# return true if we should auto-start tmux in this session. tmux is the
-# default session manager; the gating mirrors want_shpool. We require the
-# autotmux helper too, not just tmux, so a machine that has tmux but hasn't
-# picked up autotmux yet falls through to the shpool path.
+# return true if we should auto-start tmux in this session. shpool is the
+# default session manager; tmux is the fallback when shpool isn't installed
+# or WANT_SHPOOL=0. The gating mirrors want_shpool. We require the autotmux
+# helper too, not just tmux, so a machine that has tmux but hasn't picked up
+# autotmux yet falls through to the shpool path.
 function want_tmux
     test "$WANT_TMUX" = 0; and return 1
     stdin_is_tty; or return 1
@@ -728,14 +729,26 @@ function switchshpool
     autoshpool switch $argv[1]; and exit
 end
 
-# Name of the preferred session manager: "tmux" (the default), "shpool", or
-# empty when neither is enabled/installed. tmux wins when both WANT_TMUX and
-# WANT_SHPOOL are enabled and present; set WANT_TMUX=0 to fall back to shpool.
+# Name of the preferred session manager: "shpool" (the default when both are
+# available), "tmux" (the fallback), or empty when neither is enabled/installed.
+# $SESSION_BACKEND flips the preference: set it to "tmux" to prefer tmux with
+# shpool as the fallback, or "shpool" (the default when unset) to prefer shpool
+# with tmux as the fallback. The WANT_TMUX=0 / WANT_SHPOOL=0 opt-outs still
+# disable each backend regardless of the preference.
 function session_backend
-    if test "$WANT_TMUX" != 0; and have_command tmux; and have_command autotmux
-        echo tmux
-    else if test "$WANT_SHPOOL" != 0; and have_command shpool
-        echo shpool
+    set -l _pref (test -n "$SESSION_BACKEND"; and echo $SESSION_BACKEND; or echo shpool)
+    if test "$_pref" = tmux
+        if test "$WANT_TMUX" != 0; and have_command tmux; and have_command autotmux
+            echo tmux
+        else if test "$WANT_SHPOOL" != 0; and have_command shpool
+            echo shpool
+        end
+    else
+        if test "$WANT_SHPOOL" != 0; and have_command shpool
+            echo shpool
+        else if test "$WANT_TMUX" != 0; and have_command tmux; and have_command autotmux
+            echo tmux
+        end
     end
 end
 
@@ -786,10 +799,11 @@ function sessionlist
 end
 
 function maybe_start_session_and_exit
-    if want_tmux
-        autotmux; and exit
-    else if want_shpool
-        autoshpool; and exit
+    switch (session_backend)
+    case shpool
+        want_shpool; and autoshpool; and exit
+    case tmux
+        want_tmux; and autotmux; and exit
     end
 end
 
@@ -944,10 +958,11 @@ if is_interactive
     # functions/wrappers (autoshpool stamps SHPOOL_INITIAL_PWD).
     #
     # cs/ds/ms are functions, not aliases, so they can pass session_backend
-    # (which honours WANT_TMUX) as SESSION_BACKEND: the *s scripts dispatch on
+    # (which honours WANT_SHPOOL/WANT_TMUX and the $SESSION_BACKEND preference)
+    # as SESSION_BACKEND: the *s scripts dispatch on
     # $TMUX/$SHPOOL_SESSION_NAME/$SESSION_BACKEND then fall back to tmux, so an
-    # opted-in shpool user (WANT_TMUX=0) outside a session would otherwise get
-    # tmux. When session_backend is empty and we aren't in a session they no-op
+    # opted-in tmux user (WANT_SHPOOL=0) outside a session would otherwise get
+    # the scripts' default. When session_backend is empty and we aren't in a session they no-op
     # rather than trigger that fallback. cs additionally exits after a shpool
     # switch (the script
     # detaches us and the outer autoshpool loop attaches the target, like
@@ -1036,8 +1051,9 @@ if is_interactive
     end
     alias lss='lssock'
     alias j='jobs'
-    # Clone/cd into a repo, then start a session (tmux by default, shpool
-    # when WANT_TMUX=0) matching the new vcs rootdir. autosession only runs
+    # Clone/cd into a repo, then start a session (shpool by default, tmux
+    # when WANT_SHPOOL=0 or shpool is missing) matching the new vcs rootdir.
+    # autosession only runs
     # if the underlying command succeeds, so a failed clone/cd doesn't spawn
     # a stray session. Functions rather than aliases so `and autosession`
     # runs after the command instead of having $argv appended to it.
@@ -1213,7 +1229,7 @@ if is_interactive
     # Hostname is red on production hosts. The session tag is a green
     # session name when attached to a shpool or tmux session, or a yellow
     # warning naming the backend that would start when not: $SESSION_BACKEND
-    # if set, else the session_backend the gating would pick (tmux by
+    # if set, else the session_backend the gating would pick (shpool by
     # default), falling back to shpool.
     function host_info
         set _host (short_hostname | string collect)
