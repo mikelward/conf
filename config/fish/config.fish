@@ -1220,6 +1220,7 @@ if is_interactive
         printf '\r%s \n' (prompt_line | string collect)
         vcs map 2>/dev/null
         job_info
+        publish_jobs
         set_title (title | string collect)
         ps1
         flash_terminal
@@ -1461,16 +1462,85 @@ if is_interactive
         end
     end
 
-    # print information about all shell jobs on a single line.
-    # intended to be used in the preprompt
+    # print information about all shell jobs on a single line,
+    # intended to be used in the preprompt.
+    #
+    # fish's `jobs` builtin emits a tab-separated table where the
+    # first column is the job id and the last column is the full
+    # command line. CPU is an optional middle column on systems
+    # that support it (per the fish docs), so we deliberately don't
+    # index by position past the first field -- splitting on tab and
+    # taking $fields[1] / $fields[-1] survives the missing-CPU case.
+    # The old bash-style "[N]+ Running cmd" sed pipeline never
+    # matched fish's output and passed the raw table through. Now we
+    # produce the same "%N command args & %M command args &" single-
+    # line shape shrc emits, so callers (preprompt, publish_jobs)
+    # get the same data model in either shell.
     function job_info
-            set -l _out (jobs |
-                sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /' |
-                grep -v '(pwd now:' |
-                string join ' ')
-            if test -n "$_out"
-                echo "$_out"
+        set -l _entries
+        for _line in (jobs)
+            set -l _fields (string split \t -- $_line)
+            # Skip the header row (its first field is "Job", not numeric).
+            string match --quiet --regex '^[0-9]+$' -- $_fields[1]; or continue
+            set --append _entries "%$_fields[1] $_fields[-1]"
+        end
+        if test (count $_entries) -gt 0
+            string join ' ' $_entries
+        end
+    end
+
+    # Resolve the per-shell file publish_jobs writes a short summary
+    # of the current shell's job table to so a status-bar consumer
+    # (tmux, screen, ...) can display it without querying a foreign
+    # shell's job table. Keyed by $TTY rather than a multiplexer-
+    # specific pane id so the same scheme works in any multiplexer,
+    # and outside of one. Empty (and publishing is silently disabled)
+    # when $TTY isn't a /dev/... path or when $XDG_RUNTIME_DIR isn't
+    # set -- a /tmp fallback would be a predictable, per-uid path
+    # that a local attacker could pre-create as a symlink for the
+    # prompt to truncate. $XDG_RUNTIME_DIR is per-user mode 0700 on
+    # modern Linux. Cached in _publish_jobs_file.
+    function publish_jobs_file
+        if not set --query _publish_jobs_file
+            set --global _publish_jobs_file ""
+            if test -n "$XDG_RUNTIME_DIR"; and string match --quiet --regex '^/dev/.+' -- $TTY
+                set --global _publish_jobs_file "$XDG_RUNTIME_DIR/shell-jobs$TTY"
             end
+        end
+        echo $_publish_jobs_file
+    end
+
+    # Write a single-line "%N command %M command ..." summary of the
+    # current shell's job table to publish_jobs_file (e.g. "%1 vi %2
+    # tail"). Called from fish_prompt so the value refreshes on every
+    # prompt redraw. job_info emits "%N command args & %M command
+    # args &" (one line, all jobs joined) in the same shape shrc
+    # uses; we walk the fields, grab the word after each "%N" token,
+    # and drop the trailing args. An empty file means "no jobs", so
+    # the consumer can just `cat` the file without further parsing.
+    # No-op when the publish file can't be resolved (no tty).
+    function publish_jobs
+        set _file (publish_jobs_file | string collect)
+        test -n "$_file"; or return
+        mkdir -p (dirname $_file) 2>/dev/null; or return
+        job_info | awk '
+            { for (i = 1; i <= NF; i++)
+                if ($i ~ /^%[0-9]+$/ && (i+1) <= NF)
+                    printf "%s %s ", $i, $(i+1) }
+        ' > $_file
+    end
+
+    # Remove this shell's publish file. Installed as a fish_exit event
+    # handler below so the file doesn't linger after the shell exits
+    # and confuse the next shell on the same pty.
+    function unpublish_jobs
+        set _file (publish_jobs_file | string collect)
+        test -n "$_file"; or return
+        rm -f $_file
+    end
+
+    function _publish_jobs_exit --on-event fish_exit
+        unpublish_jobs
     end
 
     function short_pwd

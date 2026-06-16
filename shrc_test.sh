@@ -2017,4 +2017,76 @@ else
     skip_block "FAILSAFE tests: dash/sh already take the failsafe branch"
 fi
 
+###############
+# TEST: publish_jobs_file resolves a per-tty file under
+# $XDG_RUNTIME_DIR; publish_jobs writes a "%N command" summary string
+# there; unpublish_jobs removes it. We deliberately don't fall back
+# to /tmp -- a predictable per-uid path under /tmp is a symlink-
+# truncation vector. Each test resets the _JOB_PUBLISH_FILE_INIT
+# cache so the next call recomputes.
+
+_publish_dir="$_testdir/xdg"
+XDG_RUNTIME_DIR="$_publish_dir"
+
+start_test "publish_jobs_file returns empty when TTY isn't /dev/..."
+TTY="not a tty"
+unset _JOB_PUBLISH_FILE_INIT _JOB_PUBLISH_FILE
+assert_equal "" "$(publish_jobs_file)"
+
+start_test "publish_jobs_file returns empty when XDG_RUNTIME_DIR unset"
+TTY=/dev/pts/99
+unset _JOB_PUBLISH_FILE_INIT _JOB_PUBLISH_FILE
+# Use a subshell so the temporary unset doesn't leak into later tests.
+assert_equal "" "$(unset XDG_RUNTIME_DIR; publish_jobs_file)"
+
+start_test "publish_jobs_file builds path under XDG_RUNTIME_DIR"
+TTY=/dev/pts/99
+unset _JOB_PUBLISH_FILE_INIT _JOB_PUBLISH_FILE
+assert_equal "$_publish_dir/shell-jobs/dev/pts/99" "$(publish_jobs_file)"
+
+start_test "publish_jobs_file caches after first call"
+unset _JOB_PUBLISH_FILE_INIT _JOB_PUBLISH_FILE
+publish_jobs_file >/dev/null
+# Changing TTY now shouldn't affect the cached answer.
+TTY=/dev/pts/100
+assert_equal "$_publish_dir/shell-jobs/dev/pts/99" "$(publish_jobs_file)"
+
+start_test "publish_jobs writes empty file with no jobs"
+TTY=/dev/pts/99
+unset _JOB_PUBLISH_FILE_INIT _JOB_PUBLISH_FILE
+_file=$(publish_jobs_file)
+rm -f "$_file"
+# Override job_info with a stub that produces no lines so we exercise
+# the no-jobs path without depending on the test driver's job table.
+job_info() { :; }
+publish_jobs
+assert_true test -f "$_file"
+assert_equal "" "$(cat "$_file")"
+
+start_test "publish_jobs writes %N command per job, space-separated"
+# Stub job_info with the same single-line "%N cmd args & %M cmd args
+# &" shape the real job_info produces. The awk pair-walker should
+# drop the args and keep only "%N cmd" tokens.
+job_info() {
+    printf '%s\n' "%1 vi notes.txt & %2 tail -f syslog &"
+}
+publish_jobs
+# Trailing space after the last entry mirrors the awk format and lets
+# consumers concatenate without inserting their own separator.
+assert_equal "%1 vi %2 tail " "$(cat "$_file")"
+unset -f job_info
+
+start_test "unpublish_jobs removes the file"
+assert_true test -f "$_file"
+unpublish_jobs
+assert_false test -e "$_file"
+
+start_test "unpublish_jobs is a no-op when TTY is not a /dev/... path"
+TTY="not a tty"
+unset _JOB_PUBLISH_FILE_INIT _JOB_PUBLISH_FILE
+# Should return without trying to remove anything; just verify it
+# exits 0 and the function didn't somehow create a file.
+unpublish_jobs
+assert_equal "" "$(publish_jobs_file)"
+
 test_summary "$_real_shell shrc_test"

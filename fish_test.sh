@@ -1020,4 +1020,120 @@ assert_contains "path" "$result"
 
 rm -rf "$_fish_rg_dir"
 
+###############
+# TEST: publish_jobs_file resolves a per-tty file under
+# $XDG_RUNTIME_DIR; publish_jobs writes a "%N command" summary
+# string; unpublish_jobs removes it.
+
+start_test "fish publish_jobs_file empty when TTY isn't /dev/..."
+result="$(_fish_run '
+    set -gx XDG_RUNTIME_DIR (mktemp -d)
+    set -gx TTY "not a tty"
+    set --erase _publish_jobs_file 2>/dev/null
+    echo "[" (publish_jobs_file | string collect) "]"
+')"
+assert_equal "[  ]" "$result"
+
+start_test "fish publish_jobs_file empty when XDG_RUNTIME_DIR unset"
+# We deliberately don't fall back to /tmp -- a predictable per-uid
+# path under /tmp is a symlink-truncation vector.
+result="$(_fish_run '
+    set --erase XDG_RUNTIME_DIR 2>/dev/null
+    set -gx TTY /dev/pts/99
+    set --erase _publish_jobs_file 2>/dev/null
+    echo "[" (publish_jobs_file | string collect) "]"
+')"
+assert_equal "[  ]" "$result"
+
+start_test "fish publish_jobs_file builds path under XDG_RUNTIME_DIR"
+result="$(_fish_run '
+    set -gx XDG_RUNTIME_DIR (mktemp -d)
+    set -gx TTY /dev/pts/99
+    set --erase _publish_jobs_file 2>/dev/null
+    publish_jobs_file
+')"
+expected_suffix="/shell-jobs/dev/pts/99"
+case "$result" in
+    *"$expected_suffix") assert_contains "$expected_suffix" "$result";;
+    *) assert_equal "<path ending in $expected_suffix>" "$result";;
+esac
+
+start_test "fish publish_jobs writes empty file with no jobs, unpublish removes it"
+result="$(_fish_run '
+    set -gx XDG_RUNTIME_DIR (mktemp -d)
+    set -gx TTY /dev/pts/99
+    set --erase _publish_jobs_file 2>/dev/null
+    function job_info; end
+    publish_jobs
+    set _file (publish_jobs_file | string collect)
+    if test -f $_file
+        echo wrote
+    end
+    cat $_file
+    echo "<eof>"
+    unpublish_jobs
+    if test -e $_file
+        echo lingered
+    else
+        echo gone
+    end
+')"
+expected="wrote
+<eof>
+gone"
+assert_equal "$expected" "$result"
+
+start_test "fish job_info parses fish jobs table into %N command args"
+# Stub `jobs` with the tabular header+rows format fish emits and
+# confirm job_info turns it into the same single-line "%N command
+# args & %M command args &" shape shrc produces.
+result="$(_fish_run '
+    function jobs
+        printf "%s\t%s\t%s\t%s\t%s\n" Job Group CPU State Command
+        printf "%s\t%s\t%s\t%s\t%s\n" 2 - 0% running "tail -f syslog &"
+        printf "%s\t%s\t%s\t%s\t%s\n" 1 - 0% running "vi notes.txt &"
+    end
+    job_info
+')"
+assert_equal "%2 tail -f syslog & %1 vi notes.txt &" "$result"
+
+start_test "fish publish_jobs writes %N command per job, space-separated"
+# Drive through the now-correct job_info: stubbing `jobs` exercises
+# both functions together. The trailing space matches awk format so
+# consumers can concatenate without inserting their own separator.
+result="$(_fish_run '
+    set -gx XDG_RUNTIME_DIR (mktemp -d)
+    set -gx TTY /dev/pts/99
+    set --erase _publish_jobs_file 2>/dev/null
+    function jobs
+        printf "%s\t%s\t%s\t%s\t%s\n" Job Group CPU State Command
+        printf "%s\t%s\t%s\t%s\t%s\n" 2 - 0% running "tail -f syslog &"
+        printf "%s\t%s\t%s\t%s\t%s\n" 1 - 0% running "vi notes.txt &"
+    end
+    publish_jobs
+    cat (publish_jobs_file | string collect)
+')"
+assert_equal "%2 tail %1 vi " "$result"
+
+start_test "fish publish_jobs sees real fish background jobs"
+# Regression: previously job_info's bash-style sed silently dropped
+# every fish job because fish `jobs` is tabular, not `[N]+ Running
+# cmd`. Run a real backgrounded job and confirm the parser picks it
+# up end-to-end (jobs -> job_info -> publish_jobs).
+result="$(_fish_run '
+    set -gx XDG_RUNTIME_DIR (mktemp -d)
+    set -gx TTY /dev/pts/99
+    set --erase _publish_jobs_file 2>/dev/null
+    sleep 30 &
+    publish_jobs
+    cat (publish_jobs_file | string collect)
+    kill (jobs -p) 2>/dev/null
+')"
+# Job id varies across runs, so we only assert on the shape.
+assert_contains "sleep " "$result"
+case "$result" in
+    %[0-9]*\ sleep\ ) ;;
+    *) assert_equal "%N sleep " "$result";;
+esac
+
 test_summary "fish_test"

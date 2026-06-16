@@ -1390,6 +1390,7 @@ preprompt() {
     printf '\r%s \n' "$(prompt_line)"
     map 2>/dev/null
     job_info
+    publish_jobs
     set_title "$(title)"
     set_prompt
     flash_terminal
@@ -1613,6 +1614,71 @@ job_info() {
             tr '\n' ' ')"
         _out="${_out% }"
         test -n "$_out" && printf '%s\n' "$_out"
+}
+
+# Resolve the per-shell file publish_jobs writes a short summary of
+# the current shell's job table to, so a status-bar consumer (tmux,
+# screen, ...) can display it without having to query a foreign
+# shell's job table. Keyed by $TTY (the pty path) rather than the
+# multiplexer's pane id so the same scheme works in any multiplexer,
+# and outside of one. Empty (and publishing is silently disabled)
+# when $TTY isn't a /dev/... path (e.g. under the test harness) or
+# when $XDG_RUNTIME_DIR isn't set -- we deliberately avoid a /tmp
+# fallback because a predictable per-uid path under /tmp lets a local
+# user pre-create the leaf as a symlink and have the victim's shell
+# truncate the symlink target on every prompt. $XDG_RUNTIME_DIR is
+# per-user mode 0700 on modern Linux, so it sidesteps that. Computed
+# once and cached in _JOB_PUBLISH_FILE.
+publish_jobs_file() {
+    if test -z "${_JOB_PUBLISH_FILE_INIT:-}"; then
+        _JOB_PUBLISH_FILE_INIT=1
+        _JOB_PUBLISH_FILE=
+        case "${TTY:-}" in /dev/?*)
+            if test -n "${XDG_RUNTIME_DIR:-}"; then
+                _JOB_PUBLISH_FILE="$XDG_RUNTIME_DIR/shell-jobs$TTY"
+            fi
+            ;;
+        esac
+    fi
+    puts "$_JOB_PUBLISH_FILE"
+}
+
+# Write a single-line "%N command %M command ..." summary of the
+# current shell's job table to publish_jobs_file (e.g. "%1 vi %2
+# tail"). Called from preprompt so the value refreshes on every
+# prompt redraw. job_info emits "%N command args & %M command args &"
+# (one line, all jobs joined); we walk the fields, grab the word
+# after each "%N" token, and drop the trailing args. An empty file
+# means "no jobs", so the consumer can just `cat` the file without
+# further parsing. No-op when the publish file can't be resolved (no
+# tty).
+publish_jobs() {
+    local _file
+    _file=$(publish_jobs_file)
+    test -n "$_file" || return
+    local _dir=${_file%/*}
+    mkdir -p "$_dir" 2>/dev/null || return
+    # The `jobs` builtin's view of the job table is cleared in a
+    # pipeline left-side subshell, so `job_info | awk` would silently
+    # see zero jobs even when there are some. Command substitution
+    # preserves the table, so capture first and pipe the text.
+    local _info
+    _info=$(job_info)
+    printf '%s\n' "$_info" | awk '
+        { for (i = 1; i <= NF; i++)
+            if ($i ~ /^%[0-9]+$/ && (i+1) <= NF)
+                printf "%s %s ", $i, $(i+1) }
+    ' > "$_file"
+}
+
+# Remove this shell's publish file. Installed as the EXIT trap in the
+# interactive block below so the file doesn't linger after the shell
+# exits and confuse the next shell on the same pty.
+unpublish_jobs() {
+    local _file
+    _file=$(publish_jobs_file)
+    test -n "$_file" || return
+    rm -f "$_file"
 }
 
 short_pwd() {
@@ -1998,6 +2064,12 @@ if is_interactive; then
 
     init_colors
     init_title_sequences
+
+    # Remove the per-shell publish file on shell exit so the next shell
+    # on the same pty doesn't read a stale value. The publish file is
+    # rewritten every prompt while the shell is alive, so a missed EXIT
+    # (e.g. SIGKILL) is at worst stale until the next shell prompts.
+    trap unpublish_jobs EXIT
 
     #alias '?'='path_or_empty'
     alias @='path_or_empty'
