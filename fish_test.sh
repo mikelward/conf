@@ -403,29 +403,29 @@ result="$(_fish_run '
 assert_equal "no" "$result"
 
 ###############
-# TEST: session_backend picks tmux by default, shpool as fallback
+# TEST: session_backend picks shpool by default, tmux as fallback
 
-start_test "fish session_backend prefers tmux when both available"
+start_test "fish session_backend prefers shpool when both available"
 result="$(_fish_run '
+    function have_command; return 0; end
+    session_backend
+')"
+assert_equal "shpool" "$result"
+
+start_test "fish session_backend uses tmux when WANT_SHPOOL=0"
+result="$(_fish_run '
+    set -gx WANT_SHPOOL 0
     function have_command; return 0; end
     session_backend
 ')"
 assert_equal "tmux" "$result"
 
-start_test "fish session_backend uses shpool when WANT_TMUX=0"
+start_test "fish session_backend uses tmux when shpool missing"
 result="$(_fish_run '
-    set -gx WANT_TMUX 0
-    function have_command; return 0; end
+    function have_command; contains $argv[1] tmux autotmux; end
     session_backend
 ')"
-assert_equal "shpool" "$result"
-
-start_test "fish session_backend uses shpool when tmux missing"
-result="$(_fish_run '
-    function have_command; test $argv[1] = shpool; end
-    session_backend
-')"
-assert_equal "shpool" "$result"
+assert_equal "tmux" "$result"
 
 start_test "fish session_backend uses shpool when autotmux missing"
 result="$(_fish_run '
@@ -441,6 +441,32 @@ result="$(_fish_run '
     echo "[$_b]"
 ')"
 assert_equal "[]" "$result"
+
+# SESSION_BACKEND=tmux flips the preference: tmux preferred, shpool fallback.
+start_test "fish session_backend prefers tmux when SESSION_BACKEND=tmux"
+result="$(_fish_run '
+    set -gx SESSION_BACKEND tmux
+    function have_command; return 0; end
+    session_backend
+')"
+assert_equal "tmux" "$result"
+
+start_test "fish session_backend SESSION_BACKEND=tmux falls back to shpool when tmux missing"
+result="$(_fish_run '
+    set -gx SESSION_BACKEND tmux
+    function have_command; test $argv[1] = shpool; end
+    session_backend
+')"
+assert_equal "shpool" "$result"
+
+start_test "fish session_backend honours WANT_TMUX=0 over SESSION_BACKEND=tmux"
+result="$(_fish_run '
+    set -gx SESSION_BACKEND tmux
+    set -gx WANT_TMUX 0
+    function have_command; return 0; end
+    session_backend
+')"
+assert_equal "shpool" "$result"
 
 ###############
 # TEST: sessionattach / sessionlist dispatch to the backend
@@ -585,8 +611,9 @@ expected="changesession work
 stayed"
 assert_equal "$expected" "$result"
 
-# cs/ds/ms pass session_backend's choice (which honours WANT_TMUX) as
-# SESSION_BACKEND so the *s scripts don't fall back to tmux for a shpool user.
+# cs/ds/ms pass session_backend's choice (which honours WANT_SHPOOL/WANT_TMUX
+# and the $SESSION_BACKEND preference) as SESSION_BACKEND so the *s scripts
+# don't fall back to tmux for a WANT_SHPOOL=0 user.
 start_test "fish cs passes session_backend to the script as SESSION_BACKEND"
 result="$(_fish_run '
     function session_backend; echo shpool; end
@@ -597,7 +624,7 @@ result="$(_fish_run '
 assert_equal "SESSION_BACKEND=shpool" "$result"
 
 ###############
-# TEST: maybe_start_session_and_exit prefers tmux, falls back to shpool
+# TEST: maybe_start_session_and_exit prefers shpool, falls back to tmux
 
 start_test "fish maybe_start_session_and_exit no-op without a backend"
 result="$(_fish_run '
@@ -607,8 +634,9 @@ result="$(_fish_run '
 ')"
 assert_equal "survived" "$result"
 
-start_test "fish maybe_start_session_and_exit prefers tmux"
+start_test "fish maybe_start_session_and_exit prefers shpool"
 result="$(_fish_run '
+    function session_backend; echo shpool; end
     function want_tmux; return 0; end
     function want_shpool; return 0; end
     function autotmux; echo autotmux-called; end
@@ -616,17 +644,28 @@ result="$(_fish_run '
     maybe_start_session_and_exit
     echo after
 ')"
-assert_equal "autotmux-called" "$result"
+assert_equal "autoshpool-called" "$result"
 
-start_test "fish maybe_start_session_and_exit falls back to shpool when want_tmux false"
+start_test "fish maybe_start_session_and_exit falls back to tmux when session_backend is tmux"
 result="$(_fish_run '
-    function want_tmux; return 1; end
-    function want_shpool; return 0; end
-    function autoshpool; echo autoshpool-called; end
+    function session_backend; echo tmux; end
+    function want_tmux; return 0; end
+    function want_shpool; return 1; end
+    function autotmux; echo autotmux-called; end
     maybe_start_session_and_exit
     echo after
 ')"
-assert_equal "autoshpool-called" "$result"
+assert_equal "autotmux-called" "$result"
+
+start_test "fish maybe_start_session_and_exit skips shpool when want_shpool false"
+result="$(_fish_run '
+    function session_backend; echo shpool; end
+    function want_shpool; return 1; end
+    function autoshpool; echo autoshpool-called; end
+    maybe_start_session_and_exit
+    echo survived
+')"
+assert_equal "survived" "$result"
 
 ###############
 # TEST: CDPATH is set for all shells (not just interactive)

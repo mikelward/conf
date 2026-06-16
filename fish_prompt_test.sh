@@ -341,7 +341,7 @@ assert_equal "laptop tmux" "$result"
 
 start_test "fish host_info warning falls back to session_backend"
 # With no $SESSION_BACKEND, the warning names the backend the gating
-# would actually start (session_backend, tmux by default).
+# would actually start (session_backend, shpool by default).
 result="$(_fish_run '
     set -g HOSTNAME mikel-laptop
     set -g USERNAME mikel

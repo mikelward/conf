@@ -198,7 +198,7 @@ unset SESSION_BACKEND
 
 start_test "host_info warning falls back to session_backend"
 # With no $SESSION_BACKEND, the warning names the backend the gating
-# would actually start (session_backend, tmux by default).
+# would actually start (session_backend, shpool by default).
 in_shpool() { false; }
 session_backend() { puts tmux; }
 result="$(host_info)"
