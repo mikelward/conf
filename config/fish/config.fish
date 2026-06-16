@@ -982,10 +982,12 @@ if is_interactive
     # make* mirror change*'s exit handling: inside a shpool session makeshpool
     # hands the new session to autoshpool's loop via request_switch (detaching
     # us), so the parked shell must exit. make always targets a named session
-    # (no no-arg picker path), so there's no count==0 gate; just exit when shpool
-    # was the backend that ran (in shpool, not tmux). msp forces shpool.
-    function ms; set -lx SESSION_BACKEND (session_backend); test -n "$TMUX$SHPOOL_SESSION_NAME$SESSION_BACKEND"; and makesession $argv; and test -z "$TMUX"; and test -n "$SHPOOL_SESSION_NAME"; and exit; end
-    function msp; makeshpool $argv; and test -n "$SHPOOL_SESSION_NAME"; and exit; end
+    # (no no-arg picker path), so there's no count==0 gate; exit when shpool was
+    # the backend that ran (in shpool, not tmux). msp forces shpool. Capture the
+    # make's status and run the exit guard separately so a make that succeeds but
+    # doesn't exit still returns its own status, not the failed guard's 1.
+    function ms; set -lx SESSION_BACKEND (session_backend); test -n "$TMUX$SHPOOL_SESSION_NAME$SESSION_BACKEND"; or return; makesession $argv; set -l rc $status; test $rc -eq 0; and test -z "$TMUX"; and test -n "$SHPOOL_SESSION_NAME"; and exit; return $rc; end
+    function msp; makeshpool $argv; set -l rc $status; test $rc -eq 0; and test -n "$SHPOOL_SESSION_NAME"; and exit; return $rc; end
     alias mtm='maketmux'
     alias bindkeys='daemon xbindkeys'
     set code_patterns "*.c" "*.h" "*.cc" "*.cpp" "*.hh" "*.coffee" "*.go" "*.hs" "*.java" "*.js" "*.pl" "*.py" "*.sh" "*.rb" "*.swig" "*.ts"

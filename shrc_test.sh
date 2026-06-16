@@ -1582,6 +1582,39 @@ rm -f "$_alias_calls"
 assert_equal "made
 stayed" "$(cat "$_alias_calls")"
 
+# A make that succeeds but does not exit must return its own status (0), not the
+# failed exit guard's 1 -- otherwise `ms ... && ...` and $? checks break.
+start_test "ms returns success when a successful make does not exit"
+rm -f "$_alias_calls"
+(
+    makesession() { return 0; }
+    unset TMUX SHPOOL_SESSION_NAME
+    ms newproj
+    echo "rc=$?" >> "$_alias_calls"
+)
+assert_equal "rc=0" "$(cat "$_alias_calls")"
+
+start_test "msp returns success when a successful make does not exit"
+rm -f "$_alias_calls"
+(
+    makeshpool() { return 0; }
+    unset SHPOOL_SESSION_NAME
+    msp newproj
+    echo "rc=$?" >> "$_alias_calls"
+)
+assert_equal "rc=0" "$(cat "$_alias_calls")"
+
+# A failed make propagates its non-zero status rather than being masked.
+start_test "ms returns a failed make's status"
+rm -f "$_alias_calls"
+(
+    makesession() { return 3; }
+    unset TMUX SHPOOL_SESSION_NAME
+    ms newproj
+    echo "rc=$?" >> "$_alias_calls"
+)
+assert_equal "rc=3" "$(cat "$_alias_calls")"
+
 unset -f jjd hgd gitd autosession jd hd gd mjd mhd mgd _extract_oneliner
 unset -f autoshpool autotmux changesession changeshpool changetmux session_backend
 unset -f detachsession detachshpool detachtmux makesession makeshpool maketmux

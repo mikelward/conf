@@ -1477,17 +1477,19 @@ alias dtm = ^detachtmux
 # make* mirror change*'s exit handling: inside a shpool session makeshpool hands
 # the new session to autoshpool's loop via request_switch (detaching us), so the
 # parked shell must exit. make always targets a named session (no no-arg picker
-# path), so there's no empty-args gate; just exit when shpool was the backend
-# that ran (in shpool, not tmux). msp forces shpool.
+# path), so there's no empty-args gate; exit when shpool was the backend that ran
+# (in shpool, not tmux). msp forces shpool. Run the make directly (no try/catch
+# that would swallow its status): a failed make aborts and the error propagates,
+# while a success falls through to the exit guard and returns cleanly.
 def --wrapped ms [...args] {
     let backend = (session-backend)
     if (skip-session-script $backend) { return }
-    let ok = (try { with-env { SESSION_BACKEND: $backend } { ^makesession ...$args }; true } catch { false })
-    if $ok and (($env.TMUX? | default "") | is-empty) and (($env.SHPOOL_SESSION_NAME? | default "") | is-not-empty) { exit }
+    with-env { SESSION_BACKEND: $backend } { ^makesession ...$args }
+    if (($env.TMUX? | default "") | is-empty) and (($env.SHPOOL_SESSION_NAME? | default "") | is-not-empty) { exit }
 }
 def --wrapped msp [...args] {
-    let ok = (try { ^makeshpool ...$args; true } catch { false })
-    if $ok and (($env.SHPOOL_SESSION_NAME? | default "") | is-not-empty) { exit }
+    ^makeshpool ...$args
+    if (($env.SHPOOL_SESSION_NAME? | default "") | is-not-empty) { exit }
 }
 alias mtm = ^maketmux
 

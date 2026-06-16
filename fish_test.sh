@@ -618,6 +618,37 @@ expected="made
 stayed"
 assert_equal "$expected" "$result"
 
+# A make that succeeds but does not exit must return its own status (0), not the
+# failed exit guard's 1.
+start_test "fish ms returns success when a successful make does not exit"
+result="$(_fish_run '
+    function session_backend; echo tmux; end
+    function makesession; return 0; end
+    set -e TMUX SHPOOL_SESSION_NAME
+    ms newproj
+    echo "rc=$status"
+')"
+assert_equal "rc=0" "$result"
+
+start_test "fish msp returns success when a successful make does not exit"
+result="$(_fish_run '
+    function makeshpool; return 0; end
+    set -e SHPOOL_SESSION_NAME
+    msp newproj
+    echo "rc=$status"
+')"
+assert_equal "rc=0" "$result"
+
+start_test "fish ms returns a failed make's status"
+result="$(_fish_run '
+    function session_backend; echo tmux; end
+    function makesession; return 3; end
+    set -e TMUX SHPOOL_SESSION_NAME
+    ms newproj
+    echo "rc=$status"
+')"
+assert_equal "rc=3" "$result"
+
 # When no backend is wanted/available and we aren't in a session, cs/ds/ms
 # do nothing rather than let the script fall back to tmux; inside a session
 # they still act on it ($TMUX/$SHPOOL_SESSION_NAME win in the script).
