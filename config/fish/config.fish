@@ -1070,7 +1070,7 @@ if is_interactive
     alias py2='python2'
     alias py3='python3'
     alias rerc='source $HOME/.config/fish/config.fish'
-    alias rg='rgrep -In --dereference-recursive --exclude-dir=".*"'
+    alias rg='command rg --follow'
     function rh
         gh $argv | tail -n 20
     end

@@ -2712,23 +2712,17 @@ except OSError: pass
     })
 
     ###############
-    # rg invokes rgrep with --dereference-recursive (follow symlinks)
-    # instead of plain --recursive.
-    (run-test "nu rg invokes rgrep with --dereference-recursive" {
+    # rg shells out to ripgrep with --follow.
+    (run-test "nu rg invokes ripgrep with --follow" {
         let bin = (mktemp -d)
         let log = (mktemp -t "rg-args.XXXXXX")
-        ("#!/bin/sh\nprintf '%s\\n' \"$@\" > \"" + $log + "\"\n") | save -f ($bin | path join "rgrep")
-        ^chmod +x ($bin | path join "rgrep")
+        ("#!/bin/sh\nprintf '%s\\n' \"$@\" > \"" + $log + "\"\n") | save -f ($bin | path join "rg")
+        ^chmod +x ($bin | path join "rg")
         with-env {PATH: ([$bin] ++ $env.PATH)} {
             rg pattern path
         }
         let args = (open $log)
-        # `--recursive` is the flag we replaced. `--dereference-recursive`
-        # has only one `-` before `recursive`, so a substring check for
-        # `--recursive` cleanly rejects regressions without false-matching
-        # the new flag.
-        assert ($args | str contains "--dereference-recursive") $"expected --dereference-recursive in args, got: ($args)"
-        assert (not ($args | str contains "--recursive\n")) $"unexpected --recursive flag: ($args)"
+        assert ($args | str contains "--follow") $"expected --follow in args, got: ($args)"
         assert ($args | str contains "pattern") $"expected user arg 'pattern', got: ($args)"
         assert ($args | str contains "path") $"expected user arg 'path', got: ($args)"
     })

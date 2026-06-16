@@ -869,31 +869,21 @@ result="$(_fish_run_config '
 assert_equal "built" "$result"
 
 ###############
-# TEST: rg invokes rgrep with --dereference-recursive (follow symlinks)
-# instead of the plain --recursive flag.
+# TEST: rg shells out to ripgrep with --follow to follow symlinks.
 
 _fish_rg_dir=$(mktemp -d)
-cat > "$_fish_rg_dir/rgrep" << 'STUB'
+cat > "$_fish_rg_dir/rg" << 'STUB'
 #!/bin/sh
 printf '%s\n' "$@"
 STUB
-chmod +x "$_fish_rg_dir/rgrep"
+chmod +x "$_fish_rg_dir/rg"
 
-start_test "fish rg invokes rgrep with --dereference-recursive"
+start_test "fish rg invokes ripgrep with --follow"
 result="$(_fish_run "
     set -gx PATH $_fish_rg_dir \$PATH
     rg pattern path
 ")"
-assert_contains "--dereference-recursive" "$result"
-
-start_test "fish rg does not use plain --recursive"
-result="$(_fish_run "
-    set -gx PATH $_fish_rg_dir \$PATH
-    rg pattern path
-")"
-# `--recursive` is the flag we replaced. `--dereference-recursive` lacks
-# the leading `--` before `recursive`, so this rejects regressions cleanly.
-assert_not_contains "--recursive" "$result"
+assert_contains "--follow" "$result"
 
 start_test "fish rg passes through user arguments"
 result="$(_fish_run "
