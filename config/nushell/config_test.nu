@@ -2723,6 +2723,7 @@ except OSError: pass
         }
         let args = (open $log)
         assert ($args | str contains "--follow") $"expected --follow in args, got: ($args)"
+        assert ($args | str contains "--line-number") $"expected --line-number in args, got: ($args)"
         assert ($args | str contains "pattern") $"expected user arg 'pattern', got: ($args)"
         assert ($args | str contains "path") $"expected user arg 'path', got: ($args)"
     })

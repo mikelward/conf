@@ -1582,6 +1582,10 @@ start_test "rg invokes ripgrep with --follow"
 PATH="$_rg_dir:$PATH" rg pattern path
 assert_contains "--follow" "$(cat "$_rg_log")"
 
+start_test "rg forces --line-number so piped output keeps line numbers"
+PATH="$_rg_dir:$PATH" rg pattern path
+assert_contains "--line-number" "$(cat "$_rg_log")"
+
 start_test "rg passes through user arguments"
 PATH="$_rg_dir:$PATH" rg pattern path
 assert_contains "pattern" "$(cat "$_rg_log")"
