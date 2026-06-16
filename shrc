@@ -1409,9 +1409,10 @@ maybe_background_fetch() {
 # print the hostname and session tag for the preprompt line.
 # Hostname is red on production hosts. The session tag is a green session
 # name when attached to a shpool or tmux session, or a yellow warning naming
-# the wanted backend ($SESSION_BACKEND, defaulting to shpool) when not. The
-# session name comes from session_name (which carries a trailing space for
-# the window title); trim it for the tag.
+# the backend that would start when not: $SESSION_BACKEND if set, else the
+# session_backend the gating would pick (tmux by default), falling back to
+# shpool. The session name comes from session_name (which carries a trailing
+# space for the window title); trim it for the tag.
 host_info() {
     local _host="$(short_hostname)"
     if on_production_host; then
@@ -1427,7 +1428,8 @@ host_info() {
     if test -n "$_session"; then
         _tag=" $(green "$_session")"
     else
-        _tag=" $(yellow "${SESSION_BACKEND:-shpool}")"
+        local _backend="${SESSION_BACKEND:-$(session_backend)}"
+        _tag=" $(yellow "${_backend:-shpool}")"
     fi
     printf '%s%s%s' "$_root_info" "$_host" "$_tag"
 }

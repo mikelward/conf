@@ -1212,8 +1212,9 @@ if is_interactive
     # print the hostname and session tag for the preprompt line.
     # Hostname is red on production hosts. The session tag is a green
     # session name when attached to a shpool or tmux session, or a yellow
-    # warning naming the wanted backend ($SESSION_BACKEND, defaulting to
-    # shpool) when not.
+    # warning naming the backend that would start when not: $SESSION_BACKEND
+    # if set, else the session_backend the gating would pick (tmux by
+    # default), falling back to shpool.
     function host_info
         set _host (short_hostname | string collect)
         if on_production_host
@@ -1228,8 +1229,9 @@ if is_interactive
         if test -n "$_session"
             set _tag " "(green $_session | string collect)
         else
-            set _backend shpool
-            test -n "$SESSION_BACKEND"; and set _backend $SESSION_BACKEND
+            set _backend $SESSION_BACKEND
+            test -z "$_backend"; and set _backend (session_backend | string collect)
+            test -z "$_backend"; and set _backend shpool
             set _tag " "(yellow $_backend | string collect)
         end
         printf '%s%s%s' $_root_info $_host $_tag

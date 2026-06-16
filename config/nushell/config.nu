@@ -961,7 +961,9 @@ def prompt-info [...flags: string] { do $env.prompt-info $flags }
 # print the hostname and session tag for the preprompt line.
 # Hostname is red on production hosts. The session tag is a green session
 # name when attached to a shpool or tmux session, or a yellow warning naming
-# the wanted backend ($SESSION_BACKEND, defaulting to shpool) when not.
+# the backend that would start when not: $SESSION_BACKEND if set, else the
+# session-backend the gating would pick (tmux by default), falling back to
+# shpool.
 def host-info [] {
     let h = (short-hostname)
     let host = if (on-production-host) { red $h } else { $h }
@@ -970,7 +972,9 @@ def host-info [] {
     let tag = if ($session | is-not-empty) {
         $" (green $session)"
     } else {
-        let backend = ($env.SESSION_BACKEND? | default "shpool")
+        let want = ($env.SESSION_BACKEND? | default "")
+        let want = if ($want | is-empty) { (session-backend) } else { $want }
+        let backend = if ($want | is-empty) { "shpool" } else { $want }
         $" (yellow $backend)"
     }
     $root_info + $host + $tag
