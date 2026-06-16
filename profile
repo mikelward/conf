@@ -23,9 +23,12 @@ is_zsh() {
 # The DOTENV_SOURCED sentinel (set there too) keeps a zsh login from applying
 # ~/.env a second time via .zlogin, and keeps the zsh-to-bash re-exec from
 # re-applying it on top of the inherited values. Keep ~/.env to plain
-# variable assignments only.
+# variable assignments only; `set -a` auto-exports them so the file can use
+# the bare `VAR=val` format that gcloud and other tools expect.
 if test -z "${DOTENV_SOURCED:-}" && test -f "$HOME/.env"; then
+    set -a
     . "$HOME/.env"
+    set +a
     export DOTENV_SOURCED=1
 fi
 

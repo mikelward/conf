@@ -1102,6 +1102,49 @@ _dotenv_result=$(
 )
 assert_equal "1" "$_dotenv_result"
 
+# zshenv and profile wrap the ~/.env source in `set -a` / `set +a` so bare
+# `VAR=val` lines (the format gcloud and other deployment tools expect) are
+# auto-exported into child processes -- and `set +a` is restored so the
+# caller's allexport state doesn't leak.
+start_test "zshenv wraps ~/.env sourcing in set -a / set +a"
+assert_true grep -qF 'set -a' "$_srcdir/zshenv"
+assert_true grep -qF 'set +a' "$_srcdir/zshenv"
+
+start_test "profile wraps ~/.env sourcing in set -a / set +a"
+assert_true grep -qF 'set -a' "$_srcdir/profile"
+assert_true grep -qF 'set +a' "$_srcdir/profile"
+
+start_test "set -a around ~/.env exports bare VAR=val to children"
+_dotenv="$_testdir/dotenv_bare"
+printf 'BARE_VAR=hello\n' > "$_dotenv"
+_dotenv_bare_result=$(
+    unset DOTENV_SOURCED BARE_VAR
+    if test -z "${DOTENV_SOURCED:-}" && test -f "$_dotenv"; then
+        set -a
+        . "$_dotenv"
+        set +a
+        export DOTENV_SOURCED=1
+    fi
+    sh -c 'echo "$BARE_VAR"'
+)
+assert_equal "hello" "$_dotenv_bare_result"
+
+start_test "set +a restores allexport state after ~/.env sourcing"
+_dotenv="$_testdir/dotenv_bare"
+printf 'BARE_VAR=hello\n' > "$_dotenv"
+_dotenv_allexport=$(
+    unset DOTENV_SOURCED BARE_VAR
+    if test -z "${DOTENV_SOURCED:-}" && test -f "$_dotenv"; then
+        set -a
+        . "$_dotenv"
+        set +a
+        export DOTENV_SOURCED=1
+    fi
+    LATER_VAR=world
+    sh -c 'echo "${LATER_VAR:-unset}"'
+)
+assert_equal "unset" "$_dotenv_allexport"
+
 # Test session_backend / autosession / switchsession dispatch. session_backend
 # names the preferred manager; the wrappers route to the matching binary. The
 # tmux branch requires both tmux and autotmux.
