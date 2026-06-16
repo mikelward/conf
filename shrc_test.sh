@@ -1534,6 +1534,54 @@ rm -f "$_alias_calls"
 )
 assert_equal "changesession work" "$(cat "$_alias_calls")"
 
+# make* mirror change*'s exit handling. Inside a shpool session makeshpool hands
+# the new session to autoshpool's loop via request_switch (detaching us), so the
+# parked shell must exit. Unlike cs there's no no-arg gate: make always names a
+# session, so it exits with an argument too.
+start_test "ms exits the shell after a shpool make"
+rm -f "$_alias_calls"
+(
+    makesession() { echo made >> "$_alias_calls"; }
+    unset TMUX; SHPOOL_SESSION_NAME=work
+    ms newproj
+    echo stayed >> "$_alias_calls"
+)
+assert_equal "made" "$(cat "$_alias_calls")"
+
+start_test "msp exits the shell after a shpool make"
+rm -f "$_alias_calls"
+(
+    makeshpool() { echo made >> "$_alias_calls"; }
+    SHPOOL_SESSION_NAME=work
+    msp newproj
+    echo stayed >> "$_alias_calls"
+)
+assert_equal "made" "$(cat "$_alias_calls")"
+
+start_test "ms does not exit outside a shpool session"
+rm -f "$_alias_calls"
+(
+    makesession() { echo made >> "$_alias_calls"; }
+    unset TMUX SHPOOL_SESSION_NAME
+    ms newproj
+    echo stayed >> "$_alias_calls"
+)
+assert_equal "made
+stayed" "$(cat "$_alias_calls")"
+
+# tmux nested in shpool sets both vars; maketmux switches the tmux client in
+# place, so ms must stay (not exit) there.
+start_test "ms does not exit for tmux nested in shpool"
+rm -f "$_alias_calls"
+(
+    makesession() { echo made >> "$_alias_calls"; }
+    TMUX=/tmp/sock; SHPOOL_SESSION_NAME=work
+    ms newproj
+    echo stayed >> "$_alias_calls"
+)
+assert_equal "made
+stayed" "$(cat "$_alias_calls")"
+
 unset -f jjd hgd gitd autosession jd hd gd mjd mhd mgd _extract_oneliner
 unset -f autoshpool autotmux changesession changeshpool changetmux session_backend
 unset -f detachsession detachshpool detachtmux makesession makeshpool maketmux

@@ -570,6 +570,54 @@ expected="switched
 stayed"
 assert_equal "$expected" "$result"
 
+# make* mirror change*'s exit handling: inside a shpool session makeshpool hands
+# the new session to autoshpool's loop via request_switch (detaching us), so the
+# parked shell must exit. Unlike cs there's no no-arg gate: make always names a
+# session, so it exits with an argument too.
+start_test "fish ms exits the shell after a shpool make"
+result="$(_fish_run '
+    function makesession; echo made; end
+    set -gx SHPOOL_SESSION_NAME work
+    ms newproj
+    echo stayed
+')"
+assert_equal "made" "$result"
+
+start_test "fish msp exits the shell after a shpool make"
+result="$(_fish_run '
+    function makeshpool; echo made; end
+    set -gx SHPOOL_SESSION_NAME work
+    msp newproj
+    echo stayed
+')"
+assert_equal "made" "$result"
+
+start_test "fish ms does not exit outside a shpool session"
+result="$(_fish_run '
+    function session_backend; echo tmux; end
+    function makesession; echo made; end
+    set -e SHPOOL_SESSION_NAME
+    ms newproj
+    echo stayed
+')"
+expected="made
+stayed"
+assert_equal "$expected" "$result"
+
+# tmux nested in shpool sets both vars; maketmux switches the tmux client in
+# place, so ms must stay (not exit) there.
+start_test "fish ms does not exit for tmux nested in shpool"
+result="$(_fish_run '
+    function makesession; echo made; end
+    set -gx TMUX /tmp/sock
+    set -gx SHPOOL_SESSION_NAME work
+    ms newproj
+    echo stayed
+')"
+expected="made
+stayed"
+assert_equal "$expected" "$result"
+
 # When no backend is wanted/available and we aren't in a session, cs/ds/ms
 # do nothing rather than let the script fall back to tmux; inside a session
 # they still act on it ($TMUX/$SHPOOL_SESSION_NAME win in the script).

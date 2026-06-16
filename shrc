@@ -2037,8 +2037,14 @@ if is_interactive; then
     ds() { local b; b="$(session_backend)"; test -n "$TMUX$SHPOOL_SESSION_NAME$b" && SESSION_BACKEND="$b" detachsession "$@"; }
     dsp() { detachshpool "$@"; }
     dtm() { detachtmux "$@"; }
-    ms() { local b; b="$(session_backend)"; test -n "$TMUX$SHPOOL_SESSION_NAME$b" && SESSION_BACKEND="$b" makesession "$@"; }
-    msp() { makeshpool "$@"; }
+    # make* mirror change*'s exit handling: inside a shpool session maketmux
+    # switches the live client in place, but makeshpool hands the new session to
+    # autoshpool's outer loop via request_switch (detaching us), so the parked
+    # shell must exit -- same as cs/csp. make always targets a named session (no
+    # no-arg picker path), so there's no `$# -eq 0` gate; just exit when shpool
+    # was the backend that ran (in shpool, not tmux). msp forces shpool.
+    ms() { local b; b="$(session_backend)"; test -n "$TMUX$SHPOOL_SESSION_NAME$b" && SESSION_BACKEND="$b" makesession "$@" && test -z "$TMUX" && test -n "$SHPOOL_SESSION_NAME" && exit; }
+    msp() { makeshpool "$@" && test -n "$SHPOOL_SESSION_NAME" && exit; }
     mtm() { maketmux "$@"; }
     bindkeys() { daemon xbindkeys "$@"; }
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.go,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}"
