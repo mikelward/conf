@@ -827,7 +827,6 @@ function set_up_ssh_aliases
         end
     end <$_ssh_config
 end
-set_up_ssh_aliases
 
 #########################
 # INTERACTIVE SHELL SETUP
@@ -842,6 +841,11 @@ if is_interactive
         set --erase SHPOOL_INITIAL_PWD
     end
     maybe_start_session_and_exit
+
+    # Past this point we're the shell we're keeping (the handoff exits if it
+    # started a session). Build the ssh-config host aliases here -- an
+    # interactive convenience a launcher/handoff skips.
+    set_up_ssh_aliases
 
     log_history "New session as $USERNAME: $0 $argv"
 

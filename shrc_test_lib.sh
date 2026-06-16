@@ -281,7 +281,7 @@ _now_ns() {
 # still pretend to be bash because the dash test run is really a
 # portability cross-check of shrc's bash-ish code paths.
 #
-# Under zsh we also replay shrc's setup_shell_compat function so
+# Under zsh we also replay shrc's setup_shell_compat_common function so
 # `emulate sh` and friends take effect before any extracted function
 # runs. Without that, `IFS=:; for dir in $PATH` doesn't word-split
 # (zsh doesn't split unquoted vars by default) and path / inpath /
@@ -293,12 +293,12 @@ zsh)
     is_dash() { false; }
     is_sh() { false; }
     shell=zsh
-    # Pull shrc's setup_shell_compat out with a direct sed so we can
+    # Pull shrc's setup_shell_compat_common out with a direct sed so we can
     # invoke it before extract_func itself is defined further down.
-    eval "$(sed -n '/^setup_shell_compat()/,/^}/p' \
+    eval "$(sed -n '/^setup_shell_compat_common()/,/^}/p' \
         "$(cd "$(dirname "$0")" && pwd)/shrc")"
-    if type setup_shell_compat >/dev/null 2>&1; then
-        setup_shell_compat
+    if type setup_shell_compat_common >/dev/null 2>&1; then
+        setup_shell_compat_common
     fi
     ;;
 bash)
@@ -314,7 +314,7 @@ bash)
     # bash-branch code paths, but we now source shrc as a whole under
     # each real interpreter -- the dash run is a portability cross-
     # check of dash semantics, not a fake-bash-under-dash one. The fake
-    # also caused setup_shell_compat to take its bash branch and emit
+    # also caused setup_shell_compat_common to take its bash branch and emit
     # `shopt: not found` warnings on every dash test source.
     is_zsh() { false; }
     is_bash() { false; }

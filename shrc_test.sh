@@ -999,6 +999,109 @@ start_test "maybe_start_session_and_exit starts no backend when neither wanted"
 assert_false test -f "$_autotmux_calls"
 assert_false test -f "$_autoshpool_calls"
 
+######################################
+# Shell re-exec: switching $SHELL via ~/.env without chsh. sshd always
+# launches the /etc/passwd login shell and ignores $SHELL, so the login shell
+# re-execs into $SHELL itself. want_reexec is the (interactive/tty-independent)
+# policy; reexec_into_shell adds the interactive + tty gate and performs it.
+
+# Fake, executable shells so `command -v "$SHELL"` succeeds without depending
+# on bash/zsh living at a particular path on the test host.
+mkdir -p "$_testdir/fakebin"
+printf '#!/bin/sh\nexit 0\n' > "$_testdir/fakebin/bash"
+printf '#!/bin/sh\nexit 0\n' > "$_testdir/fakebin/zsh"
+chmod +x "$_testdir/fakebin/bash" "$_testdir/fakebin/zsh"
+_fakebash="$_testdir/fakebin/bash"
+_fakezsh="$_testdir/fakebin/zsh"
+
+# Run want_reexec in a subshell so the temporary $shell/$SHELL/guard
+# assignments don't bleed into later tests; echo yes/no for the parent.
+_want_reexec_result() {
+    # usage: _want_reexec_result RUNNING_SHELL SHELL_VALUE [GUARD]
+    ( shell="$1"; SHELL="$2"; SHELL_REEXEC_DONE="$3"
+      if want_reexec; then echo yes; else echo no; fi )
+}
+
+start_test "want_reexec switches zsh -> a different supported, executable shell"
+assert_equal "yes" "$(_want_reexec_result zsh "$_fakebash" "")"
+
+start_test "want_reexec switches bash -> a different supported, executable shell"
+assert_equal "yes" "$(_want_reexec_result bash "$_fakezsh" "")"
+
+start_test "want_reexec stays put when SHELL names the running shell"
+assert_equal "no" "$(_want_reexec_result bash "$_fakebash" "")"
+
+start_test "want_reexec ignores an unsupported target shell"
+assert_equal "no" "$(_want_reexec_result zsh "$_testdir/fakebin/fish" "")"
+
+start_test "want_reexec ignores a non-executable target shell"
+assert_equal "no" "$(_want_reexec_result zsh "$_testdir/nope/bash" "")"
+
+start_test "want_reexec does not switch twice (SHELL_REEXEC_DONE guard)"
+assert_equal "no" "$(_want_reexec_result zsh "$_fakebash" "1")"
+
+# reexec_into_shell must NEVER exec for a non-interactive shell, or it would
+# break `ssh host cmd`, scp, rsync, and cron. The test runs non-interactively,
+# so even with want_reexec satisfied it must fall through (the process
+# survives to write the marker rather than being replaced by exec).
+start_test "reexec_into_shell is a no-op in a non-interactive shell"
+rm -f "$_testdir/reexec_survived"
+( shell=zsh; SHELL="$_fakebash"
+  unset SHELL_REEXEC_DONE SHRC_LOAD_FUNCTIONS_ONLY
+  reexec_into_shell
+  echo survived > "$_testdir/reexec_survived" )
+assert_true test -f "$_testdir/reexec_survived"
+
+# The re-exec is limited to login shells, so manually starting the other shell
+# from an existing prompt (e.g. `zsh` from a bash login) isn't hijacked. The
+# test harness itself is a non-login shell, so login_shell is false here.
+start_test "login_shell is false for a non-login shell"
+assert_false login_shell
+
+# Lock in the login gate: reexec_into_shell must consult login_shell.
+start_test "reexec_into_shell is gated on login_shell"
+assert_contains "login_shell || return" \
+    "$(grep -F 'login_shell || return' "$_srcdir/shrc")"
+
+######################################
+# setup_shell_compat_common / setup_shell_compat_interactive split
+# (essential, always-run vs interactive-only)
+
+start_test "setup_shell_compat_common is defined"
+assert_true is_function setup_shell_compat_common
+
+start_test "setup_shell_compat_interactive is defined"
+assert_true is_function setup_shell_compat_interactive
+
+start_test "setup_shell_compat_interactive runs without error"
+assert_true setup_shell_compat_interactive
+
+######################################
+# ~/.env is applied once per process tree via the exported DOTENV_SOURCED
+# sentinel, so a zsh login's .zlogin re-read and a zsh->bash re-exec don't
+# re-apply self-referential assignments like `export PATH="$HOME/bin:$PATH"`.
+
+start_test "zshenv guards ~/.env sourcing with the DOTENV_SOURCED sentinel"
+assert_contains "export DOTENV_SOURCED=1" \
+    "$(grep -F 'export DOTENV_SOURCED=1' "$_srcdir/zshenv")"
+
+start_test "profile guards ~/.env sourcing with the DOTENV_SOURCED sentinel"
+assert_contains "export DOTENV_SOURCED=1" \
+    "$(grep -F 'export DOTENV_SOURCED=1' "$_srcdir/profile")"
+
+# Behavioural check of the guard pattern: running the guarded source twice
+# (as zshenv then profile would) applies ~/.env only once.
+start_test "DOTENV_SOURCED sentinel applies ~/.env only once"
+_dotenv="$_testdir/dotenv"
+printf 'COUNT_VAR=$((${COUNT_VAR:-0}+1)); export COUNT_VAR\n' > "$_dotenv"
+_dotenv_result=$(
+    unset DOTENV_SOURCED COUNT_VAR
+    if test -z "${DOTENV_SOURCED:-}" && test -f "$_dotenv"; then . "$_dotenv"; export DOTENV_SOURCED=1; fi
+    if test -z "${DOTENV_SOURCED:-}" && test -f "$_dotenv"; then . "$_dotenv"; export DOTENV_SOURCED=1; fi
+    echo "$COUNT_VAR"
+)
+assert_equal "1" "$_dotenv_result"
+
 # Test session_backend / autosession / switchsession dispatch. session_backend
 # names the preferred manager; the wrappers route to the matching binary. The
 # tmux branch requires both tmux and autotmux.

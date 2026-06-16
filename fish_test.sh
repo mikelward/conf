@@ -851,4 +851,21 @@ _failsafe_out="$(HOME=$_fish_failsafe_home run_with_timeout 15 \
 assert_contains "failsafe mode" "$_failsafe_out"
 assert_contains "AFTER" "$_failsafe_out"
 
+###############
+# TEST: set_up_ssh_aliases is deferred into the interactive block (after the
+# handoff), so a launcher that hands off never builds the aliases. WANT_TMUX/
+# WANT_SHPOOL=0 keep maybe_start_session_and_exit from firing here.
+
+# The interactive block runs set_up_ssh_aliases, so a Host alias function is built.
+start_test "fish interactive block builds ssh aliases after the handoff"
+result="$(_fish_run_config '
+    set -gx WANT_TMUX 0
+    set -gx WANT_SHPOOL 0
+    mkdir -p $HOME/.ssh
+    printf "%s\n" "Host foo" >$HOME/.ssh/config
+' '' '
+    if functions --query foo; echo built; else; echo skipped; end
+')"
+assert_equal "built" "$result"
+
 test_summary "fish_test"

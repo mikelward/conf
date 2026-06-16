@@ -20,4 +20,26 @@ result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
 ' </dev/null 2>/dev/null | grep -E '^(ON|OFF)$' | tail -1)
 assert_equal "ON" "$result"
 
+# Regression: the interactive-only zsh setopts (history/completion/prompt)
+# were split out of setup_shell_compat_common into setup_shell_compat_interactive,
+# which the interactive block runs only after the session handoff. Under an
+# interactive zsh the block runs, so SHARE_HISTORY is enabled...
+start_test "shrc enables SHARE_HISTORY under interactive zsh"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    if [[ -o SHARE_HISTORY ]]; then print -r "ON"; else print -r "OFF"; fi
+' </dev/null 2>/dev/null | grep -E '^(ON|OFF)$' | tail -1)
+assert_equal "ON" "$result"
+
+# ...but loading only the function defs + essential compat
+# (SHRC_LOAD_FUNCTIONS_ONLY skips the interactive block) leaves it OFF,
+# proving the setopt was deferred out of setup_shell_compat_common rather than
+# run on every source -- so a launcher that re-execs or hands off skips it.
+start_test "shrc defers SHARE_HISTORY out of essential setup_shell_compat_common"
+result=$(zsh --no-rcs -c '
+    SHRC_LOAD_FUNCTIONS_ONLY=1 source '"$_srcdir"'/shrc >/dev/null 2>&1
+    if [[ -o SHARE_HISTORY ]]; then print -r "ON"; else print -r "OFF"; fi
+' </dev/null 2>/dev/null | grep -E '^(ON|OFF)$' | tail -1)
+assert_equal "OFF" "$result"
+
 test_summary "shrc_zsh_test"
