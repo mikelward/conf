@@ -1257,6 +1257,41 @@ except OSError: pass
         } | complete)
         assert ($out.stdout | str contains "stayed")
     })
+    # make* mirror change*'s exit handling: inside a shpool session makeshpool
+    # hands the new session to autoshpool's loop via request_switch (detaching
+    # us), so the parked shell must exit. Unlike cs there's no empty-args gate:
+    # make always names a session, so it exits with an argument too.
+    (run-test "nu msp exits the shell after a shpool make" {
+        let bin = (mktemp -d)
+        "#!/bin/sh\necho makeshpool-called\n" | save -f ($bin | path join "makeshpool")
+        ^chmod +x ($bin | path join "makeshpool")
+        let out = (with-env { SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
+            ^nu --no-config-file -c $"source ($CONFIG); msp newproj; print stayed"
+        } | complete)
+        assert ($out.stdout | str contains "makeshpool-called")
+        assert (not ($out.stdout | str contains "stayed"))
+    })
+    (run-test "nu ms exits the shell after a shpool make" {
+        let bin = (mktemp -d)
+        "#!/bin/sh\necho makesession-called\n" | save -f ($bin | path join "makesession")
+        ^chmod +x ($bin | path join "makesession")
+        let out = (with-env { SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
+            ^nu --no-config-file -c $"source ($CONFIG); ms newproj; print stayed"
+        } | complete)
+        assert ($out.stdout | str contains "makesession-called")
+        assert (not ($out.stdout | str contains "stayed"))
+    })
+    # tmux nested in shpool sets both vars; maketmux switches the tmux client in
+    # place, so ms must NOT exit.
+    (run-test "nu ms does not exit for tmux nested in shpool" {
+        let bin = (mktemp -d)
+        "#!/bin/sh\necho makesession-called\n" | save -f ($bin | path join "makesession")
+        ^chmod +x ($bin | path join "makesession")
+        let out = (with-env { TMUX: "/tmp/sock", SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
+            ^nu --no-config-file -c $"source ($CONFIG); ms newproj; print stayed"
+        } | complete)
+        assert ($out.stdout | str contains "stayed")
+    })
     # cs/ds/ms pass session-backend's choice (which honours WANT_SHPOOL/
     # WANT_TMUX and the $SESSION_BACKEND preference) as SESSION_BACKEND so
     # the *s scripts don't fall back to tmux for a WANT_SHPOOL=0 user. With

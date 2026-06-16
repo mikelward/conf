@@ -1474,12 +1474,21 @@ def --wrapped ds [...args] {
 }
 alias dsp = ^detachshpool
 alias dtm = ^detachtmux
+# make* mirror change*'s exit handling: inside a shpool session makeshpool hands
+# the new session to autoshpool's loop via request_switch (detaching us), so the
+# parked shell must exit. make always targets a named session (no no-arg picker
+# path), so there's no empty-args gate; just exit when shpool was the backend
+# that ran (in shpool, not tmux). msp forces shpool.
 def --wrapped ms [...args] {
     let backend = (session-backend)
     if (skip-session-script $backend) { return }
-    with-env { SESSION_BACKEND: $backend } { ^makesession ...$args }
+    let ok = (try { with-env { SESSION_BACKEND: $backend } { ^makesession ...$args }; true } catch { false })
+    if $ok and (($env.TMUX? | default "") | is-empty) and (($env.SHPOOL_SESSION_NAME? | default "") | is-not-empty) { exit }
 }
-alias msp = ^makeshpool
+def --wrapped msp [...args] {
+    let ok = (try { ^makeshpool ...$args; true } catch { false })
+    if $ok and (($env.SHPOOL_SESSION_NAME? | default "") | is-not-empty) { exit }
+}
 alias mtm = ^maketmux
 
 ######################
