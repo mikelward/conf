@@ -2142,7 +2142,7 @@ if is_interactive; then
     py3() { python3 "$@"; }
     r() { fc -e - -- "$@"; }
     rerc() { . "$HOME/.shrc"; }
-    rg() { g --binary-files=without-match --recursive --exclude-dir=".*" "$@"; }
+    rg() { rgrep --binary-files=without-match --line-number --dereference-recursive --exclude-dir=".*" "$@"; }
     rh() { gh "$@" | tail -n 20; }
     q() { xa "$@"; }
     s() { subl "$@"; }
