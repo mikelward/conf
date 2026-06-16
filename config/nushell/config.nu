@@ -826,6 +826,67 @@ def prompt-session-name [] {
     }
 }
 
+# Resolve the per-shell file publish-jobs writes a short summary of
+# the current shell's job table to so a status-bar consumer (tmux,
+# screen, ...) can display it without having to query a foreign
+# shell's job table. Keyed by $TTY (the pty path) rather than the
+# multiplexer's pane id so the same scheme works in any multiplexer,
+# and outside of one. Returns "" (and publishing is silently disabled)
+# when $TTY isn't a /dev/... path or when $XDG_RUNTIME_DIR isn't set
+# -- a /tmp fallback would be a predictable, per-uid path that a
+# local attacker could pre-create as a symlink for the prompt to
+# truncate. $XDG_RUNTIME_DIR is per-user mode 0700 on modern Linux.
+#
+# Nushell has no exit hook, so unlike shrc/fish we can't reliably
+# remove the file on shell exit. The file is rewritten every prompt
+# while the shell is alive, so the worst case is a stale value until
+# the next shell on the same pty publishes its own count.
+def publish-jobs-file [] {
+    let tty = ($env.TTY? | default "")
+    if not ($tty | str starts-with "/dev/") { return "" }
+    let xdg = ($env.XDG_RUNTIME_DIR? | default "")
+    if ($xdg | is-empty) { return "" }
+    $"($xdg)/shell-jobs($tty)"
+}
+
+# Write a single-line "%N command %M command ..." summary of the
+# current shell's job table to publish-jobs-file (e.g. "%1 vi %2
+# tail"). Called from render-prompt so the value refreshes on every
+# prompt redraw. An empty file means "no jobs", so the consumer can
+# just `cat` the file without further parsing. No-op when the publish
+# file can't be resolved (no tty).
+#
+# Wrapped in try so a stale-but-set $XDG_RUNTIME_DIR (e.g. a long-
+# lived tmux session whose /run/user/$UID was cleaned up) silently
+# disables publishing for this prompt instead of surfacing the
+# mkdir/save error and breaking render-prompt.
+def publish-jobs [] {
+    let file = (publish-jobs-file)
+    if ($file | is-empty) { return }
+    try {
+        mkdir ($file | path dirname)
+        let summary = (
+            job list
+            | each {|j|
+                # `job spawn -d` lands in the `description` column on
+                # 0.112.1+, in `tag` on earlier nushells; fall through
+                # to `type` (always present) so the status bar shows
+                # something useful (e.g. "thread") when neither is set.
+                let label = (
+                    $j.description?
+                    | default $j.tag?
+                    | default $j.type?
+                    | default "job"
+                )
+                $"%($j.id) ($label)"
+            }
+            | str join " "
+        )
+        let content = if ($summary | is-empty) { "" } else { $summary + " " }
+        $content | save --force --raw $file
+    }
+}
+
 ##################################
 # ENVIRONMENT SETUP
 # Set $PATH and other variables.
@@ -1120,6 +1181,7 @@ def --env render-prompt [] {
     let cr = (char cr)
     let title_seq = (title-escape (title))
     let bell = (flash-terminal)
+    publish-jobs
     hide-env --ignore-errors _SESSION_NAME
     $"(ansi reset)($bell)($info)($title_seq)($nl)($sep)($cr)($line) ($nl)((ps1-character)) "
 }

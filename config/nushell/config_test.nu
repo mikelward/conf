@@ -2831,6 +2831,80 @@ except OSError: pass
         assert ($r.stderr | str contains "failsafe mode") $"expected failsafe mode on stderr, got: ($r.stderr)"
         assert ($r.stdout | str contains "HISTORY_FILE=SENTINEL")
     })
+
+    ###############
+    # publish-jobs-file resolves a per-tty file under $XDG_RUNTIME_DIR;
+    # publish-jobs writes a "%N command" summary string (empty when
+    # there are no jobs) and swallows errors so a stale-but-set
+    # $XDG_RUNTIME_DIR doesn't break prompt rendering.
+
+    (run-test "nu publish-jobs-file empty when TTY isn't /dev/..." {
+        let r = (with-env {TTY: "not a tty", XDG_RUNTIME_DIR: (mktemp -d)} {
+            publish-jobs-file
+        })
+        assert equal $r ""
+    })
+
+    # We deliberately don't fall back to /tmp -- a predictable per-uid
+    # path under /tmp is a symlink-truncation vector. hide-env inside
+    # the closure scrubs XDG_RUNTIME_DIR for just this call.
+    (run-test "nu publish-jobs-file empty when XDG_RUNTIME_DIR unset" {
+        let r = (with-env {TTY: "/dev/pts/99"} {
+            hide-env --ignore-errors XDG_RUNTIME_DIR
+            publish-jobs-file
+        })
+        assert equal $r ""
+    })
+
+    (run-test "nu publish-jobs-file builds path under XDG_RUNTIME_DIR" {
+        let xdg = (mktemp -d)
+        let r = (with-env {TTY: "/dev/pts/99", XDG_RUNTIME_DIR: $xdg} {
+            publish-jobs-file
+        })
+        assert equal $r $"($xdg)/shell-jobs/dev/pts/99"
+    })
+
+    (run-test "nu publish-jobs writes empty file when no jobs" {
+        let xdg = (mktemp -d)
+        with-env {TTY: "/dev/pts/99", XDG_RUNTIME_DIR: $xdg} {
+            publish-jobs
+            let file = (publish-jobs-file)
+            assert ($file | path exists) $"expected ($file) to exist"
+            let content = (open --raw $file)
+            assert equal $content ""
+        }
+    })
+
+    # `job spawn -d` lands in the `description` column on 0.112.1+, in
+    # `tag` on earlier nushells. Spawn a real job with --description so
+    # we exercise the modern path against the actual job table.
+    (run-test "nu publish-jobs writes %id description per job" {
+        let xdg = (mktemp -d)
+        let id = (job spawn --description vi { sleep 60sec })
+        with-env {TTY: "/dev/pts/99", XDG_RUNTIME_DIR: $xdg} {
+            publish-jobs
+            let file = (publish-jobs-file)
+            let content = (open --raw $file)
+            # Trailing space matches the shrc/fish format so consumers
+            # can concatenate without inserting their own separator.
+            assert equal $content $"%($id) vi "
+        }
+        job kill $id
+    })
+
+    # Regression: a stale but non-empty $XDG_RUNTIME_DIR (e.g. a long-
+    # lived tmux session after /run/user/$UID has been cleaned up)
+    # used to surface mkdir/save errors and break render-prompt.
+    # publish-jobs now wraps the dir creation + write in `try` so it
+    # silently disables for this prompt instead of throwing.
+    (run-test "nu publish-jobs swallows errors when target dir is unwritable" {
+        # /proc is mounted read-only on Linux, so mkdir under it fails.
+        # We don't assert on the file existing; just that no error
+        # leaks out of publish-jobs.
+        with-env {TTY: "/dev/pts/99", XDG_RUNTIME_DIR: "/proc/shell-jobs-test"} {
+            publish-jobs
+        }
+    })
 ]
 
 for r in $results { print $r }

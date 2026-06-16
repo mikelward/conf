@@ -245,13 +245,14 @@ assert_equal "" "$result"
 # TEST: job_info (parity with bash). Renders all background jobs on a
 # single space-separated line so the preprompt stays compact (one line
 # for jobs rather than one line per job). Stub `jobs` to feed
-# deterministic bash-style output into the sed/grep pipeline.
+# deterministic fish-style tabular output into the awk pipeline.
 
 start_test "fish job_info joins multiple jobs onto one line"
 result="$(_fish_run '
     function jobs
-        printf "[1]+  Stopped                 vi\n"
-        printf "[2]-  Stopped                 cat\n"
+        printf "%s\t%s\t%s\t%s\t%s\n" Job Group CPU State Command
+        printf "%s\t%s\t%s\t%s\t%s\n" 1 - 0% stopped vi
+        printf "%s\t%s\t%s\t%s\t%s\n" 2 - 0% stopped cat
     end
     job_info
 ')"
@@ -260,7 +261,8 @@ assert_equal "%1 vi %2 cat" "$result"
 start_test "fish job_info renders a single job without a trailing space"
 result="$(_fish_run '
     function jobs
-        printf "[1]+  Stopped                 vi\n"
+        printf "%s\t%s\t%s\t%s\t%s\n" Job Group CPU State Command
+        printf "%s\t%s\t%s\t%s\t%s\n" 1 - 0% stopped vi
     end
     job_info
 ')"
@@ -273,16 +275,32 @@ result="$(_fish_run '
 ')"
 assert_equal "" "$result"
 
-start_test "fish job_info filters pwd-change noise"
+start_test "fish job_info preserves command args including the trailing &"
+# Background pipelines come through with a trailing "&"; keep the
+# whole command line so the preprompt matches what the user typed.
 result="$(_fish_run '
     function jobs
-        printf "[1]+  Stopped                 vi\n"
-        printf "[2]-  Done                    pushd /tmp  (pwd now: /tmp)\n"
-        printf "[3]+  Stopped                 cat\n"
+        printf "%s\t%s\t%s\t%s\t%s\n" Job Group CPU State Command
+        printf "%s\t%s\t%s\t%s\t%s\n" 1 - 0% running "sleep 100 &"
+        printf "%s\t%s\t%s\t%s\t%s\n" 2 - 0% running "tail -f log &"
     end
     job_info
 ')"
-assert_equal "%1 vi %3 cat" "$result"
+assert_equal "%1 sleep 100 & %2 tail -f log &" "$result"
+
+start_test "fish job_info handles the no-CPU column format"
+# fish docs say CPU is only printed on systems that support it, so
+# `jobs` may emit "Job\tGroup\tState\tCommand" (4 columns instead
+# of 5). Confirm we still pick up the command from the last tab-
+# separated field.
+result="$(_fish_run '
+    function jobs
+        printf "%s\t%s\t%s\t%s\n" Job Group State Command
+        printf "%s\t%s\t%s\t%s\n" 1 - running "sleep 30 &"
+    end
+    job_info
+')"
+assert_equal "%1 sleep 30 &" "$result"
 
 ###############
 # TEST: fish_last_error (parity with bash_last_error / nushell last-job-info)
