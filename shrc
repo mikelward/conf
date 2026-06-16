@@ -2101,7 +2101,9 @@ if is_interactive; then
     # the exit on no args. And only exit when changesession actually picked
     # shpool: it dispatches on $TMUX before $SHPOOL_SESSION_NAME, so a tmux
     # session nested in shpool (both set) switches the tmux client in place and
-    # must stay -- gate on "in shpool, not in tmux". csp forces shpool, so it
+    # must stay -- gate on "in shpool, not in tmux". A cancelled picker (ESC)
+    # returns non-zero, so the `&&` chain stops before `exit` and we stay put.
+    # csp forces shpool, so it
     # detaches whenever we're in a shpool session regardless of tmux.
     cs() { local b; b="$(session_backend)"; test -n "$TMUX$SHPOOL_SESSION_NAME$b" && SESSION_BACKEND="$b" changesession "$@" && test $# -eq 0 && test -z "$TMUX" && test -n "$SHPOOL_SESSION_NAME" && exit; }
     csp() { changeshpool "$@" && test $# -eq 0 && test -n "$SHPOOL_SESSION_NAME" && exit; }
