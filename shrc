@@ -1143,26 +1143,10 @@ sessionattach() {
     esac
 }
 
-# Detach the current session using the preferred backend.
-sessiondetach() {
-    case "$(session_backend)" in
-        tmux)   tmux detach "$@" ;;
-        shpool) shpool detach "$@" ;;
-    esac
-}
-
-# Create (and attach to) a named session using the preferred backend. tmux
-# starts a fresh session with the given name; shpool's attach creates the
-# session when it doesn't exist yet, so the same verb makes a session on both.
-# Stamp SHPOOL_INITIAL_PWD so a freshly created shpool session lands in the
-# caller's directory rather than the outer shell's startup dir (same reason as
-# the autoshpool wrapper above); tmux uses the caller's PWD natively.
-sessionmake() {
-    case "$(session_backend)" in
-        tmux)   tmux new-session -s "$@" ;;
-        shpool) SHPOOL_INITIAL_PWD="$PWD" shpool attach "$@" ;;
-    esac
-}
+# Detaching and making named sessions live in the scripts repo as the
+# detachsession/detachtmux/detachshpool and makesession/maketmux/makeshpool
+# commands (dispatchers + per-backend twins, alongside autosession and
+# changesession). The ds*/ms* aliases below call those scripts.
 
 # List sessions using the preferred backend (the vcs-aware tmuxlist /
 # shpoollist helpers).
@@ -1920,14 +1904,43 @@ if is_interactive; then
 
     #alias '?'='path_or_empty'
     alias @='path_or_empty'
-    # Backend-agnostic session verbs (route through session_backend, which
-    # defaults to tmux). as/sw/sls/sa/sd/attach/detach work whatever the
-    # active backend is; the asp/atm and sp*/t* spellings below force a
-    # specific backend.
+    # Session-manager verbs, named {verb}{backend}: verb is a(uto), c(hange),
+    # d(etach), or m(ake); backend is s (session: pick tmux/shpool via
+    # session_backend), sp (shpool), or tm (tmux). The *s spellings follow the
+    # active backend; *sp/*tm force one. auto* attach-or-create at startup,
+    # change* are the fzf switchers, detach*/make* detach or create named
+    # sessions. All but auto* live in the scripts repo; auto* stay shell
+    # functions/wrappers (autoshpool stamps SHPOOL_INITIAL_PWD).
+    #
+    # The *s scripts dispatch on $TMUX/$SHPOOL_SESSION_NAME/$SESSION_BACKEND,
+    # then fall back to tmux; pass session_backend (which honours WANT_TMUX) as
+    # SESSION_BACKEND so an opted-in shpool user (WANT_TMUX=0) outside a session
+    # isn't handed tmux. When session_backend is empty (no backend wanted/
+    # available) and we aren't already in a session, do nothing rather than let
+    # the script fall back to tmux -- matching the old autosession/switchsession
+    # no-op. as routes through the shell autosession, which already does this.
     as() { autosession "$@"; }
     asp() { autoshpool "$@"; }
     atm() { autotmux "$@"; }
-    attach() { sessionattach "$@"; }
+    # shpool can't switch a live client itself: changesession/changeshpool hand
+    # the switch to autoshpool's outer loop by detaching us (see the scripts'
+    # request_switch), so the now-parked shell must exit, exactly as the old
+    # switchshpool did with `&& exit`. The switch only happens on the no-arg
+    # picker path; --list/--preview/--help also return 0 but just print, so gate
+    # the exit on no args. And only exit when changesession actually picked
+    # shpool: it dispatches on $TMUX before $SHPOOL_SESSION_NAME, so a tmux
+    # session nested in shpool (both set) switches the tmux client in place and
+    # must stay -- gate on "in shpool, not in tmux". csp forces shpool, so it
+    # detaches whenever we're in a shpool session regardless of tmux.
+    cs() { local b; b="$(session_backend)"; test -n "$TMUX$SHPOOL_SESSION_NAME$b" && SESSION_BACKEND="$b" changesession "$@" && test $# -eq 0 && test -z "$TMUX" && test -n "$SHPOOL_SESSION_NAME" && exit; }
+    csp() { changeshpool "$@" && test $# -eq 0 && test -n "$SHPOOL_SESSION_NAME" && exit; }
+    ctm() { changetmux "$@"; }
+    ds() { local b; b="$(session_backend)"; test -n "$TMUX$SHPOOL_SESSION_NAME$b" && SESSION_BACKEND="$b" detachsession "$@"; }
+    dsp() { detachshpool "$@"; }
+    dtm() { detachtmux "$@"; }
+    ms() { local b; b="$(session_backend)"; test -n "$TMUX$SHPOOL_SESSION_NAME$b" && SESSION_BACKEND="$b" makesession "$@"; }
+    msp() { makeshpool "$@"; }
+    mtm() { maketmux "$@"; }
     bindkeys() { daemon xbindkeys "$@"; }
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.go,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}"
     code_includes="$(eval echo --include=$code_patterns)"
@@ -1962,8 +1975,6 @@ if is_interactive; then
         pkill "$1"
         (setsid "$1"&)
     }
-    detach() { sessiondetach "$@"; }
-    detachsession() { sessiondetach "$@"; }
     diga() { dig +noall +answer +search "$@"; }
     digs() { dig +short +search "$@"; }
     download() { cd "$HOME/Downloads"; wget "$@"; }
@@ -2012,8 +2023,6 @@ if is_interactive; then
         lsof -a -n -P -i "$@"
     }
     lss() { lssock "$@"; }
-    lsp() { shpoollist "$@"; }
-    sls() { sessionlist "$@"; }
     j() { jobs "$@"; }
     # Clone/cd into a repo, then start a session (tmux by default, shpool
     # when WANT_TMUX=0) matching the new vcs rootdir. autosession only runs
@@ -2026,9 +2035,6 @@ if is_interactive; then
     mhd() { hgd -f "$@" && autosession; }
     mgd() { gitd -f "$@" && autosession; }
     m() { make -f .Makefile "$@"; }
-    # make a named session via the default backend; makeshpool/maketmux below
-    # force a specific one (mirroring the sp*/t* spellings).
-    makesession() { sessionmake "$@"; }
     ml() { m lint; }
     # shadows magtape command, but who uses that?
     mt() { m test; }
@@ -2058,36 +2064,8 @@ if is_interactive; then
     rh() { gh "$@" | tail -n 20; }
     q() { xa "$@"; }
     s() { subl "$@"; }
-    # sa/sd/sps/ssp are backend-agnostic (route through session_backend).
-    sa() { sessionattach "$@"; }
-    sd() { sessiondetach "$@"; }
-    shpls() { shpoollist "$@"; }
-    shpoolswitch() { switchshpool "$@"; }
-    shsw() { switchshpool "$@"; }
-    # sp* force shpool, mirroring the t* tmux spellings below.
-    spa() { shpool attach "$@"; }
-    spd() { shpool detach "$@"; }
-    detachshpool() { shpool detach "$@"; }
-    # stamp SHPOOL_INITIAL_PWD so a newly created session opens in $PWD (see
-    # sessionmake / the autoshpool wrapper).
-    makeshpool() { SHPOOL_INITIAL_PWD="$PWD" shpool attach "$@"; }
     spell() { aspell -a "$@"; }
-    sps() { switchshpool "$@"; }
     sr() { ssh -l root "$@"; }
-    ssp() { switchshpool "$@"; }
-    # generic switch verbs follow the default backend (tmux unless WANT_TMUX=0)
-    sw() { switchsession "$@"; }
-    sws() { switchsession "$@"; }
-    switch() { switchsession "$@"; }
-    swsh() { switchshpool "$@"; }
-    # tmux-specific spellings, mirroring the sp* shpool ones. tmux is the
-    # default backend (see session_backend / maybe_start_session_and_exit).
-    ta() { tmux attach "$@"; }
-    td() { tmux detach "$@"; }
-    detachtmux() { tmux detach "$@"; }
-    maketmux() { tmux new-session -s "$@"; }
-    tls() { tmux list-sessions -F '#{session_name}' "$@"; }
-    tsw() { switchsession "$@"; }
     symlink() { ln --symbolic --relative "$@"; }
     t() { tail "$@"; }
     tf() { t -f "$@"; }
