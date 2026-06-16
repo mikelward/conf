@@ -1101,20 +1101,8 @@ except OSError: pass
         switchsession work
         assert equal (open $calls | str trim) "autoshpool switch work"
     })
-    (run-test "nu sw alias routes through switchsession to autotmux" {
-        let calls = (mktemp -t "sess-calls.XXXXXX")
-        let bin = (mktemp -d)
-        ("#!/bin/sh\necho \"autotmux $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "autotmux")
-        ^chmod +x ($bin | path join "autotmux")
-        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "tmux")
-        ^chmod +x ($bin | path join "tmux")
-        $env.PATH = [$bin]
-        sw work
-        assert equal (open $calls | str trim) "autotmux switch work"
-    })
-
     ###############
-    # sessionattach / sessiondetach / sessionlist dispatch to the backend
+    # sessionattach / sessionlist dispatch to the backend
     (run-test "nu sessionattach runs tmux attach on the tmux backend" {
         let calls = (mktemp -t "sess-calls.XXXXXX")
         let bin = (mktemp -d)
@@ -1135,59 +1123,6 @@ except OSError: pass
         $env.PATH = [$bin]
         sessionattach work
         assert equal (open $calls | str trim) "shpool attach work"
-    })
-    (run-test "nu sessiondetach runs tmux detach on the tmux backend" {
-        let calls = (mktemp -t "sess-calls.XXXXXX")
-        let bin = (mktemp -d)
-        ("#!/bin/sh\necho \"tmux $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "tmux")
-        ^chmod +x ($bin | path join "tmux")
-        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autotmux")
-        ^chmod +x ($bin | path join "autotmux")
-        $env.PATH = [$bin]
-        sessiondetach
-        assert equal (open $calls | str trim) "tmux detach"
-    })
-    (run-test "nu sessiondetach runs shpool detach on the shpool backend" {
-        let calls = (mktemp -t "sess-calls.XXXXXX")
-        let bin = (mktemp -d)
-        ("#!/bin/sh\necho \"shpool $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "shpool")
-        ^chmod +x ($bin | path join "shpool")
-        $env.WANT_TMUX = "0"
-        $env.PATH = [$bin]
-        sessiondetach
-        assert equal (open $calls | str trim) "shpool detach"
-    })
-    (run-test "nu sessionmake runs tmux new-session on the tmux backend" {
-        let calls = (mktemp -t "sess-calls.XXXXXX")
-        let bin = (mktemp -d)
-        ("#!/bin/sh\necho \"tmux $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "tmux")
-        ^chmod +x ($bin | path join "tmux")
-        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autotmux")
-        ^chmod +x ($bin | path join "autotmux")
-        $env.PATH = [$bin]
-        sessionmake work
-        assert equal (open $calls | str trim) "tmux new-session -s work"
-    })
-    (run-test "nu sessionmake runs shpool attach (stamping PWD) on the shpool backend" {
-        let calls = (mktemp -t "sess-calls.XXXXXX")
-        let bin = (mktemp -d)
-        # record the stamped SHPOOL_INITIAL_PWD too: a freshly created shpool
-        # session must open in the caller's dir, not the startup dir.
-        ("#!/bin/sh\necho \"shpool $* pwd=$SHPOOL_INITIAL_PWD\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "shpool")
-        ^chmod +x ($bin | path join "shpool")
-        $env.WANT_TMUX = "0"
-        $env.PATH = [$bin]
-        sessionmake work
-        assert equal (open $calls | str trim) ("shpool attach work pwd=" + $env.PWD)
-    })
-    (run-test "nu makeshpool runs shpool attach and stamps SHPOOL_INITIAL_PWD" {
-        let calls = (mktemp -t "sess-calls.XXXXXX")
-        let bin = (mktemp -d)
-        ("#!/bin/sh\necho \"shpool $* pwd=$SHPOOL_INITIAL_PWD\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "shpool")
-        ^chmod +x ($bin | path join "shpool")
-        $env.PATH = [$bin]
-        makeshpool work
-        assert equal (open $calls | str trim) ("shpool attach work pwd=" + $env.PWD)
     })
     (run-test "nu sessionlist runs tmuxlist on the tmux backend" {
         let calls = (mktemp -t "sess-calls.XXXXXX")
@@ -1213,6 +1148,128 @@ except OSError: pass
         $env.PATH = [$bin]
         sessionlist
         assert equal (open $calls | str trim) "shpoollist-called"
+    })
+
+    # The {verb}{backend} session aliases forward their args to the matching
+    # command (a nu def for auto*, a script on PATH for change*/detach*/make*).
+    # `cmd` is the external each one must ultimately run; `extra` are extra
+    # exit-0 stubs (e.g. tmux, so session-backend resolves to tmux for `as`).
+    ...([
+        [alias cmd            run          extra];
+        # cs/ds/ms no-op unless a backend is selected, so give them tmux+autotmux
+        # on PATH (session-backend resolves to tmux); the others ignore it.
+        [as    autotmux       { as work }  [tmux]]
+        [asp   autoshpool     { asp work } []]
+        [atm   autotmux       { atm work } []]
+        [cs    changesession  { cs work }  [tmux autotmux]]
+        [csp   changeshpool   { csp work } []]
+        [ctm   changetmux     { ctm work } []]
+        [ds    detachsession  { ds work }  [tmux autotmux]]
+        [dsp   detachshpool   { dsp work } []]
+        [dtm   detachtmux     { dtm work } []]
+        [ms    makesession    { ms work }  [tmux autotmux]]
+        [msp   makeshpool     { msp work } []]
+        [mtm   maketmux        { mtm work } []]
+    ] | each {|case|
+        run-test $"nu ($case.alias) calls ($case.cmd)" {
+            let calls = (mktemp -t "sess-calls.XXXXXX")
+            let bin = (mktemp -d)
+            ($"#!/bin/sh\necho \"($case.cmd) $*\" >> \"($calls)\"\n") | save -f ($bin | path join $case.cmd)
+            ^chmod +x ($bin | path join $case.cmd)
+            for x in $case.extra {
+                "#!/bin/sh\nexit 0\n" | save -f ($bin | path join $x)
+                ^chmod +x ($bin | path join $x)
+            }
+            $env.PATH = [$bin]
+            do $case.run
+            assert equal (open $calls | str trim) $"($case.cmd) work"
+        }
+    })
+
+    # In a shpool session, cs/csp must exit the shell after the switch (the
+    # script detaches us and the outer autoshpool loop attaches the target).
+    # `exit` would end this test process, so drive them in a subprocess and
+    # check the trailing `print` never runs.
+    (run-test "nu csp exits the shell after a shpool switch" {
+        let bin = (mktemp -d)
+        "#!/bin/sh\necho changeshpool-called\n" | save -f ($bin | path join "changeshpool")
+        ^chmod +x ($bin | path join "changeshpool")
+        let out = (with-env { SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
+            ^nu --no-config-file -c $"source ($CONFIG); csp; print stayed"
+        } | complete)
+        assert ($out.stdout | str contains "changeshpool-called")
+        assert (not ($out.stdout | str contains "stayed"))
+    })
+    (run-test "nu cs exits the shell after a shpool switch" {
+        let bin = (mktemp -d)
+        "#!/bin/sh\necho changesession-called\n" | save -f ($bin | path join "changesession")
+        ^chmod +x ($bin | path join "changesession")
+        let out = (with-env { SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
+            ^nu --no-config-file -c $"source ($CONFIG); cs; print stayed"
+        } | complete)
+        assert ($out.stdout | str contains "changesession-called")
+        assert (not ($out.stdout | str contains "stayed"))
+    })
+    # tmux nested in shpool sets both $TMUX and $SHPOOL_SESSION_NAME;
+    # changesession switches the tmux client in place, so cs must NOT exit.
+    (run-test "nu cs does not exit for tmux nested in shpool" {
+        let bin = (mktemp -d)
+        "#!/bin/sh\necho changesession-called\n" | save -f ($bin | path join "changesession")
+        ^chmod +x ($bin | path join "changesession")
+        let out = (with-env { TMUX: "/tmp/sock", SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
+            ^nu --no-config-file -c $"source ($CONFIG); cs; print stayed"
+        } | complete)
+        assert ($out.stdout | str contains "stayed")
+    })
+    # --list/--preview/--help return 0 too but only print, so an arg means csp
+    # must NOT exit, even in a shpool session.
+    (run-test "nu csp does not exit for a non-switch subcommand" {
+        let bin = (mktemp -d)
+        "#!/bin/sh\necho changeshpool-called\n" | save -f ($bin | path join "changeshpool")
+        ^chmod +x ($bin | path join "changeshpool")
+        let out = (with-env { SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
+            ^nu --no-config-file -c $"source ($CONFIG); csp --list; print stayed"
+        } | complete)
+        assert ($out.stdout | str contains "stayed")
+    })
+    # cs/ds/ms pass session-backend's choice (which honours WANT_TMUX) as
+    # SESSION_BACKEND so the *s scripts don't fall back to tmux for a shpool
+    # user. WANT_TMUX=0 with shpool on PATH resolves to shpool.
+    (run-test "nu cs passes session-backend to the script as SESSION_BACKEND" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho \"SESSION_BACKEND=$SESSION_BACKEND\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "changesession")
+        ^chmod +x ($bin | path join "changesession")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
+        ^chmod +x ($bin | path join "shpool")
+        $env.WANT_TMUX = "0"
+        $env.PATH = [$bin]
+        cs work
+        assert equal (open $calls | str trim) "SESSION_BACKEND=shpool"
+    })
+    # When no backend is wanted/available (session-backend empty) and we aren't
+    # in a session, cs/ds/ms do nothing rather than let the script fall back to
+    # tmux; inside a session they still act on it.
+    (run-test "nu cs is a no-op when no backend is selected" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho changesession-called >> \"" + $calls + "\"\n") | save -f ($bin | path join "changesession")
+        ^chmod +x ($bin | path join "changesession")
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.PATH = [$bin]   # no tmux/shpool -> session-backend is empty
+        cs work
+        assert ((open $calls | str trim) | is-empty)
+    })
+    (run-test "nu cs still runs in a session when no backend is selected" {
+        let calls = (mktemp -t "sess-calls.XXXXXX")
+        let bin = (mktemp -d)
+        ("#!/bin/sh\necho changesession-called >> \"" + $calls + "\"\n") | save -f ($bin | path join "changesession")
+        ^chmod +x ($bin | path join "changesession")
+        $env.TMUX = "/tmp/sock"
+        $env.PATH = [$bin]
+        cs work
+        assert equal (open $calls | str trim) "changesession-called"
     })
 
     ###############

@@ -342,28 +342,10 @@ def --wrapped sessionattach [...args] {
     }
 }
 
-# Detach the current session using the preferred backend.
-def --wrapped sessiondetach [...args] {
-    match (session-backend) {
-        "tmux" => { ^tmux detach ...$args }
-        "shpool" => { ^shpool detach ...$args }
-        _ => { }
-    }
-}
-
-# Create (and attach to) a named session using the preferred backend. tmux
-# starts a fresh session with the given name; shpool's attach creates the
-# session when it doesn't exist yet, so the same verb makes a session on both.
-# Stamp SHPOOL_INITIAL_PWD so a freshly created shpool session lands in the
-# caller's directory rather than the outer shell's startup dir (same reason as
-# the autoshpool wrapper above); tmux uses the caller's PWD natively.
-def --wrapped sessionmake [...args] {
-    match (session-backend) {
-        "tmux" => { ^tmux new-session -s ...$args }
-        "shpool" => { with-env { SHPOOL_INITIAL_PWD: $env.PWD } { ^shpool attach ...$args } }
-        _ => { }
-    }
-}
+# Detaching and making named sessions live in the scripts repo as the
+# detachsession/detachtmux/detachshpool and makesession/maketmux/makeshpool
+# commands (dispatchers + per-backend twins, alongside autosession and
+# changesession). The ds*/ms* aliases below call those scripts.
 
 # List sessions using the preferred backend (tmuxlist / shpoollist).
 def --wrapped sessionlist [...args] {
@@ -1409,46 +1391,65 @@ def clone [url: string, ...args: string] {
 }
 
 #######################
-# SHPOOL ALIASES
-# Short aliases for the `shpoollist` helper. Aliases rather than `def`
-# wrappers so flags pass through without nushell's parser catching them
-# (same rationale as the VCS aliases above). Mirrors shrc/fish.
-
-alias lsp   = ^shpoollist
-alias shpls = ^shpoollist
-alias detachshpool = ^shpool detach
-# def rather than an alias so it can stamp SHPOOL_INITIAL_PWD, so a newly
-# created session opens in $PWD (see sessionmake / autoshpool).
-def --wrapped makeshpool [...args] { with-env { SHPOOL_INITIAL_PWD: $env.PWD } { ^shpool attach ...$args } }
-
-#######################
-# TMUX ALIASES
-# tmux equivalents of the shpool helpers. tmux is the default session
-# manager (see session-backend / maybe-start-session-and-exit); the shpool
-# aliases above stay for when WANT_TMUX=0 selects shpool.
-
-alias atm = ^autotmux
-alias ta  = ^tmux attach
-alias td  = ^tmux detach
-alias detachtmux = ^tmux detach
-alias maketmux = ^tmux new-session -s
-alias tls = ^tmux list-sessions -F '#{session_name}'
-
-#######################
 # SESSION ALIASES
-# Backend-agnostic shortcuts that route through session-backend (tmux unless
-# WANT_TMUX=0), matching shrc/fish. tsw is the tmux-flavoured switch spelling;
-# the shpool/tmux-named aliases above force a specific backend.
+# Session-manager verbs, named {verb}{backend}: verb is a(uto), c(hange),
+# d(etach), or m(ake); backend is s (session: pick tmux/shpool via
+# session-backend), sp (shpool), or tm (tmux). The *s spellings follow the
+# active backend; *sp/*tm force one. auto* attach-or-create at startup,
+# change* are the fzf switchers, detach*/make* detach or create named
+# sessions. All but auto* live in the scripts repo (so the *sp/*tm aliases call
+# those externals); auto* stay nu defs, with the autoshpool wrapper stamping
+# SHPOOL_INITIAL_PWD. Mirrors shrc/fish.
+#
+# cs/ds/ms are defs, not aliases, so they can pass session-backend (which
+# honours WANT_TMUX) as SESSION_BACKEND: the *s scripts dispatch on
+# $TMUX/$SHPOOL_SESSION_NAME/$SESSION_BACKEND then fall back to tmux, so an
+# opted-in shpool user (WANT_TMUX=0) outside a session would otherwise get tmux.
+# When session-backend is empty and we aren't in a session, they no-op rather
+# than trigger that fallback (see skip-session-script).
+# cs additionally exits the shell after a shpool switch (the script detaches us
+# and the outer autoshpool loop attaches the target, like switchsession); tmux
+# switches in place, so only exit when in a shpool session, and a cancelled
+# picker errors so we stay (mirrors switchsession's try/exit).
 
 alias as  = autosession
-alias sa  = sessionattach
-alias sd  = sessiondetach
-alias detachsession = sessiondetach
-alias makesession = sessionmake
-alias sls = sessionlist
-alias sw  = switchsession
-alias sws = switchsession
-alias tsw = switchsession
+alias asp = autoshpool
+alias atm = autotmux
+# skip-session-script is true when no backend is wanted/available and we aren't
+# already in a session, so cs/ds/ms do nothing instead of letting the script
+# fall back to tmux for a WANT_TMUX=0 user (matches autosession/switchsession).
+def skip-session-script [backend: string] {
+    ($backend | is-empty) and (($env.TMUX? | default "") | is-empty) and (($env.SHPOOL_SESSION_NAME? | default "") | is-empty)
+}
+def --wrapped cs [...args] {
+    let backend = (session-backend)
+    if (skip-session-script $backend) { return }
+    let ok = (try { with-env { SESSION_BACKEND: $backend } { ^changesession ...$args }; true } catch { false })
+    # Only the no-arg picker path switches (--list/--preview/--help just print),
+    # so gate the exit on empty args. And changesession dispatches on $TMUX
+    # before $SHPOOL_SESSION_NAME, so a tmux session nested in shpool switches in
+    # place and must stay: only exit when shpool was picked (in shpool, not tmux).
+    if $ok and ($args | is-empty) and (($env.TMUX? | default "") | is-empty) and (($env.SHPOOL_SESSION_NAME? | default "") | is-not-empty) { exit }
+}
+def --wrapped csp [...args] {
+    let ok = (try { ^changeshpool ...$args; true } catch { false })
+    if $ok and ($args | is-empty) and (($env.SHPOOL_SESSION_NAME? | default "") | is-not-empty) { exit }
+}
+alias ctm = ^changetmux
+def --wrapped ds [...args] {
+    let backend = (session-backend)
+    if (skip-session-script $backend) { return }
+    with-env { SESSION_BACKEND: $backend } { ^detachsession ...$args }
+}
+alias dsp = ^detachshpool
+alias dtm = ^detachtmux
+def --wrapped ms [...args] {
+    let backend = (session-backend)
+    if (skip-session-script $backend) { return }
+    with-env { SESSION_BACKEND: $backend } { ^makesession ...$args }
+}
+alias msp = ^makeshpool
+alias mtm = ^maketmux
 
 ######################
 # INTERACTIVE: PROMPT / HOOKS

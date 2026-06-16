@@ -770,30 +770,10 @@ function sessionattach
     end
 end
 
-# Detach the current session using the preferred backend.
-function sessiondetach
-    switch (session_backend)
-    case tmux
-        tmux detach $argv
-    case shpool
-        shpool detach $argv
-    end
-end
-
-# Create (and attach to) a named session using the preferred backend. tmux
-# starts a fresh session with the given name; shpool's attach creates the
-# session when it doesn't exist yet, so the same verb makes a session on both.
-# Stamp SHPOOL_INITIAL_PWD so a freshly created shpool session lands in the
-# caller's directory rather than the outer shell's startup dir (same reason as
-# the autoshpool wrapper above); tmux uses the caller's PWD natively.
-function sessionmake
-    switch (session_backend)
-    case tmux
-        tmux new-session -s $argv
-    case shpool
-        SHPOOL_INITIAL_PWD=$PWD shpool attach $argv
-    end
-end
+# Detaching and making named sessions live in the scripts repo as the
+# detachsession/detachtmux/detachshpool and makesession/maketmux/makeshpool
+# commands (dispatchers + per-backend twins, alongside autosession and
+# changesession). The ds*/ms* aliases below call those scripts.
 
 # List sessions using the preferred backend (tmuxlist / shpoollist).
 function sessionlist
@@ -951,15 +931,38 @@ if is_interactive
 
     #alias '?'='path_or_empty'
     alias @='path_or_empty'
-    # Backend-agnostic session verbs (route through session_backend, which
-    # defaults to tmux). as/sw/sls/sa/sd/attach/detach work whatever the
-    # active backend is; the asp/atm and sp*/t* spellings force a backend.
+    # Session-manager verbs, named {verb}{backend}: verb is a(uto), c(hange),
+    # d(etach), or m(ake); backend is s (session: pick tmux/shpool via
+    # session_backend), sp (shpool), or tm (tmux). The *s spellings follow the
+    # active backend; *sp/*tm force one. auto* attach-or-create at startup,
+    # change* are the fzf switchers, detach*/make* detach or create named
+    # sessions. All but auto* live in the scripts repo; auto* stay shell
+    # functions/wrappers (autoshpool stamps SHPOOL_INITIAL_PWD).
+    #
+    # cs/ds/ms are functions, not aliases, so they can pass session_backend
+    # (which honours WANT_TMUX) as SESSION_BACKEND: the *s scripts dispatch on
+    # $TMUX/$SHPOOL_SESSION_NAME/$SESSION_BACKEND then fall back to tmux, so an
+    # opted-in shpool user (WANT_TMUX=0) outside a session would otherwise get
+    # tmux. When session_backend is empty and we aren't in a session they no-op
+    # rather than trigger that fallback. cs additionally exits after a shpool
+    # switch (the script
+    # detaches us and the outer autoshpool loop attaches the target, like
+    # switchshpool's `and exit`). changesession dispatches on $TMUX before
+    # $SHPOOL_SESSION_NAME, so a tmux session nested in shpool switches in place
+    # and must stay: only exit when shpool was picked (in shpool, not in tmux).
+    # A cancelled picker returns non-zero so we stay. csp forces shpool.
     alias as='autosession'
     alias asp='autoshpool'
     alias atm='autotmux'
-    alias attach='sessionattach'
-    alias detach='sessiondetach'
-    alias detachsession='sessiondetach'
+    function cs; set -lx SESSION_BACKEND (session_backend); test -n "$TMUX$SHPOOL_SESSION_NAME$SESSION_BACKEND"; and changesession $argv; and test (count $argv) -eq 0; and test -z "$TMUX"; and test -n "$SHPOOL_SESSION_NAME"; and exit; end
+    function csp; changeshpool $argv; and test (count $argv) -eq 0; and test -n "$SHPOOL_SESSION_NAME"; and exit; end
+    alias ctm='changetmux'
+    function ds; set -lx SESSION_BACKEND (session_backend); test -n "$TMUX$SHPOOL_SESSION_NAME$SESSION_BACKEND"; and detachsession $argv; end
+    alias dsp='detachshpool'
+    alias dtm='detachtmux'
+    function ms; set -lx SESSION_BACKEND (session_backend); test -n "$TMUX$SHPOOL_SESSION_NAME$SESSION_BACKEND"; and makesession $argv; end
+    alias msp='makeshpool'
+    alias mtm='maketmux'
     alias bindkeys='daemon xbindkeys'
     set code_patterns "*.c" "*.h" "*.cc" "*.cpp" "*.hh" "*.coffee" "*.go" "*.hs" "*.java" "*.js" "*.pl" "*.py" "*.sh" "*.rb" "*.swig" "*.ts"
     set code_includes "--include="$code_patterns
@@ -1024,8 +1027,6 @@ if is_interactive
     alias la='l -a'
     alias latest='recent -1'
     alias lc='l -C'
-    alias lsp='shpoollist'
-    alias sls='sessionlist'
     function lssock
         lsof -a -n -P -i $argv
     end
@@ -1043,9 +1044,6 @@ if is_interactive
     function mhd; hgd -f $argv; and autosession; end
     function mgd; gitd -f $argv; and autosession; end
     alias m='make -f .Makefile'
-    # make a named session via the default backend; makeshpool/maketmux below
-    # force a specific one (mirroring the sp*/t* spellings).
-    alias makesession='sessionmake'
     alias ml='m lint'
     # shadows magtape command, but who uses that?
     alias mt='m test'
@@ -1074,39 +1072,12 @@ if is_interactive
     end
     alias q='xa'
     alias s='subl'
-    # sa/sd/sps/ssp are backend-agnostic (route through session_backend).
-    alias sa='sessionattach'
-    alias sd='sessiondetach'
-    alias shpls='shpoollist'
-    alias shpoolswitch='switchshpool'
-    alias shsw='switchshpool'
-    # sp* force shpool, mirroring the t* tmux spellings below.
-    alias spa='shpool attach'
-    alias spd='shpool detach'
-    alias detachshpool='shpool detach'
-    # function rather than an alias so it can stamp SHPOOL_INITIAL_PWD, so a
-    # newly created session opens in $PWD (see sessionmake / autoshpool).
-    function makeshpool; SHPOOL_INITIAL_PWD=$PWD shpool attach $argv; end
     alias spell='aspell -a'
-    alias sps='switchshpool'
     alias sr='ssh -l root'
-    alias ssp='switchshpool'
-    # generic switch verbs follow the default backend (tmux unless WANT_TMUX=0)
-    alias sw='switchsession'
-    alias sws='switchsession'
-    alias swsh='switchshpool'
     alias symlink='ln -sr'
     alias t='tail'
-    # tmux-specific spellings, mirroring the sp* shpool ones. tmux is the
-    # default backend (see session_backend / maybe_start_session_and_exit).
-    alias ta='tmux attach'
-    alias td='tmux detach'
-    alias detachtmux='tmux detach'
-    alias maketmux='tmux new-session -s'
     alias tf='t -f'
     alias tl='t -f /var/log/syslog'
-    alias tls='tmux list-sessions -F "#{session_name}"'
-    alias tsw='switchsession'
     alias today='date +"%Y-%m-%d"'
     alias ts='t -f /var/log/syslog'
     alias userctl='systemctl --user'

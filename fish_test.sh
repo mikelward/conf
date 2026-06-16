@@ -443,7 +443,7 @@ result="$(_fish_run '
 assert_equal "[]" "$result"
 
 ###############
-# TEST: sessionattach / sessiondetach / sessionlist dispatch to the backend
+# TEST: sessionattach / sessionlist dispatch to the backend
 
 start_test "fish sessionattach runs tmux attach on the tmux backend"
 result="$(_fish_run '
@@ -461,45 +461,6 @@ result="$(_fish_run '
 ')"
 assert_equal "shpool attach work" "$result"
 
-start_test "fish sessiondetach runs tmux detach on the tmux backend"
-result="$(_fish_run '
-    function session_backend; echo tmux; end
-    function tmux; echo "tmux $argv"; end
-    sessiondetach
-')"
-assert_equal "tmux detach" "$result"
-
-start_test "fish sessiondetach runs shpool detach on the shpool backend"
-result="$(_fish_run '
-    function session_backend; echo shpool; end
-    function shpool; echo "shpool $argv"; end
-    sessiondetach
-')"
-assert_equal "shpool detach" "$result"
-
-start_test "fish sessionmake runs tmux new-session on the tmux backend"
-result="$(_fish_run '
-    function session_backend; echo tmux; end
-    function tmux; echo "tmux $argv"; end
-    sessionmake work
-')"
-assert_equal "tmux new-session -s work" "$result"
-
-start_test "fish sessionmake runs shpool attach (stamping PWD) on the shpool backend"
-result="$(_fish_run '
-    function session_backend; echo shpool; end
-    function shpool; echo "shpool $argv pwd=$SHPOOL_INITIAL_PWD"; end
-    sessionmake work
-')"
-assert_equal "shpool attach work pwd=$PWD" "$result"
-
-start_test "fish makeshpool runs shpool attach and stamps SHPOOL_INITIAL_PWD"
-result="$(_fish_run '
-    function shpool; echo "shpool $argv pwd=$SHPOOL_INITIAL_PWD"; end
-    makeshpool work
-')"
-assert_equal "shpool attach work pwd=$PWD" "$result"
-
 start_test "fish sessionlist runs tmuxlist on the tmux backend"
 result="$(_fish_run '
     function session_backend; echo tmux; end
@@ -515,6 +476,125 @@ result="$(_fish_run '
     sessionlist
 ')"
 assert_equal "shpoollist-called" "$result"
+
+###############
+# TEST: the {verb}{backend} session aliases forward args to their command
+# (a shell function for auto*, a script on PATH for change*/detach*/make*).
+# Each is stubbed by name so this checks the wiring without a real backend.
+
+for _pair in \
+    "as autosession" "asp autoshpool" "atm autotmux" \
+    "cs changesession" "csp changeshpool" "ctm changetmux" \
+    "ds detachsession" "dsp detachshpool" "dtm detachtmux" \
+    "ms makesession" "msp makeshpool" "mtm maketmux"; do
+    set -- $_pair
+    _alias="$1"; _target="$2"
+    start_test "fish $_alias calls $_target"
+    # cs/ds/ms no-op unless a backend is selected, so stub session_backend; the
+    # auto* aliases call their (stubbed) target directly and ignore it.
+    result="$(_fish_run "
+        function session_backend; echo tmux; end
+        function $_target; echo \"$_target \$argv\"; end
+        $_alias work
+    ")"
+    assert_equal "$_target work" "$result"
+done
+
+# The switch only happens on the no-arg picker path: in a shpool session it
+# detaches us, so cs/csp must exit afterwards (the trailing echo must not run).
+# --list/--preview/--help return 0 too but only print, so an arg means no exit.
+start_test "fish csp exits the shell after a shpool switch"
+result="$(_fish_run '
+    function changeshpool; echo switched; end
+    set -gx SHPOOL_SESSION_NAME work
+    csp
+    echo stayed
+')"
+assert_equal "switched" "$result"
+
+start_test "fish cs exits the shell after a shpool switch"
+result="$(_fish_run '
+    function changesession; echo switched; end
+    set -gx SHPOOL_SESSION_NAME work
+    cs
+    echo stayed
+')"
+assert_equal "switched" "$result"
+
+start_test "fish csp does not exit for a non-switch subcommand"
+result="$(_fish_run '
+    function changeshpool; echo "changeshpool $argv"; end
+    set -gx SHPOOL_SESSION_NAME work
+    csp --list
+    echo stayed
+')"
+expected="changeshpool --list
+stayed"
+assert_equal "$expected" "$result"
+
+start_test "fish cs does not exit outside a shpool session"
+result="$(_fish_run '
+    function session_backend; echo tmux; end
+    function changesession; echo switched; end
+    set -e SHPOOL_SESSION_NAME
+    cs
+    echo stayed
+')"
+expected="switched
+stayed"
+assert_equal "$expected" "$result"
+
+# When no backend is wanted/available and we aren't in a session, cs/ds/ms
+# do nothing rather than let the script fall back to tmux; inside a session
+# they still act on it ($TMUX/$SHPOOL_SESSION_NAME win in the script).
+start_test "fish cs is a no-op when no backend is selected"
+result="$(_fish_run '
+    function session_backend; echo ""; end
+    function changesession; echo "changesession $argv"; end
+    set -e TMUX
+    set -e SHPOOL_SESSION_NAME
+    cs work
+    echo done
+')"
+assert_equal "done" "$result"
+
+start_test "fish cs still runs in a session when no backend is selected"
+result="$(_fish_run '
+    function session_backend; echo ""; end
+    function changesession; echo "changesession $argv"; end
+    set -gx TMUX /tmp/sock
+    set -e SHPOOL_SESSION_NAME
+    cs work
+    echo done
+')"
+expected="changesession work
+done"
+assert_equal "$expected" "$result"
+
+# tmux nested in shpool sets both $TMUX and $SHPOOL_SESSION_NAME; changesession
+# switches the tmux client in place, so cs must stay (not exit) there.
+start_test "fish cs does not exit for tmux nested in shpool"
+result="$(_fish_run '
+    function changesession; echo "changesession $argv"; end
+    set -gx TMUX /tmp/sock
+    set -gx SHPOOL_SESSION_NAME work
+    cs work
+    echo stayed
+')"
+expected="changesession work
+stayed"
+assert_equal "$expected" "$result"
+
+# cs/ds/ms pass session_backend's choice (which honours WANT_TMUX) as
+# SESSION_BACKEND so the *s scripts don't fall back to tmux for a shpool user.
+start_test "fish cs passes session_backend to the script as SESSION_BACKEND"
+result="$(_fish_run '
+    function session_backend; echo shpool; end
+    function changesession; echo "SESSION_BACKEND=$SESSION_BACKEND"; end
+    set -e SHPOOL_SESSION_NAME
+    cs work
+')"
+assert_equal "SESSION_BACKEND=shpool" "$result"
 
 ###############
 # TEST: maybe_start_session_and_exit prefers tmux, falls back to shpool

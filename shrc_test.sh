@@ -1088,44 +1088,6 @@ rm -f "$_dispatch_calls"
 )
 assert_equal "shpool attach work" "$(cat "$_dispatch_calls" 2>/dev/null)"
 
-start_test "sessiondetach runs tmux detach on the tmux backend"
-rm -f "$_dispatch_calls"
-(
-    session_backend() { echo tmux; }
-    tmux() { echo "tmux $*" >> "$_dispatch_calls"; }
-    sessiondetach
-)
-assert_equal "tmux detach" "$(cat "$_dispatch_calls" 2>/dev/null)"
-
-start_test "sessiondetach runs shpool detach on the shpool backend"
-rm -f "$_dispatch_calls"
-(
-    session_backend() { echo shpool; }
-    shpool() { echo "shpool $*" >> "$_dispatch_calls"; }
-    sessiondetach
-)
-assert_equal "shpool detach" "$(cat "$_dispatch_calls" 2>/dev/null)"
-
-start_test "sessionmake runs tmux new-session on the tmux backend"
-rm -f "$_dispatch_calls"
-(
-    session_backend() { echo tmux; }
-    tmux() { echo "tmux $*" >> "$_dispatch_calls"; }
-    sessionmake work
-)
-assert_equal "tmux new-session -s work" "$(cat "$_dispatch_calls" 2>/dev/null)"
-
-start_test "sessionmake runs shpool attach (stamping PWD) on the shpool backend"
-rm -f "$_dispatch_calls"
-(
-    session_backend() { echo shpool; }
-    # record the stamped SHPOOL_INITIAL_PWD too: a freshly created shpool
-    # session must open in the caller's dir, not the outer shell's startup dir.
-    shpool() { echo "shpool $* pwd=$SHPOOL_INITIAL_PWD" >> "$_dispatch_calls"; }
-    sessionmake work
-)
-assert_equal "shpool attach work pwd=$PWD" "$(cat "$_dispatch_calls" 2>/dev/null)"
-
 start_test "sessionlist runs tmuxlist on the tmux backend"
 rm -f "$_dispatch_calls"
 (
@@ -1221,61 +1183,151 @@ _extract_oneliner mjd
 mjd repo
 assert_equal "jjd -f repo" "$(cat "$_vcsdir_calls")"
 
-# detach* / make* are longer-form spellings of the session verbs, living in
-# the interactive block. Pull each out and confirm it routes to the right
-# backend: the *session spellings go through the backend-agnostic helpers
-# (sessiondetach / sessionmake), the *shpool / *tmux spellings straight to
-# their backends.
-_detach_calls="$_testdir/detach_calls"
-sessiondetach() { echo "sessiondetach $*" >> "$_detach_calls"; }
-sessionmake() { echo "sessionmake $*" >> "$_detach_calls"; }
-shpool() { echo "shpool $*" >> "$_detach_calls"; }
-tmux() { echo "tmux $*" >> "$_detach_calls"; }
-_extract_oneliner detachsession
-_extract_oneliner detachshpool
-_extract_oneliner detachtmux
-_extract_oneliner makesession
-_extract_oneliner makeshpool
-_extract_oneliner maketmux
+# The session-manager aliases are the lean {verb}{backend} set, each a thin
+# wrapper that calls the matching command (a shell function for auto*, a script
+# on PATH for change*/detach*/make*). They live in the interactive block, so
+# pull each out and confirm it forwards its args to the expected command. The
+# command is stubbed by name, so this checks the wiring without a real backend.
+_alias_calls="$_testdir/alias_calls"
+for _cmd in autosession autoshpool autotmux \
+            changesession changeshpool changetmux \
+            detachsession detachshpool detachtmux \
+            makesession makeshpool maketmux; do
+    eval "$_cmd() { echo \"$_cmd \$*\" >> \"\$_alias_calls\"; }"
+done
+for _alias in as asp atm cs csp ctm ds dsp dtm ms msp mtm; do
+    _extract_oneliner "$_alias"
+done
 
-start_test "detachsession routes through sessiondetach"
-rm -f "$_detach_calls"
-detachsession work
-assert_equal "sessiondetach work" "$(cat "$_detach_calls")"
+# cs/ds/ms no-op unless a backend is selected, so stub session_backend; the
+# auto* aliases call their (stubbed) target directly and ignore it. Also keep
+# SHPOOL_SESSION_NAME out of the way or the cs/csp exit would end the test.
+session_backend() { echo tmux; }
+unset SHPOOL_SESSION_NAME
 
-start_test "detachshpool runs shpool detach"
-rm -f "$_detach_calls"
-detachshpool
-assert_equal "shpool detach" "$(cat "$_detach_calls")"
+# Each alias and the command it must call, with a sample argument.
+while read -r _alias _target; do
+    start_test "$_alias calls $_target"
+    rm -f "$_alias_calls"
+    "$_alias" work
+    assert_equal "$_target work" "$(cat "$_alias_calls")"
+done <<'ALIASES'
+as autosession
+asp autoshpool
+atm autotmux
+cs changesession
+csp changeshpool
+ctm changetmux
+ds detachsession
+dsp detachshpool
+dtm detachtmux
+ms makesession
+msp makeshpool
+mtm maketmux
+ALIASES
 
-start_test "detachtmux runs tmux detach"
-rm -f "$_detach_calls"
-detachtmux
-assert_equal "tmux detach" "$(cat "$_detach_calls")"
+# The switch only happens on the no-arg picker path: in a shpool session it
+# detaches us and the outer autoshpool loop attaches the target, so cs/csp must
+# exit the now-parked shell (a bare echo after must not run). Run in subshells
+# so the exit only ends the subshell. Local stubs write a fixed marker.
+start_test "cs exits the shell after a shpool switch"
+rm -f "$_alias_calls"
+(
+    changesession() { echo switched >> "$_alias_calls"; }
+    unset TMUX; SHPOOL_SESSION_NAME=work
+    cs
+    echo stayed >> "$_alias_calls"
+)
+assert_equal "switched" "$(cat "$_alias_calls")"
 
-start_test "makesession routes through sessionmake"
-rm -f "$_detach_calls"
-makesession work
-assert_equal "sessionmake work" "$(cat "$_detach_calls")"
+start_test "csp exits the shell after a shpool switch"
+rm -f "$_alias_calls"
+(
+    changeshpool() { echo switched >> "$_alias_calls"; }
+    SHPOOL_SESSION_NAME=work
+    csp
+    echo stayed >> "$_alias_calls"
+)
+assert_equal "switched" "$(cat "$_alias_calls")"
 
-start_test "makeshpool runs shpool attach and stamps SHPOOL_INITIAL_PWD"
-rm -f "$_detach_calls"
-# redefine the shpool stub to also capture the stamped PWD (only makeshpool
-# sets it; detach* above intentionally don't). Safe to redefine here: no later
-# test in this block reuses the shpool stub.
-shpool() { echo "shpool $* pwd=$SHPOOL_INITIAL_PWD" >> "$_detach_calls"; }
-makeshpool work
-assert_equal "shpool attach work pwd=$PWD" "$(cat "$_detach_calls")"
+# --list/--preview/--help return 0 too but only print, so an arg means no exit.
+start_test "csp does not exit for a non-switch subcommand"
+rm -f "$_alias_calls"
+(
+    changeshpool() { echo "changeshpool $*" >> "$_alias_calls"; }
+    SHPOOL_SESSION_NAME=work
+    csp --list
+    echo stayed >> "$_alias_calls"
+)
+assert_equal "changeshpool --list
+stayed" "$(cat "$_alias_calls")"
 
-start_test "maketmux runs tmux new-session"
-rm -f "$_detach_calls"
-maketmux work
-assert_equal "tmux new-session -s work" "$(cat "$_detach_calls")"
+start_test "cs does not exit outside a shpool session"
+rm -f "$_alias_calls"
+(
+    changesession() { echo switched >> "$_alias_calls"; }
+    unset TMUX SHPOOL_SESSION_NAME
+    cs
+    echo stayed >> "$_alias_calls"
+)
+assert_equal "switched
+stayed" "$(cat "$_alias_calls")"
+
+# tmux nested in shpool sets both $TMUX and $SHPOOL_SESSION_NAME; changesession
+# switches the tmux client in place, so cs must stay (not exit) there.
+start_test "cs does not exit for tmux nested in shpool"
+rm -f "$_alias_calls"
+(
+    changesession() { echo switched >> "$_alias_calls"; }
+    TMUX=/tmp/sock; SHPOOL_SESSION_NAME=work
+    cs
+    echo stayed >> "$_alias_calls"
+)
+assert_equal "switched
+stayed" "$(cat "$_alias_calls")"
+
+# The *s scripts dispatch on $SESSION_BACKEND (falling back to tmux), so cs/ds/ms
+# pass session_backend's choice (which honours WANT_TMUX) as SESSION_BACKEND, or
+# a WANT_TMUX=0 user outside a session would be handed tmux.
+start_test "cs passes session_backend to the script as SESSION_BACKEND"
+rm -f "$_alias_calls"
+(
+    session_backend() { echo shpool; }
+    changesession() { echo "SESSION_BACKEND=$SESSION_BACKEND" >> "$_alias_calls"; }
+    unset SHPOOL_SESSION_NAME
+    cs work
+)
+assert_equal "SESSION_BACKEND=shpool" "$(cat "$_alias_calls")"
+
+# When no backend is wanted/available (session_backend empty) and we aren't in
+# a session, cs/ds/ms do nothing rather than let the script fall back to tmux
+# (matches autosession/switchsession). But inside a session they still act on
+# it, since the script honours $TMUX/$SHPOOL_SESSION_NAME first.
+start_test "cs is a no-op when no backend is selected"
+rm -f "$_alias_calls"
+(
+    session_backend() { echo ""; }
+    changesession() { echo "changesession $*" >> "$_alias_calls"; }
+    unset TMUX SHPOOL_SESSION_NAME
+    cs work
+)
+assert_equal "" "$(cat "$_alias_calls" 2>/dev/null)"
+
+start_test "cs still runs in a session when no backend is selected"
+rm -f "$_alias_calls"
+(
+    session_backend() { echo ""; }
+    changesession() { echo "changesession $*" >> "$_alias_calls"; }
+    TMUX=/tmp/sock; unset SHPOOL_SESSION_NAME
+    cs work
+)
+assert_equal "changesession work" "$(cat "$_alias_calls")"
 
 unset -f jjd hgd gitd autosession jd hd gd mjd mhd mgd _extract_oneliner
-unset -f sessiondetach sessionmake shpool tmux
+unset -f autoshpool autotmux changesession changeshpool changetmux session_backend
 unset -f detachsession detachshpool detachtmux makesession makeshpool maketmux
-rm -f "$_vcsdir_calls" "$_detach_calls"
+unset -f as asp atm cs csp ctm ds dsp dtm ms msp mtm
+rm -f "$_vcsdir_calls" "$_alias_calls"
 
 # Re-source shrc so the real connected_remotely / inside_project are
 # restored for later tests, replacing the stubs left over from the
