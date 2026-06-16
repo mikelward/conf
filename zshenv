@@ -18,8 +18,15 @@ unsetopt GLOBAL_RCS
 # subshells) inherit the exported values and must not re-source it, or
 # self-referential assignments like `export PATH="$HOME/bin:$PATH"` would
 # stack. profile (.zlogin/.bash_profile) checks the same sentinel.
+#
+# `set -a` makes every assignment in ~/.env automatically exported, so the
+# file can use the plain `VAR=val` format that gcloud and other deployment
+# tools expect when reading .env for secrets, while still tolerating an
+# explicit `export VAR=val`.
 if test -z "${DOTENV_SOURCED:-}" && test -f "$HOME/.env"; then
+    set -a
     . "$HOME/.env"
+    set +a
     export DOTENV_SOURCED=1
 fi
 
