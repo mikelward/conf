@@ -1496,6 +1496,54 @@ rm -f "$_alias_calls"
 assert_equal "switched
 stayed" "$(cat "$_alias_calls")"
 
+# A switch that succeeds but does not exit (an in-place tmux switch, or an
+# attach/detach from outside any session) must return the picker's own status
+# (0), not the failed exit guard's 1 -- otherwise `cs && ...` and $? checks break
+# and the prompt shows a spurious error after a successful switch.
+start_test "cs returns success when a tmux-nested switch does not exit"
+rm -f "$_alias_calls"
+(
+    changesession() { return 0; }
+    TMUX=/tmp/sock; SHPOOL_SESSION_NAME=work
+    cs
+    echo "rc=$?" >> "$_alias_calls"
+)
+assert_equal "rc=0" "$(cat "$_alias_calls")"
+
+start_test "cs returns success when an outside-session switch does not exit"
+rm -f "$_alias_calls"
+(
+    session_backend() { echo shpool; }
+    changesession() { return 0; }
+    unset TMUX SHPOOL_SESSION_NAME
+    cs
+    echo "rc=$?" >> "$_alias_calls"
+)
+assert_equal "rc=0" "$(cat "$_alias_calls")"
+
+start_test "csp returns success when an outside-session switch does not exit"
+rm -f "$_alias_calls"
+(
+    changeshpool() { return 0; }
+    unset SHPOOL_SESSION_NAME
+    csp
+    echo "rc=$?" >> "$_alias_calls"
+)
+assert_equal "rc=0" "$(cat "$_alias_calls")"
+
+# A cancelled picker (ESC) returns non-zero; cs must propagate that status so we
+# stay put and the caller sees the cancel.
+start_test "cs returns a cancelled picker's status"
+rm -f "$_alias_calls"
+(
+    session_backend() { echo shpool; }
+    changesession() { return 130; }
+    unset TMUX SHPOOL_SESSION_NAME
+    cs
+    echo "rc=$?" >> "$_alias_calls"
+)
+assert_equal "rc=130" "$(cat "$_alias_calls")"
+
 # The *s scripts dispatch on $SESSION_BACKEND (falling back to tmux), so cs/ds/ms
 # pass session_backend's choice (which honours WANT_SHPOOL/WANT_TMUX and the
 # $SESSION_BACKEND preference) as SESSION_BACKEND, or a WANT_SHPOOL=0 user

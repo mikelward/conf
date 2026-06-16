@@ -969,12 +969,16 @@ if is_interactive
     # switchshpool's `and exit`). changesession dispatches on $TMUX before
     # $SHPOOL_SESSION_NAME, so a tmux session nested in shpool switches in place
     # and must stay: only exit when shpool was picked (in shpool, not in tmux).
-    # A cancelled picker returns non-zero so we stay. csp forces shpool.
+    # A cancelled picker returns non-zero so we stay. csp forces shpool. Capture
+    # the picker's status and run the exit guard separately (same as ms/msp): a
+    # successful switch that doesn't exit -- an in-place tmux switch, or an
+    # attach/detach from outside any session -- must still return the picker's
+    # own status (0), not the failed guard's 1.
     alias as='autosession'
     alias asp='autoshpool'
     alias atm='autotmux'
-    function cs; set -lx SESSION_BACKEND (session_backend); test -n "$TMUX$SHPOOL_SESSION_NAME$SESSION_BACKEND"; and changesession $argv; and test (count $argv) -eq 0; and test -z "$TMUX"; and test -n "$SHPOOL_SESSION_NAME"; and exit; end
-    function csp; changeshpool $argv; and test (count $argv) -eq 0; and test -n "$SHPOOL_SESSION_NAME"; and exit; end
+    function cs; set -lx SESSION_BACKEND (session_backend); test -n "$TMUX$SHPOOL_SESSION_NAME$SESSION_BACKEND"; or return; changesession $argv; set -l rc $status; test $rc -eq 0; and test (count $argv) -eq 0; and test -z "$TMUX"; and test -n "$SHPOOL_SESSION_NAME"; and exit; return $rc; end
+    function csp; changeshpool $argv; set -l rc $status; test $rc -eq 0; and test (count $argv) -eq 0; and test -n "$SHPOOL_SESSION_NAME"; and exit; return $rc; end
     alias ctm='changetmux'
     function ds; set -lx SESSION_BACKEND (session_backend); test -n "$TMUX$SHPOOL_SESSION_NAME$SESSION_BACKEND"; and detachsession $argv; end
     alias dsp='detachshpool'
