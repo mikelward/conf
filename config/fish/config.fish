@@ -1597,8 +1597,7 @@ exec zsh -i'
     # when empty.
     function title
         if show_hostname_in_title
-            short_hostname
-            printf ' '
+            printf '%s ' (short_hostname | string collect)
         end
         set _session (prompt_session_name | string trim)
         if test -n "$_session"
