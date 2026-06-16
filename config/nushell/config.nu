@@ -1209,7 +1209,7 @@ def py  [...args] { ^python ...$args }
 def py2 [...args] { ^python2 ...$args }
 def py3 [...args] { ^python3 ...$args }
 def --env rd [] { cd (projectroot) }
-def rg [...args] { ^rg --follow ...$args }
+def rg [...args] { ^rg --follow --line-number ...$args }
 def rh [...args] { gh-search ...$args | last 20 }
 def s [...args] { ^subl ...$args }
 def spell [...args] { ^aspell -a ...$args }

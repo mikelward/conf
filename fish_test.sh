@@ -885,6 +885,13 @@ result="$(_fish_run "
 ")"
 assert_contains "--follow" "$result"
 
+start_test "fish rg forces --line-number so piped output keeps line numbers"
+result="$(_fish_run "
+    set -gx PATH $_fish_rg_dir \$PATH
+    rg pattern path
+")"
+assert_contains "--line-number" "$result"
+
 start_test "fish rg passes through user arguments"
 result="$(_fish_run "
     set -gx PATH $_fish_rg_dir \$PATH
