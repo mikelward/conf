@@ -1554,6 +1554,46 @@ assert_equal "0" "$?"
 rm -rf "$_retry_dir"
 
 ###############
+# RG
+# rg should invoke rgrep with --dereference-recursive (follow symlinks)
+# instead of plain --recursive. The function lives inside shrc's
+# interactive block (skipped under SHRC_LOAD_FUNCTIONS_ONLY), so pull
+# its definition out by hand and dedent it before eval'ing.
+
+_rg_def=$(grep -E '^[[:space:]]+rg\(\) \{' "$_srcdir/shrc" | sed 's/^[[:space:]]*//')
+start_test "shrc defines rg as a one-liner function"
+assert_true test -n "$_rg_def"
+eval "$_rg_def"
+
+_rg_dir=$(mktemp -d)
+_rg_log="$_rg_dir/args"
+cat > "$_rg_dir/rgrep" << STUB
+#!/bin/sh
+printf '%s\n' "\$@" > "$_rg_log"
+exit 0
+STUB
+chmod +x "$_rg_dir/rgrep"
+
+start_test "rg invokes rgrep with --dereference-recursive"
+PATH="$_rg_dir:$PATH" rg pattern path
+assert_contains "--dereference-recursive" "$(cat "$_rg_log")"
+
+start_test "rg does not use plain --recursive"
+PATH="$_rg_dir:$PATH" rg pattern path
+# `--recursive` (two leading hyphens) is the flag we replaced. The new
+# `--dereference-recursive` has only one hyphen before `recursive`, so
+# substring `--recursive` rejects regressions without false-matching.
+assert_not_contains "--recursive" "$(cat "$_rg_log")"
+
+start_test "rg passes through user arguments"
+PATH="$_rg_dir:$PATH" rg pattern path
+assert_contains "pattern" "$(cat "$_rg_log")"
+assert_contains "path" "$(cat "$_rg_log")"
+
+unset -f rg
+rm -rf "$_rg_dir"
+
+###############
 # CDPATH
 # Verify CDPATH contains HOME but not the conf/config subdirectories, which
 # would surprisingly shadow directory names when `cd`ing from anywhere.

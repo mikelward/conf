@@ -2711,6 +2711,28 @@ except OSError: pass
         assert ($r.stdout | str contains "HISTORY_FILE=SENTINEL")
     })
 
+    ###############
+    # rg invokes rgrep with --dereference-recursive (follow symlinks)
+    # instead of plain --recursive.
+    (run-test "nu rg invokes rgrep with --dereference-recursive" {
+        let bin = (mktemp -d)
+        let log = (mktemp -t "rg-args.XXXXXX")
+        ("#!/bin/sh\nprintf '%s\\n' \"$@\" > \"" + $log + "\"\n") | save -f ($bin | path join "rgrep")
+        ^chmod +x ($bin | path join "rgrep")
+        with-env {PATH: ([$bin] ++ $env.PATH)} {
+            rg pattern path
+        }
+        let args = (open $log)
+        # `--recursive` is the flag we replaced. `--dereference-recursive`
+        # has only one `-` before `recursive`, so a substring check for
+        # `--recursive` cleanly rejects regressions without false-matching
+        # the new flag.
+        assert ($args | str contains "--dereference-recursive") $"expected --dereference-recursive in args, got: ($args)"
+        assert (not ($args | str contains "--recursive\n")) $"unexpected --recursive flag: ($args)"
+        assert ($args | str contains "pattern") $"expected user arg 'pattern', got: ($args)"
+        assert ($args | str contains "path") $"expected user arg 'path', got: ($args)"
+    })
+
     # ~/.failsafe is a persistent opt-in: presence of the file alone
     # forces failsafe mode for every new shell.
     (run-test "nu ~/.failsafe file triggers failsafe mode" {
