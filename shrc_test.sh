@@ -1555,10 +1555,10 @@ rm -rf "$_retry_dir"
 
 ###############
 # RG
-# rg should invoke rgrep with --dereference-recursive (follow symlinks)
-# instead of plain --recursive. The function lives inside shrc's
-# interactive block (skipped under SHRC_LOAD_FUNCTIONS_ONLY), so pull
-# its definition out by hand and dedent it before eval'ing.
+# rg should shell out to ripgrep (`command rg`) with --follow to follow
+# symlinks. The function lives inside shrc's interactive block (skipped
+# under SHRC_LOAD_FUNCTIONS_ONLY), so pull its definition out by hand
+# and dedent it before eval'ing.
 
 _rg_def=$(grep -E '^[[:space:]]+rg\(\) \{' "$_srcdir/shrc" | sed 's/^[[:space:]]*//')
 start_test "shrc defines rg as a one-liner function"
@@ -1567,23 +1567,20 @@ eval "$_rg_def"
 
 _rg_dir=$(mktemp -d)
 _rg_log="$_rg_dir/args"
-cat > "$_rg_dir/rgrep" << STUB
+# Stub `rg` on PATH so `command rg` resolves to it instead of the real
+# ripgrep. The function uses `command rg` rather than calling itself, so
+# no infinite recursion -- if it ever did recurse, this stub wouldn't be
+# reached at all.
+cat > "$_rg_dir/rg" << STUB
 #!/bin/sh
 printf '%s\n' "\$@" > "$_rg_log"
 exit 0
 STUB
-chmod +x "$_rg_dir/rgrep"
+chmod +x "$_rg_dir/rg"
 
-start_test "rg invokes rgrep with --dereference-recursive"
+start_test "rg invokes ripgrep with --follow"
 PATH="$_rg_dir:$PATH" rg pattern path
-assert_contains "--dereference-recursive" "$(cat "$_rg_log")"
-
-start_test "rg does not use plain --recursive"
-PATH="$_rg_dir:$PATH" rg pattern path
-# `--recursive` (two leading hyphens) is the flag we replaced. The new
-# `--dereference-recursive` has only one hyphen before `recursive`, so
-# substring `--recursive` rejects regressions without false-matching.
-assert_not_contains "--recursive" "$(cat "$_rg_log")"
+assert_contains "--follow" "$(cat "$_rg_log")"
 
 start_test "rg passes through user arguments"
 PATH="$_rg_dir:$PATH" rg pattern path
