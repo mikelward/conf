@@ -2041,10 +2041,13 @@ if is_interactive; then
     # switches the live client in place, but makeshpool hands the new session to
     # autoshpool's outer loop via request_switch (detaching us), so the parked
     # shell must exit -- same as cs/csp. make always targets a named session (no
-    # no-arg picker path), so there's no `$# -eq 0` gate; just exit when shpool
-    # was the backend that ran (in shpool, not tmux). msp forces shpool.
-    ms() { local b; b="$(session_backend)"; test -n "$TMUX$SHPOOL_SESSION_NAME$b" && SESSION_BACKEND="$b" makesession "$@" && test -z "$TMUX" && test -n "$SHPOOL_SESSION_NAME" && exit; }
-    msp() { makeshpool "$@" && test -n "$SHPOOL_SESSION_NAME" && exit; }
+    # no-arg picker path), so there's no `$# -eq 0` gate; exit when shpool was
+    # the backend that ran (in shpool, not tmux). msp forces shpool. Capture the
+    # make's status and run the exit guard separately so a make that succeeds but
+    # doesn't exit still returns its own status, not the failed guard's 1 (which
+    # would break `ms ... && ...` and show a spurious error in $?/the prompt).
+    ms() { local b rc; b="$(session_backend)"; test -n "$TMUX$SHPOOL_SESSION_NAME$b" || return; SESSION_BACKEND="$b" makesession "$@"; rc=$?; test $rc -eq 0 && test -z "$TMUX" && test -n "$SHPOOL_SESSION_NAME" && exit; return $rc; }
+    msp() { local rc; makeshpool "$@"; rc=$?; test $rc -eq 0 && test -n "$SHPOOL_SESSION_NAME" && exit; return $rc; }
     mtm() { maketmux "$@"; }
     bindkeys() { daemon xbindkeys "$@"; }
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.go,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}"

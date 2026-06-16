@@ -1291,6 +1291,19 @@ except OSError: pass
             ^nu --no-config-file -c $"source ($CONFIG); ms newproj; print stayed"
         } | complete)
         assert ($out.stdout | str contains "stayed")
+        assert ($out.exit_code == 0)
+    })
+    # A failed make propagates (aborts ms) instead of being swallowed by a
+    # try/catch -- so the error reaches the caller and the exit guard never runs.
+    (run-test "nu ms propagates a failed make" {
+        let bin = (mktemp -d)
+        "#!/bin/sh\nexit 3\n" | save -f ($bin | path join "makesession")
+        ^chmod +x ($bin | path join "makesession")
+        let out = (with-env { SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
+            ^nu --no-config-file -c $"source ($CONFIG); ms newproj; print stayed"
+        } | complete)
+        assert (not ($out.stdout | str contains "stayed"))
+        assert ($out.exit_code != 0)
     })
     # cs/ds/ms pass session-backend's choice (which honours WANT_SHPOOL/
     # WANT_TMUX and the $SESSION_BACKEND preference) as SESSION_BACKEND so
