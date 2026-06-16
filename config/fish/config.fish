@@ -1438,12 +1438,16 @@ if is_interactive
         end
     end
 
-    # print information about all shell jobs
+    # print information about all shell jobs on a single line.
     # intended to be used in the preprompt
     function job_info
-            jobs |
+            set -l _out (jobs |
                 sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /' |
-                grep -v '(pwd now:'
+                grep -v '(pwd now:' |
+                string join ' ')
+            if test -n "$_out"
+                echo "$_out"
+            end
     end
 
     function short_pwd

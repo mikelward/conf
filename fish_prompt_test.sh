@@ -242,6 +242,49 @@ result="$(_fish_run '
 assert_equal "" "$result"
 
 ###############
+# TEST: job_info (parity with bash). Renders all background jobs on a
+# single space-separated line so the preprompt stays compact (one line
+# for jobs rather than one line per job). Stub `jobs` to feed
+# deterministic bash-style output into the sed/grep pipeline.
+
+start_test "fish job_info joins multiple jobs onto one line"
+result="$(_fish_run '
+    function jobs
+        printf "[1]+  Stopped                 vi\n"
+        printf "[2]-  Stopped                 cat\n"
+    end
+    job_info
+')"
+assert_equal "%1 vi %2 cat" "$result"
+
+start_test "fish job_info renders a single job without a trailing space"
+result="$(_fish_run '
+    function jobs
+        printf "[1]+  Stopped                 vi\n"
+    end
+    job_info
+')"
+assert_equal "%1 vi" "$result"
+
+start_test "fish job_info produces no output when there are no jobs"
+result="$(_fish_run '
+    function jobs; end
+    job_info
+')"
+assert_equal "" "$result"
+
+start_test "fish job_info filters pwd-change noise"
+result="$(_fish_run '
+    function jobs
+        printf "[1]+  Stopped                 vi\n"
+        printf "[2]-  Done                    pushd /tmp  (pwd now: /tmp)\n"
+        printf "[3]+  Stopped                 cat\n"
+    end
+    job_info
+')"
+assert_equal "%1 vi %3 cat" "$result"
+
+###############
 # TEST: fish_last_error (parity with bash_last_error / nushell last-job-info)
 # Exercises the real fish_last_error by setting last_job_status directly.
 # Expected output contract:

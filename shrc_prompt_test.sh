@@ -417,6 +417,53 @@ result="$(last_job_info)"
 assert_equal "" "$result"
 
 ###############
+# job_info renders all background jobs on a single space-separated
+# line so the preprompt stays compact (one line for jobs rather than
+# one line per job). Stub `jobs` to feed deterministic shell-builtin
+# style output to the function's sed/grep pipeline.
+start_test "job_info joins multiple jobs onto one line"
+
+jobs() {
+    printf '[1]+  Stopped                 vi\n'
+    printf '[2]-  Stopped                 cat\n'
+}
+result="$(job_info)"
+assert_equal "%1 vi %2 cat" "$result"
+
+###############
+start_test "job_info renders a single job without a trailing space"
+
+jobs() {
+    printf '[1]+  Stopped                 vi\n'
+}
+result="$(job_info)"
+assert_equal "%1 vi" "$result"
+
+###############
+start_test "job_info produces no output when there are no jobs"
+
+jobs() { :; }
+result="$(job_info)"
+assert_equal "" "$result"
+
+###############
+# Some `jobs` implementations emit lines like
+#   [1]+  Done    pushd /tmp  (pwd now: /tmp)
+# job_info filters those so they don't show up in the preprompt;
+# verify the filter survives the new single-line join.
+start_test "job_info filters pwd-change noise"
+
+jobs() {
+    printf '[1]+  Stopped                 vi\n'
+    printf '[2]-  Done                    pushd /tmp  (pwd now: /tmp)\n'
+    printf '[3]+  Stopped                 cat\n'
+}
+result="$(job_info)"
+assert_equal "%1 vi %3 cat" "$result"
+
+unset -f jobs
+
+###############
 start_test "preprompt integrates components"
 
 HOME="$_testdir/fakehome"
