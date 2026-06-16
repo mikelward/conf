@@ -959,18 +959,19 @@ $env.prompt-info = {|flags: list<string>|
 def prompt-info [...flags: string] { do $env.prompt-info $flags }
 
 # print the hostname and session tag for the preprompt line.
-# Hostname is red on production hosts. The session tag is a green [session]
-# when attached to a shpool or tmux session, or a yellow "shpool" warning
-# when not.
+# Hostname is red on production hosts. The session tag is a green session
+# name when attached to a shpool or tmux session, or a yellow warning naming
+# the wanted backend ($SESSION_BACKEND, defaulting to shpool) when not.
 def host-info [] {
     let h = (short-hostname)
     let host = if (on-production-host) { red $h } else { $h }
     let root_info = if (i-am-root) { $"[(red 'root')] " } else { "" }
     let session = (prompt-session-name | str trim)
     let tag = if ($session | is-not-empty) {
-        $" [(green $session)]"
+        $" (green $session)"
     } else {
-        $" (yellow "shpool")"
+        let backend = ($env.SESSION_BACKEND? | default "shpool")
+        $" (yellow $backend)"
     }
     $root_info + $host + $tag
 }
@@ -1011,12 +1012,11 @@ def --env prompt-line [] {
 }
 
 # print the string that should be used as the xterm title.
-# Format: "<hostname> [<session>] <project-or-pwd>", matching the
-# bracketed session tag used in host-info. Each leading part is omitted
-# when empty.
+# Format: "<hostname> <session> <project-or-pwd>", matching the session tag
+# used in host-info. Each leading part is omitted when empty.
 def title [] {
     let session = (prompt-session-name | str trim)
-    let tag = if ($session | is-not-empty) { $"[($session)] " } else { "" }
+    let tag = if ($session | is-not-empty) { $"($session) " } else { "" }
     let parts = if (show-hostname-in-title) {
         [(short-hostname) " " $tag (project-or-pwd)]
     } else {

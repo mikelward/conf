@@ -1407,10 +1407,11 @@ maybe_background_fetch() {
 }
 
 # print the hostname and session tag for the preprompt line.
-# Hostname is red on production hosts. The session tag is a green [session]
-# when attached to a shpool or tmux session, or a yellow "shpool" warning
-# when not. The session name comes from session_name (which carries a
-# trailing space for the window title); trim it for the bracketed tag.
+# Hostname is red on production hosts. The session tag is a green session
+# name when attached to a shpool or tmux session, or a yellow warning naming
+# the wanted backend ($SESSION_BACKEND, defaulting to shpool) when not. The
+# session name comes from session_name (which carries a trailing space for
+# the window title); trim it for the tag.
 host_info() {
     local _host="$(short_hostname)"
     if on_production_host; then
@@ -1424,9 +1425,9 @@ host_info() {
     _session="${_session% }"
     local _tag
     if test -n "$_session"; then
-        _tag=" [$(green "$_session")]"
+        _tag=" $(green "$_session")"
     else
-        _tag=" $(yellow shpool)"
+        _tag=" $(yellow "${SESSION_BACKEND:-shpool}")"
     fi
     printf '%s%s%s' "$_root_info" "$_host" "$_tag"
 }
@@ -1742,9 +1743,8 @@ exec zsh -i'
 }
 
 # print the string that should be used as the xterm title.
-# Format: "<hostname> [<session>] <project-or-pwd>", matching the
-# bracketed session tag used in host_info. Each leading part is omitted
-# when empty.
+# Format: "<hostname> <session> <project-or-pwd>", matching the session tag
+# used in host_info. Each leading part is omitted when empty.
 title() {
     if show_hostname_in_title; then
         short_hostname
@@ -1753,7 +1753,7 @@ title() {
     local _session="$(prompt_session_name)"
     _session="${_session% }"
     if test -n "$_session"; then
-        printf '[%s] ' "$_session"
+        printf '%s ' "$_session"
     fi
     project_or_pwd
 }

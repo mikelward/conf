@@ -1211,8 +1211,9 @@ if is_interactive
 
     # print the hostname and session tag for the preprompt line.
     # Hostname is red on production hosts. The session tag is a green
-    # [session] when attached to a shpool or tmux session, or a yellow
-    # "shpool" warning when not.
+    # session name when attached to a shpool or tmux session, or a yellow
+    # warning naming the wanted backend ($SESSION_BACKEND, defaulting to
+    # shpool) when not.
     function host_info
         set _host (short_hostname | string collect)
         if on_production_host
@@ -1225,9 +1226,11 @@ if is_interactive
         set _tag
         set _session (prompt_session_name | string trim)
         if test -n "$_session"
-            set _tag " ["(green $_session | string collect)"]"
+            set _tag " "(green $_session | string collect)
         else
-            set _tag " "(yellow shpool | string collect)
+            set _backend shpool
+            test -n "$SESSION_BACKEND"; and set _backend $SESSION_BACKEND
+            set _tag " "(yellow $_backend | string collect)
         end
         printf '%s%s%s' $_root_info $_host $_tag
     end
@@ -1596,16 +1599,15 @@ exec zsh -i'
     end
 
     # print the string that should be used as the xterm title.
-    # Format: "<hostname> [<session>] <project-or-pwd>", matching the
-    # bracketed session tag used in host_info. Each leading part is omitted
-    # when empty.
+    # Format: "<hostname> <session> <project-or-pwd>", matching the session
+    # tag used in host_info. Each leading part is omitted when empty.
     function title
         if show_hostname_in_title
             printf '%s ' (short_hostname | string collect)
         end
         set _session (prompt_session_name | string trim)
         if test -n "$_session"
-            printf '[%s] ' $_session
+            printf '%s ' $_session
         end
         project_or_pwd
     end
