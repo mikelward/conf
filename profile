@@ -17,6 +17,18 @@ is_zsh() {
     test -n "${ZSH_VERSION:-}"
 }
 
+# Per-host environment overrides, sourced before .shrc so that anything set
+# here (e.g. SHELL) is visible to the shrc re-exec and the rest of startup.
+# Covers bash and other login shells; zsh already picked this up via .zshenv.
+# The DOTENV_SOURCED sentinel (set there too) keeps a zsh login from applying
+# ~/.env a second time via .zlogin, and keeps the zsh-to-bash re-exec from
+# re-applying it on top of the inherited values. Keep ~/.env to plain
+# variable assignments only.
+if test -z "${DOTENV_SOURCED:-}" && test -f "$HOME/.env"; then
+    . "$HOME/.env"
+    export DOTENV_SOURCED=1
+fi
+
 # zsh will have already read .shrc via the .zshrc symlink if it's interactive,
 # source .shrc for other shells here
 if { ! is_zsh; } || { is_zsh && ! is_interactive; }; then

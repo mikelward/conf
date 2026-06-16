@@ -1524,6 +1524,13 @@ $env.config = ($env.config | upsert hooks.env_change.PWD [{|before, after|
 # mode so the test suite stays quiet. Mirrors shrc's
 # `maybe_start_session_and_exit` call on startup.
 #
+# Parity note: "run interactive setup once" across the login -> session-manager
+# transition is handled the same way in every shell -- by the handoff below
+# (maybe-start-session-and-exit), which exits the launcher before the heavy
+# setup, so only the kept shell does it. Re-sourcing within a process is left to
+# re-run fully (it's how you reload after editing), so there's no once-guard to
+# mirror here.
+#
 # When entering a shpool session, the autoshpool wrapper has stamped
 # SHPOOL_INITIAL_PWD onto the env; cd to it (so the spawned shell lands
 # in the user's caller PWD, not shpool's daemon PWD) and clear the var

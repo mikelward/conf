@@ -71,6 +71,66 @@ else
     shell=sh
 fi
 
+# Re-exec into the shell named by $SHELL when it differs from the one that's
+# actually running. sshd always launches the /etc/passwd login shell and
+# ignores $SHELL, so the only way to switch shells without chsh is for the
+# login shell to exec into $SHELL itself. Combined with ~/.env (sourced from
+# .zshenv and profile before we get here), `echo 'export SHELL=/bin/bash' >>
+# ~/.env` makes the next login land in bash. Doing this here -- before
+# setup_shell_compat_common and all the interactive setup below -- means a zsh
+# login destined for bash skips the zsh-specific setup entirely.
+
+# want_reexec: true when we should re-exec into $SHELL. Pure policy over
+# $SHELL, the running shell ($shell), and the one-shot SHELL_REEXEC_DONE
+# guard, with no interactive/tty checks, so it is unit-testable. Only switches
+# between shells shrc supports (bash/zsh), and only when $SHELL is a different,
+# executable shell we haven't already switched into.
+want_reexec() {
+    test -n "${SHELL_REEXEC_DONE:-}" && return 1
+    case "${SHELL:-}" in
+        */bash|bash) test "$shell" = bash && return 1;;
+        */zsh|zsh)   test "$shell" = zsh && return 1;;
+        *) return 1;;
+    esac
+    command -v "$SHELL" >/dev/null 2>&1
+}
+
+# login_shell: true when this is a login shell -- the context where sshd (or a
+# local login) launched the /etc/passwd shell. Used to limit the re-exec to the
+# login handoff, so manually starting the other shell from an existing prompt
+# (e.g. `zsh` from a bash login, where $SHELL still names bash) is left alone
+# instead of being hijacked straight back into $SHELL.
+login_shell() {
+    if is_zsh; then
+        [[ -o login ]]
+    elif is_bash; then
+        shopt -q login_shell
+    else
+        # POSIX fallback: a login shell's argv[0] is prefixed with '-'.
+        case $0 in -*) return 0;; *) return 1;; esac
+    fi
+}
+
+# reexec_into_shell: perform the switch if want_reexec agrees and we're an
+# interactive, tty-attached *login* shell. The interactive + `test -t 0` gate
+# keeps this from firing for `ssh host cmd`, scp, rsync, or cron (non-interactive
+# shells that would break on any exec/output); the login_shell gate keeps it
+# from hijacking a shell the user started by hand from an existing session.
+# SHRC_LOAD_FUNCTIONS_ONLY (the test harness) suppresses the action while still
+# defining the function. The earlier failsafe block has already returned for
+# FAILSAFE/~/.failsafe, so a bad $SHELL is recoverable with `touch ~/.failsafe`.
+reexec_into_shell() {
+    test -n "${SHRC_LOAD_FUNCTIONS_ONLY:-}" && return
+    case $- in *i*) ;; *) return;; esac
+    test -t 0 || return
+    login_shell || return
+    want_reexec || return
+    SHELL_REEXEC_DONE=1
+    export SHELL_REEXEC_DONE
+    exec "$SHELL" -l
+}
+reexec_into_shell
+
 # Per-shell compatibility options. Defined as a function (rather than
 # inline) so the test harness can replay the same setup -- especially
 # `emulate sh` under zsh -- before exercising functions extracted from
@@ -79,35 +139,21 @@ fi
 # under zsh because unquoted `$PATH` doesn't split. `emulate sh` without
 # -L persists to the caller's scope, so calling this function here has
 # the same effect as the previous top-level case block.
-setup_shell_compat() {
+setup_shell_compat_common() {
     case "$shell" in
     zsh)
-        # make zsh as similar to bash as possible
+        # make zsh as similar to bash as possible. Only options that affect
+        # how the *rest of shrc* parses and runs belong here; the
+        # interactive-only history/completion/prompt options live in
+        # setup_shell_compat_interactive, which runs after the session
+        # handoff so a launcher that re-execs or hands off doesn't pay for
+        # setup it's about to throw away.
         emulate sh
         setopt BRACE_EXPAND
-        setopt BANG_HIST
-        setopt CSH_JUNKIE_HISTORY
         setopt INTERACTIVE_COMMENTS
         setopt KSH_TYPESET
         # so aliases like + and - work
         unsetopt POSIX_ALIASES >/dev/null 2>&1
-        # so we can display jobs in the prompt
-        unsetopt POSIX_JOBS >/dev/null 2>&1
-
-        # share history between shells
-        # particularly useful for zsh-autocomplete
-        setopt SHARE_HISTORY
-        HISTFILE=~/.zsh_history
-        HISTSIZE=100000
-        SAVEHIST=100000
-
-        # make tab completion do what it says
-        # e.g. in conf/config, i3s<TAB> completes to i3status/, it should
-        # autocd to i3status/, not strip the slash and run i3status
-        unsetopt AUTO_REMOVE_SLASH
-
-        # set_prompt sets PS1 to a string likely including '$', don't expand it
-        unsetopt PROMPT_SUBST
 
         # enable ksh default features
         setopt KSH_GLOB         # !(pattern) etc. like in ksh
@@ -134,7 +180,37 @@ setup_shell_compat() {
         ;;
     esac
 }
-setup_shell_compat
+setup_shell_compat_common
+
+# Interactive-only shell options, split out from setup_shell_compat_common. Called
+# from the interactive block *after* the session handoff (maybe_start_session_and_exit),
+# so a shell that re-execs into another shell or hands off to tmux/shpool never
+# runs the zsh history/completion/prompt setopts it's about to throw away.
+setup_shell_compat_interactive() {
+    case "$shell" in
+    zsh)
+        setopt BANG_HIST
+        setopt CSH_JUNKIE_HISTORY
+        # so we can display jobs in the prompt
+        unsetopt POSIX_JOBS >/dev/null 2>&1
+
+        # share history between shells
+        # particularly useful for zsh-autocomplete
+        setopt SHARE_HISTORY
+        HISTFILE=~/.zsh_history
+        HISTSIZE=100000
+        SAVEHIST=100000
+
+        # make tab completion do what it says
+        # e.g. in conf/config, i3s<TAB> completes to i3status/, it should
+        # autocd to i3status/, not strip the slash and run i3status
+        unsetopt AUTO_REMOVE_SLASH
+
+        # set_prompt sets PS1 to a string likely including '$', don't expand it
+        unsetopt PROMPT_SUBST
+        ;;
+    esac
+}
 
 # standardize on bash-like variables that everyone assumes are preset
 : ${USERNAME:=$(id -un)}
@@ -1878,7 +1954,6 @@ set_up_ssh_aliases() {
     done < "$HOME/.ssh/config"
     set +f
 }
-set_up_ssh_aliases
 
 if is_interactive; then
     # The autoshpool wrapper stamps SHPOOL_INITIAL_PWD with the PWD at
@@ -1889,6 +1964,13 @@ if is_interactive; then
         SHPOOL_INITIAL_PWD=
     fi
     maybe_start_session_and_exit
+
+    # Past this point we're the shell we're keeping (the handoff exits if it
+    # started a session). Run the interactive-only setup that a launcher or a
+    # re-exec skips: the zsh history/completion/prompt setopts and the
+    # ssh-config host aliases.
+    setup_shell_compat_interactive
+    set_up_ssh_aliases
 
     log_history "New session as $USERNAME: $0 $*"
 
