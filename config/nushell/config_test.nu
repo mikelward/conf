@@ -2268,18 +2268,43 @@ except OSError: pass
         $env.USERNAME = "mikel"
         hide-env --ignore-errors SHPOOL_SESSION_NAME
         hide-env --ignore-errors SESSION_BACKEND
+        # No wanted backend, so session-backend is empty and the warning
+        # falls back to shpool.
+        $env.WANT_TMUX = "0"
+        $env.WANT_SHPOOL = "0"
         $env.on-production-host = {|| false }
         let out = (host-info)
         assert str contains $out "shpool"
         assert str contains $out (ansi yellow)
     })
     (run-test "nu host-info warning honours SESSION_BACKEND" {
-        # Outside any session the yellow warning names the wanted backend
-        # ($SESSION_BACKEND), defaulting to shpool.
+        # Outside any session, an explicitly set $SESSION_BACKEND wins over
+        # session-backend so the warning names the chosen backend.
         $env.HOSTNAME = "mikel-laptop"
         $env.USERNAME = "mikel"
         hide-env --ignore-errors SHPOOL_SESSION_NAME
         $env.SESSION_BACKEND = "tmux"
+        $env.on-production-host = {|| false }
+        let out = (host-info)
+        assert str contains ($out | ansi strip) "tmux"
+        assert str contains $out (ansi yellow)
+    })
+    (run-test "nu host-info warning falls back to session-backend" {
+        # With no $SESSION_BACKEND, the warning names the backend the gating
+        # would actually start (session-backend). Fake tmux + autotmux on
+        # PATH so session-backend picks tmux (the default).
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        hide-env --ignore-errors SESSION_BACKEND
+        hide-env --ignore-errors WANT_TMUX
+        let bindir = (mktemp -d)
+        for cmd in [tmux autotmux] {
+            let p = ([$bindir $cmd] | path join)
+            "#!/bin/sh\n" | save -f $p
+            chmod +x $p
+        }
+        $env.PATH = ($env.PATH | prepend $bindir)
         $env.on-production-host = {|| false }
         let out = (host-info)
         assert str contains ($out | ansi strip) "tmux"

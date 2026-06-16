@@ -174,6 +174,8 @@ HOSTNAME="mikel-laptop"
 USERNAME="mikel"
 on_production_host() { false; }
 in_shpool() { false; }
+# No wanted/installed backend, so the warning falls back to shpool.
+session_backend() { :; }
 result="$(host_info)"
 assert_equal "laptop shpool" "$result"
 
@@ -186,13 +188,22 @@ in_shpool() { false; }
 unset SHPOOL_SESSION_NAME
 
 start_test "host_info warning honours SESSION_BACKEND"
-# Outside any session the yellow warning names the wanted backend
-# ($SESSION_BACKEND), defaulting to shpool.
+# Outside any session, an explicitly set $SESSION_BACKEND wins over
+# session_backend so the warning names the chosen backend.
 in_shpool() { false; }
 SESSION_BACKEND="tmux"
 result="$(host_info)"
 assert_equal "laptop tmux" "$result"
 unset SESSION_BACKEND
+
+start_test "host_info warning falls back to session_backend"
+# With no $SESSION_BACKEND, the warning names the backend the gating
+# would actually start (session_backend, tmux by default).
+in_shpool() { false; }
+session_backend() { puts tmux; }
+result="$(host_info)"
+assert_equal "laptop tmux" "$result"
+session_backend() { :; }
 
 start_test "host_info prepends [root] when root"
 i_am_root() { true; }

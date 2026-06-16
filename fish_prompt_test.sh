@@ -309,6 +309,8 @@ result="$(_fish_run '
     set -g USERNAME mikel
     function on_production_host; return 1; end
     function in_shpool; return 1; end
+    # No wanted/installed backend, so the warning falls back to shpool.
+    function session_backend; end
     host_info
 ')"
 assert_equal "laptop shpool" "$result"
@@ -325,14 +327,28 @@ result="$(_fish_run '
 assert_equal "laptop edge1" "$result"
 
 start_test "fish host_info warning honours SESSION_BACKEND"
-# Outside any session the yellow warning names the wanted backend
-# ($SESSION_BACKEND), defaulting to shpool.
+# Outside any session, an explicitly set $SESSION_BACKEND wins over
+# session_backend so the warning names the chosen backend.
 result="$(_fish_run '
     set -g HOSTNAME mikel-laptop
     set -g USERNAME mikel
     set -g SESSION_BACKEND tmux
     function on_production_host; return 1; end
     function in_shpool; return 1; end
+    host_info
+')"
+assert_equal "laptop tmux" "$result"
+
+start_test "fish host_info warning falls back to session_backend"
+# With no $SESSION_BACKEND, the warning names the backend the gating
+# would actually start (session_backend, tmux by default).
+result="$(_fish_run '
+    set -g HOSTNAME mikel-laptop
+    set -g USERNAME mikel
+    set -e SESSION_BACKEND
+    function on_production_host; return 1; end
+    function in_shpool; return 1; end
+    function session_backend; echo tmux; end
     host_info
 ')"
 assert_equal "laptop tmux" "$result"
@@ -344,6 +360,7 @@ result="$(_fish_run '
     function on_production_host; return 1; end
     function in_shpool; return 1; end
     function i_am_root; return 0; end
+    function session_backend; end
     host_info
 ')"
 assert_equal "[root] laptop shpool" "$result"
@@ -461,6 +478,7 @@ result="$(_fish_run '
     set -g USERNAME mikel
     function on_production_host; return 1; end
     function in_shpool; return 1; end
+    function session_backend; end
     function is_ssh_valid; return 0; end
     function prompt_info; return 1; end
     cd $HOME
@@ -475,6 +493,7 @@ result="$(_fish_run '
     set -g USERNAME mikel
     function on_production_host; return 1; end
     function in_shpool; return 1; end
+    function session_backend; end
     function is_ssh_valid; return 1; end
     function prompt_info; return 1; end
     cd $HOME
@@ -492,6 +511,7 @@ result="$(_fish_run '
     set -g USERNAME mikel
     function on_production_host; return 1; end
     function in_shpool; return 1; end
+    function session_backend; end
     function is_ssh_valid; return 0; end
     function prompt_info; echo "conf main"; end
     prompt_line
@@ -509,6 +529,7 @@ result="$(_fish_run '
     set -g COLUMNS 80
     mkdir -p $HOME
     cd $HOME
+    function session_backend; end
     function is_ssh_valid; return 1; end
     function prompt_info; return 1; end
     function vcs
@@ -533,6 +554,7 @@ result="$(_fish_run '
     set -g HOSTNAME mikel-workstation
     set -g USERNAME mikel
     set -g COLUMNS 80
+    function session_backend; end
     function prompt_info; echo "conf main"; end
     function vcs
         switch $argv[1]
