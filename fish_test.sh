@@ -690,6 +690,49 @@ expected="changesession work
 stayed"
 assert_equal "$expected" "$result"
 
+# A switch that succeeds but does not exit (an in-place tmux switch, or an
+# attach/detach from outside any session) must return the picker's own status
+# (0), not the failed exit guard's 1.
+start_test "fish cs returns success when a tmux-nested switch does not exit"
+result="$(_fish_run '
+    function changesession; return 0; end
+    set -gx TMUX /tmp/sock
+    set -gx SHPOOL_SESSION_NAME work
+    cs
+    echo "rc=$status"
+')"
+assert_equal "rc=0" "$result"
+
+start_test "fish cs returns success when an outside-session switch does not exit"
+result="$(_fish_run '
+    function session_backend; echo shpool; end
+    function changesession; return 0; end
+    set -e TMUX SHPOOL_SESSION_NAME
+    cs
+    echo "rc=$status"
+')"
+assert_equal "rc=0" "$result"
+
+start_test "fish csp returns success when an outside-session switch does not exit"
+result="$(_fish_run '
+    function changeshpool; return 0; end
+    set -e SHPOOL_SESSION_NAME
+    csp
+    echo "rc=$status"
+')"
+assert_equal "rc=0" "$result"
+
+# A cancelled picker (ESC) returns non-zero; cs must propagate that status.
+start_test "fish cs returns a cancelled picker's status"
+result="$(_fish_run '
+    function session_backend; echo shpool; end
+    function changesession; return 130; end
+    set -e TMUX SHPOOL_SESSION_NAME
+    cs
+    echo "rc=$status"
+')"
+assert_equal "rc=130" "$result"
+
 # cs/ds/ms pass session_backend's choice (which honours WANT_SHPOOL/WANT_TMUX
 # and the $SESSION_BACKEND preference) as SESSION_BACKEND so the *s scripts
 # don't fall back to tmux for a WANT_SHPOOL=0 user.

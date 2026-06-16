@@ -2102,11 +2102,15 @@ if is_interactive; then
     # shpool: it dispatches on $TMUX before $SHPOOL_SESSION_NAME, so a tmux
     # session nested in shpool (both set) switches the tmux client in place and
     # must stay -- gate on "in shpool, not in tmux". A cancelled picker (ESC)
-    # returns non-zero, so the `&&` chain stops before `exit` and we stay put.
-    # csp forces shpool, so it
-    # detaches whenever we're in a shpool session regardless of tmux.
-    cs() { local b; b="$(session_backend)"; test -n "$TMUX$SHPOOL_SESSION_NAME$b" && SESSION_BACKEND="$b" changesession "$@" && test $# -eq 0 && test -z "$TMUX" && test -n "$SHPOOL_SESSION_NAME" && exit; }
-    csp() { changeshpool "$@" && test $# -eq 0 && test -n "$SHPOOL_SESSION_NAME" && exit; }
+    # returns non-zero, so the exit guard's `test $rc -eq 0` fails and we stay
+    # put. csp forces shpool, so it detaches whenever we're in a shpool session
+    # regardless of tmux. Capture the picker's status and run the exit guard
+    # separately (same as ms/msp): a successful switch that doesn't exit -- an
+    # in-place tmux switch, or an attach/detach from outside any session -- must
+    # still return the picker's own status (0), not the failed guard's 1 (which
+    # would break `cs && ...` and show a spurious error in $?/the prompt).
+    cs() { local b rc; b="$(session_backend)"; test -n "$TMUX$SHPOOL_SESSION_NAME$b" || return; SESSION_BACKEND="$b" changesession "$@"; rc=$?; test $rc -eq 0 && test $# -eq 0 && test -z "$TMUX" && test -n "$SHPOOL_SESSION_NAME" && exit; return $rc; }
+    csp() { local rc; changeshpool "$@"; rc=$?; test $rc -eq 0 && test $# -eq 0 && test -n "$SHPOOL_SESSION_NAME" && exit; return $rc; }
     ctm() { changetmux "$@"; }
     ds() { local b; b="$(session_backend)"; test -n "$TMUX$SHPOOL_SESSION_NAME$b" && SESSION_BACKEND="$b" detachsession "$@"; }
     dsp() { detachshpool "$@"; }
