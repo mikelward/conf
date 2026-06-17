@@ -1257,6 +1257,41 @@ except OSError: pass
         } | complete)
         assert ($out.stdout | str contains "stayed")
     })
+    # A switch that succeeds but does not exit (a tmux-nested switch) must return
+    # cleanly (exit code 0), not a swallowed/fake status, matching shrc/fish.
+    (run-test "nu cs returns success when a tmux-nested switch does not exit" {
+        let bin = (mktemp -d)
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "changesession")
+        ^chmod +x ($bin | path join "changesession")
+        let out = (with-env { TMUX: "/tmp/sock", SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
+            ^nu --no-config-file -c $"source ($CONFIG); cs; print stayed"
+        } | complete)
+        assert ($out.stdout | str contains "stayed")
+        assert ($out.exit_code == 0)
+    })
+    # A cancelled (ESC) or failed picker propagates (aborts cs) instead of being
+    # swallowed by a try/catch -- so the non-zero status reaches the caller and
+    # the exit guard never runs (mirrors shrc/fish returning the picker status).
+    (run-test "nu cs propagates a cancelled/failed picker" {
+        let bin = (mktemp -d)
+        "#!/bin/sh\nexit 130\n" | save -f ($bin | path join "changesession")
+        ^chmod +x ($bin | path join "changesession")
+        let out = (with-env { SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
+            ^nu --no-config-file -c $"source ($CONFIG); cs; print stayed"
+        } | complete)
+        assert (not ($out.stdout | str contains "stayed"))
+        assert ($out.exit_code != 0)
+    })
+    (run-test "nu csp propagates a cancelled/failed picker" {
+        let bin = (mktemp -d)
+        "#!/bin/sh\nexit 130\n" | save -f ($bin | path join "changeshpool")
+        ^chmod +x ($bin | path join "changeshpool")
+        let out = (with-env { SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
+            ^nu --no-config-file -c $"source ($CONFIG); csp; print stayed"
+        } | complete)
+        assert (not ($out.stdout | str contains "stayed"))
+        assert ($out.exit_code != 0)
+    })
     # make* mirror change*'s exit handling: inside a shpool session makeshpool
     # hands the new session to autoshpool's loop via request_switch (detaching
     # us), so the parked shell must exit. Unlike cs there's no empty-args gate:

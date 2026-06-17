@@ -1502,8 +1502,9 @@ def clone [url: string, ...args: string] {
 # than trigger that fallback (see skip-session-script).
 # cs additionally exits the shell after a shpool switch (the script detaches us
 # and the outer autoshpool loop attaches the target, like switchsession); tmux
-# switches in place, so only exit when in a shpool session, and a cancelled
-# picker errors so we stay (mirrors switchsession's try/exit).
+# switches in place, so only exit when in a shpool session. A cancelled (ESC) or
+# failed picker propagates its non-zero status (aborting cs before the exit
+# guard), matching shrc/fish, so we stay put and $? reflects the picker.
 
 alias as  = autosession
 alias asp = autoshpool
@@ -1517,16 +1518,20 @@ def skip-session-script [backend: string] {
 def --wrapped cs [...args] {
     let backend = (session-backend)
     if (skip-session-script $backend) { return }
-    let ok = (try { with-env { SESSION_BACKEND: $backend } { ^changesession ...$args }; true } catch { false })
+    # Run the picker directly (no try/catch that would swallow its status, same
+    # as ms/msp): a cancelled (ESC) or failed picker aborts cs and propagates the
+    # non-zero status, so `cs and ...` and $? see the failure instead of a fake
+    # success; a successful switch falls through to the exit guard and returns 0.
+    with-env { SESSION_BACKEND: $backend } { ^changesession ...$args }
     # Only the no-arg picker path switches (--list/--preview/--help just print),
     # so gate the exit on empty args. And changesession dispatches on $TMUX
     # before $SHPOOL_SESSION_NAME, so a tmux session nested in shpool switches in
     # place and must stay: only exit when shpool was picked (in shpool, not tmux).
-    if $ok and ($args | is-empty) and (($env.TMUX? | default "") | is-empty) and (($env.SHPOOL_SESSION_NAME? | default "") | is-not-empty) { exit }
+    if ($args | is-empty) and (($env.TMUX? | default "") | is-empty) and (($env.SHPOOL_SESSION_NAME? | default "") | is-not-empty) { exit }
 }
 def --wrapped csp [...args] {
-    let ok = (try { ^changeshpool ...$args; true } catch { false })
-    if $ok and ($args | is-empty) and (($env.SHPOOL_SESSION_NAME? | default "") | is-not-empty) { exit }
+    ^changeshpool ...$args
+    if ($args | is-empty) and (($env.SHPOOL_SESSION_NAME? | default "") | is-not-empty) { exit }
 }
 alias ctm = ^changetmux
 def --wrapped ds [...args] {
