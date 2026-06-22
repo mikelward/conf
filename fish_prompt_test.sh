@@ -595,7 +595,7 @@ result="$(_fish_run '
     function prompt_info; return 1; end
     function vcs
         switch $argv[1]
-            case map; return 0
+            case unmerged; return 0
             case "*"; return 1
         end
     end
@@ -619,7 +619,7 @@ result="$(_fish_run '
     function prompt_info; echo "conf main"; end
     function vcs
         switch $argv[1]
-            case map; return 0
+            case unmerged; return 0
             case "*"; return 1
         end
     end
@@ -643,7 +643,7 @@ result="$(_fish_run '
     function prompt_info; echo "edge1 ui somebranch * pull"; end
     function vcs
         switch $argv[1]
-            case map; return 0
+            case unmerged; return 0
             case "*"; return 1
         end
     end
