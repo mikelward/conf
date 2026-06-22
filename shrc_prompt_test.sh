@@ -40,9 +40,9 @@ projectname() { :; }
 vcs() { return 1; }
 outgoing() { return 1; }
 base() { :; }
-# `map` is defined in shrc.vcs via the command dispatch loop; stub it
-# here so preprompt's `map 2>/dev/null` call is a silent no-op by default.
-map() { :; }
+# `unmerged` is defined in shrc.vcs via the command dispatch loop; stub it
+# here so preprompt's `unmerged 2>/dev/null` call is a silent no-op by default.
+unmerged() { :; }
 # preprompt now calls maybe_background_fetch on each prompt to keep
 # remote refs warm. The real implementation invokes `command vcs
 # auto-fetch`, which spawns a detached fetch per the cwd's VCS. Install
@@ -639,12 +639,10 @@ in_shpool() { true; }
 SHPOOL_SESSION_NAME="edge1"
 inside_project() { true; }
 prompt_info() { echo "edge1 ui somebranch * pull"; }
-# `map` is what preprompt actually calls (since commit 426dcda replaced
-# the direct `base` call). It's defined in shrc.vcs's command dispatch
-# loop and not extracted by this test, so stub it directly.
-map() { echo "abc1234 Bump targetSdk to 36"; }
+# `unmerged` is what preprompt actually calls. It's defined in shrc.vcs's
+# command dispatch loop and not extracted by this test, so stub it directly.
+unmerged() { echo "abc1234 Bump targetSdk to 36"; }
 outgoing() { echo "abc1234 Bump targetSdk to 36"; }
-base() { echo "abc1234 Bump targetSdk to 36"; }
 
 result="$(_resolve_cr "$(preprompt)")"
 expected="
@@ -666,7 +664,7 @@ prompt_info() { :; }
 vcs() { return 1; }
 outgoing() { return 1; }
 base() { :; }
-map() { :; }
+unmerged() { :; }
 
 ###############
 # maybe_background_fetch: keeps remote refs warm by invoking `vcs

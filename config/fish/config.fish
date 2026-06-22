@@ -1222,7 +1222,7 @@ if is_interactive
         printf '\n'
         bar $COLUMNS
         printf '\r%s \n' (prompt_line | string collect)
-        vcs map 2>/dev/null
+        vcs unmerged 2>/dev/null
         job_info
         publish_jobs
         set_title (title | string collect)
