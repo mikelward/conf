@@ -1043,6 +1043,12 @@ $env.prompt-info = {|flags: list<string>|
 }
 def prompt-info [...flags: string] { do $env.prompt-info $flags }
 
+# wrapper around `vcs unmerged` so render-prompt has a single override
+# point and tests can stub it cheaply. Overridable: set $env.unmerged =
+# { ... } in an autoload file.
+$env.unmerged = { try { ^vcs unmerged | str trim } catch { "" } }
+def unmerged [] { do $env.unmerged }
+
 # print the hostname and session tag for the preprompt line.
 # Hostname is red on production hosts. The session tag is a green session
 # name when attached to a shpool or tmux session, or a yellow warning naming
@@ -1181,9 +1187,11 @@ def --env render-prompt [] {
     let cr = (char cr)
     let title_seq = (title-escape (title))
     let bell = (flash-terminal)
+    let unmerged_out = (unmerged)
+    let unmerged_segment = if ($unmerged_out | is-empty) { "" } else { $"($unmerged_out)($nl)" }
     publish-jobs
     hide-env --ignore-errors _SESSION_NAME
-    $"(ansi reset)($bell)($info)($title_seq)($nl)($sep)($cr)($line) ($nl)((ps1-character)) "
+    $"(ansi reset)($bell)($info)($title_seq)($nl)($sep)($cr)($line) ($nl)($unmerged_segment)((ps1-character)) "
 }
 
 def render-right-prompt [] { "" }

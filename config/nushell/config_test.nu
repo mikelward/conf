@@ -803,6 +803,34 @@ except OSError: pass
         cd $env.HOME
         assert str contains (render-prompt) "status 1"
     })
+    (run-test "nu render-prompt includes unmerged output" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.UID = 1000
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.PATH = []
+        $env.unmerged = { "abc1234 Bump targetSdk to 36" }
+        cd $env.HOME
+        assert str contains (render-prompt) "abc1234 Bump targetSdk to 36"
+        $env.unmerged = { try { ^vcs unmerged | str trim } catch { "" } }
+    })
+    (run-test "nu render-prompt omits empty unmerged" {
+        $env.HOSTNAME = "mikel-laptop"
+        $env.USERNAME = "mikel"
+        $env.UID = 1000
+        hide-env --ignore-errors TMUX
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.PATH = []
+        $env.unmerged = { "" }
+        cd $env.HOME
+        # With nothing to show, the prompt-character line should follow
+        # the prompt line directly (no blank line for unmerged).
+        let rendered = (render-prompt)
+        assert str contains $rendered "―"
+        assert not (($rendered | str contains $"(char newline)(char newline)((ps1-character))"))
+        $env.unmerged = { try { ^vcs unmerged | str trim } catch { "" } }
+    })
 
     ###############
     # pre_execution / pre_prompt hooks
