@@ -6,14 +6,18 @@
 # Sequence: dim the backlight at 5 min, lock at 10 min, blank the screens
 # at 15 min. Screen wakes and backlight restores on any input.
 #
+# NOTE: in a swayidle CONFIG FILE each directive must be on ONE physical
+# line -- swayidle parses line by line and a trailing backslash is NOT a
+# continuation (that's only valid on the `swayidle` command line). So the
+# timeout/resume pairs below are kept on single lines.
+#
 # Lid behaviour (turn the internal panel off, and don't suspend when an
 # external monitor is attached) is handled outside swayidle -- by the
 # river-lid helper and a logind drop-in installed by setup-river.
 
 # Dim the backlight after 5 minutes; restore on resume. brightnessctl -s
 # saves the current level so -r can put it back exactly.
-timeout 300 'brightnessctl -s set 10%' \
-	resume 'brightnessctl -r'
+timeout 300 'brightnessctl -s set 10%' resume 'brightnessctl -r'
 
 # Lock the screen after 10 minutes of idle. river-theme lock applies the
 # current light/dark palette, then execs swaylock -f. Fall back to plain
@@ -23,8 +27,7 @@ timeout 600 'command -v river-theme >/dev/null 2>&1 && river-theme lock || swayl
 
 # Turn all outputs off (DPMS) after 15 minutes; back on when input
 # resumes. wlopm is the wlroots output-power tool ('*' = all outputs).
-timeout 900 'wlopm --off "*"' \
-	resume 'wlopm --on "*"'
+timeout 900 'wlopm --off "*"' resume 'wlopm --on "*"'
 
 # Always lock before the system sleeps, and on an explicit lock request
 # (e.g. loginctl lock-session), so the screen is never left unlocked. Same

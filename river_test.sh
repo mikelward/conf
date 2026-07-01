@@ -148,6 +148,13 @@ assert_contains "set-view-tags" "$_base"
 
 ### Themed lock via swayidle ################################################
 
+# A swayidle CONFIG FILE parses one physical line per directive; a trailing
+# backslash is NOT a continuation and breaks parsing (swayidle exits, no
+# rules arm). Guard against reintroducing shell-style continuations.
+start_test "swayidle config has no backslash line-continuations"
+_swayidle_cont=$(grep -c '\\$' "$_swayidle/config" 2>/dev/null || true)
+assert_equal "0" "$_swayidle_cont"
+
 start_test "swayidle locks via river-theme"
 assert_contains "river-theme lock" "$_swayidle_cfg"
 start_test "swayidle lock falls back to swaylock without river-theme"
