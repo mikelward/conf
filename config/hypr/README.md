@@ -47,6 +47,7 @@ need a backport/COPR/manual build on Debian/Fedora):
     brightnessctl                         # backlight keys + hypridle dimming
     grim slurp wl-clipboard               # screenshots (Print) → clipboard
     playerctl                             # media play/pause/next/prev keys
+    gnome-calculator                      # XF86Calculator key
     yazi                                  # terminal file manager (SUPER+E)
     network-manager-applet blueman        # network + bluetooth tray applets
     polkit-gnome                          # GUI privilege prompts
