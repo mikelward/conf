@@ -16,5 +16,9 @@
 # can't see lid state, only which outputs are connected. The river-lid
 # helper (per-host) handles that.
 #
-# The include path is relative to this file's directory (~/.config/kanshi).
+# The include path is relative to this file's directory (~/.config/kanshi)
+# and matches only real per-host files placed directly in hosts/. The
+# template and example profiles live in hosts/examples/ (a subdirectory the
+# "hosts/*.conf" glob does NOT descend into), so they are never loaded and
+# can't accidentally match a machine you haven't configured yet.
 include "hosts/*.conf"

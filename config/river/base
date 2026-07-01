@@ -97,17 +97,21 @@ riverctl map normal Super W spawn terminal_on_workstation
 riverctl map normal Super Y spawn music
 
 # Launcher (fuzzel), themed for the current light/dark mode via river-theme.
-riverctl map normal Super Space spawn "river-theme menu"
+# Fall back to plain fuzzel if the (optional) river-theme helper is absent.
+riverctl map normal Super Space spawn 'command -v river-theme >/dev/null 2>&1 && river-theme menu || fuzzel'
 
 # Toggle light/dark manually (overrides the clock until the next switch).
+# No-op if river-theme isn't installed (there's no non-helper way to switch).
 riverctl map normal Super+Shift T spawn "river-theme toggle"
 
 ### Window management #########################################################
 
-# Close / exit / lock. Lock is themed for the current light/dark mode.
+# Close / exit / lock. Lock is themed for the current light/dark mode, but
+# ALWAYS falls back to plain swaylock if river-theme isn't installed -- the
+# screen must lock even without the optional helper.
 riverctl map normal Super BackSpace close
 riverctl map normal Super+Shift E exit
-riverctl map normal Super+Control L spawn "river-theme lock"
+riverctl map normal Super+Control L spawn 'command -v river-theme >/dev/null 2>&1 && river-theme lock || swaylock -f'
 
 # Screenshots (grim + slurp + wl-clipboard):
 #   Print              whole output -> ~/Pictures/Screenshots/<timestamp>.png

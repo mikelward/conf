@@ -244,15 +244,16 @@ test-amethyst: $(CACHE)/test-amethyst.stamp
 # border contrast, the three-clock ordering, and JSON/shell syntax.
 $(CACHE)/test-river.stamp: river_test.sh shrc_test_lib.sh \
                            config/river/init config/river/base \
-                           config/river/hosts/template.sh \
-                           config/river/hosts/example-laptop.sh \
-                           config/river/hosts/example-desktop.sh \
+                           config/river/hosts/examples/template.sh \
+                           config/river/hosts/examples/example-laptop.sh \
+                           config/river/hosts/examples/example-desktop.sh \
                            config/waybar/config config/waybar/style.css \
                            config/waybar/scripts/battery.sh \
                            config/fuzzel/fuzzel.ini \
                            config/swaync/config.json config/swaync/style.css \
                            config/swayidle/config config/swaylock/config \
-                           config/kanshi/config config/kanshi/hosts/template.conf \
+                           config/kanshi/config \
+                           config/kanshi/hosts/examples/template.conf \
                            | $(CACHE)
 	@bash river_test.sh
 	@touch $@

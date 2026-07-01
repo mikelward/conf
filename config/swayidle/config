@@ -16,8 +16,10 @@ timeout 300 'brightnessctl -s set 10%' \
 	resume 'brightnessctl -r'
 
 # Lock the screen after 10 minutes of idle. river-theme lock applies the
-# current light/dark palette, then execs swaylock -f.
-timeout 600 'river-theme lock'
+# current light/dark palette, then execs swaylock -f. Fall back to plain
+# swaylock if the optional river-theme helper isn't installed -- the screen
+# must lock either way.
+timeout 600 'command -v river-theme >/dev/null 2>&1 && river-theme lock || swaylock -f'
 
 # Turn all outputs off (DPMS) after 15 minutes; back on when input
 # resumes. wlopm is the wlroots output-power tool ('*' = all outputs).
@@ -25,6 +27,7 @@ timeout 900 'wlopm --off "*"' \
 	resume 'wlopm --on "*"'
 
 # Always lock before the system sleeps, and on an explicit lock request
-# (e.g. loginctl lock-session), so the screen is never left unlocked.
-before-sleep 'river-theme lock'
-lock 'river-theme lock'
+# (e.g. loginctl lock-session), so the screen is never left unlocked. Same
+# swaylock fallback as above.
+before-sleep 'command -v river-theme >/dev/null 2>&1 && river-theme lock || swaylock -f'
+lock 'command -v river-theme >/dev/null 2>&1 && river-theme lock || swaylock -f'

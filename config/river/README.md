@@ -76,7 +76,7 @@ The base config works immediately with sane defaults. To tailor a machine:
    ```
    Copy the template and fill in the names:
    ```
-   cp ~/.config/river/hosts/template.sh ~/.config/river/hosts/$(hostname -s).sh
+   cp ~/.config/river/hosts/examples/template.sh ~/.config/river/hosts/$(hostname -s).sh
    ```
    Handedness rule used here: **trackpads** keep the left button primary
    (`left-handed disabled`); **mice** use the right button primary
@@ -88,7 +88,7 @@ The base config works immediately with sane defaults. To tailor a machine:
    ```
    Copy the kanshi template and fill in the outputs:
    ```
-   cp ~/.config/kanshi/hosts/template.conf ~/.config/kanshi/hosts/$(hostname -s).conf
+   cp ~/.config/kanshi/hosts/examples/template.conf ~/.config/kanshi/hosts/$(hostname -s).conf
    ```
    External monitors are enabled automatically on hotplug (kanshi switches
    to the matching profile).
@@ -113,8 +113,12 @@ or re-run `riverctl` commands ad hoc.
 | `river/hosts/<host>.sh` | internal output for `river-lid` (e.g. `eDP-1`) | `wlr-randr` |
 | `kanshi/hosts/<host>.conf` | output names (`eDP-1`, `HDMI-A-1`, `DP-1`, …) and modes | `wlr-randr` |
 
-The `example-laptop` / `example-desktop` files in both `hosts/` dirs are
-illustrative only — they never match a real hostname, so they never load.
+The `template` and `example-laptop` / `example-desktop` files live in
+`hosts/examples/` in both the river and kanshi trees. They are illustrative
+only and are **never loaded**: river sources `hosts/<hostname>.sh` (an
+example never matches a real hostname), and kanshi's `hosts/*.conf` glob
+doesn't descend into `examples/`. Your real per-host files go directly in
+`hosts/`.
 
 ## Keybindings
 

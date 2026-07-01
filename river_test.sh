@@ -27,17 +27,25 @@ _swayidle_cfg=$(cat "$_swayidle/config" 2>/dev/null)
 
 for f in \
 	"$_river/init" "$_river/base" \
-	"$_river/hosts/template.sh" "$_river/hosts/example-laptop.sh" \
-	"$_river/hosts/example-desktop.sh" \
+	"$_river/hosts/examples/template.sh" \
+	"$_river/hosts/examples/example-laptop.sh" \
+	"$_river/hosts/examples/example-desktop.sh" \
 	"$_river/README.md" \
 	"$_waybar/config" "$_waybar/style.css" "$_waybar/scripts/battery.sh" \
 	"$_fuzzel/fuzzel.ini" \
 	"$_swaync/config.json" "$_swaync/style.css" \
 	"$_swayidle/config" "$_swaylock/config" \
-	"$_kanshi/config" "$_kanshi/hosts/template.conf"; do
+	"$_kanshi/config" "$_kanshi/hosts/examples/template.conf"; do
 	start_test "exists: ${f#"$_srcdir"/}"
 	assert_true test -f "$f"
 done
+
+# Examples must NOT sit directly in hosts/ where kanshi's "hosts/*.conf"
+# glob (and the river hostname match) would pick them up.
+start_test "no example kanshi profiles in the loaded hosts/ dir"
+assert_true test -z "$(find "$_kanshi/hosts" -maxdepth 1 -name 'example-*.conf' 2>/dev/null)"
+start_test "no example river host files loose in hosts/"
+assert_true test -z "$(find "$_river/hosts" -maxdepth 1 -name 'example-*.sh' 2>/dev/null)"
 
 ### Executable bits (river execs init; waybar execs battery.sh) #############
 
@@ -49,8 +57,10 @@ assert_true test -x "$_waybar/scripts/battery.sh"
 ### Shell syntax ############################################################
 
 for f in "$_river/init" "$_river/base" \
-	"$_river/hosts/template.sh" "$_river/hosts/example-laptop.sh" \
-	"$_river/hosts/example-desktop.sh" "$_waybar/scripts/battery.sh"; do
+	"$_river/hosts/examples/template.sh" \
+	"$_river/hosts/examples/example-laptop.sh" \
+	"$_river/hosts/examples/example-desktop.sh" \
+	"$_waybar/scripts/battery.sh"; do
 	start_test "sh -n: ${f#"$_srcdir"/}"
 	assert_true sh -n "$f"
 done
@@ -99,11 +109,17 @@ assert_contains "map normal Super Return zoom" "$_base"
 ### Launcher, theme toggle, lock, screenshots ##############################
 
 start_test "Super+Space opens themed launcher"
-assert_contains 'map normal Super Space spawn "river-theme menu"' "$_base"
+assert_contains "map normal Super Space spawn" "$_base"
+assert_contains "river-theme menu" "$_base"
+start_test "launcher falls back to fuzzel without river-theme"
+assert_contains "river-theme menu || fuzzel" "$_base"
 start_test "Super+Shift+T toggles theme"
 assert_contains 'map normal Super+Shift T spawn "river-theme toggle"' "$_base"
 start_test "Super+Ctrl+L locks (themed)"
-assert_contains 'map normal Super+Control L spawn "river-theme lock"' "$_base"
+assert_contains "map normal Super+Control L spawn" "$_base"
+assert_contains "river-theme lock" "$_base"
+start_test "lock keybind falls back to swaylock without river-theme"
+assert_contains "river-theme lock || swaylock -f" "$_base"
 start_test "Print takes a full screenshot"
 assert_contains "map normal None Print spawn" "$_base"
 assert_contains "grim" "$_base"
@@ -132,8 +148,10 @@ assert_contains "set-view-tags" "$_base"
 
 ### Themed lock via swayidle ################################################
 
-start_test "swayidle locks via river-theme (not bare swaylock)"
+start_test "swayidle locks via river-theme"
 assert_contains "river-theme lock" "$_swayidle_cfg"
+start_test "swayidle lock falls back to swaylock without river-theme"
+assert_contains "river-theme lock || swaylock -f" "$_swayidle_cfg"
 start_test "swayidle blanks screens on idle (wlopm)"
 assert_contains "wlopm" "$_swayidle_cfg"
 
