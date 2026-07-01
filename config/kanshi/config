@@ -1,0 +1,42 @@
+# kanshi configuration
+# ~/.config/kanshi/config
+#
+# Display hotplug profiles. kanshi watches for outputs appearing/disappearing
+# and applies the first profile whose listed outputs all match. This makes
+# docking/undocking and plugging in an external monitor "just work" the same
+# way on every machine.
+#
+# ---------------------------------------------------------------------------
+# FILL IN YOUR OUTPUT NAMES.
+#   Hyprland:  hyprctl monitors        (look at the "Monitor <NAME>" lines)
+#   or:        wlr-randr                (lists each output name + modes)
+# Laptop panels are usually eDP-1; external outputs are DP-1/DP-2/HDMI-A-1.
+# Match on the connector name (and optionally "make model serial" for a
+# specific monitor). Replace every REPLACE-ME below.
+# ---------------------------------------------------------------------------
+
+# --- Laptop, lid open, no external display (undocked) ---
+profile undocked {
+    output "REPLACE-ME-eDP-1" enable mode 1920x1080 position 0,0 scale 1.0
+}
+
+# --- Laptop at a dock / with an external monitor to the right ---
+# Internal panel on the left, external to its right. Adjust position by the
+# internal panel's width (e.g. 1920,0 if eDP is 1920 wide).
+profile docked {
+    output "REPLACE-ME-eDP-1" enable mode 1920x1080 position 0,0 scale 1.0
+    output "REPLACE-ME-DP-1" enable mode 2560x1440 position 1920,0 scale 1.0
+}
+
+# --- Laptop lid closed, external only (clamshell) ---
+profile clamshell {
+    output "REPLACE-ME-eDP-1" disable
+    output "REPLACE-ME-DP-1" enable mode 2560x1440 position 0,0 scale 1.0
+}
+
+# --- Desktop workstation with dual monitors ---
+# For a headless workstation there's no eDP; list the two external outputs.
+profile workstation {
+    output "REPLACE-ME-DP-1" enable mode 2560x1440 position 0,0 scale 1.0
+    output "REPLACE-ME-DP-2" enable mode 2560x1440 position 2560,0 scale 1.0
+}
