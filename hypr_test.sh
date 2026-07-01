@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # Tests for the Hyprland Wayland desktop configs under config/hypr,
-# config/waybar, config/fuzzel, config/swaync, and config/kanshi.
+# config/waybar, config/fuzzel, and config/swaync.
 #
 # These are static presence/parse checks: we can't launch a compositor in CI,
 # so we guard against the config files being moved/renamed and against the
@@ -25,7 +25,6 @@ _waybar_css="$_srcdir/config/waybar/style.css"
 _fuzzel="$_srcdir/config/fuzzel/fuzzel.ini"
 _swaync_cfg="$_srcdir/config/swaync/config.json"
 _swaync_css="$_srcdir/config/swaync/style.css"
-_kanshi="$_srcdir/config/kanshi/config"
 
 ################################################################################
 # Files exist. Without these guards every assert_contains below would trivially
@@ -43,7 +42,7 @@ for _f in "$_hypr" "$_idle" "$_lock" "$_toggle" "$_layoutcycle" "$_lid" \
           "$_srcdir/config/swaync/colors-light.css" \
           "$_srcdir/config/swaync/style-light.css" \
           "$_fuzzel" "$_srcdir/config/fuzzel/fuzzel-light.ini" \
-          "$_swaync_cfg" "$_swaync_css" "$_kanshi"; do
+          "$_swaync_cfg" "$_swaync_css"; do
     start_test "exists: ${_f##*/config/}"
     assert_true test -f "$_f"
 done
@@ -223,7 +222,7 @@ assert_contains "\"pulseaudio\"" "$_waybar_body"
 ################################################################################
 # Autostart wires up bar, notifications, idle, hotplug, wallpaper.
 ################################################################################
-for _svc in hypridle kanshi swww-daemon; do
+for _svc in hypridle swww-daemon; do
     start_test "autostart: $_svc"
     assert_contains "exec-once = $_svc" "$_hypr_body"
 done
@@ -288,31 +287,26 @@ else
 fi
 
 ################################################################################
-# fuzzel launcher and kanshi profiles.
+# fuzzel launcher.
 ################################################################################
 _fuzzel_body=$(cat "$_fuzzel")
 start_test "fuzzel has a colors section (themed)"
 assert_contains "[colors]" "$_fuzzel_body"
 
-_kanshi_body=$(cat "$_kanshi")
-for _p in undocked docked clamshell workstation; do
-    start_test "kanshi profile: $_p"
-    assert_contains "profile $_p {" "$_kanshi_body"
-done
+################################################################################
+# Monitors are auto-placed by Hyprland; no display-hotplug daemon or names.
+################################################################################
+start_test "monitor catch-all rule auto-places outputs"
+assert_contains "monitor = , preferred, auto, auto" "$_hypr_body"
 
-# kanshi matches the first profile whose listed outputs are all connected, so
-# the two-output profiles (docked, workstation) must precede the one-output
-# ones (clamshell, undocked) or they'd be shadowed.
-start_test "kanshi lists two-output profiles before one-output ones"
-_docked_ln=$(grep -n '^profile docked {' "$_kanshi" | cut -d: -f1)
-_workstation_ln=$(grep -n '^profile workstation {' "$_kanshi" | cut -d: -f1)
-_clamshell_ln=$(grep -n '^profile clamshell {' "$_kanshi" | cut -d: -f1)
-_undocked_ln=$(grep -n '^profile undocked {' "$_kanshi" | cut -d: -f1)
-assert_true test "$_docked_ln" -lt "$_clamshell_ln"
-start_test "kanshi workstation precedes clamshell"
-assert_true test "$_workstation_ln" -lt "$_clamshell_ln"
-start_test "kanshi workstation precedes undocked"
-assert_true test "$_workstation_ln" -lt "$_undocked_ln"
+################################################################################
+# Zero placeholders anywhere in the shipped desktop config.
+################################################################################
+start_test "no REPLACE-ME placeholders in any shipped config file"
+_placeholders=$(grep -rl 'REPLACE-ME' \
+    "$_srcdir/config/hypr" "$_srcdir/config/waybar" \
+    "$_srcdir/config/fuzzel" "$_srcdir/config/swaync" 2>/dev/null || true)
+assert_equal "" "$_placeholders"
 
 ################################################################################
 # Touchpad gesture uses the current Hyprland 0.51+ syntax.

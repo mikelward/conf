@@ -4,7 +4,7 @@
 #
 #   close: disable the internal panel. Suspend ONLY when no external display
 #          is connected -- a docked laptop with the lid shut keeps running on
-#          its external screen (kanshi then repositions the remaining output).
+#          its external screen (Hyprland auto-places the remaining output).
 #   open:  re-enable the internal panel.
 #
 # For this to be the authoritative lid handler, systemd-logind must be told to

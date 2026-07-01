@@ -23,7 +23,6 @@ Files (all live under this repo's `config/` and map to `~/.config/`):
 | `config/waybar/{style,style-light,common,colors-dark,colors-light}.css` | Bar theme (dark + light) |
 | `config/fuzzel/fuzzel.ini` | Launcher (SUPER+Space) |
 | `config/swaync/config.json` + `{style,style-light,common,colors-*}.css` | Notifications + control center (dark + light) |
-| `config/kanshi/config` | Display hotplug profiles |
 
 ## Installing
 
@@ -42,7 +41,7 @@ installs (package names vary by distro; Hyprland is first-class on Arch and may
 need a backport/COPR/manual build on Debian/Fedora):
 
     hyprland hypridle hyprlock xdg-desktop-portal-hyprland
-    waybar fuzzel swaync swww kanshi
+    waybar fuzzel swaync swww
     power-profiles-daemon
     pipewire wireplumber pavucontrol      # volume/sound
     brightnessctl                         # backlight keys + hypridle dimming
@@ -156,21 +155,23 @@ Focus follows the mouse (`follow_mouse = 1`) — no click needed to focus.
   backlight the dim step is simply a no-op.
 - **Multi-machine.** The same configs run everywhere unchanged — input
   handedness and the laptop's internal panel are auto-detected, and Hyprland
-  auto-places monitors. The only things you *might* fill in are optional:
-  custom monitor positioning (kanshi) and a wallpaper.
+  auto-places monitors. Nothing is machine-specific.
 
 ## Placeholders
 
-Input devices and the internal panel are auto-detected, so there are **no
-required placeholders**. The two optional ones:
+**None required.** Input devices and the internal panel are auto-detected, and
+monitors are auto-placed, so the shipped config has no fill-in-the-blanks
+anywhere. Two things are optional:
 
-1. **Monitor / output names (optional)** — `config/kanshi/config` is only needed
-   if you want a *specific* multi-monitor arrangement (positions/scales).
-   Without it, Hyprland auto-places every output and `lid.sh` handles clamshell,
-   so single-monitor, docked, and undocked all work with no config. To use it,
-   run `hyprctl monitors` (or `wlr-randr`), replace the `REPLACE-ME-*` names and
-   adjust `mode`/`position`/`scale`, and delete profiles you don't need. The
-   profiles are ordered most-specific-first (see the comments in that file).
+1. **Custom monitor arrangement (optional)** — the catch-all `monitor = ,
+   preferred, auto, auto` rule auto-places every output left-to-right, and
+   `lid.sh` handles clamshell, so single-monitor, docked, undocked, and
+   dual-head all work with no config. For a *specific* layout (fixed
+   positions/scale/order), add per-output `monitor = <name>, <mode>, <pos>,
+   <scale>` lines to `hyprland.conf` — find names with `hyprctl monitors` /
+   `wlr-randr`. (If you prefer a hotplug daemon with declarative profiles,
+   kanshi still works; it was dropped from the defaults to keep zero
+   placeholders.)
 
 2. **Wallpaper image (optional)** — `config/hypr/hyprland.conf` (`swww img ...`) and
    `config/hypr/hyprlock.conf` (`background { path = ... }`). Optionally add
@@ -190,6 +191,10 @@ required placeholders**. The two optional ones:
 - **swww over swaybg.** swww runs a daemon so you can swap wallpapers/get
   transitions live. For a purely static wallpaper, replace the two `swww`
   `exec-once` lines with `exec-once = swaybg -i <file> -m fill`.
-- **kanshi for positioning, Hyprland for the lid.** kanshi picks a profile by
-  connected-output set; the lid switch (which kanshi can't see) is handled by
-  Hyprland's `lid.sh`, which changes that set by disabling the internal panel.
+- **Hyprland auto-placement over kanshi.** Custom monitor *positioning*
+  inherently needs output names (no auto-detection for "which monitor goes
+  left"), which meant fill-in placeholders. Since Hyprland's built-in
+  catch-all rule auto-places outputs and `lid.sh` handles clamshell, dropping
+  kanshi from the defaults gets the desktop to **zero placeholders** while
+  still working everywhere. Add `monitor=` rules (or re-add kanshi) if you want
+  a pinned layout.
