@@ -41,7 +41,8 @@ for _f in "$_hypr" "$_idle" "$_lock" "$_toggle" "$_layoutcycle" "$_lid" \
           "$_srcdir/config/swaync/colors-dark.css" \
           "$_srcdir/config/swaync/colors-light.css" \
           "$_srcdir/config/swaync/style-light.css" \
-          "$_fuzzel" "$_swaync_cfg" "$_swaync_css" "$_kanshi"; do
+          "$_fuzzel" "$_srcdir/config/fuzzel/fuzzel-light.ini" \
+          "$_swaync_cfg" "$_swaync_css" "$_kanshi"; do
     start_test "exists: ${_f##*/config/}"
     assert_true test -f "$_f"
 done
