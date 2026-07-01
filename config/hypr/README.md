@@ -112,7 +112,7 @@ letters.
 | `SUPER + .` / `SUPER + ,` | Next / previous layout (tile → threecolumn → columns) |
 | `SUPER + \`` (backtick) | Monocle (fullscreen state 1 — keeps gaps + bar) |
 | `SUPER + Shift + \` | Quick toggle master ⇄ dwindle |
-| `SUPER + Shift + F` | Toggle floating |
+| `SUPER + Shift + F` / `SUPER + Insert` | Toggle floating |
 | `SUPER + P` | Pseudo-tile (useful with dwindle) |
 | `SUPER + Shift + R` | **Resize** mode (h/j/k/l or arrows; Esc/Enter to exit) |
 
