@@ -247,6 +247,8 @@ $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
                           config/hypr/hypridle.conf \
                           config/hypr/hyprlock.conf \
                           config/hypr/scripts/toggle-layout.sh \
+                          config/hypr/scripts/layout-cycle.sh \
+                          config/hypr/scripts/lid.sh \
                           config/waybar/config.jsonc \
                           config/waybar/style.css \
                           config/fuzzel/fuzzel.ini \

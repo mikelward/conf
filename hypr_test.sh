@@ -14,6 +14,8 @@ _hypr="$_srcdir/config/hypr/hyprland.conf"
 _idle="$_srcdir/config/hypr/hypridle.conf"
 _lock="$_srcdir/config/hypr/hyprlock.conf"
 _toggle="$_srcdir/config/hypr/scripts/toggle-layout.sh"
+_layoutcycle="$_srcdir/config/hypr/scripts/layout-cycle.sh"
+_lid="$_srcdir/config/hypr/scripts/lid.sh"
 _waybar_cfg="$_srcdir/config/waybar/config.jsonc"
 _waybar_css="$_srcdir/config/waybar/style.css"
 _fuzzel="$_srcdir/config/fuzzel/fuzzel.ini"
@@ -25,7 +27,8 @@ _kanshi="$_srcdir/config/kanshi/config"
 # Files exist. Without these guards every assert_contains below would trivially
 # match against empty strings.
 ################################################################################
-for _f in "$_hypr" "$_idle" "$_lock" "$_toggle" "$_waybar_cfg" "$_waybar_css" \
+for _f in "$_hypr" "$_idle" "$_lock" "$_toggle" "$_layoutcycle" "$_lid" \
+          "$_waybar_cfg" "$_waybar_css" \
           "$_fuzzel" "$_swaync_cfg" "$_swaync_css" "$_kanshi"; do
     start_test "exists: ${_f##*/config/}"
     assert_true test -f "$_f"
@@ -49,13 +52,17 @@ assert_contains "new_status = slave" "$_hypr_body"
 start_test "follow_mouse is enabled"
 assert_contains "follow_mouse = 1" "$_hypr_body"
 
-start_test "per-device left_handed is set in a device block"
-assert_contains "left_handed" "$_hypr_body"
+start_test "global default is right-handed (trackpads keep left button primary)"
+_input_block=$(sed -n '/^input {/,/^}/p' "$_hypr")
+assert_contains "left_handed = false" "$_input_block"
+
+start_test "mice are set left_handed = true (right button primary) per device"
+assert_contains "left_handed = true" "$_hypr_body"
 
 start_test "per-device scroll_factor is set in a device block"
 assert_contains "scroll_factor" "$_hypr_body"
 
-start_test "there are at least two device blocks (multiple pointers)"
+start_test "there are at least two mouse device blocks (multiple pointers)"
 _devcount=$(grep -c '^device {' "$_hypr")
 assert_true test "$_devcount" -ge 2
 
@@ -129,6 +136,64 @@ start_test "inner gaps are zero"
 assert_contains "gaps_in = 0" "$_hypr_body"
 start_test "outer gaps are zero"
 assert_contains "gaps_out = 0" "$_hypr_body"
+
+################################################################################
+# Dim inactive windows (matching the KDE diminactive effect).
+################################################################################
+start_test "inactive windows are dimmed"
+assert_contains "dim_inactive = true" "$_hypr_body"
+
+################################################################################
+# Krohnkite/KDE-matching keybinds: app launchers, close, monocle, layout cycle.
+################################################################################
+start_test "close window is bound to SUPER+BackSpace (Krohnkite Meta+Backspace)"
+assert_contains "BackSpace, killactive" "$_hypr_body"
+
+start_test "terminal launcher bound to SUPER+T"
+assert_contains "\$mainMod, T, exec" "$_hypr_body"
+
+for _app in browser1 browser2 music; do
+    start_test "app-launch bind present: $_app"
+    assert_contains "exec, $_app" "$_hypr_body"
+done
+
+start_test "monocle bound to SUPER+grave"
+assert_contains "\$mainMod, grave, fullscreen, 1" "$_hypr_body"
+
+start_test "layout cycle (next/prev) invokes layout-cycle.sh"
+assert_contains "layout-cycle.sh next" "$_hypr_body"
+assert_contains "layout-cycle.sh prev" "$_hypr_body"
+
+################################################################################
+# Laptop lid handling: bound to the lid switch, driven by lid.sh.
+################################################################################
+start_test "lid switch (close) is bound"
+assert_contains "switch:on:Lid Switch" "$_hypr_body"
+start_test "lid switch (open) is bound"
+assert_contains "switch:off:Lid Switch" "$_hypr_body"
+start_test "lid binds invoke lid.sh"
+assert_contains "lid.sh close" "$_hypr_body"
+assert_contains "lid.sh open" "$_hypr_body"
+
+start_test "lid.sh only suspends when no external display is connected"
+_lid_body=$(cat "$_lid")
+assert_contains "systemctl suspend" "$_lid_body"
+# The suspend must be guarded by the external-display check, not unconditional.
+assert_contains 'if test -z "$external"' "$_lid_body"
+
+start_test "lid.sh disables the internal panel on close"
+assert_contains "disable" "$_lid_body"
+
+################################################################################
+# Tray applets: network + volume/sound.
+################################################################################
+_waybar_body=$(cat "$_waybar_cfg")
+start_test "network tray applet autostarts"
+assert_contains "exec-once = nm-applet" "$_hypr_body"
+start_test "waybar exposes a network module"
+assert_contains "\"network\"" "$_waybar_body"
+start_test "waybar exposes a volume/sound module"
+assert_contains "\"pulseaudio\"" "$_waybar_body"
 
 ################################################################################
 # Autostart wires up bar, notifications, idle, hotplug, wallpaper.

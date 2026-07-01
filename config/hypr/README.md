@@ -2,7 +2,8 @@
 
 A dynamic-tiling Wayland desktop built around Hyprland's **master/stack**
 layout, modelled on the Krohnkite KWin script's "Tile" layout. Intended as a
-KDE replacement that works across laptops and workstations.
+KDE replacement that works across laptops and workstations, matching the KDE +
+Krohnkite setup in `setup-kde` (scripts repo).
 
 Files (all live under this repo's `config/` and map to `~/.config/`):
 
@@ -11,88 +12,97 @@ Files (all live under this repo's `config/` and map to `~/.config/`):
 | `config/hypr/hyprland.conf` | Compositor: layout, input, keybinds, look |
 | `config/hypr/hypridle.conf` | Idle: dim → lock → DPMS off → suspend |
 | `config/hypr/hyprlock.conf` | Lock screen |
-| `config/hypr/scripts/toggle-layout.sh` | Master ⇄ dwindle toggle |
-| `config/waybar/config.jsonc` | Bar: workspaces, clocks, tray, battery |
+| `config/hypr/scripts/toggle-layout.sh` | Master ⇄ dwindle quick toggle |
+| `config/hypr/scripts/layout-cycle.sh` | Cycle tile → threecolumn → columns |
+| `config/hypr/scripts/lid.sh` | Laptop lid: disable internal panel, conditional suspend |
+| `config/waybar/config.jsonc` | Bar: workspaces, clocks, tray, battery, net, volume |
 | `config/waybar/style.css` | Bar theme |
 | `config/fuzzel/fuzzel.ini` | Launcher (SUPER+Space) |
 | `config/swaync/config.json` + `style.css` | Notifications + control center |
 | `config/kanshi/config` | Display hotplug profiles |
 
-## Packages to install
+## Installing
 
-Core compositor + session:
+Packages, the systemd-logind lid drop-in, and `power-profiles-daemon` are
+handled by **`setup-hypr`** in the scripts repo:
+
+    setup-hypr            # install packages + logind drop-in + services
+    setup-hypr --no-install   # only (re)apply logind + services
+
+Or as part of a full machine bootstrap, select the Hyprland desktop:
+
+    setup --hypr
+
+The dotfiles here are installed by this repo's `make install`. `setup-hypr`
+installs (package names vary by distro; Hyprland is first-class on Arch and may
+need a backport/COPR/manual build on Debian/Fedora):
 
     hyprland hypridle hyprlock xdg-desktop-portal-hyprland
-
-Bar, launcher, notifications, wallpaper, display hotplug:
-
     waybar fuzzel swaync swww kanshi
-
-Power, audio, backlight, and helpers used by the keybinds/modules:
-
     power-profiles-daemon
-    wireplumber pavucontrol   # wpctl volume keys + audio module
-    brightnessctl             # backlight keys + hypridle dimming
-    network-manager           # nm-connection-editor for the network module
-
-Fonts (the configs reference a Nerd Font for glyphs):
-
-    ttf-jetbrains-mono-nerd   # or any "JetBrainsMono Nerd Font" package
-
-> Package names above are Arch-style; translate to your distro. On Debian/
-> Ubuntu several of these (hyprland, hypridle, hyprlock, swaync, swww) may
-> need a backport, a PPA, or a manual build.
-
-Enable the power-profiles daemon (it's a system service, not started by
-Hyprland):
-
-    systemctl enable --now power-profiles-daemon
+    pipewire wireplumber pavucontrol      # volume/sound
+    brightnessctl                         # backlight keys + hypridle dimming
+    network-manager-applet blueman        # network + bluetooth tray applets
+    polkit-gnome                          # GUI privilege prompts
+    a JetBrains Mono Nerd Font            # glyphs in waybar/fuzzel/lock
 
 ## Starting the session
 
-If you use a Wayland display manager (SDDM, greetd/tuigreet, ly), Hyprland
-installs a `hyprland.desktop` session entry — just pick "Hyprland" at login.
-
-To start from a TTY instead, add to your shell profile (or run manually):
+Pick "Hyprland" at your display manager, or from a TTY:
 
     exec Hyprland
 
 ## Keybindings
 
-`SUPER` is the modifier (`$mainMod`).
+`SUPER` is the modifier (`$mainMod`). Keys match the KDE/Krohnkite setup so the
+muscle memory carries over.
 
 ### Master/stack (Krohnkite equivalents)
 
 | Keys | Action |
 |------|--------|
-| `SUPER + H` / `SUPER + L` | Shrink / grow the master area (mfact) |
+| `SUPER + \` / `SUPER + /` | Grow / shrink the master area (mfact) |
+| `SUPER + Return` | Set focused window as master (swap with master) |
 | `SUPER + I` / `SUPER + D` | Add / remove a window from the master area |
-| `SUPER + Shift + Return` | Swap focused window with master |
 | `SUPER + O` / `SUPER + Shift + O` | Cycle master orientation (rotate) |
 | `SUPER + J` / `SUPER + K` | Focus next / previous in the stack |
 | `SUPER + Shift + J` / `SUPER + Shift + K` | Move window down / up the stack |
 
-### Layout / window
+### Layouts
+
+Krohnkite cycled Tile / ThreeColumn / Columns / Monocle. Hyprland has no native
+ThreeColumn/Columns, so `layout-cycle.sh` approximates them:
 
 | Keys | Action |
 |------|--------|
-| `SUPER + Backslash` | Toggle master ⇄ dwindle layout |
-| `SUPER + M` | Monocle (fullscreen state 1 — keeps gaps + bar) |
+| `SUPER + .` / `SUPER + ,` | Next / previous layout (tile → threecolumn → columns) |
+| `SUPER + \`` (backtick) | Monocle (fullscreen state 1 — keeps gaps + bar) |
+| `SUPER + Shift + \` | Quick toggle master ⇄ dwindle |
 | `SUPER + Shift + F` | True fullscreen (state 0 — covers the bar) |
 | `SUPER + F` | Toggle floating |
-| `SUPER + Q` | Close the current window |
 | `SUPER + R` | Enter **resize** mode (h/j/k/l or arrows; Esc/Enter to exit) |
 
-### Session / apps
+- `tile` = master, orientation left (master/stack)
+- `threecolumn` = master, orientation center (master centred, stack both sides)
+- `columns` = dwindle (BSP)
+
+### Apps / session
 
 | Keys | Action |
 |------|--------|
-| `SUPER + Return` | Terminal (kitty) |
+| `SUPER + T` | Terminal (kitty) |
+| `SUPER + W` | Terminal on workstation |
+| `SUPER + G` / `SUPER + H` | Browser 1 / Browser 2 |
+| `SUPER + Y` | Music |
 | `SUPER + Space` | Launcher (fuzzel) |
+| `SUPER + Backspace` | Close the current window |
 | `SUPER + Shift + L` | Lock now (hyprlock) |
 | `SUPER + Shift + E` | Exit Hyprland (log out) |
 | `SUPER + 1..0` | Switch to workspace 1–10 |
 | `SUPER + Shift + 1..0` | Move window to workspace 1–10 |
+
+> `browser1`, `browser2`, `terminal_on_workstation`, and `music` are the same
+> helper scripts the KDE setup binds; they live in the scripts repo on `$PATH`.
 
 ### Mouse
 
@@ -103,41 +113,62 @@ To start from a TTY instead, add to your shell profile (or run manually):
 
 Focus follows the mouse (`follow_mouse = 1`) — no click needed to focus.
 
+## Behaviour notes
+
+- **Dim inactive windows.** `decoration:dim_inactive` with `dim_strength =
+  0.15`, matching the KDE "dim inactive" effect (Strength 15).
+- **Per-device handedness.** Global default is right-handed so **trackpads keep
+  the left button primary**; each **mouse** gets a `device {}` block with
+  `left_handed = true` (right button primary) plus its own `scroll_factor`.
+  Hyprland has no "all mice" selector, so list one block per mouse — unmatched
+  names are ignored, so the same file is safe on every machine.
+- **Laptop lid.** `lid.sh` disables the internal panel on lid close and
+  **suspends only when no external display is connected** — a docked laptop
+  with the lid shut keeps running on its external screen. `setup-hypr` installs
+  a logind drop-in (`HandleLidSwitch=ignore`) so Hyprland is the sole lid
+  handler.
+- **Power management is identical on laptops and desktops** — one shared
+  `hypridle.conf` (dim → lock → DPMS off → suspend). On a desktop with no
+  backlight the dim step is simply a no-op.
+- **Multi-machine.** The same configs are meant to run everywhere; the only
+  per-machine bits are output names (kanshi) and device names (mice / internal
+  panel), all marked as placeholders below.
+
 ## Placeholders you must fill in
 
 Everything below is marked `REPLACE-ME` / `PLACEHOLDER` in the files.
 
-1. **Pointer device names** — `config/hypr/hyprland.conf`, the two `device {}`
-   blocks. Run `hyprctl devices` and copy each pointer's exact `name` (lower
-   case, spaces → hyphens). Set `left_handed` and `scroll_factor` per device.
+1. **Mouse device names** — `config/hypr/hyprland.conf`, the `device {}` blocks.
+   Run `hyprctl devices` and copy each MOUSE's exact `name` (lower case, spaces
+   → hyphens). Trackpads need no block (they use the left-handed=false default).
 
-2. **Monitor / output names** — `config/kanshi/config`. Run
-   `hyprctl monitors` (see the `Monitor <NAME>` lines) or `wlr-randr`. Replace
-   the `REPLACE-ME-eDP-1` / `REPLACE-ME-DP-1` / `REPLACE-ME-DP-2` names, and
-   adjust each output's `mode`, `position`, and `scale`. Delete profiles you
-   don't need (e.g. `workstation` on a laptop-only setup). kanshi owns
-   per-output layout; Hyprland's own `monitor=` line is left as a `preferred,
-   auto` catch-all so the two don't conflict.
+2. **Internal panel name** — `config/hypr/scripts/lid.sh` (`INTERNAL`, default
+   `eDP-1`). Confirm with `hyprctl monitors`. Or export
+   `HYPR_INTERNAL_OUTPUT` to override without editing.
 
-3. **Wallpaper image** — `config/hypr/hyprland.conf` (`swww img ...`) and
-   `config/hypr/hyprlock.conf` (`background { path = ... }`). Point both at a
-   real image file.
+3. **Monitor / output names** — `config/kanshi/config`. Run `hyprctl monitors`
+   or `wlr-randr`. Replace the `REPLACE-ME-*` names and adjust `mode`,
+   `position`, `scale`. Delete profiles you don't need. Note the `clamshell`
+   profile intentionally lists **only** the external output: when the lid
+   closes, `lid.sh` drops the internal panel from the connected set so this
+   profile (rather than `docked`) matches.
 
-4. **Timezones (optional)** — the waybar clocks use `Europe/London` and
-   `America/Los_Angeles` plus your system local time. Edit
-   `config/waybar/config.jsonc` (`clock#london`, `clock#sf`) if you want
-   different zones.
+4. **Wallpaper image** — `config/hypr/hyprland.conf` (`swww img ...`) and
+   `config/hypr/hyprlock.conf` (`background { path = ... }`).
+
+5. **Timezones (optional)** — the waybar clocks use `Europe/London` and
+   `America/Los_Angeles` plus system local time; edit
+   `config/waybar/config.jsonc` if you want different zones.
 
 ## Design choices
 
 - **swaync over mako.** You asked for a control center; mako is a lighter
   notification daemon with no GUI. swaync gives the notification history +
-  Do-Not-Disturb control center you wanted (toggleable, themable). If you ever
-  decide you don't need the center, mako is the simpler drop-in.
-- **swww over swaybg.** swww runs a daemon so you can swap wallpapers and get
-  transitions live. For a purely static wallpaper `swaybg -i <file>` is
-  simpler and one fewer moving part — replace the two `swww` `exec-once` lines
-  with `exec-once = swaybg -i <file> -m fill` if you prefer.
-- **kanshi for hotplug** rather than Hyprland's built-in `monitor=` rules, so
-  docked/undocked/clamshell/workstation profiles apply automatically and
-  identically on every machine.
+  Do-Not-Disturb control center. mako is the simpler drop-in if you drop the
+  center.
+- **swww over swaybg.** swww runs a daemon so you can swap wallpapers/get
+  transitions live. For a purely static wallpaper, replace the two `swww`
+  `exec-once` lines with `exec-once = swaybg -i <file> -m fill`.
+- **kanshi for positioning, Hyprland for the lid.** kanshi picks a profile by
+  connected-output set; the lid switch (which kanshi can't see) is handled by
+  Hyprland's `lid.sh`, which changes that set by disabling the internal panel.
