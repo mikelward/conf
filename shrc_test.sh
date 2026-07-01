@@ -871,59 +871,14 @@ assert_true test -f "$_returned"
 # Clean up
 unset -f autoshpool
 rm -f "$_autoshpool_calls" "$_returned"
-# Re-source shrc to reinstate the real autoshpool wrapper (the stubs
-# above replaced it). The next batch of tests stubs autoshpool again
-# inside their own subshells, so the restored wrapper doesn't leak.
+# Re-source shrc to restore the real functions the switchshpool tests above
+# stubbed. autoshpool is now a plain scripts-repo binary (it passes
+# `shpool attach -d` to open the session in the caller's directory), so shrc no
+# longer defines an autoshpool wrapper for the pwd workaround.
 SHRC_LOAD_FUNCTIONS_ONLY=1 . "$_srcdir/shrc"
 
-# Test the autoshpool wrapper. The wrapper sets SHPOOL_INITIAL_PWD to
-# the PWD at invocation time so the spawned in-shpool shell can cd
-# there. Drive the real wrapper (not a stub) by putting a fake
-# autoshpool script on PATH; `command autoshpool` in the wrapper
-# resolves to the fake, which records what env it saw.
-_fake_bin="$_testdir/fake_bin"
-_autoshpool_env="$_testdir/autoshpool_env"
-mkdir -p "$_fake_bin"
-cat > "$_fake_bin/autoshpool" <<'EOF'
-#!/bin/sh
-printf 'SHPOOL_INITIAL_PWD=%s\nargs=%s\n' "${SHPOOL_INITIAL_PWD-unset}" "$*" \
-    >> "$AUTOSHPOOL_ENV_LOG"
-EOF
-chmod +x "$_fake_bin/autoshpool"
-
-start_test "autoshpool is defined as a function by shrc"
-assert_true is_function autoshpool
-
-start_test "autoshpool wrapper stamps current PWD onto SHPOOL_INITIAL_PWD"
-rm -f "$_autoshpool_env"
-_pwd_dir="$_testdir/pwd_dir"
-mkdir -p "$_pwd_dir"
-(
-    cd "$_pwd_dir"
-    PATH="$_fake_bin:$PATH" AUTOSHPOOL_ENV_LOG="$_autoshpool_env" autoshpool
-)
-assert_equal "SHPOOL_INITIAL_PWD=$_pwd_dir
-args=" "$(cat "$_autoshpool_env")"
-
-start_test "autoshpool wrapper forwards args to the binary"
-rm -f "$_autoshpool_env"
-(
-    cd "$_pwd_dir"
-    PATH="$_fake_bin:$PATH" AUTOSHPOOL_ENV_LOG="$_autoshpool_env" \
-        autoshpool switch mysession
-)
-assert_equal "SHPOOL_INITIAL_PWD=$_pwd_dir
-args=switch mysession" "$(cat "$_autoshpool_env")"
-
-start_test "autoshpool wrapper does not leak SHPOOL_INITIAL_PWD to caller"
-unset SHPOOL_INITIAL_PWD
-(
-    cd "$_pwd_dir"
-    PATH="$_fake_bin:$PATH" AUTOSHPOOL_ENV_LOG="$_autoshpool_env" autoshpool
-)
-assert_equal "" "${SHPOOL_INITIAL_PWD-}"
-
-rm -rf "$_fake_bin" "$_autoshpool_env" "$_pwd_dir"
+start_test "shrc does not wrap autoshpool (the scripts-repo binary is used directly)"
+assert_false is_function autoshpool
 
 # Test maybe_start_session_and_exit. The "should we even try" gating lives
 # in want_tmux / want_shpool; the dispatch picks the backend named by

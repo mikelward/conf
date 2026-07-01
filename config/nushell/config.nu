@@ -250,14 +250,11 @@ def want-shpool [] {
     (connected-remotely) or (inside-project)
 }
 
-# Wrap the external autoshpool binary so every invocation stamps
-# SHPOOL_INITIAL_PWD with the PWD at call time. The spawned in-shpool
-# shell then cd's to that directory (see the top-level in-shpool block
-# below), so `cd repo; jd ...` lands the new session in the repo rather
-# than in the outer shell's startup dir. Mirrors shrc's autoshpool() and
-# config.fish's `function autoshpool`.
+# Wrap the external autoshpool binary. shpool opens each session's shell in the
+# right directory itself (autoshpool passes `shpool attach -d`), so there's
+# nothing to stamp here. Mirrors config.fish/shrc, which call the binary directly.
 def --wrapped autoshpool [...args] {
-    with-env { SHPOOL_INITIAL_PWD: $env.PWD } { ^autoshpool ...$args }
+    ^autoshpool ...$args
 }
 
 # start the preferred session manager if this session warrants it, then exit
@@ -302,8 +299,7 @@ def want-tmux [] {
     (connected-remotely) or (inside-project)
 }
 
-# Wrap the external autotmux binary. Unlike autoshpool there's no
-# SHPOOL_INITIAL_PWD to stamp -- tmux uses the caller's PWD natively.
+# Wrap the external autotmux binary (a plain pass-through, like autoshpool).
 def --wrapped autotmux [...args] {
     ^autotmux ...$args
 }
@@ -1497,8 +1493,8 @@ def clone [url: string, ...args: string] {
 # active backend; *sp/*tm force one. auto* attach-or-create at startup,
 # change* are the fzf switchers, detach*/make* detach or create named
 # sessions. All but auto* live in the scripts repo (so the *sp/*tm aliases call
-# those externals); auto* stay nu defs, with the autoshpool wrapper stamping
-# SHPOOL_INITIAL_PWD. Mirrors shrc/fish.
+# those externals); auto* stay nu defs that pass through to the autoshpool/
+# autotmux binaries. Mirrors shrc/fish.
 #
 # cs/ds/ms are defs, not aliases, so they can pass session-backend (which
 # honours WANT_SHPOOL/WANT_TMUX and the $SESSION_BACKEND preference) as
@@ -1648,16 +1644,10 @@ $env.config = ($env.config | upsert hooks.env_change.PWD [{|before, after|
 # re-run fully (it's how you reload after editing), so there's no once-guard to
 # mirror here.
 #
-# When entering a shpool session, the autoshpool wrapper has stamped
-# SHPOOL_INITIAL_PWD onto the env; cd to it (so the spawned shell lands
-# in the user's caller PWD, not shpool's daemon PWD) and clear the var
-# so it doesn't leak into later sessions. Mirrors shrc's `if in_shpool
-# && test -n "$SHPOOL_INITIAL_PWD"` block.
+# shpool opens the session's shell in the right directory itself (autoshpool and
+# friends pass `shpool attach -d`), so there's no PWD to restore here. Mirrors
+# shrc/fish, which likewise no longer cd on entering a session.
 if (is-interactive) {
-    if (in-shpool) and (($env.SHPOOL_INITIAL_PWD? | default "") | is-not-empty) {
-        cd $env.SHPOOL_INITIAL_PWD
-        hide-env SHPOOL_INITIAL_PWD
-    }
     maybe-start-session-and-exit
 }
 
