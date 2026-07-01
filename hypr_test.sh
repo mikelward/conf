@@ -252,6 +252,12 @@ assert_not_contains "REPLACE-ME" "$_lid_body"
 start_test "lid.sh detects the panel from 'monitors all' (incl. disabled)"
 assert_contains "monitors all" "$_lid_body"
 
+# Re-enabling must use auto scale like the catch-all monitor rule; a hardcoded
+# scale of 1 would reset a HiDPI panel every time the lid is opened.
+start_test "lid.sh re-enables the panel with auto scale"
+assert_contains "preferred, auto, auto" "$_lid_body"
+assert_not_contains "preferred, auto, 1" "$_lid_body"
+
 ################################################################################
 # Tray applets: network + volume/sound.
 ################################################################################
@@ -391,5 +397,12 @@ assert_contains "\"\$theme\" sleep" "$_themed_body"
 start_test "fuzzel launcher themes by current mode"
 _fuzzellaunch_body=$(cat "$_fuzzellaunch")
 assert_contains "theme.sh\" mode" "$_fuzzellaunch_body"
+
+# theme.sh records the applied mode in a marker; launch-fuzzel.sh must read it
+# so a manual `theme.sh light`/`theme.sh dark` override themes fuzzel too (the
+# time-of-day mode is only the fallback).
+start_test "theme.sh writes the mode marker and fuzzel launcher reads it"
+assert_contains "theme-mode" "$_theme_body"
+assert_contains "theme-mode" "$_fuzzellaunch_body"
 
 test_summary "hypr_test"

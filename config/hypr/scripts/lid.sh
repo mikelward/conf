@@ -43,7 +43,9 @@ case "$action" in
         fi
         ;;
     open)
-        hyprctl keyword monitor "${INTERNAL}, preferred, auto, 1"
+        # auto scale, matching the catch-all `monitor = , preferred, auto, auto`
+        # rule -- a hardcoded scale here would reset a HiDPI panel to 1x.
+        hyprctl keyword monitor "${INTERNAL}, preferred, auto, auto"
         ;;
     *)
         echo "usage: $0 close|open" >&2
