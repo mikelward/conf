@@ -191,10 +191,23 @@ assert_contains "BackSpace, killactive" "$_hypr_body"
 start_test "terminal launcher bound to SUPER+T"
 assert_contains "\$mainMod, T, exec" "$_hypr_body"
 
-for _app in browser1 browser2 music; do
+# SUPER+<letter> launchers from xbindkeysrc.
+for _app in browser1 browser2 browser3 home irc google-calendar google-chat \
+            google-meet notepad bluetooth-connect remote-desktop youtube-music; do
     start_test "app-launch bind present: $_app"
     assert_contains "exec, $_app" "$_hypr_body"
 done
+
+start_test "add/remove master moved off letters onto = / -"
+assert_contains "\$mainMod, equal, layoutmsg, addmaster" "$_hypr_body"
+assert_contains "\$mainMod, minus, layoutmsg, removemaster" "$_hypr_body"
+start_test "float is on SUPER+Shift+F (F is browser2)"
+assert_contains "\$mainMod SHIFT, F, togglefloating" "$_hypr_body"
+assert_contains "\$mainMod, F, exec, browser2" "$_hypr_body"
+start_test "resize submap entered with SUPER+Shift+R"
+assert_contains "\$mainMod SHIFT, R, submap, resize" "$_hypr_body"
+start_test "no true-fullscreen (state 0) bind"
+assert_not_contains "fullscreen, 0" "$_hypr_body"
 
 start_test "monocle bound to SUPER+grave"
 assert_contains "\$mainMod, grave, fullscreen, 1" "$_hypr_body"
