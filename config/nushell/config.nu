@@ -240,13 +240,18 @@ def inside-project [] {
 $env.stdin-is-tty = {|| is-terminal --stdin }
 def stdin-is-tty [] { do $env.stdin-is-tty }
 
-# return true if we should auto-start shpool in this session
+# return true if we should auto-start shpool in this session. We require the
+# autoshpool helper too, not just shpool, mirroring want-tmux's autotmux gate:
+# a machine that has shpool but hasn't picked up the scripts repo yet must
+# fall through to the tmux path rather than erroring on a missing autoshpool
+# at every shell start.
 def want-shpool [] {
     if (($env.WANT_SHPOOL? | default "1") == "0") { return false }
     if (not (stdin-is-tty)) { return false }
     if (in-shpool) { return false }
     if (inside-tmux) { return false }
     if (not (have-command "shpool")) { return false }
+    if (not (have-command "autoshpool")) { return false }
     (connected-remotely) or (inside-project)
 }
 
@@ -315,13 +320,13 @@ def session-backend [] {
     if $pref == "tmux" {
         if (($env.WANT_TMUX? | default "1") != "0") and (have-command "tmux") and (have-command "autotmux") {
             "tmux"
-        } else if (($env.WANT_SHPOOL? | default "1") != "0") and (have-command "shpool") {
+        } else if (($env.WANT_SHPOOL? | default "1") != "0") and (have-command "shpool") and (have-command "autoshpool") {
             "shpool"
         } else {
             ""
         }
     } else {
-        if (($env.WANT_SHPOOL? | default "1") != "0") and (have-command "shpool") {
+        if (($env.WANT_SHPOOL? | default "1") != "0") and (have-command "shpool") and (have-command "autoshpool") {
             "shpool"
         } else if (($env.WANT_TMUX? | default "1") != "0") and (have-command "tmux") and (have-command "autotmux") {
             "tmux"
@@ -1499,9 +1504,10 @@ def clone [url: string, ...args: string] {
 # cs/ds/ms are defs, not aliases, so they can pass session-backend (which
 # honours WANT_SHPOOL/WANT_TMUX and the $SESSION_BACKEND preference) as
 # SESSION_BACKEND: the *s scripts dispatch on
-# $TMUX/$SHPOOL_SESSION_NAME/$SESSION_BACKEND then fall back to tmux, so an
-# opted-in tmux user (WANT_SHPOOL=0) outside a session would otherwise get
-# the scripts' default.
+# $TMUX/$SHPOOL_SESSION_NAME/$SESSION_BACKEND then fall back to whichever
+# backend is installed (shpool first), so an opted-in tmux user
+# (WANT_SHPOOL=0) outside a session would otherwise get the scripts' default
+# -- the scripts can't see the WANT_* opt-outs.
 # When session-backend is empty and we aren't in a session, they no-op rather
 # than trigger that fallback (see skip-session-script).
 # cs additionally exits the shell after a shpool switch (the script detaches us

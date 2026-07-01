@@ -379,13 +379,18 @@ stdin_is_tty() {
     test -t 0
 }
 
-# return true if we should auto-start shpool in this session
+# return true if we should auto-start shpool in this session. We require the
+# autoshpool helper too, not just shpool, mirroring want_tmux's autotmux gate:
+# a machine that has shpool but hasn't picked up the scripts repo yet must
+# fall through to the tmux path rather than erroring on a missing autoshpool
+# at every shell start.
 want_shpool() {
     if test "${WANT_SHPOOL:-1}" = 0; then return 1; fi
     if ! stdin_is_tty; then return 1; fi
     if in_shpool; then return 1; fi
     if inside_tmux; then return 1; fi
     if ! have_command shpool; then return 1; fi
+    if ! have_command autoshpool; then return 1; fi
     connected_remotely || inside_project
 }
 
@@ -1184,11 +1189,11 @@ session_backend() {
     if test "${SESSION_BACKEND:-shpool}" = tmux; then
         if test "${WANT_TMUX:-1}" != 0 && have_command tmux && have_command autotmux; then
             puts tmux
-        elif test "${WANT_SHPOOL:-1}" != 0 && have_command shpool; then
+        elif test "${WANT_SHPOOL:-1}" != 0 && have_command shpool && have_command autoshpool; then
             puts shpool
         fi
     else
-        if test "${WANT_SHPOOL:-1}" != 0 && have_command shpool; then
+        if test "${WANT_SHPOOL:-1}" != 0 && have_command shpool && have_command autoshpool; then
             puts shpool
         elif test "${WANT_TMUX:-1}" != 0 && have_command tmux && have_command autotmux; then
             puts tmux
@@ -2078,14 +2083,15 @@ if is_interactive; then
     # in the scripts repo; autosession/switch* stay shell wrappers.
     #
     # The *s scripts dispatch on $TMUX/$SHPOOL_SESSION_NAME/$SESSION_BACKEND,
-    # then fall back to tmux; pass session_backend (which honours WANT_SHPOOL/
-    # WANT_TMUX and the $SESSION_BACKEND preference) as SESSION_BACKEND so an
-    # opted-in tmux user (WANT_SHPOOL=0) outside a session is handed tmux
-    # rather than the scripts' default. When session_backend is empty (no
-    # backend wanted/available) and we aren't already in a session, do nothing
-    # rather than let the script fall back to tmux -- matching the old
-    # autosession/switchsession no-op. as routes through the shell autosession,
-    # which already does this.
+    # then fall back to whichever backend is installed (shpool first); pass
+    # session_backend (which honours WANT_SHPOOL/WANT_TMUX and the
+    # $SESSION_BACKEND preference) as SESSION_BACKEND so an opted-in tmux user
+    # (WANT_SHPOOL=0) outside a session is handed tmux rather than the
+    # scripts' default -- the scripts can't see the WANT_* opt-outs. When
+    # session_backend is empty (no backend wanted/available) and we aren't
+    # already in a session, do nothing rather than let the script fall back to
+    # an installed backend -- matching the old autosession/switchsession
+    # no-op. as routes through the shell autosession, which already does this.
     as() { autosession "$@"; }
     asp() { autoshpool "$@"; }
     atm() { autotmux "$@"; }
