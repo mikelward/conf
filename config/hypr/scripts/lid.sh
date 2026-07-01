@@ -10,9 +10,17 @@
 # For this to be the authoritative lid handler, systemd-logind must be told to
 # ignore the lid (HandleLidSwitch=ignore); setup-hypr installs that drop-in.
 #
-# >>> PLACEHOLDER: set INTERNAL to your laptop's internal panel name.
-# Find it with `hyprctl monitors` (usually eDP-1; eDP-2 on some machines). <<<
-INTERNAL="${HYPR_INTERNAL_OUTPUT:-eDP-1}"
+# The internal panel is auto-detected as the first output whose connector is an
+# internal type (eDP/LVDS/DSI). Override with HYPR_INTERNAL_OUTPUT if needed.
+INTERNAL="$HYPR_INTERNAL_OUTPUT"
+if test -z "$INTERNAL"; then
+    INTERNAL=$(hyprctl monitors -j \
+        | grep -o '"name": *"[^"]*"' \
+        | cut -d'"' -f4 \
+        | grep -iE '^(eDP|LVDS|DSI)' \
+        | head -n1)
+    test -n "$INTERNAL" || INTERNAL=eDP-1
+fi
 
 action="$1"
 
