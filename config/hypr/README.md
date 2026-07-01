@@ -86,7 +86,9 @@ For full systemd env propagation you can later *convert* the `env = KEY,VAL`
 lines from `hyprland.conf` into shell `export KEY=VAL` lines in
 `~/.config/uwsm/env` (put the `HYPR*` ones in `~/.config/uwsm/env-hyprland`).
 uwsm sources those files as shell, so the format must be `export …`, not the
-`env =` syntax — a follow-up, not required to try uwsm.
+`env =` syntax — and **quote any value with shell metacharacters**, e.g.
+`env = QT_QPA_PLATFORM,wayland;xcb` becomes `export QT_QPA_PLATFORM='wayland;xcb'`
+(unquoted, the `;` would end the command). A follow-up, not required to try uwsm.
 
 ## Keybindings
 
