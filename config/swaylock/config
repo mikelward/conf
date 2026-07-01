@@ -1,0 +1,32 @@
+# swaylock -- traditional, solid lock screen matching the desktop palette
+# (bg #1d1f21, accent #ffb52a, alert #e60053). Invoked as `swaylock -f`
+# from swayidle and the Super+Ctrl+L keybind.
+
+# Solid background colour -- no image, traditional.
+color=1d1f21
+
+# Show a subtle indicator ring only while typing/interacting.
+indicator
+indicator-radius=90
+indicator-thickness=6
+
+# Don't reveal keystroke count; do surface failed attempts.
+ignore-empty-password
+show-failed-attempts
+
+# Ring / text colours for each state.
+ring-color=444444
+ring-clear-color=ffb52a
+ring-ver-color=ffb52a
+ring-wrong-color=e60053
+key-hl-color=ffb52a
+bs-hl-color=e60053
+inside-color=222222
+inside-clear-color=222222
+inside-ver-color=222222
+inside-wrong-color=222222
+text-color=dfdfdf
+text-clear-color=dfdfdf
+text-ver-color=dfdfdf
+text-wrong-color=dfdfdf
+separator-color=00000000

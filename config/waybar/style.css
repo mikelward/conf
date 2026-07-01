@@ -1,0 +1,131 @@
+/*
+ * Waybar theme -- traditional, solid, readable.
+ *
+ * The palette (bg / bg-alt / fg / muted / accent / alert) is imported
+ * from theme.css, which river-theme regenerates for the current
+ * light/dark mode and then reloads Waybar (SIGUSR2). base writes a
+ * dark-mode theme.css fallback if river-theme isn't installed, so this
+ * @import always resolves. @import must be the first statement.
+ *
+ * The BAR itself is a solid, square panel (traditional). Only the light
+ * rounding requested for UI chrome is applied -- to popovers (tooltips,
+ * the calendar dropdown) and the tray -- not to the bar edges.
+ */
+
+@import url("theme.css");
+
+* {
+    font-family: "Ubuntu Mono", "DejaVu Sans Mono", monospace;
+    font-size: 13px;
+    /* No rounded focus rings or animations -- keep it flat and traditional. */
+    min-height: 0;
+}
+
+window#waybar {
+    background: @bg;
+    color: @fg;
+    border-bottom: 1px solid #000000;
+}
+
+/* Generic module padding. */
+#tags,
+#mode,
+#window,
+#tray,
+#network,
+#pulseaudio,
+#custom-battery,
+#clock {
+    padding: 0 8px;
+    background: transparent;
+}
+
+/* River tags: flat squares, accent for the focused/occupied tag. */
+#tags button {
+    padding: 0 6px;
+    color: @muted;
+    background: transparent;
+    border-bottom: 2px solid transparent;
+}
+
+#tags button.occupied {
+    color: @fg;
+}
+
+#tags button.focused {
+    color: @accent;
+    border-bottom: 2px solid @accent;
+}
+
+#tags button.urgent {
+    color: @alert;
+    border-bottom: 2px solid @alert;
+}
+
+#window {
+    color: @muted;
+}
+
+/* Battery states (class set by scripts/battery.sh). */
+#custom-battery.warning {
+    color: @accent;
+}
+
+#custom-battery.critical {
+    color: @alert;
+}
+
+#custom-battery.charging {
+    color: @fg;
+}
+
+#network.disconnected,
+#pulseaudio.muted {
+    color: @muted;
+}
+
+/* The three clocks. Local (rightmost) gets the accent so it reads as the
+ * primary clock; the two foreign-zone clocks are slightly muted. */
+#clock {
+    color: @fg;
+}
+
+#clock.local {
+    color: @accent;
+    font-weight: bold;
+}
+
+#clock.sf,
+#clock.london {
+    color: @muted;
+}
+
+/* --- Light rounding on UI chrome only (popovers + tray) --- */
+
+tooltip {
+    background: @bg-alt;
+    border: 1px solid @accent;
+    border-radius: 6px;
+}
+
+tooltip label {
+    color: @fg;
+    padding: 4px;
+}
+
+#tray {
+    border-radius: 6px;
+}
+
+#tray menu {
+    background: @bg-alt;
+    border-radius: 6px;
+}
+
+#tray > .passive {
+    -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+}

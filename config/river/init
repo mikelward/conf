@@ -1,0 +1,46 @@
+#!/bin/sh
+# river init -- entry point. river executes this file (honouring its
+# shebang) once, at compositor startup.
+#
+# KEEP THIS FILE IDENTICAL ON EVERY MACHINE. It contains no machine-
+# specific values; it only wires up the shared base config and an
+# optional per-host override so the same checkout works everywhere.
+#
+#   ~/.config/river/init            this file (host-agnostic)
+#   ~/.config/river/base            shared config: keybinds, tags, theme,
+#                                   layout, autostart
+#   ~/.config/river/hosts/<host>.sh per-host overrides: outputs, input
+#                                   devices, handedness, scroll factor
+#
+# The per-host file is chosen by hostname and sourced only if it exists,
+# so a machine you have not configured yet still comes up with a fully
+# working, sane-default desktop (graceful degradation -- no hard errors).
+#
+# Installed by confinst as a symlink at ~/.config/river/init; the exec
+# bit is tracked in git so river can run it directly.
+
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/river"
+
+# Shared base config (required). Sourced rather than executed so the
+# helper functions and any exported state remain available to the
+# per-host file below.
+if test -r "$config_dir/base"; then
+	. "$config_dir/base"
+else
+	printf 'river: missing base config at %s\n' "$config_dir/base" >&2
+fi
+
+# Per-host overrides (optional). Selected by short hostname; an absent
+# file is fine -- the base config already stands on its own.
+host="$(hostname 2>/dev/null || uname -n 2>/dev/null || echo unknown)"
+# Strip any domain suffix so "laptop.example.com" matches "laptop.sh".
+host="${host%%.*}"
+host_file="$config_dir/hosts/$host.sh"
+
+if test -r "$host_file"; then
+	printf 'river: applying host config %s\n' "$host_file" >&2
+	. "$host_file"
+else
+	printf 'river: no host config for "%s" (looked for %s); using defaults\n' \
+		"$host" "$host_file" >&2
+fi

@@ -1,0 +1,40 @@
+{
+    "$schema": "/etc/xdg/swaync/configSchema.json",
+
+    "//": "swaync -- notification daemon + control centre. Chosen over mako because it adds a control centre (a KDE-like notification history + Do-Not-Disturb / quick-toggle panel), which suits a traditional desktop. mako is lighter (notifications only, ~one INI file) but has no panel. Toggle the panel with: swaync-client -t.",
+
+    "positionX": "right",
+    "positionY": "top",
+    "layer": "overlay",
+    "control-center-layer": "top",
+    "cssPriority": "user",
+
+    "notification-window-width": 380,
+    "notification-icon-size": 48,
+    "notification-body-image-height": 120,
+    "notification-body-image-width": 200,
+    "timeout": 8,
+    "timeout-low": 4,
+    "timeout-critical": 0,
+
+    "control-center-width": 420,
+    "control-center-height": 600,
+    "fit-to-screen": true,
+    "keyboard-shortcuts": true,
+    "image-visibility": "when-available",
+    "transition-time": 150,
+    "hide-on-clear": false,
+    "hide-on-action": true,
+
+    "widgets": ["title", "dnd", "notifications"],
+    "widget-config": {
+        "title": {
+            "text": "Notifications",
+            "clear-all-button": true,
+            "button-text": "Clear all"
+        },
+        "dnd": {
+            "text": "Do not disturb"
+        }
+    }
+}

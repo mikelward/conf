@@ -1,0 +1,297 @@
+# river base config -- shared across every machine. Sourced by
+# ~/.config/river/init. Holds keybinds, tags, theme, layout and
+# autostart. Put NOTHING machine-specific here (outputs, input device
+# names, handedness, scroll factor all live in hosts/<host>.sh).
+#
+# Style goals: traditional, KDE-like feel. No gaps, thin borders,
+# distinct focused/unfocused colours, keyboard-driven, focus follows
+# mouse. Keybinds deliberately mirror the KDE/Krohnkite setup in
+# setup-kde so muscle memory carries over:
+#
+#   Super+T          terminal            Super+G      browser1
+#   Super+H          browser2            Super+W      terminal_on_workstation
+#   Super+Y          music               Super+Space  launcher (fuzzel)
+#   Super+Backspace  close window        Super+Return zoom (set master)
+#   Super+`          monocle/fullscreen  Super+,/.    main location left/top
+#   Super+N          focus tag N         Super+Shift+N move window to tag N
+#
+# All riverctl calls below are idempotent, so re-sourcing this file
+# (e.g. from a host override) is harmless.
+
+### Helpers ###################################################################
+
+# Launch a program once: skip it if the same command line is already
+# running. Keeps re-runs of init from stacking duplicate bars/daemons.
+# Matches on the full command line (pgrep -f) so shell-script daemons
+# like `river-lid eDP-1` and `river-theme watch` dedupe correctly --
+# pgrep -x would only see the interpreter name for those.
+run_once() {
+	if ! pgrep -f "$*" >/dev/null 2>&1; then
+		"$@" &
+	fi
+}
+
+### Input #####################################################################
+
+# Focus follows the mouse (KDE "focus follows mouse"). "normal" tracks
+# the pointer between windows while still letting popups/menus take
+# keyboard focus. Per-device settings (handedness, scroll factor) are
+# host-specific and live in hosts/<host>.sh.
+riverctl focus-follows-cursor normal
+
+# Warp the cursor to the focused output when focus moves between
+# monitors, so the pointer follows keyboard focus across screens.
+riverctl set-cursor-warp on-output-change
+
+# Key repeat: 50 keys/sec after a 300ms delay (comfortable, traditional).
+riverctl set-repeat 50 300
+
+### Theme / borders ###########################################################
+#
+# river cannot round window corners, blur, or dim inactive window
+# CONTENTS -- it has no compositor effects. The closest we can get to
+# KDE's "dim inactive" is a strong border-colour contrast: a bright
+# accent border on the focused window and a dim grey border on the rest.
+# (UI-chrome rounding -- Waybar/fuzzel/swaync -- is done in their CSS.)
+#
+# Time-of-day theming: river-theme switches the whole desktop between a
+# light palette (07:00-19:00) and a dark one (otherwise) -- borders,
+# Waybar, swaync, fuzzel and swaylock together. These border colours are
+# just a dark-mode fallback for when river-theme isn't installed;
+# river-theme overrides them below (and on every switch).
+riverctl border-width 2
+riverctl border-color-focused "0xffb52a"
+riverctl border-color-unfocused "0x444444"
+riverctl border-color-urgent "0xe60053"
+
+# NO GAPS: outer and inner gaps are both zero. Set on the layout
+# generator below via -outer-padding 0 / -view-padding 0.
+
+# Draw server-side decorations (borders) for every window; ask clients
+# not to draw their own, for a consistent traditional frame.
+riverctl rule-add -app-id "*" ssd
+
+### Window rules ##############################################################
+
+# Float small utility/dialog windows that make no sense tiled.
+riverctl rule-add -app-id "pavucontrol" float
+riverctl rule-add -app-id "nm-connection-editor" float
+riverctl rule-add -app-id "blueman-manager" float
+riverctl rule-add -app-id "org.kde.polkit-kde-authentication-agent-1" float
+riverctl rule-add -app-id "*" -title "Picture-in-Picture" float
+
+### Pointer (mouse) bindings ##################################################
+
+# Super + drag to move, Super + right-drag to resize (KDE-style), plus
+# Super + middle to toggle floating.
+riverctl map-pointer normal Super BTN_LEFT move-view
+riverctl map-pointer normal Super BTN_RIGHT resize-view
+riverctl map-pointer normal Super BTN_MIDDLE toggle-float
+
+### Application launch bindings (mirror setup-kde) ############################
+
+riverctl map normal Super T spawn terminal
+riverctl map normal Super G spawn browser1
+riverctl map normal Super H spawn browser2
+riverctl map normal Super W spawn terminal_on_workstation
+riverctl map normal Super Y spawn music
+
+# Launcher (fuzzel), themed for the current light/dark mode via river-theme.
+# Fall back to plain fuzzel if the (optional) river-theme helper is absent.
+riverctl map normal Super Space spawn 'command -v river-theme >/dev/null 2>&1 && river-theme menu || fuzzel'
+
+# Toggle light/dark manually (overrides the clock until the next switch).
+# No-op if river-theme isn't installed (there's no non-helper way to switch).
+riverctl map normal Super+Shift T spawn "river-theme toggle"
+
+### Window management #########################################################
+
+# Close / exit / lock. Lock is themed for the current light/dark mode, but
+# ALWAYS falls back to plain swaylock if river-theme isn't installed -- the
+# screen must lock even without the optional helper.
+riverctl map normal Super BackSpace close
+riverctl map normal Super+Shift E exit
+riverctl map normal Super+Control L spawn 'command -v river-theme >/dev/null 2>&1 && river-theme lock || swaylock -f'
+
+# Screenshots (grim + slurp + wl-clipboard):
+#   Print              whole output -> ~/Pictures/Screenshots/<timestamp>.png
+#   Super+Shift+S      drag a region -> clipboard (KDE Spectacle muscle memory)
+#   Super+Print        drag a region -> file
+riverctl map normal None Print spawn 'grim "$HOME/Pictures/Screenshots/$(date +%Y%m%d-%H%M%S).png"'
+riverctl map normal Super+Shift S spawn 'grim -g "$(slurp)" - | wl-copy'
+riverctl map normal Super Print spawn 'grim -g "$(slurp)" "$HOME/Pictures/Screenshots/$(date +%Y%m%d-%H%M%S).png"'
+
+# Focus and swap within the stack (vim-style j/k).
+riverctl map normal Super J focus-view next
+riverctl map normal Super K focus-view previous
+riverctl map normal Super+Shift J swap next
+riverctl map normal Super+Shift K swap previous
+
+# Zoom: swap the focused view with the master/main view (Krohnkite "Set
+# master", KDE Meta+Return).
+riverctl map normal Super Return zoom
+
+# Focus / send to the next-or-previous output (multi-monitor).
+riverctl map normal Super O focus-output next
+riverctl map normal Super+Shift O send-to-output next
+
+# Bump a floating window back into the tiled layout, or float a tiled one.
+riverctl map normal Super+Shift Space toggle-float
+
+# Monocle: fullscreen the focused window (Krohnkite Monocle, KDE Meta+`).
+# Bound to both backtick and F for convenience.
+riverctl map normal Super grave toggle-fullscreen
+riverctl map normal Super F toggle-fullscreen
+
+### Layout adjustment (rivertile) ############################################
+#
+# Fully keyboard-driven resize/layout controls. main-ratio grows/shrinks
+# the master area; main-count moves windows in/out of the master stack;
+# main-location moves the master area (left = vertical master/stack like
+# Krohnkite Tile, top = horizontal). The \ and / aliases match the
+# Krohnkite grow/shrink-width binds from setup-kde.
+
+riverctl map normal Super equal     send-layout-cmd rivertile "main-ratio +0.05"
+riverctl map normal Super minus     send-layout-cmd rivertile "main-ratio -0.05"
+riverctl map normal Super backslash send-layout-cmd rivertile "main-ratio +0.05"
+riverctl map normal Super slash     send-layout-cmd rivertile "main-ratio -0.05"
+
+riverctl map normal Super bracketright send-layout-cmd rivertile "main-count +1"
+riverctl map normal Super bracketleft  send-layout-cmd rivertile "main-count -1"
+
+# main-location: comma = master on the left (default), period = master on
+# top. Mirrors the "cycle layout" feel of Krohnkite's comma/period binds.
+riverctl map normal Super comma  send-layout-cmd rivertile "main-location left"
+riverctl map normal Super period send-layout-cmd rivertile "main-location top"
+
+### Tags (virtual desktops 1-9) ###############################################
+#
+# Super+N            focus tag N
+# Super+Shift+N      move focused window to tag N
+# Super+Control+N    toggle tag N in the focused set
+# Super+Shift+Control+N toggle tag N on the focused window
+# Super+0 / Super+Shift+0 focus / assign all tags
+
+all_tags=$(((1 << 9) - 1))
+i=1
+while test "$i" -le 9; do
+	tag=$((1 << (i - 1)))
+	riverctl map normal Super "$i" set-focused-tags "$tag"
+	riverctl map normal Super+Shift "$i" set-view-tags "$tag"
+	riverctl map normal Super+Control "$i" toggle-focused-tags "$tag"
+	riverctl map normal Super+Shift+Control "$i" toggle-view-tags "$tag"
+	i=$((i + 1))
+done
+riverctl map normal Super 0 set-focused-tags "$all_tags"
+riverctl map normal Super+Shift 0 set-view-tags "$all_tags"
+
+### Media / brightness keys ###################################################
+#
+# Bound in every mode (also while locked) via -release/normal so they
+# work regardless of focus. Uses wpctl (PipeWire/WirePlumber) for audio
+# and brightnessctl for backlight; both degrade to no-ops if absent.
+
+riverctl map normal None XF86AudioRaiseVolume  spawn "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
+riverctl map normal None XF86AudioLowerVolume  spawn "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+riverctl map normal None XF86AudioMute         spawn "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+riverctl map normal None XF86AudioMicMute      spawn "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
+riverctl map normal None XF86MonBrightnessUp   spawn "brightnessctl set 5%+"
+riverctl map normal None XF86MonBrightnessDown spawn "brightnessctl set 5%-"
+
+riverctl map normal None XF86AudioPlay spawn "playerctl play-pause"
+riverctl map normal None XF86AudioNext spawn "playerctl next"
+riverctl map normal None XF86AudioPrev spawn "playerctl previous"
+
+### Layout generator ##########################################################
+#
+# rivertile is the default generator (master/stack, like Krohnkite's
+# Tile). It is bundled with river, so it is always available.
+#
+# Richer generators worth considering if you want Krohnkite's
+# ThreeColumn / Columns / spiral layouts, which rivertile does not do:
+#
+#   stacktile     https://git.sr.ht/~novakane/stacktile  (multiple
+#                 stacks, closest to Krohnkite ThreeColumn/Columns)
+#   filtile       https://gitlab.com/gwund/filtile        (per-tag layouts)
+#   river-luatile https://github.com/MTeaHead/river-luatile (Lua-scripted)
+#
+# To use one instead, install it (see setup-river), then set it as the
+# default layout below and spawn it in place of rivertile, e.g.:
+#   riverctl default-layout stacktile
+#   run_once stacktile ...
+# rivertile's keybinds above target the "rivertile" namespace, so adjust
+# send-layout-cmd targets to match your chosen generator.
+
+riverctl default-layout rivertile
+
+# No gaps: outer and view padding both 0. Master on the left, one master
+# window, 55% width -- a conventional master/stack tile.
+run_once rivertile \
+	-view-padding 0 \
+	-outer-padding 0 \
+	-main-location left \
+	-main-count 1 \
+	-main-ratio 0.55
+
+### Autostart #################################################################
+#
+# Wallpaper, bar, notifications, display hotplug and idle management.
+# run_once keeps these from doubling up when init is re-run. Anything
+# host-specific (e.g. a per-machine wallpaper) can be overridden in
+# hosts/<host>.sh, which is sourced after this file.
+
+# Ensure the screenshot target directory exists (grim won't create it).
+mkdir -p "$HOME/Pictures/Screenshots"
+
+# Wallpaper: plain solid colour (traditional, not animated). A host file
+# may relaunch swaybg with -i <image> to use a picture instead. The
+# neutral tone reads acceptably under both light and dark themes.
+run_once swaybg --color "1d1f21" --mode solid
+
+# Apply the light/dark theme ONCE, synchronously, BEFORE the bar starts,
+# so Waybar/swaync have their generated theme.css (which they @import)
+# already in place on first paint. If river-theme isn't installed, write a
+# dark-mode fallback palette so the CSS still resolves.
+if command -v river-theme >/dev/null 2>&1; then
+	river-theme apply auto
+else
+	for _app in waybar swaync; do
+		_dir="${XDG_CONFIG_HOME:-$HOME/.config}/$_app"
+		test -d "$_dir" || continue
+		cat >"$_dir/theme.css" <<'THEME'
+@define-color bg      #222222;
+@define-color bg-alt  #2e2e2e;
+@define-color fg      #dfdfdf;
+@define-color muted   #8a8a8a;
+@define-color accent  #ffb52a;
+@define-color alert   #e60053;
+THEME
+	done
+fi
+
+# Keep the theme following the clock: flip at 07:00 and 19:00.
+run_once river-theme watch
+
+# Status bar / tray / clocks.
+run_once waybar
+
+# Notifications + control centre.
+run_once swaync
+
+# Display hotplug / multi-monitor arrangement (per-host profiles).
+run_once kanshi
+
+# Idle / lock / DPMS. -w waits for the previous timeout command to finish
+# before starting the next. Config in ~/.config/swayidle/config.
+run_once swayidle -w
+
+# Polkit authentication agent, so GUI apps can request privileges.
+# Path varies by distro; try the common KDE one, fall back to the
+# GNOME one. Harmless if neither is installed.
+if test -x /usr/lib/polkit-kde-authentication-agent-1; then
+	run_once /usr/lib/polkit-kde-authentication-agent-1
+elif test -x /usr/libexec/polkit-kde-authentication-agent-1; then
+	run_once /usr/libexec/polkit-kde-authentication-agent-1
+elif test -x /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1; then
+	run_once /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
+fi
