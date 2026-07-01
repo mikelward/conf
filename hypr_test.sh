@@ -105,6 +105,12 @@ assert_contains "grim" "$_hypr_body"
 start_test "playback keys use playerctl"
 assert_contains "playerctl play-pause" "$_hypr_body"
 
+# The calculator launches a GUI, so it must NOT fire under the lock screen:
+# plain `bind`, not `bindl`.
+start_test "calculator key is not active while locked (plain bind)"
+assert_contains "bind = , XF86Calculator" "$_hypr_body"
+assert_not_contains "bindl = , XF86Calculator" "$_hypr_body"
+
 ################################################################################
 # Krohnkite-equivalent master/stack keybinds.
 ################################################################################
