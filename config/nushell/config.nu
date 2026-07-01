@@ -1644,10 +1644,17 @@ $env.config = ($env.config | upsert hooks.env_change.PWD [{|before, after|
 # re-run fully (it's how you reload after editing), so there's no once-guard to
 # mirror here.
 #
-# shpool opens the session's shell in the right directory itself (autoshpool and
-# friends pass `shpool attach -d`), so there's no PWD to restore here. Mirrors
-# shrc/fish, which likewise no longer cd on entering a session.
+# Transitional fallback: the updated scripts-repo helpers open the session in
+# the right directory via `shpool attach -d`, leaving SHPOOL_INITIAL_PWD unset
+# (this block a no-op). Until that ships everywhere (mikelward/scripts#107), the
+# older helpers still stamp SHPOOL_INITIAL_PWD (forwarded via the shpool config's
+# forward_env), so cd there on entry. Remove this block and the forward_env entry
+# once the scripts update is deployed. Mirrors shrc/fish.
 if (is-interactive) {
+    if (in-shpool) and (($env.SHPOOL_INITIAL_PWD? | default "") | is-not-empty) {
+        cd $env.SHPOOL_INITIAL_PWD
+        hide-env SHPOOL_INITIAL_PWD
+    }
     maybe-start-session-and-exit
 }
 

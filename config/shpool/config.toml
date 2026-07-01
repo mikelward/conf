@@ -1,1 +1,5 @@
 prompt_prefix = ""
+# Transitional: forward the pwd the pre-#107 scripts stamp so the shells'
+# SHPOOL_INITIAL_PWD fallback can cd there on entry. Drop once the updated
+# scripts (which pass `shpool attach -d`) are deployed everywhere.
+forward_env = ["PWD", "SHPOOL_INITIAL_PWD"]
