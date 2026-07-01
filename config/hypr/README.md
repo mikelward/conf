@@ -74,15 +74,19 @@ nothing about how you currently log in until you select the uwsm session:
 
 - **Display manager:** with uwsm installed, pick the "Hyprland (uwsm-managed)"
   session entry at the greeter instead of plain "Hyprland".
-- **TTY:** `uwsm start hyprland` (instead of `exec Hyprland`).
+- **TTY:** `uwsm start hyprland.desktop` (instead of `exec Hyprland`; the
+  argument is the Hyprland desktop-entry ID, or use `uwsm start -- Hyprland`).
 
 > **gdm3 / PAM note:** on some setups (e.g. a work laptop on gdm3) the
 > session/PAM wiring is picky — verify login, keyring unlock, and `hyprlock`
 > auth still work *before* making uwsm your default. Nothing changes until you
 > choose the uwsm session, so it's safe to try and switch back.
 
-For full systemd env propagation you can later move the `env = ` lines from
-`hyprland.conf` into `~/.config/uwsm/env` — a follow-up, not required to try it.
+For full systemd env propagation you can later *convert* the `env = KEY,VAL`
+lines from `hyprland.conf` into shell `export KEY=VAL` lines in
+`~/.config/uwsm/env` (put the `HYPR*` ones in `~/.config/uwsm/env-hyprland`).
+uwsm sources those files as shell, so the format must be `export …`, not the
+`env =` syntax — a follow-up, not required to try uwsm.
 
 ## Keybindings
 
