@@ -715,16 +715,6 @@ case '*'
     set --export LS_COLORS 'no=00:fi=00:di=00;34:ln=00;35:so=00;00:bd=00;00:cd=00;00:or=00;31:pi=00;00:ex=00;32'
 end
 
-# Stamp the current PWD onto SHPOOL_INITIAL_PWD for every autoshpool
-# invocation so the spawned shpool shell cd's back to where the user
-# actually was. Without this, SHPOOL_INITIAL_PWD would only carry the
-# outer shell's startup PWD, so `cd repo; and autoshpool` would land
-# the session in the startup dir instead of the repo. `command`
-# bypasses the wrapper itself to avoid recursion.
-function autoshpool
-    SHPOOL_INITIAL_PWD=$PWD command autoshpool $argv
-end
-
 function switchshpool
     autoshpool switch $argv[1]; and exit
 end
@@ -847,13 +837,8 @@ end
 # Set up the prompt, title, key bindings, etc.
 
 if is_interactive
-    # The autoshpool wrapper stamps SHPOOL_INITIAL_PWD with the PWD at
-    # invocation time; the spawned in-shpool shell cd's there and clears
-    # it so it doesn't leak into later sessions.
-    if in_shpool; and test -n "$SHPOOL_INITIAL_PWD"
-        cd $SHPOOL_INITIAL_PWD
-        set --erase SHPOOL_INITIAL_PWD
-    end
+    # shpool opens the session's shell in the right directory itself (autoshpool
+    # and friends pass `shpool attach -d`), so there's no PWD to restore here.
     maybe_start_session_and_exit
 
     # Past this point we're the shell we're keeping (the handoff exits if it
@@ -954,8 +939,8 @@ if is_interactive
     # session_backend), sp (shpool), or tm (tmux). The *s spellings follow the
     # active backend; *sp/*tm force one. auto* attach-or-create at startup,
     # change* are the fzf switchers, detach*/make* detach or create named
-    # sessions. All but auto* live in the scripts repo; auto* stay shell
-    # functions/wrappers (autoshpool stamps SHPOOL_INITIAL_PWD).
+    # sessions. change*/detach*/make* and the autoshpool/autotmux binaries live
+    # in the scripts repo; autosession/switch* stay shell wrappers.
     #
     # cs/ds/ms are functions, not aliases, so they can pass session_backend
     # (which honours WANT_SHPOOL/WANT_TMUX and the $SESSION_BACKEND preference)

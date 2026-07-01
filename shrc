@@ -1172,14 +1172,6 @@ fi
 
 fi # SHRC_LOAD_FUNCTIONS_ONLY guard (env-setup block)
 
-# Stamp the current PWD onto SHPOOL_INITIAL_PWD for every autoshpool
-# invocation so the spawned shpool shell cd's back to where the user
-# actually was. Without this, SHPOOL_INITIAL_PWD would only carry the
-# outer shell's startup PWD, so `cd repo && autoshpool` would land the
-# session in the startup dir instead of the repo. `command` bypasses the
-# wrapper itself to avoid recursion.
-autoshpool() { SHPOOL_INITIAL_PWD="$PWD" command autoshpool "$@"; }
-
 switchshpool() { autoshpool switch "$1" && exit; }
 
 # Name of the preferred session manager: "shpool" (the default when both are
@@ -2037,13 +2029,8 @@ set_up_ssh_aliases() {
 }
 
 if is_interactive; then
-    # The autoshpool wrapper stamps SHPOOL_INITIAL_PWD with the PWD at
-    # invocation time; the spawned in-shpool shell cd's there and clears
-    # it so it doesn't leak into later sessions.
-    if in_shpool && test -n "$SHPOOL_INITIAL_PWD"; then
-        cd "$SHPOOL_INITIAL_PWD"
-        SHPOOL_INITIAL_PWD=
-    fi
+    # shpool opens the session's shell in the right directory itself (autoshpool
+    # and friends pass `shpool attach -d`), so there's no PWD to restore here.
     maybe_start_session_and_exit
 
     # Past this point we're the shell we're keeping (the handoff exits if it
@@ -2078,8 +2065,8 @@ if is_interactive; then
     # session_backend), sp (shpool), or tm (tmux). The *s spellings follow the
     # active backend; *sp/*tm force one. auto* attach-or-create at startup,
     # change* are the fzf switchers, detach*/make* detach or create named
-    # sessions. All but auto* live in the scripts repo; auto* stay shell
-    # functions/wrappers (autoshpool stamps SHPOOL_INITIAL_PWD).
+    # sessions. change*/detach*/make* and the autoshpool/autotmux binaries live
+    # in the scripts repo; autosession/switch* stay shell wrappers.
     #
     # The *s scripts dispatch on $TMUX/$SHPOOL_SESSION_NAME/$SESSION_BACKEND,
     # then fall back to tmux; pass session_backend (which honours WANT_SHPOOL/

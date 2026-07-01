@@ -135,20 +135,9 @@ let results = [
     })
 
     ###############
-    # autoshpool wrapper stamps SHPOOL_INITIAL_PWD with the PWD at
-    # invocation time so the spawned shpool shell can cd back to where
-    # the user actually was.
-    (run-test "nu autoshpool stamps SHPOOL_INITIAL_PWD onto invocation" {
-        let calls = (mktemp -t "vcs-calls.XXXXXX")
-        let bin = (mktemp -d)
-        ("#!/bin/sh\necho \"SHPOOL_INITIAL_PWD=$SHPOOL_INITIAL_PWD\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "autoshpool")
-        ^chmod +x ($bin | path join "autoshpool")
-        $env.PATH = ([$bin] ++ $env.PATH)
-        let pwd_dir = (mktemp -d -t "pwd-dir.XXXXXX")
-        cd $pwd_dir
-        autoshpool
-        assert equal (open $calls | str trim) $"SHPOOL_INITIAL_PWD=($pwd_dir)"
-    })
+    # autoshpool is a plain pass-through to the scripts-repo binary (shpool
+    # attach -d opens the session in the right directory, so there's nothing to
+    # stamp here); it must still forward its args unchanged.
     (run-test "nu autoshpool forwards args to the binary" {
         let calls = (mktemp -t "vcs-calls.XXXXXX")
         let bin = (mktemp -d)
@@ -158,14 +147,14 @@ let results = [
         autoshpool switch mysession
         assert equal (open $calls | str trim) "args=switch mysession"
     })
-    (run-test "nu autoshpool does not leak SHPOOL_INITIAL_PWD to caller" {
+    (run-test "nu autoshpool does not stamp SHPOOL_INITIAL_PWD" {
         let bin = (mktemp -d)
-        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autoshpool")
+        ("#!/bin/sh\necho \"SHPOOL_INITIAL_PWD=${SHPOOL_INITIAL_PWD-unset}\" >> \"" + $bin + "/log\"\n") | save -f ($bin | path join "autoshpool")
         ^chmod +x ($bin | path join "autoshpool")
         $env.PATH = ([$bin] ++ $env.PATH)
         hide-env --ignore-errors SHPOOL_INITIAL_PWD
         autoshpool
-        assert (not (is-env-set "SHPOOL_INITIAL_PWD"))
+        assert equal (open ($bin + "/log") | str trim) "SHPOOL_INITIAL_PWD=unset"
     })
 
 
