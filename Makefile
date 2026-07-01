@@ -259,6 +259,7 @@ $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
                           config/waybar/colors-dark.css \
                           config/waybar/colors-light.css \
                           config/fuzzel/fuzzel.ini \
+                          config/fuzzel/fuzzel-light.ini \
                           config/swaync/config.json \
                           config/swaync/style.css \
                           config/swaync/style-light.css \
