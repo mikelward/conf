@@ -114,7 +114,8 @@ test-all: \
 	test-lint \
 	test-gitconfig \
 	test-makefile \
-	test-amethyst
+	test-amethyst \
+	test-hypr
 
 $(CACHE):
 	@mkdir -p $@
@@ -239,9 +240,26 @@ $(CACHE)/test-amethyst.stamp: amethyst.yml amethyst_test.sh shrc_test_lib.sh | $
 	@touch $@
 test-amethyst: $(CACHE)/test-amethyst.stamp
 
+# Static presence/parse checks for the Hyprland Wayland desktop configs.
+# Depends on every config file it validates so editing any of them re-runs.
+$(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
+                          config/hypr/hyprland.conf \
+                          config/hypr/hypridle.conf \
+                          config/hypr/hyprlock.conf \
+                          config/hypr/scripts/toggle-layout.sh \
+                          config/waybar/config.jsonc \
+                          config/waybar/style.css \
+                          config/fuzzel/fuzzel.ini \
+                          config/swaync/config.json \
+                          config/swaync/style.css \
+                          config/kanshi/config | $(CACHE)
+	@bash hypr_test.sh
+	@touch $@
+test-hypr: $(CACHE)/test-hypr.stamp
+
 .PHONY: all install install-dotfiles install-vcs bootstrap \
 	vcs-build vcs-sync vcs-fetch \
 	test test-verbose test-full test-all \
 	test-dash test-bash test-zsh test-prompt test-vcs \
 	test-fish test-nu test-lint \
-	test-gitconfig test-makefile test-amethyst
+	test-gitconfig test-makefile test-amethyst test-hypr

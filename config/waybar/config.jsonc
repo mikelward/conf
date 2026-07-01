@@ -1,0 +1,95 @@
+// Waybar configuration
+// ~/.config/waybar/config.jsonc
+//
+// Left:   Hyprland workspaces + focused window title
+// Center: three clocks (local, London, San Francisco)
+// Right:  power profile, audio, battery, tray (StatusNotifierItem)
+{
+    "layer": "top",
+    "position": "top",
+    "height": 30,
+    "spacing": 6,
+
+    "modules-left": ["hyprland/workspaces", "hyprland/window"],
+    "modules-center": ["clock", "clock#london", "clock#sf"],
+    "modules-right": ["power-profiles-daemon", "pulseaudio", "network", "battery", "tray"],
+
+    "hyprland/workspaces": {
+        "on-click": "activate",
+        "format": "{id}",
+        "sort-by-number": true
+    },
+
+    "hyprland/window": {
+        "max-length": 60,
+        "separate-outputs": true
+    },
+
+    // Local time (uses the system timezone).
+    "clock": {
+        "interval": 10,
+        "format": " {:%H:%M}",
+        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
+    },
+
+    // London.
+    "clock#london": {
+        "interval": 10,
+        "timezone": "Europe/London",
+        "format": "LON {:%H:%M}",
+        "tooltip-format": "London — {:%A %d %B, %H:%M %Z}"
+    },
+
+    // San Francisco.
+    "clock#sf": {
+        "interval": 10,
+        "timezone": "America/Los_Angeles",
+        "format": "SF {:%H:%M}",
+        "tooltip-format": "San Francisco — {:%A %d %B, %H:%M %Z}"
+    },
+
+    "power-profiles-daemon": {
+        "format": "{icon}",
+        "tooltip-format": "Power profile: {profile}\nDriver: {driver}",
+        "tooltip": true,
+        "format-icons": {
+            "default": "",
+            "performance": "",
+            "balanced": "",
+            "power-saver": ""
+        }
+    },
+
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "format-muted": " muted",
+        "format-icons": {
+            "headphone": "",
+            "default": ["", "", ""]
+        },
+        "on-click": "pavucontrol",
+        "scroll-step": 5
+    },
+
+    "network": {
+        "format-wifi": " {signalStrength}%",
+        "format-ethernet": " {ipaddr}",
+        "format-disconnected": "睊",
+        "tooltip-format": "{ifname} via {gwaddr}",
+        "on-click": "nm-connection-editor"
+    },
+
+    "battery": {
+        "states": { "warning": 30, "critical": 15 },
+        "format": "{icon} {capacity}%",
+        "format-charging": " {capacity}%",
+        "format-plugged": " {capacity}%",
+        "format-icons": ["", "", "", "", ""],
+        "tooltip-format": "{timeTo} ({power}W)"
+    },
+
+    "tray": {
+        "icon-size": 18,
+        "spacing": 10
+    }
+}
