@@ -266,8 +266,7 @@ $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
                           config/swaync/style-light.css \
                           config/swaync/common.css \
                           config/swaync/colors-dark.css \
-                          config/swaync/colors-light.css \
-                          config/kanshi/config | $(CACHE)
+                          config/swaync/colors-light.css | $(CACHE)
 	@bash hypr_test.sh
 	@touch $@
 test-hypr: $(CACHE)/test-hypr.stamp
