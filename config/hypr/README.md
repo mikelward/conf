@@ -26,19 +26,17 @@ Files (all live under this repo's `config/` and map to `~/.config/`):
 
 ## Installing
 
-Packages, the systemd-logind lid drop-in, and `power-profiles-daemon` are
-handled by **`setup-hypr`** in the scripts repo:
+The dotfiles here are installed by this repo's `make install`. The **packages**
+are installed by `setup`; **`setup-hypr`** applies the non-dotfile config (the
+systemd-logind lid drop-in and enabling `power-profiles-daemon`):
 
-    setup-hypr            # install packages + logind drop-in + services
-    setup-hypr --no-install   # only (re)apply logind + services
+    setup --hypr              # full bootstrap: packages + Hyprland config
+    setup-hypr                # just the logind drop-in + services (packages via setup)
+    setup-hypr --no-install   # skip those system changes too
 
-Or as part of a full machine bootstrap, select the Hyprland desktop:
-
-    setup --hypr
-
-The dotfiles here are installed by this repo's `make install`. `setup-hypr`
-installs (package names vary by distro; Hyprland is first-class on Arch and may
-need a backport/COPR/manual build on Debian/Fedora):
+The packages `setup` installs (names vary by distro; Hyprland is first-class on
+Arch, `setup` auto-enables the `lionheartp/Hyprland` COPR on Fedora, and on
+Debian/Ubuntu the hypr* tools may need a backport or manual build):
 
     hyprland hypridle hyprlock xdg-desktop-portal-hyprland
     waybar fuzzel swaync swww
