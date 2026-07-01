@@ -11,10 +11,13 @@
 # ignore the lid (HandleLidSwitch=ignore); setup-hypr installs that drop-in.
 #
 # The internal panel is auto-detected as the first output whose connector is an
-# internal type (eDP/LVDS/DSI). Override with HYPR_INTERNAL_OUTPUT if needed.
+# internal type (eDP/LVDS/DSI). Use `monitors all` (which includes DISABLED
+# outputs) so the `open` path can still find the panel after `close` disabled
+# it -- plain `hyprctl monitors` lists active outputs only. Override with
+# HYPR_INTERNAL_OUTPUT if needed.
 INTERNAL="$HYPR_INTERNAL_OUTPUT"
 if test -z "$INTERNAL"; then
-    INTERNAL=$(hyprctl monitors -j \
+    INTERNAL=$(hyprctl monitors all -j \
         | grep -o '"name": *"[^"]*"' \
         | cut -d'"' -f4 \
         | grep -iE '^(eDP|LVDS|DSI)' \
@@ -24,11 +27,11 @@ fi
 
 action="$1"
 
-# Names of all currently-connected monitors, one per line.
-monitors=$(hyprctl monitors -j | grep -o '"name": *"[^"]*"' | cut -d'"' -f4)
-
-# Anything that isn't the internal panel counts as an external display.
-external=$(printf '%s\n' "$monitors" | grep -v "^${INTERNAL}\$")
+# External displays = currently ACTIVE monitors (plain `monitors`) that aren't
+# the internal panel. We want active outputs here, so a disabled/disconnected
+# external doesn't count toward "keep running while docked".
+active=$(hyprctl monitors -j | grep -o '"name": *"[^"]*"' | cut -d'"' -f4)
+external=$(printf '%s\n' "$active" | grep -v "^${INTERNAL}\$")
 
 case "$action" in
     close)

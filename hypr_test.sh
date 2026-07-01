@@ -207,6 +207,9 @@ assert_contains "disable" "$_lid_body"
 start_test "lid.sh auto-detects the internal panel (eDP/LVDS/DSI), no placeholder"
 assert_contains "eDP|LVDS|DSI" "$_lid_body"
 assert_not_contains "REPLACE-ME" "$_lid_body"
+# Must use `monitors all` so a disabled panel is still found on the open path.
+start_test "lid.sh detects the panel from 'monitors all' (incl. disabled)"
+assert_contains "monitors all" "$_lid_body"
 
 ################################################################################
 # Tray applets: network + volume/sound.
