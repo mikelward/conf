@@ -1,0 +1,86 @@
+{
+    "layer": "top",
+    "position": "top",
+    "height": 28,
+    "spacing": 6,
+
+    "modules-left": ["river/tags", "river/mode"],
+    "modules-center": ["river/window"],
+
+    "//": "modules-right renders LEFT-to-RIGHT. Applets first, then the three clocks with LOCAL rightmost. Reading right-to-left the clocks are: local, London, San Francisco -- exactly as requested.",
+    "modules-right": [
+        "tray",
+        "network",
+        "pulseaudio",
+        "custom/battery",
+        "clock#sf",
+        "clock#london",
+        "clock#local"
+    ],
+
+    "river/tags": {
+        "num-tags": 9
+    },
+
+    "river/window": {
+        "max-length": 60
+    },
+
+    "tray": {
+        "icon-size": 16,
+        "spacing": 8
+    },
+
+    "network": {
+        "format-wifi": "{icon} {essid}",
+        "format-ethernet": "eth {ipaddr}",
+        "format-disconnected": "offline",
+        "format-icons": ["wifi"],
+        "tooltip-format": "{ifname}: {ipaddr}\n{signalStrength}% signal",
+        "tooltip-format-ethernet": "{ifname}: {ipaddr}",
+        "on-click": "nm-connection-editor"
+    },
+
+    "pulseaudio": {
+        "format": "vol {volume}%",
+        "format-muted": "muted",
+        "format-bluetooth": "bt {volume}%",
+        "format-source": "mic {volume}%",
+        "format-source-muted": "mic off",
+        "scroll-step": 5,
+        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "on-click-right": "pavucontrol"
+    },
+
+    "//battery": "Custom script module so it disappears cleanly on desktops with no battery (built-in battery module can render a stray icon). See scripts/battery.sh.",
+    "custom/battery": {
+        "exec": "$HOME/.config/waybar/scripts/battery.sh",
+        "return-type": "json",
+        "interval": 30,
+        "tooltip": true
+    },
+
+    "clock#sf": {
+        "timezone": "America/Los_Angeles",
+        "format": "SF {:%H:%M}",
+        "tooltip-format": "San Francisco\n{:%A %d %B %Y  %H:%M %Z}"
+    },
+
+    "clock#london": {
+        "timezone": "Europe/London",
+        "format": "LON {:%H:%M}",
+        "tooltip-format": "London\n{:%A %d %B %Y  %H:%M %Z}"
+    },
+
+    "//clock-local": "No timezone override -> the machine's local time. Rightmost module. Labelled 'Local' per the city-label requirement.",
+    "clock#local": {
+        "format": "Local {:%a %d %b  %H:%M}",
+        "tooltip-format": "Local time\n{:%A %d %B %Y  %H:%M %Z}",
+        "calendar": {
+            "mode": "month",
+            "format": {
+                "today": "<b>{}</b>"
+            }
+        }
+    }
+}

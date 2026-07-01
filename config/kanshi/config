@@ -1,0 +1,20 @@
+# kanshi -- display hotplug / multi-monitor arrangement. Started by river
+# (autostart in base). Reacts to outputs being plugged/unplugged and
+# applies the first profile whose output set matches what's connected.
+#
+# SHARED BASE + PER-HOST PROFILES: this file only pulls in the per-host
+# profile files. Each machine's profiles are keyed by that machine's
+# actual output names, so only the current host's profiles ever match --
+# and an unconfigured machine simply has no matching profile, leaving
+# river's default arrangement untouched (graceful, no hard failure).
+#
+# Profiles handle the "enable external displays when present/hotplugged"
+# requirement automatically: plugging a monitor changes the connected
+# output set, kanshi switches to the matching (docked/external) profile.
+#
+# Turning the internal panel off *on lid close* is NOT done here -- kanshi
+# can't see lid state, only which outputs are connected. The river-lid
+# helper (per-host) handles that.
+#
+# The include path is relative to this file's directory (~/.config/kanshi).
+include "hosts/*.conf"

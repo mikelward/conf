@@ -114,7 +114,8 @@ test-all: \
 	test-lint \
 	test-gitconfig \
 	test-makefile \
-	test-amethyst
+	test-amethyst \
+	test-river
 
 $(CACHE):
 	@mkdir -p $@
@@ -238,6 +239,24 @@ $(CACHE)/test-amethyst.stamp: amethyst.yml amethyst_test.sh shrc_test_lib.sh | $
 	@bash amethyst_test.sh
 	@touch $@
 test-amethyst: $(CACHE)/test-amethyst.stamp
+
+# river Wayland desktop config. Driver validates keybinds, no-gaps,
+# border contrast, the three-clock ordering, and JSON/shell syntax.
+$(CACHE)/test-river.stamp: river_test.sh shrc_test_lib.sh \
+                           config/river/init config/river/base \
+                           config/river/hosts/template.sh \
+                           config/river/hosts/example-laptop.sh \
+                           config/river/hosts/example-desktop.sh \
+                           config/waybar/config config/waybar/style.css \
+                           config/waybar/scripts/battery.sh \
+                           config/fuzzel/fuzzel.ini \
+                           config/swaync/config.json config/swaync/style.css \
+                           config/swayidle/config config/swaylock/config \
+                           config/kanshi/config config/kanshi/hosts/template.conf \
+                           | $(CACHE)
+	@bash river_test.sh
+	@touch $@
+test-river: $(CACHE)/test-river.stamp
 
 .PHONY: all install install-dotfiles install-vcs bootstrap \
 	vcs-build vcs-sync vcs-fetch \
