@@ -2,9 +2,17 @@
 # ~/.config/kanshi/config
 #
 # Display hotplug profiles. kanshi watches for outputs appearing/disappearing
-# and applies the first profile whose listed outputs all match. This makes
-# docking/undocking and plugging in an external monitor "just work" the same
-# way on every machine.
+# and applies the FIRST profile all of whose listed outputs are connected
+# (extra connected outputs are allowed). Two consequences drive the ordering
+# below:
+#   * ORDER MATTERS. Because matching is "all listed outputs connected" (not an
+#     exact set), a profile listing fewer outputs also matches a superset state.
+#     So the more-specific profiles (more outputs) MUST come first, otherwise a
+#     one-output profile would shadow the dual-output ones.
+#   * The single-output profiles (undocked=eDP only, clamshell=external only)
+#     reference DIFFERENT outputs, so they don't shadow each other.
+# This makes docking/undocking, clamshell, and a dual-head workstation "just
+# work" the same way on every machine.
 #
 # ---------------------------------------------------------------------------
 # FILL IN YOUR OUTPUT NAMES.
@@ -15,33 +23,34 @@
 # specific monitor). Replace every REPLACE-ME below.
 # ---------------------------------------------------------------------------
 
-# --- Laptop, lid open, no external display (undocked) ---
-profile undocked {
-    output "REPLACE-ME-eDP-1" enable mode 1920x1080 position 0,0 scale 1.0
-}
-
-# --- Laptop at a dock / with an external monitor to the right ---
+# --- Laptop at a dock / with an external monitor to the right (two outputs) ---
 # Internal panel on the left, external to its right. Adjust position by the
-# internal panel's width (e.g. 1920,0 if eDP is 1920 wide).
+# internal panel's width (e.g. 1920,0 if eDP is 1920 wide). Listed first so it
+# wins over `undocked` when both the panel and the external are connected.
 profile docked {
     output "REPLACE-ME-eDP-1" enable mode 1920x1080 position 0,0 scale 1.0
     output "REPLACE-ME-DP-1" enable mode 2560x1440 position 1920,0 scale 1.0
 }
 
-# --- Laptop lid closed, external only (clamshell) ---
-# kanshi picks a profile by matching the SET of connected outputs, so this
-# profile must NOT list the internal panel -- otherwise it would have the same
-# match set as `docked` and `docked` (listed first) would always win. When the
-# lid closes, config/hypr/scripts/lid.sh disables the internal panel, so the
-# internal output drops out of the connected set and only the external remains,
-# which matches this profile and positions it at the origin.
-profile clamshell {
-    output "REPLACE-ME-DP-1" enable mode 2560x1440 position 0,0 scale 1.0
-}
-
-# --- Desktop workstation with dual monitors ---
+# --- Desktop workstation with dual monitors (two outputs) ---
 # For a headless workstation there's no eDP; list the two external outputs.
+# Listed before the single-output profiles so a DP-1+DP-2 workstation isn't
+# shadowed by `clamshell` (which lists only DP-1).
 profile workstation {
     output "REPLACE-ME-DP-1" enable mode 2560x1440 position 0,0 scale 1.0
     output "REPLACE-ME-DP-2" enable mode 2560x1440 position 2560,0 scale 1.0
+}
+
+# --- Laptop, lid open, no external display (undocked, one output) ---
+profile undocked {
+    output "REPLACE-ME-eDP-1" enable mode 1920x1080 position 0,0 scale 1.0
+}
+
+# --- Laptop lid closed, external only (clamshell, one output) ---
+# Lists only the external panel. When the lid closes, config/hypr/scripts/lid.sh
+# disables the internal panel, so the connected set becomes just the external
+# output and this profile applies (the two-output profiles above no longer match
+# because the internal panel / second monitor is gone).
+profile clamshell {
+    output "REPLACE-ME-DP-1" enable mode 2560x1440 position 0,0 scale 1.0
 }

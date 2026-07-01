@@ -1,0 +1,8 @@
+/* swaync dark palette (Nord "Polar Night" / "Frost").
+ * ~/.config/swaync/colors-dark.css */
+@define-color bg     #2e3440;
+@define-color bg-alt #3b4252;
+@define-color fg     #eceff4;
+@define-color muted  #d8dee9;
+@define-color accent #88c0d0;
+@define-color crit   #bf616a;

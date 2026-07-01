@@ -15,10 +15,13 @@ Files (all live under this repo's `config/` and map to `~/.config/`):
 | `config/hypr/scripts/toggle-layout.sh` | Master ⇄ dwindle quick toggle |
 | `config/hypr/scripts/layout-cycle.sh` | Cycle tile → threecolumn → columns |
 | `config/hypr/scripts/lid.sh` | Laptop lid: disable internal panel, conditional suspend |
+| `config/hypr/scripts/theme.sh` | Apply light/dark theme by time of day |
+| `config/hypr/scripts/theme-daemon.sh` | Re-apply theme at each 07:00/19:00 boundary |
+| `config/hypr/scripts/launch-fuzzel.sh` | Launch fuzzel with the current theme's colours |
 | `config/waybar/config.jsonc` | Bar: workspaces, clocks, tray, battery, net, volume |
-| `config/waybar/style.css` | Bar theme |
+| `config/waybar/{style,style-light,common,colors-dark,colors-light}.css` | Bar theme (dark + light) |
 | `config/fuzzel/fuzzel.ini` | Launcher (SUPER+Space) |
-| `config/swaync/config.json` + `style.css` | Notifications + control center |
+| `config/swaync/config.json` + `{style,style-light,common,colors-*}.css` | Notifications + control center (dark + light) |
 | `config/kanshi/config` | Display hotplug profiles |
 
 ## Installing
@@ -44,6 +47,8 @@ need a backport/COPR/manual build on Debian/Fedora):
     brightnessctl                         # backlight keys + hypridle dimming
     network-manager-applet blueman        # network + bluetooth tray applets
     polkit-gnome                          # GUI privilege prompts
+    xdg-desktop-portal-gtk glib2          # gsettings + colour-scheme portal
+                                          #   (light/dark theming; kitty + GTK)
     a JetBrains Mono Nerd Font            # glyphs in waybar/fuzzel/lock
 
 ## Starting the session
@@ -127,6 +132,16 @@ Focus follows the mouse (`follow_mouse = 1`) — no click needed to focus.
   with the lid shut keeps running on its external screen. `setup-hypr` installs
   a logind drop-in (`HandleLidSwitch=ignore`) so Hyprland is the sole lid
   handler.
+- **Automatic light/dark by time of day.** `theme-daemon.sh` (autostarted)
+  applies **light 07:00–19:00 and dark otherwise**, and re-applies at each
+  boundary. `theme.sh` drives the whole desktop: it sets the freedesktop
+  colour-scheme preference (so **kitty**, via its `*.auto.conf` themes, and
+  **GTK** apps follow automatically), relaunches **waybar** and **swaync** with
+  the matching stylesheet, sets Hyprland's border colours, and — if you drop
+  `~/.config/hypr/wallpaper-light.jpg` / `wallpaper-dark.jpg` — swaps the
+  wallpaper. **fuzzel** is themed per-launch by `launch-fuzzel.sh`. Because the
+  daemon owns waybar/swaync, they are not started by their own `exec-once`
+  lines. Edit `LIGHT_START` / `DARK_START` in `theme.sh` to change the times.
 - **Power management is identical on laptops and desktops** — one shared
   `hypridle.conf` (dim → lock → DPMS off → suspend). On a desktop with no
   backlight the dim step is simply a no-op.
@@ -154,7 +169,9 @@ Everything below is marked `REPLACE-ME` / `PLACEHOLDER` in the files.
    profile (rather than `docked`) matches.
 
 4. **Wallpaper image** — `config/hypr/hyprland.conf` (`swww img ...`) and
-   `config/hypr/hyprlock.conf` (`background { path = ... }`).
+   `config/hypr/hyprlock.conf` (`background { path = ... }`). Optionally add
+   `~/.config/hypr/wallpaper-light.jpg` and `wallpaper-dark.jpg` for `theme.sh`
+   to swap the wallpaper with the light/dark theme.
 
 5. **Timezones (optional)** — the waybar clocks use `Europe/London` and
    `America/Los_Angeles` plus system local time; edit
