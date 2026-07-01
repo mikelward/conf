@@ -87,6 +87,25 @@ start_test "hyprland.conf has no REPLACE-ME placeholders"
 assert_not_contains "REPLACE-ME" "$_hypr_body"
 
 ################################################################################
+# Keyboard: Dvorak layout with Caps Lock as Compose (matching `setup`).
+################################################################################
+start_test "keyboard layout is US Dvorak"
+assert_contains "kb_variant = dvorak" "$_input_block"
+start_test "Caps Lock is the compose key"
+assert_contains "kb_options = compose:caps" "$_input_block"
+
+################################################################################
+# Lock, screenshots, and playback keys (from xbindkeysrc).
+################################################################################
+start_test "lock is bound to SUPER+L"
+assert_contains "\$mainMod, L, exec, \$lock" "$_hypr_body"
+start_test "Print takes a screenshot (grim)"
+assert_contains ", Print," "$_hypr_body"
+assert_contains "grim" "$_hypr_body"
+start_test "playback keys use playerctl"
+assert_contains "playerctl play-pause" "$_hypr_body"
+
+################################################################################
 # Krohnkite-equivalent master/stack keybinds.
 ################################################################################
 start_test "mfact decrease bind (SUPER+H)"
