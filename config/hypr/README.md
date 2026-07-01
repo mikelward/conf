@@ -66,58 +66,60 @@ Pick "Hyprland" at your display manager, or from a TTY:
 
 ## Keybindings
 
-`SUPER` is the modifier (`$mainMod`). Keys match the KDE/Krohnkite setup so the
-muscle memory carries over.
+`SUPER` is the modifier (`$mainMod`). `SUPER+<letter>` launchers mirror your
+`xbindkeysrc`; the tiling controls sit on symbol keys so they don't take the
+letters.
 
-### Master/stack (Krohnkite equivalents)
-
-| Keys | Action |
-|------|--------|
-| `SUPER + \` / `SUPER + /` | Grow / shrink the master area (mfact) |
-| `SUPER + Return` | Set focused window as master (swap with master) |
-| `SUPER + I` / `SUPER + D` | Add / remove a window from the master area |
-| `SUPER + O` / `SUPER + Shift + O` | Cycle master orientation (rotate) |
-| `SUPER + J` / `SUPER + K` | Focus next / previous in the stack |
-| `SUPER + Shift + J` / `SUPER + Shift + K` | Move window down / up the stack |
-
-### Layouts
-
-Krohnkite cycled Tile / ThreeColumn / Columns / Monocle. Hyprland has no native
-ThreeColumn/Columns, so `layout-cycle.sh` approximates them:
-
-| Keys | Action |
-|------|--------|
-| `SUPER + .` / `SUPER + ,` | Next / previous layout (tile → threecolumn → columns) |
-| `SUPER + \`` (backtick) | Monocle (fullscreen state 1 — keeps gaps + bar) |
-| `SUPER + Shift + \` | Quick toggle master ⇄ dwindle |
-| `SUPER + Shift + F` | True fullscreen (state 0 — covers the bar) |
-| `SUPER + F` | Toggle floating |
-| `SUPER + R` | Enter **resize** mode (h/j/k/l or arrows; Esc/Enter to exit) |
-
-- `tile` = master, orientation left (master/stack)
-- `threecolumn` = master, orientation center (master centred, stack both sides)
-- `columns` = dwindle (BSP)
-
-### Apps / session
+### Apps / session (launchers from xbindkeysrc)
 
 | Keys | Action |
 |------|--------|
 | `SUPER + T` | Terminal (kitty) |
 | `SUPER + W` | Terminal on workstation |
-| `SUPER + G` / `SUPER + H` | Browser 1 / Browser 2 |
-| `SUPER + Y` | Music |
+| `SUPER + G` / `SUPER + F` | Browser 1 / Browser 2 |
+| `SUPER + Shift + G` | Browser 3 |
 | `SUPER + E` | File manager (yazi in a terminal) |
+| `SUPER + B` / `SUPER + Shift + B` | Bluetooth connect / audio profile |
+| `SUPER + C` / `SUPER + Shift + C` | Calendar / Chat |
+| `SUPER + H` | Home |
+| `SUPER + I` | IRC |
+| `SUPER + M` | Meet |
+| `SUPER + N` | Notepad |
+| `SUPER + R` | Remote desktop |
+| `SUPER + Y` | YouTube Music |
 | `SUPER + Space` | Launcher (fuzzel) |
-| `SUPER + Backspace` | Close the current window |
-| `SUPER + L` | Lock now (hyprlock) |
+| `SUPER + Backspace` | Close / kill the current window |
+| `SUPER + L` | Lock (hyprlock) |
 | `SUPER + Shift + E` | Exit Hyprland (log out) |
-| `SUPER + 1..0` | Switch to workspace 1–10 |
-| `SUPER + Shift + 1..0` | Move window to workspace 1–10 |
-| `Print` / `SUPER`+`Print` | Screenshot: whole screen / region → clipboard |
+| `SUPER + 1..0` / `SUPER + Shift + 1..0` | Switch to / move window to workspace 1–10 |
+| `Print` / `SUPER + Print` | Screenshot: whole screen / region → clipboard |
 | `XF86Audio*` / `XF86MonBrightness*` | Volume, play/pause/next/prev, brightness |
 
-> `browser1`, `browser2`, `terminal_on_workstation`, and `music` are the same
-> helper scripts the KDE setup binds; they live in the scripts repo on `$PATH`.
+> Launchers run the helper scripts of the same name from the scripts repo (on
+> `$PATH`). `SUPER + D` (code) and `SUPER + S` (secureshell) are **left unbound**
+> — those scripts aren't in this repo; add them in a local override.
+
+### Master/stack + layouts (Krohnkite equivalents)
+
+| Keys | Action |
+|------|--------|
+| `SUPER + \` / `SUPER + /` | Grow / shrink the master area (mfact) |
+| `SUPER + Return` | Set focused window as master |
+| `SUPER + =` / `SUPER + -` | Add / remove a window from the master area |
+| `SUPER + O` / `SUPER + Shift + O` | Cycle master orientation (rotate) |
+| `SUPER + J` / `SUPER + K` | Focus next / previous in the stack |
+| `SUPER + Shift + J` / `SUPER + Shift + K` | Move window down / up the stack |
+| `SUPER + .` / `SUPER + ,` | Next / previous layout (tile → threecolumn → columns) |
+| `SUPER + \`` (backtick) | Monocle (fullscreen state 1 — keeps gaps + bar) |
+| `SUPER + Shift + \` | Quick toggle master ⇄ dwindle |
+| `SUPER + Shift + F` | Toggle floating |
+| `SUPER + P` | Pseudo-tile (useful with dwindle) |
+| `SUPER + Shift + R` | **Resize** mode (h/j/k/l or arrows; Esc/Enter to exit) |
+
+The layout cycle approximates Krohnkite's Tile / ThreeColumn / Columns:
+`tile` = master orientation left, `threecolumn` = master orientation center,
+`columns` = dwindle (BSP). Monocle has its own key (no true-fullscreen bind —
+`SUPER + Backspace` kills, and those were too close together).
 
 ### Mouse
 
