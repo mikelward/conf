@@ -253,6 +253,7 @@ $(CACHE)/test-river.stamp: river_test.sh shrc_test_lib.sh \
                            config/swaync/config.json config/swaync/style.css \
                            config/swayidle/config config/swaylock/config \
                            config/kanshi/config \
+                           config/kanshi/hosts/default.conf \
                            config/kanshi/hosts/examples/template.conf \
                            | $(CACHE)
 	@bash river_test.sh

@@ -190,6 +190,17 @@ assert_contains "radius=" "$(cat "$_fuzzel/fuzzel.ini")"
 start_test "kanshi includes per-host profiles"
 assert_contains 'include "hosts/*.conf"' "$(cat "$_kanshi/config")"
 
+# hosts/default.conf must exist so the include glob always matches (an
+# unmatched glob makes kanshi try to open the literal pattern and exit),
+# and it must declare no active profiles (else it would apply everywhere).
+start_test "kanshi has an always-present default.conf placeholder"
+assert_true test -f "$_kanshi/hosts/default.conf"
+start_test "kanshi default.conf declares no active profiles"
+_kanshi_default_profiles=$(grep -c '^[[:space:]]*profile' "$_kanshi/hosts/default.conf" 2>/dev/null || true)
+assert_equal "0" "$_kanshi_default_profiles"
+start_test "kanshi hosts/*.conf glob matches at least one shipped file"
+assert_true test -n "$(find "$_kanshi/hosts" -maxdepth 1 -name '*.conf' 2>/dev/null)"
+
 ### init: sources base then a per-host file, no hard failure ################
 
 start_test "init sources the base config"

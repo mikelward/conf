@@ -21,4 +21,10 @@
 # template and example profiles live in hosts/examples/ (a subdirectory the
 # "hosts/*.conf" glob does NOT descend into), so they are never loaded and
 # can't accidentally match a machine you haven't configured yet.
+#
+# hosts/default.conf is an always-present, profile-less placeholder so this
+# glob always matches at least one file: kanshi expands the include with
+# wordexp(3), and an unmatched glob would be left as the literal
+# "hosts/*.conf", which kanshi would try to open and then exit. With the
+# placeholder, an unconfigured machine simply has no matching profile.
 include "hosts/*.conf"
