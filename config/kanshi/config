@@ -29,8 +29,13 @@ profile docked {
 }
 
 # --- Laptop lid closed, external only (clamshell) ---
+# kanshi picks a profile by matching the SET of connected outputs, so this
+# profile must NOT list the internal panel -- otherwise it would have the same
+# match set as `docked` and `docked` (listed first) would always win. When the
+# lid closes, config/hypr/scripts/lid.sh disables the internal panel, so the
+# internal output drops out of the connected set and only the external remains,
+# which matches this profile and positions it at the origin.
 profile clamshell {
-    output "REPLACE-ME-eDP-1" disable
     output "REPLACE-ME-DP-1" enable mode 2560x1440 position 0,0 scale 1.0
 }
 
