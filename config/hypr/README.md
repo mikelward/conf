@@ -64,6 +64,26 @@ Pick "Hyprland" at your display manager, or from a TTY:
 
     exec Hyprland
 
+### Optional: uwsm (systemd-managed session)
+
+[uwsm](https://github.com/Vladimir-csp/uwsm) can instead launch Hyprland as a
+**systemd user session**, which propagates the environment to systemd user
+services and D-Bus activation (better xdg-desktop-portal, tray, and a clean
+logout). `setup` installs it, but enabling it is **opt-in** — it changes
+nothing about how you currently log in until you select the uwsm session:
+
+- **Display manager:** with uwsm installed, pick the "Hyprland (uwsm-managed)"
+  session entry at the greeter instead of plain "Hyprland".
+- **TTY:** `uwsm start hyprland` (instead of `exec Hyprland`).
+
+> **gdm3 / PAM note:** on some setups (e.g. a work laptop on gdm3) the
+> session/PAM wiring is picky — verify login, keyring unlock, and `hyprlock`
+> auth still work *before* making uwsm your default. Nothing changes until you
+> choose the uwsm session, so it's safe to try and switch back.
+
+For full systemd env propagation you can later move the `env = ` lines from
+`hyprland.conf` into `~/.config/uwsm/env` — a follow-up, not required to try it.
+
 ## Keybindings
 
 `SUPER` is the modifier (`$mainMod`). `SUPER+<letter>` launchers mirror your
