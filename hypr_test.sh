@@ -19,6 +19,7 @@ _lid="$_srcdir/config/hypr/scripts/lid.sh"
 _theme="$_srcdir/config/hypr/scripts/theme.sh"
 _themed="$_srcdir/config/hypr/scripts/theme-daemon.sh"
 _fuzzellaunch="$_srcdir/config/hypr/scripts/launch-fuzzel.sh"
+_apply="$_srcdir/config/hypr/scripts/apply-input.sh"
 _waybar_cfg="$_srcdir/config/waybar/config.jsonc"
 _waybar_css="$_srcdir/config/waybar/style.css"
 _fuzzel="$_srcdir/config/fuzzel/fuzzel.ini"
@@ -31,7 +32,7 @@ _kanshi="$_srcdir/config/kanshi/config"
 # match against empty strings.
 ################################################################################
 for _f in "$_hypr" "$_idle" "$_lock" "$_toggle" "$_layoutcycle" "$_lid" \
-          "$_theme" "$_themed" "$_fuzzellaunch" \
+          "$_theme" "$_themed" "$_fuzzellaunch" "$_apply" \
           "$_waybar_cfg" "$_waybar_css" \
           "$_srcdir/config/waybar/common.css" \
           "$_srcdir/config/waybar/colors-dark.css" \
@@ -59,8 +60,8 @@ start_test "new windows join the stack, not the master"
 assert_contains "new_status = slave" "$_hypr_body"
 
 ################################################################################
-# Input: focus follows mouse, and per-device blocks exist for handedness and
-# scroll speed.
+# Input: focus follows mouse; handedness is auto-applied per device (no
+# hardcoded device names / placeholders).
 ################################################################################
 start_test "follow_mouse is enabled"
 assert_contains "follow_mouse = 1" "$_hypr_body"
@@ -69,15 +70,22 @@ start_test "global default is right-handed (trackpads keep left button primary)"
 _input_block=$(sed -n '/^input {/,/^}/p' "$_hypr")
 assert_contains "left_handed = false" "$_input_block"
 
-start_test "mice are set left_handed = true (right button primary) per device"
-assert_contains "left_handed = true" "$_hypr_body"
-
-start_test "per-device scroll_factor is set in a device block"
-assert_contains "scroll_factor" "$_hypr_body"
-
-start_test "there are at least two mouse device blocks (multiple pointers)"
+start_test "no hardcoded per-device blocks remain"
 _devcount=$(grep -c '^device {' "$_hypr")
-assert_true test "$_devcount" -ge 2
+assert_true test "$_devcount" -eq 0
+
+start_test "handedness is auto-applied by apply-input.sh at login"
+assert_contains "exec-once = ~/.config/hypr/scripts/apply-input.sh" "$_hypr_body"
+
+_apply_body=$(cat "$_apply")
+start_test "apply-input classifies touchpads vs mice"
+assert_contains "touchpad" "$_apply_body"
+start_test "apply-input sets mice left_handed via hyprctl"
+assert_contains "left_handed" "$_apply_body"
+assert_contains "scroll_factor" "$_apply_body"
+
+start_test "hyprland.conf has no REPLACE-ME placeholders"
+assert_not_contains "REPLACE-ME" "$_hypr_body"
 
 ################################################################################
 # Krohnkite-equivalent master/stack keybinds.
@@ -196,6 +204,10 @@ assert_contains 'if test -z "$external"' "$_lid_body"
 
 start_test "lid.sh disables the internal panel on close"
 assert_contains "disable" "$_lid_body"
+
+start_test "lid.sh auto-detects the internal panel (eDP/LVDS/DSI), no placeholder"
+assert_contains "eDP|LVDS|DSI" "$_lid_body"
+assert_not_contains "REPLACE-ME" "$_lid_body"
 
 ################################################################################
 # Tray applets: network + volume/sound.
@@ -318,6 +330,10 @@ assert_equal "" "$_ws_active"
 ################################################################################
 start_test "launcher bind uses the theme-aware fuzzel wrapper"
 assert_contains "Space, exec, ~/.config/hypr/scripts/launch-fuzzel.sh" "$_hypr_body"
+
+start_test "file-manager bind (SUPER+E) launches yazi"
+assert_contains "\$mainMod, E, exec" "$_hypr_body"
+assert_contains "yazi" "$_hypr_body"
 
 start_test "theme boundaries are 07:00 (light) and 19:00 (dark)"
 assert_contains "LIGHT_START=7" "$_theme_body"

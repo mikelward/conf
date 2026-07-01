@@ -15,6 +15,7 @@ Files (all live under this repo's `config/` and map to `~/.config/`):
 | `config/hypr/scripts/toggle-layout.sh` | Master ⇄ dwindle quick toggle |
 | `config/hypr/scripts/layout-cycle.sh` | Cycle tile → threecolumn → columns |
 | `config/hypr/scripts/lid.sh` | Laptop lid: disable internal panel, conditional suspend |
+| `config/hypr/scripts/apply-input.sh` | Auto-classify pointers (mice → right-handed) |
 | `config/hypr/scripts/theme.sh` | Apply light/dark theme by time of day |
 | `config/hypr/scripts/theme-daemon.sh` | Re-apply theme at each 07:00/19:00 boundary |
 | `config/hypr/scripts/launch-fuzzel.sh` | Launch fuzzel with the current theme's colours |
@@ -45,11 +46,15 @@ need a backport/COPR/manual build on Debian/Fedora):
     power-profiles-daemon
     pipewire wireplumber pavucontrol      # volume/sound
     brightnessctl                         # backlight keys + hypridle dimming
+    yazi                                  # terminal file manager (SUPER+E)
     network-manager-applet blueman        # network + bluetooth tray applets
     polkit-gnome                          # GUI privilege prompts
     xdg-desktop-portal-gtk glib2          # gsettings + colour-scheme portal
                                           #   (light/dark theming; kitty + GTK)
     a JetBrains Mono Nerd Font            # glyphs in waybar/fuzzel/lock
+
+`yazi` isn't in every distro's default repos; if the package is missing,
+`cargo install --locked yazi-fm yazi-cli` installs it.
 
 ## Starting the session
 
@@ -99,6 +104,7 @@ ThreeColumn/Columns, so `layout-cycle.sh` approximates them:
 | `SUPER + W` | Terminal on workstation |
 | `SUPER + G` / `SUPER + H` | Browser 1 / Browser 2 |
 | `SUPER + Y` | Music |
+| `SUPER + E` | File manager (yazi in a terminal) |
 | `SUPER + Space` | Launcher (fuzzel) |
 | `SUPER + Backspace` | Close the current window |
 | `SUPER + Shift + L` | Lock now (hyprlock) |
@@ -122,16 +128,19 @@ Focus follows the mouse (`follow_mouse = 1`) — no click needed to focus.
 
 - **Dim inactive windows.** `decoration:dim_inactive` with `dim_strength =
   0.15`, matching the KDE "dim inactive" effect (Strength 15).
-- **Per-device handedness.** Global default is right-handed so **trackpads keep
-  the left button primary**; each **mouse** gets a `device {}` block with
-  `left_handed = true` (right button primary) plus its own `scroll_factor`.
-  Hyprland has no "all mice" selector, so list one block per mouse — unmatched
-  names are ignored, so the same file is safe on every machine.
+- **Per-device handedness (auto).** Global default is right-handed so
+  **trackpads keep the left button primary**. `apply-input.sh` (autostarted)
+  enumerates the pointers at login, classifies each as touchpad or mouse by
+  name, and flips **mice** to `left_handed` (right button primary) with a faster
+  `scroll_factor` — no device names to hardcode, and the same config works on
+  every machine. Re-run it after hotplugging a mouse; override the mouse wheel
+  speed with `HYPR_MOUSE_SCROLL_FACTOR`.
 - **Laptop lid.** `lid.sh` disables the internal panel on lid close and
   **suspends only when no external display is connected** — a docked laptop
-  with the lid shut keeps running on its external screen. `setup-hypr` installs
-  a logind drop-in (`HandleLidSwitch=ignore`) so Hyprland is the sole lid
-  handler.
+  with the lid shut keeps running on its external screen. The internal panel is
+  auto-detected (first eDP/LVDS/DSI output; override with
+  `HYPR_INTERNAL_OUTPUT`). `setup-hypr` installs a logind drop-in
+  (`HandleLidSwitch=ignore`) so Hyprland is the sole lid handler.
 - **Automatic light/dark by time of day.** `theme-daemon.sh` (autostarted)
   applies **light 07:00–19:00 and dark otherwise**, and re-applies at each
   boundary. `theme.sh` drives the whole desktop: it sets the freedesktop
@@ -145,35 +154,30 @@ Focus follows the mouse (`follow_mouse = 1`) — no click needed to focus.
 - **Power management is identical on laptops and desktops** — one shared
   `hypridle.conf` (dim → lock → DPMS off → suspend). On a desktop with no
   backlight the dim step is simply a no-op.
-- **Multi-machine.** The same configs are meant to run everywhere; the only
-  per-machine bits are output names (kanshi) and device names (mice / internal
-  panel), all marked as placeholders below.
+- **Multi-machine.** The same configs run everywhere unchanged — input
+  handedness and the laptop's internal panel are auto-detected, and Hyprland
+  auto-places monitors. The only things you *might* fill in are optional:
+  custom monitor positioning (kanshi) and a wallpaper.
 
-## Placeholders you must fill in
+## Placeholders
 
-Everything below is marked `REPLACE-ME` / `PLACEHOLDER` in the files.
+Input devices and the internal panel are auto-detected, so there are **no
+required placeholders**. The two optional ones:
 
-1. **Mouse device names** — `config/hypr/hyprland.conf`, the `device {}` blocks.
-   Run `hyprctl devices` and copy each MOUSE's exact `name` (lower case, spaces
-   → hyphens). Trackpads need no block (they use the left-handed=false default).
+1. **Monitor / output names (optional)** — `config/kanshi/config` is only needed
+   if you want a *specific* multi-monitor arrangement (positions/scales).
+   Without it, Hyprland auto-places every output and `lid.sh` handles clamshell,
+   so single-monitor, docked, and undocked all work with no config. To use it,
+   run `hyprctl monitors` (or `wlr-randr`), replace the `REPLACE-ME-*` names and
+   adjust `mode`/`position`/`scale`, and delete profiles you don't need. The
+   profiles are ordered most-specific-first (see the comments in that file).
 
-2. **Internal panel name** — `config/hypr/scripts/lid.sh` (`INTERNAL`, default
-   `eDP-1`). Confirm with `hyprctl monitors`. Or export
-   `HYPR_INTERNAL_OUTPUT` to override without editing.
-
-3. **Monitor / output names** — `config/kanshi/config`. Run `hyprctl monitors`
-   or `wlr-randr`. Replace the `REPLACE-ME-*` names and adjust `mode`,
-   `position`, `scale`. Delete profiles you don't need. Note the `clamshell`
-   profile intentionally lists **only** the external output: when the lid
-   closes, `lid.sh` drops the internal panel from the connected set so this
-   profile (rather than `docked`) matches.
-
-4. **Wallpaper image** — `config/hypr/hyprland.conf` (`swww img ...`) and
+2. **Wallpaper image (optional)** — `config/hypr/hyprland.conf` (`swww img ...`) and
    `config/hypr/hyprlock.conf` (`background { path = ... }`). Optionally add
    `~/.config/hypr/wallpaper-light.jpg` and `wallpaper-dark.jpg` for `theme.sh`
    to swap the wallpaper with the light/dark theme.
 
-5. **Timezones (optional)** — the waybar clocks use `Europe/London` and
+3. **Timezones (optional)** — the waybar clocks use `Europe/London` and
    `America/Los_Angeles` plus system local time; edit
    `config/waybar/config.jsonc` if you want different zones.
 

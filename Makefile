@@ -249,6 +249,7 @@ $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
                           config/hypr/scripts/toggle-layout.sh \
                           config/hypr/scripts/layout-cycle.sh \
                           config/hypr/scripts/lid.sh \
+                          config/hypr/scripts/apply-input.sh \
                           config/hypr/scripts/theme.sh \
                           config/hypr/scripts/theme-daemon.sh \
                           config/hypr/scripts/launch-fuzzel.sh \
