@@ -187,25 +187,30 @@ riverctl map normal Super+Shift 0 set-view-tags "$all_tags"
 
 ### Media / brightness keys ###################################################
 #
-# Bound in every mode (also while locked) via -release/normal so they
-# work regardless of focus. Uses wpctl (PipeWire/WirePlumber) for audio
+# river mappings belong to a single mode, and river switches to its
+# "locked" mode automatically while a screenlocker (swaylock) is active.
+# To keep volume/brightness/media usable on the lock screen, bind these in
+# BOTH "normal" and "locked". Uses wpctl (PipeWire/WirePlumber) for audio
 # and brightnessctl for backlight; both degrade to no-ops if absent.
 
-riverctl map normal None XF86AudioRaiseVolume  spawn "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
-riverctl map normal None XF86AudioLowerVolume  spawn "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
-riverctl map normal None XF86AudioMute         spawn "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
-riverctl map normal None XF86AudioMicMute      spawn "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
-riverctl map normal None XF86MonBrightnessUp   spawn "brightnessctl set 5%+"
-riverctl map normal None XF86MonBrightnessDown spawn "brightnessctl set 5%-"
-
-riverctl map normal None XF86AudioPlay spawn "playerctl play-pause"
-riverctl map normal None XF86AudioNext spawn "playerctl next"
-riverctl map normal None XF86AudioPrev spawn "playerctl previous"
+for _mode in normal locked; do
+	riverctl map "$_mode" None XF86AudioRaiseVolume  spawn "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
+	riverctl map "$_mode" None XF86AudioLowerVolume  spawn "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+	riverctl map "$_mode" None XF86AudioMute         spawn "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+	riverctl map "$_mode" None XF86AudioMicMute      spawn "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
+	riverctl map "$_mode" None XF86MonBrightnessUp   spawn "brightnessctl set 5%+"
+	riverctl map "$_mode" None XF86MonBrightnessDown spawn "brightnessctl set 5%-"
+	riverctl map "$_mode" None XF86AudioPlay         spawn "playerctl play-pause"
+	riverctl map "$_mode" None XF86AudioNext         spawn "playerctl next"
+	riverctl map "$_mode" None XF86AudioPrev         spawn "playerctl previous"
+done
 
 ### Layout generator ##########################################################
 #
 # rivertile is the default generator (master/stack, like Krohnkite's
-# Tile). It is bundled with river, so it is always available.
+# Tile). It ships with the monolithic river (river-classic / river 0.3.x)
+# that this config targets. Note: river 0.4+ is non-monolithic and does
+# NOT bundle rivertile -- use river-classic (setup-river installs it).
 #
 # Richer generators worth considering if you want Krohnkite's
 # ThreeColumn / Columns / spiral layouts, which rivertile does not do:

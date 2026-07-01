@@ -38,8 +38,11 @@ Helpers in the **scripts** repo:
 
 `setup-river` installs these (Debian/Ubuntu and Fedora names handled):
 
-**Core:** `river` (bundles `rivertile`), `waybar`, `fuzzel`, `swaync`,
-`kanshi`, `swayidle`, `swaylock`, `swaybg`.
+**Core:** `river-classic` (the monolithic river that bundles `rivertile`;
+this config uses the `riverctl` + `rivertile` model, which upstream
+`river` 0.4+ dropped — `setup-river` prefers `river-classic` and warns if
+`rivertile` is missing), `waybar`, `sway-notification-center`/`swaync`,
+`fuzzel`, `kanshi`, `swayidle`, `swaylock`, `swaybg`.
 
 **Helpers used by keybinds / autostart:** `wlopm` (idle DPMS — may need
 building from [sr.ht](https://git.sr.ht/~leon_plickat/wlopm)), `wlr-randr`,

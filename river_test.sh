@@ -127,6 +127,15 @@ start_test "Super+Shift+S screenshots a region to the clipboard"
 assert_contains 'map normal Super+Shift S spawn' "$_base"
 assert_contains "wl-copy" "$_base"
 
+### Media keys work while locked ############################################
+
+# river mappings are per-mode and swaylock puts river into "locked" mode,
+# so volume/brightness/media must be bound in both normal and locked.
+start_test "media/brightness keys bound in normal and locked modes"
+assert_contains "for _mode in normal locked" "$_base"
+assert_contains 'map "$_mode" None XF86AudioRaiseVolume' "$_base"
+assert_contains 'map "$_mode" None XF86MonBrightnessUp' "$_base"
+
 ### Monocle / fullscreen ####################################################
 
 start_test "Super+grave toggles fullscreen (monocle)"
