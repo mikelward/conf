@@ -837,8 +837,17 @@ end
 # Set up the prompt, title, key bindings, etc.
 
 if is_interactive
-    # shpool opens the session's shell in the right directory itself (autoshpool
-    # and friends pass `shpool attach -d`), so there's no PWD to restore here.
+    # Transitional fallback: the updated scripts-repo helpers open the session in
+    # the right directory via `shpool attach -d`, leaving SHPOOL_INITIAL_PWD
+    # unset (this block a no-op). Until that ships everywhere
+    # (mikelward/scripts#107), the older helpers still stamp SHPOOL_INITIAL_PWD
+    # (forwarded via the shpool config's forward_env), so cd there on entry.
+    # Remove this block and the forward_env entry once the scripts update is
+    # deployed.
+    if in_shpool; and test -n "$SHPOOL_INITIAL_PWD"
+        cd $SHPOOL_INITIAL_PWD
+        set --erase SHPOOL_INITIAL_PWD
+    end
     maybe_start_session_and_exit
 
     # Past this point we're the shell we're keeping (the handoff exits if it
