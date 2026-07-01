@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # Toggle Hyprland's general layout between master and dwindle.
-# Bound to SUPER+Backslash in hyprland.conf.
+# Bound to SUPER+SHIFT+Backslash in hyprland.conf.
 
 current=$(hyprctl getoption general:layout -j | grep -o '"str": *"[^"]*"' | cut -d'"' -f4)
 
