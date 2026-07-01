@@ -1,0 +1,5 @@
+/* Waybar light theme.
+ * ~/.config/waybar/style-light.css
+ * Loaded by theme.sh (`waybar -s style-light.css`) between 07:00 and 19:00. */
+@import url("colors-light.css");
+@import url("common.css");

@@ -16,6 +16,9 @@ _lock="$_srcdir/config/hypr/hyprlock.conf"
 _toggle="$_srcdir/config/hypr/scripts/toggle-layout.sh"
 _layoutcycle="$_srcdir/config/hypr/scripts/layout-cycle.sh"
 _lid="$_srcdir/config/hypr/scripts/lid.sh"
+_theme="$_srcdir/config/hypr/scripts/theme.sh"
+_themed="$_srcdir/config/hypr/scripts/theme-daemon.sh"
+_fuzzellaunch="$_srcdir/config/hypr/scripts/launch-fuzzel.sh"
 _waybar_cfg="$_srcdir/config/waybar/config.jsonc"
 _waybar_css="$_srcdir/config/waybar/style.css"
 _fuzzel="$_srcdir/config/fuzzel/fuzzel.ini"
@@ -28,7 +31,16 @@ _kanshi="$_srcdir/config/kanshi/config"
 # match against empty strings.
 ################################################################################
 for _f in "$_hypr" "$_idle" "$_lock" "$_toggle" "$_layoutcycle" "$_lid" \
+          "$_theme" "$_themed" "$_fuzzellaunch" \
           "$_waybar_cfg" "$_waybar_css" \
+          "$_srcdir/config/waybar/common.css" \
+          "$_srcdir/config/waybar/colors-dark.css" \
+          "$_srcdir/config/waybar/colors-light.css" \
+          "$_srcdir/config/waybar/style-light.css" \
+          "$_srcdir/config/swaync/common.css" \
+          "$_srcdir/config/swaync/colors-dark.css" \
+          "$_srcdir/config/swaync/colors-light.css" \
+          "$_srcdir/config/swaync/style-light.css" \
           "$_fuzzel" "$_swaync_cfg" "$_swaync_css" "$_kanshi"; do
     start_test "exists: ${_f##*/config/}"
     assert_true test -f "$_f"
@@ -198,10 +210,21 @@ assert_contains "\"pulseaudio\"" "$_waybar_body"
 ################################################################################
 # Autostart wires up bar, notifications, idle, hotplug, wallpaper.
 ################################################################################
-for _svc in waybar swaync hypridle kanshi swww-daemon; do
+for _svc in hypridle kanshi swww-daemon; do
     start_test "autostart: $_svc"
     assert_contains "exec-once = $_svc" "$_hypr_body"
 done
+
+start_test "theme daemon autostarts"
+assert_contains "exec-once = ~/.config/hypr/scripts/theme-daemon.sh" "$_hypr_body"
+
+# waybar and swaync are launched by theme.sh (with the light/dark style), not
+# by their own exec-once lines.
+_theme_body=$(cat "$_theme")
+start_test "theme.sh launches waybar"
+assert_contains "waybar -s" "$_theme_body"
+start_test "theme.sh launches swaync"
+assert_contains "swaync --style" "$_theme_body"
 
 ################################################################################
 # hypridle: dim, lock, and screen-off listeners exist.
@@ -263,5 +286,55 @@ for _p in undocked docked clamshell workstation; do
     start_test "kanshi profile: $_p"
     assert_contains "profile $_p {" "$_kanshi_body"
 done
+
+# kanshi matches the first profile whose listed outputs are all connected, so
+# the two-output profiles (docked, workstation) must precede the one-output
+# ones (clamshell, undocked) or they'd be shadowed.
+start_test "kanshi lists two-output profiles before one-output ones"
+_docked_ln=$(grep -n '^profile docked {' "$_kanshi" | cut -d: -f1)
+_workstation_ln=$(grep -n '^profile workstation {' "$_kanshi" | cut -d: -f1)
+_clamshell_ln=$(grep -n '^profile clamshell {' "$_kanshi" | cut -d: -f1)
+_undocked_ln=$(grep -n '^profile undocked {' "$_kanshi" | cut -d: -f1)
+assert_true test "$_docked_ln" -lt "$_clamshell_ln"
+start_test "kanshi workstation precedes clamshell"
+assert_true test "$_workstation_ln" -lt "$_clamshell_ln"
+start_test "kanshi workstation precedes undocked"
+assert_true test "$_workstation_ln" -lt "$_undocked_ln"
+
+################################################################################
+# Touchpad gesture uses the current Hyprland 0.51+ syntax.
+################################################################################
+start_test "workspace gesture uses the new 0.51 gesture syntax"
+assert_contains "gesture = 3, horizontal, workspace" "$_hypr_body"
+start_test "the removed gestures:workspace_swipe option is not an active directive"
+# The word may appear in a comment (for pre-0.51 users); ensure it's never an
+# actual config line.
+_ws_active=$(grep -E '^[[:space:]]*workspace_swipe' "$_hypr" || true)
+assert_equal "" "$_ws_active"
+
+################################################################################
+# Time-based light/dark theming.
+################################################################################
+start_test "launcher bind uses the theme-aware fuzzel wrapper"
+assert_contains "Space, exec, ~/.config/hypr/scripts/launch-fuzzel.sh" "$_hypr_body"
+
+start_test "theme boundaries are 07:00 (light) and 19:00 (dark)"
+assert_contains "LIGHT_START=7" "$_theme_body"
+assert_contains "DARK_START=19" "$_theme_body"
+
+start_test "theme.sh drives the system colour-scheme (kitty + GTK follow it)"
+assert_contains "color-scheme" "$_theme_body"
+
+start_test "theme.sh exposes light and dark modes"
+assert_contains "prefer-light" "$_theme_body"
+assert_contains "prefer-dark" "$_theme_body"
+
+start_test "theme daemon re-applies at each boundary"
+_themed_body=$(cat "$_themed")
+assert_contains "\"\$theme\" sleep" "$_themed_body"
+
+start_test "fuzzel launcher themes by current mode"
+_fuzzellaunch_body=$(cat "$_fuzzellaunch")
+assert_contains "theme.sh\" mode" "$_fuzzellaunch_body"
 
 test_summary "hypr_test"

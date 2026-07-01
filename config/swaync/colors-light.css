@@ -1,0 +1,8 @@
+/* swaync light palette (Nord "Snow Storm", darkened accents for contrast).
+ * ~/.config/swaync/colors-light.css */
+@define-color bg     #eceff4;
+@define-color bg-alt #d8dee9;
+@define-color fg     #2e3440;
+@define-color muted  #4c566a;
+@define-color accent #5e81ac;
+@define-color crit   #bf616a;
