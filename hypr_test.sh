@@ -99,9 +99,11 @@ assert_contains "kb_options = compose:caps" "$_input_block"
 ################################################################################
 start_test "lock is bound to SUPER+L"
 assert_contains "\$mainMod, L, exec, \$lock" "$_hypr_body"
-start_test "Print takes a screenshot (grim)"
+start_test "Print takes a screenshot (grim) with an explicit PNG MIME type"
 assert_contains ", Print," "$_hypr_body"
 assert_contains "grim" "$_hypr_body"
+# Explicit --type so paste works without relying on xdg-mime inference.
+assert_contains "wl-copy --type image/png" "$_hypr_body"
 start_test "playback keys use playerctl"
 assert_contains "playerctl play-pause" "$_hypr_body"
 
