@@ -45,6 +45,8 @@ need a backport/COPR/manual build on Debian/Fedora):
     power-profiles-daemon
     pipewire wireplumber pavucontrol      # volume/sound
     brightnessctl                         # backlight keys + hypridle dimming
+    grim slurp wl-clipboard               # screenshots (Print) → clipboard
+    playerctl                             # media play/pause/next/prev keys
     yazi                                  # terminal file manager (SUPER+E)
     network-manager-applet blueman        # network + bluetooth tray applets
     polkit-gnome                          # GUI privilege prompts
@@ -106,10 +108,12 @@ ThreeColumn/Columns, so `layout-cycle.sh` approximates them:
 | `SUPER + E` | File manager (yazi in a terminal) |
 | `SUPER + Space` | Launcher (fuzzel) |
 | `SUPER + Backspace` | Close the current window |
-| `SUPER + Shift + L` | Lock now (hyprlock) |
+| `SUPER + L` | Lock now (hyprlock) |
 | `SUPER + Shift + E` | Exit Hyprland (log out) |
 | `SUPER + 1..0` | Switch to workspace 1–10 |
 | `SUPER + Shift + 1..0` | Move window to workspace 1–10 |
+| `Print` / `SUPER`+`Print` | Screenshot: whole screen / region → clipboard |
+| `XF86Audio*` / `XF86MonBrightness*` | Volume, play/pause/next/prev, brightness |
 
 > `browser1`, `browser2`, `terminal_on_workstation`, and `music` are the same
 > helper scripts the KDE setup binds; they live in the scripts repo on `$PATH`.
@@ -125,6 +129,10 @@ Focus follows the mouse (`follow_mouse = 1`) — no click needed to focus.
 
 ## Behaviour notes
 
+- **Keyboard: US Dvorak, Caps Lock as Compose** (`kb_variant = dvorak`,
+  `kb_options = compose:caps`) — matching `setup`'s `configure_keyboard`. Your
+  espanso config also uses `lv3:menu_switch` (Menu key as AltGr); append it to
+  `kb_options` if you want that too.
 - **Dim inactive windows.** `decoration:dim_inactive` with `dim_strength =
   0.15`, matching the KDE "dim inactive" effect (Strength 15).
 - **Per-device handedness (auto).** Global default is right-handed so
