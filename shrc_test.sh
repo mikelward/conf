@@ -711,11 +711,12 @@ assert_false in_shpool
 # SHPOOL FUNCTIONS
 
 # want_shpool folds in `! in_shpool`, `! inside_tmux`,
-# `have_command shpool`, the `stdin_is_tty` check, and the
-# WANT_SHPOOL=0 opt-out, so each block sets all six gating stubs.
+# `have_command shpool`, `have_command autoshpool`, the `stdin_is_tty`
+# check, and the WANT_SHPOOL=0 opt-out, so each block sets all the
+# gating stubs.
 in_shpool() { false; }
 inside_tmux() { false; }
-have_command() { test "$1" = shpool; }
+have_command() { case "$1" in shpool|autoshpool) return 0 ;; *) return 1 ;; esac; }
 stdin_is_tty() { true; }
 
 start_test "want_shpool when connected remotely"
@@ -761,7 +762,15 @@ start_test "want_shpool false when shpool not installed"
 have_command() { false; }
 connected_remotely() { true; }
 assert_false want_shpool
+have_command() { case "$1" in shpool|autoshpool) return 0 ;; *) return 1 ;; esac; }
+
+start_test "want_shpool false when autoshpool not installed"
+# Mirrors want_tmux's autotmux gate: shpool without the scripts repo must
+# fall through to the tmux path, not error at every shell start.
 have_command() { test "$1" = shpool; }
+connected_remotely() { true; }
+assert_false want_shpool
+have_command() { case "$1" in shpool|autoshpool) return 0 ;; *) return 1 ;; esac; }
 
 start_test "want_shpool false when stdin is not a tty"
 stdin_is_tty() { false; }
@@ -1138,10 +1147,11 @@ _dotenv_allexport_on=$(
 assert_equal "world" "$_dotenv_allexport_on"
 
 # Test session_backend / autosession / switchsession dispatch. session_backend
-# names the preferred manager; the wrappers route to the matching binary. The
-# tmux branch requires both tmux and autotmux.
+# names the preferred manager; the wrappers route to the matching binary. Each
+# branch requires both the multiplexer and its auto* helper (tmux+autotmux,
+# shpool+autoshpool).
 _dispatch_calls="$_testdir/dispatch_calls"
-have_command() { case "$1" in tmux|autotmux|shpool) return 0;; *) return 1;; esac; }
+have_command() { case "$1" in tmux|autotmux|shpool|autoshpool) return 0;; *) return 1;; esac; }
 
 start_test "session_backend prefers shpool when both available"
 assert_equal "shpool" "$(session_backend)"
@@ -1154,17 +1164,22 @@ unset WANT_SHPOOL
 start_test "session_backend uses tmux when shpool missing"
 have_command() { case "$1" in tmux|autotmux) return 0;; *) return 1;; esac; }
 assert_equal "tmux" "$(session_backend)"
-have_command() { case "$1" in tmux|autotmux|shpool) return 0;; *) return 1;; esac; }
+have_command() { case "$1" in tmux|autotmux|shpool|autoshpool) return 0;; *) return 1;; esac; }
 
 start_test "session_backend uses shpool when autotmux missing"
-have_command() { case "$1" in tmux|shpool) return 0;; *) return 1;; esac; }
+have_command() { case "$1" in tmux|shpool|autoshpool) return 0;; *) return 1;; esac; }
 assert_equal "shpool" "$(session_backend)"
+have_command() { case "$1" in tmux|autotmux|shpool|autoshpool) return 0;; *) return 1;; esac; }
+
+start_test "session_backend uses tmux when autoshpool missing"
 have_command() { case "$1" in tmux|autotmux|shpool) return 0;; *) return 1;; esac; }
+assert_equal "tmux" "$(session_backend)"
+have_command() { case "$1" in tmux|autotmux|shpool|autoshpool) return 0;; *) return 1;; esac; }
 
 start_test "session_backend empty when nothing available"
 have_command() { false; }
 assert_equal "" "$(session_backend)"
-have_command() { case "$1" in tmux|autotmux|shpool) return 0;; *) return 1;; esac; }
+have_command() { case "$1" in tmux|autotmux|shpool|autoshpool) return 0;; *) return 1;; esac; }
 
 start_test "session_backend empty when both backends opted out"
 WANT_TMUX=0
@@ -1181,9 +1196,9 @@ unset SESSION_BACKEND
 
 start_test "session_backend SESSION_BACKEND=tmux falls back to shpool when tmux missing"
 SESSION_BACKEND=tmux
-have_command() { test "$1" = shpool; }
+have_command() { case "$1" in shpool|autoshpool) return 0;; *) return 1;; esac; }
 assert_equal "shpool" "$(session_backend)"
-have_command() { case "$1" in tmux|autotmux|shpool) return 0;; *) return 1;; esac; }
+have_command() { case "$1" in tmux|autotmux|shpool|autoshpool) return 0;; *) return 1;; esac; }
 unset SESSION_BACKEND
 
 # SESSION_BACKEND=shpool matches the default ordering: shpool wins.

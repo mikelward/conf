@@ -64,13 +64,15 @@ def --env fake-vcs-bin [calls: string, --fail] {
     $env.PATH = ([$bin] ++ $env.PATH)
 }
 
-# Add a fake shpool to PATH so `have-command "shpool"` (called from
-# want-shpool) returns true under the test env, where the real shpool
-# isn't installed.
+# Add fake shpool and autoshpool to PATH so `have-command "shpool"` and
+# `have-command "autoshpool"` (both checked by want-shpool / session-backend)
+# return true under the test env, where the real ones aren't installed.
 def --env fake-shpool-on-path [] {
     let bin = (mktemp -d)
     "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
     ^chmod +x ($bin | path join "shpool")
+    "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autoshpool")
+    ^chmod +x ($bin | path join "autoshpool")
     $env.PATH = ([$bin] ++ $env.PATH)
 }
 
@@ -959,6 +961,17 @@ except OSError: pass
         fake-shpool-on-path
         assert (not (want-shpool))
     })
+    (run-test "nu want-shpool false when autoshpool not installed" {
+        # shpool present but autoshpool missing must not select the shpool
+        # path (mirrors want-tmux's autotmux gate).
+        let bin = (mktemp -d)
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
+        ^chmod +x ($bin | path join "shpool")
+        $env.PATH = [$bin]
+        $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+        $env.stdin-is-tty = {|| true }
+        assert (not (want-shpool))
+    })
     (run-test "nu projectname picks up projectroot override" {
         $env.projectroot = {|| "/srv/code/myrepo" }
         assert equal (projectname) "myrepo"
@@ -1063,8 +1076,22 @@ except OSError: pass
         ^chmod +x ($bin | path join "tmux")
         "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
         ^chmod +x ($bin | path join "shpool")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autoshpool")
+        ^chmod +x ($bin | path join "autoshpool")
         $env.PATH = [$bin]
         assert equal (session-backend) "shpool"
+    })
+    (run-test "nu session-backend uses tmux when autoshpool missing" {
+        # shpool present but autoshpool missing falls back to tmux.
+        let bin = (mktemp -d)
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
+        ^chmod +x ($bin | path join "shpool")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "tmux")
+        ^chmod +x ($bin | path join "tmux")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autotmux")
+        ^chmod +x ($bin | path join "autotmux")
+        $env.PATH = [$bin]
+        assert equal (session-backend) "tmux"
     })
     (run-test "nu session-backend empty when nothing available" {
         $env.PATH = []
@@ -1082,6 +1109,8 @@ except OSError: pass
         let bin = (mktemp -d)
         "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
         ^chmod +x ($bin | path join "shpool")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autoshpool")
+        ^chmod +x ($bin | path join "autoshpool")
         $env.PATH = [$bin]
         assert equal (session-backend) "shpool"
     })
@@ -1161,6 +1190,8 @@ except OSError: pass
         let bin = (mktemp -d)
         ("#!/bin/sh\necho \"shpool $*\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "shpool")
         ^chmod +x ($bin | path join "shpool")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autoshpool")
+        ^chmod +x ($bin | path join "autoshpool")
         $env.WANT_TMUX = "0"
         $env.PATH = [$bin]
         sessionattach work
@@ -1186,6 +1217,8 @@ except OSError: pass
         ^chmod +x ($bin | path join "shpoollist")
         "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
         ^chmod +x ($bin | path join "shpool")
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "autoshpool")
+        ^chmod +x ($bin | path join "autoshpool")
         $env.WANT_TMUX = "0"
         $env.PATH = [$bin]
         sessionlist

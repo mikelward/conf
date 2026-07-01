@@ -308,6 +308,16 @@ result="$(_fish_run '
 ')"
 assert_equal "no" "$result"
 
+start_test "fish want_shpool false when autoshpool not installed"
+result="$(_fish_run '
+    set -gx SSH_CONNECTION "1.2.3.4 1 2.3.4.5 22"
+    function projectroot; echo /some/project; end
+    function have_command; test $argv[1] = shpool; end
+    function stdin_is_tty; return 0; end
+    if want_shpool; echo yes; else; echo no; end
+')"
+assert_equal "no" "$result"
+
 ###############
 # TEST: want_tmux gating (mirrors want_shpool but on the tmux binary)
 
@@ -429,10 +439,17 @@ assert_equal "tmux" "$result"
 
 start_test "fish session_backend uses shpool when autotmux missing"
 result="$(_fish_run '
-    function have_command; contains $argv[1] tmux shpool; end
+    function have_command; contains $argv[1] tmux shpool autoshpool; end
     session_backend
 ')"
 assert_equal "shpool" "$result"
+
+start_test "fish session_backend uses tmux when autoshpool missing"
+result="$(_fish_run '
+    function have_command; contains $argv[1] tmux autotmux shpool; end
+    session_backend
+')"
+assert_equal "tmux" "$result"
 
 start_test "fish session_backend empty when nothing available"
 result="$(_fish_run '
@@ -454,7 +471,7 @@ assert_equal "tmux" "$result"
 start_test "fish session_backend SESSION_BACKEND=tmux falls back to shpool when tmux missing"
 result="$(_fish_run '
     set -gx SESSION_BACKEND tmux
-    function have_command; test $argv[1] = shpool; end
+    function have_command; contains $argv[1] shpool autoshpool; end
     session_backend
 ')"
 assert_equal "shpool" "$result"
