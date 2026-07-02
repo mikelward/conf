@@ -20,10 +20,10 @@
 
 # --- Extra launchers ---------------------------------------------------------
 # SUPER+D (code) and SUPER+S (secureshell) are left unbound in the shared
-# config because those helper scripts aren't in the repo. $run sources .shrc
+# config because those helper scripts aren't in the repo. $runenv sources .shrc
 # so the bind sees the login-shell PATH, including ~/scripts.* override dirs:
-# bind = $mainMod, D, exec, $run code
-# bind = $mainMod, S, exec, $run secureshell
+# bind = $mainMod, D, exec, $runenv code
+# bind = $mainMod, S, exec, $runenv secureshell
 
 # --- Rebinding an already-bound key -------------------------------------------
 # Hyprland executes ALL binds on a key in order (a later bind adds, it does
