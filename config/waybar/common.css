@@ -24,7 +24,8 @@ window#waybar {
 #network,
 #battery,
 #power-profiles-daemon,
-#tray {
+#tray,
+#custom-power {
     padding: 0 10px;
     margin: 2px 2px;
 }
@@ -97,6 +98,16 @@ window#waybar {
 
 #network.disconnected {
     color: @crit;
+}
+
+/* Session/power button: quiet until hovered, then warning-coloured as a
+ * hint that it leads to logout/shutdown actions. */
+#custom-power {
+    color: @muted;
+}
+
+#custom-power:hover {
+    color: @warn;
 }
 
 #tray menu {

@@ -19,6 +19,7 @@ _lid="$_srcdir/config/hypr/scripts/lid.sh"
 _theme="$_srcdir/config/hypr/scripts/theme.sh"
 _themed="$_srcdir/config/hypr/scripts/theme-daemon.sh"
 _fuzzellaunch="$_srcdir/config/hypr/scripts/launch-fuzzel.sh"
+_powermenu="$_srcdir/config/waybar/scripts/power-menu.sh"
 _apply="$_srcdir/config/hypr/scripts/apply-input.sh"
 _waybar_cfg="$_srcdir/config/waybar/config.jsonc"
 _waybar_css="$_srcdir/config/waybar/style.css"
@@ -31,7 +32,7 @@ _swaync_css="$_srcdir/config/swaync/style.css"
 # match against empty strings.
 ################################################################################
 for _f in "$_hypr" "$_idle" "$_lock" "$_toggle" "$_layoutcycle" "$_lid" \
-          "$_theme" "$_themed" "$_fuzzellaunch" "$_apply" \
+          "$_theme" "$_themed" "$_fuzzellaunch" "$_apply" "$_powermenu" \
           "$_waybar_cfg" "$_waybar_css" \
           "$_srcdir/config/waybar/common.css" \
           "$_srcdir/config/waybar/colors-dark.css" \
@@ -324,6 +325,43 @@ start_test "waybar has a tray"
 assert_contains "\"tray\"" "$_waybar_body"
 start_test "waybar has a battery module"
 assert_contains "\"battery\"" "$_waybar_body"
+
+################################################################################
+# Session/power button: far-right waybar module driving a theme-aware fuzzel
+# dmenu with lock/logout/suspend/reboot/shutdown.
+################################################################################
+start_test "waybar has the session/power button as the last right module"
+_right=$(sed -n '/"modules-right"/p' "$_waybar_cfg")
+assert_contains "\"custom/power\"]" "$_right"
+start_test "power button launches the power menu script"
+assert_contains "waybar/scripts/power-menu.sh" "$_waybar_body"
+
+_powermenu_body=$(cat "$_powermenu")
+start_test "power menu offers the five session actions"
+assert_contains "Lock Logout Suspend Reboot Shutdown" "$_powermenu_body"
+start_test "power menu locks via loginctl"
+assert_contains "loginctl lock-session" "$_powermenu_body"
+start_test "power menu suspend/reboot/shutdown use systemctl"
+assert_contains "systemctl suspend" "$_powermenu_body"
+assert_contains "systemctl reboot" "$_powermenu_body"
+assert_contains "systemctl poweroff" "$_powermenu_body"
+
+# Logout must tear down a uwsm session unit when there is one, and fall back
+# to whichever compositor is running (the waybar config is shared).
+start_test "power menu logout prefers uwsm stop"
+assert_contains "uwsm stop" "$_powermenu_body"
+start_test "power menu logout handles both compositors"
+assert_contains "hyprctl dispatch exit" "$_powermenu_body"
+assert_contains "swaymsg exit" "$_powermenu_body"
+
+start_test "power menu is a themed fuzzel dmenu (mode marker like the launcher)"
+assert_contains "fuzzel --dmenu" "$_powermenu_body"
+assert_contains "theme-mode" "$_powermenu_body"
+assert_contains "fuzzel-light.ini" "$_powermenu_body"
+
+start_test "power menu parses as shell and is executable"
+assert_true sh -n "$_powermenu"
+assert_true test -x "$_powermenu"
 
 # JSON validity of the waybar config (strip // and /* */ comments first) and
 # the swaync config, when a JSON parser is available.

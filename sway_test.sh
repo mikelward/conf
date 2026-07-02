@@ -330,6 +330,12 @@ assert_contains "sway/window" "$_waybar_body"
 start_test "waybar keeps the hyprland modules (still shared)"
 assert_contains "hyprland/workspaces" "$_waybar_body"
 
+# The shared session/power button must be able to log a Sway session out too.
+start_test "waybar power menu handles sway logout"
+_powermenu_body=$(cat "$_srcdir/config/waybar/scripts/power-menu.sh")
+assert_contains "swaymsg exit" "$_powermenu_body"
+assert_contains "SWAYSOCK" "$_powermenu_body"
+
 if command -v python3 >/dev/null 2>&1; then
     start_test "waybar config.jsonc still parses as JSON (comments stripped)"
     if sed -e 's://.*$::' "$_waybar_cfg" \

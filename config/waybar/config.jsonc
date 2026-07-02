@@ -9,7 +9,7 @@
 // Left:   workspaces (Hyprland or Sway)
 // Center: focused window title (Hyprland or Sway)
 // Right:  three clocks (San Francisco, London, local), power profile, audio,
-//         battery, tray (StatusNotifierItem)
+//         battery, tray (StatusNotifierItem), session/power menu
 {
     "layer": "top",
     "position": "top",
@@ -18,7 +18,7 @@
 
     "modules-left": ["hyprland/workspaces", "sway/workspaces"],
     "modules-center": ["hyprland/window", "sway/window"],
-    "modules-right": ["clock#sf", "clock#london", "clock", "power-profiles-daemon", "pulseaudio", "network", "battery", "tray"],
+    "modules-right": ["clock#sf", "clock#london", "clock", "power-profiles-daemon", "pulseaudio", "network", "battery", "tray", "custom/power"],
 
     "hyprland/workspaces": {
         "on-click": "activate",
@@ -106,5 +106,14 @@
     "tray": {
         "icon-size": 18,
         "spacing": 10
+    },
+
+    // Session/power menu: lock, logout, suspend, reboot, shutdown via a
+    // theme-aware fuzzel dmenu (see the script for the uwsm/compositor
+    // logout handling).
+    "custom/power": {
+        "format": "",
+        "tooltip": false,
+        "on-click": "~/.config/waybar/scripts/power-menu.sh"
     }
 }
