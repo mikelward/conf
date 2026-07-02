@@ -221,7 +221,7 @@ $(CACHE)/test-lint.stamp: shrc shrc.vcs profile exitrc \
 	@touch $@
 test-lint: $(CACHE)/test-lint.stamp
 
-$(CACHE)/test-env.stamp: env config/environment.d/zz-env.conf env_test.sh shrc_test_lib.sh | $(CACHE)
+$(CACHE)/test-env.stamp: env config/environment.d/env.conf env_test.sh shrc_test_lib.sh | $(CACHE)
 	@sh env_test.sh
 	@touch $@
 test-env: $(CACHE)/test-env.stamp
