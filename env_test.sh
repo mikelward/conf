@@ -4,19 +4,19 @@
 #
 # The file is dual-dialect -- sourced by POSIX shells (zshenv, profile,
 # shrc, the scripts repo's runenv) AND read by systemd's environment.d via
-# the config/environment.d/50-env.conf symlink -- so beyond checking the
+# the config/environment.d/zz-env.conf symlink -- so beyond checking the
 # values, these tests enforce the intersection of the two syntaxes: plain
 # KEY=VALUE lines with only $VAR/${VAR} expansion.
 
 . "$(dirname "$0")/shrc_test_lib.sh"
 
 _env="$_srcdir/env"
-_envd_link="$_srcdir/config/environment.d/50-env.conf"
+_envd_link="$_srcdir/config/environment.d/zz-env.conf"
 
 start_test "env exists"
 assert_true test -f "$_env"
 
-start_test "environment.d 50-env.conf is a symlink to env"
+start_test "environment.d zz-env.conf is a symlink to env"
 assert_true test -L "$_envd_link"
 assert_true test "$(readlink -f "$_envd_link")" = "$(readlink -f "$_env")"
 
