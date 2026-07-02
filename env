@@ -19,12 +19,15 @@
 # doesn't exist on this machine is skipped by lookup, so it costs nothing
 # beyond a little noise in `echo $PATH`.
 #
-# Machine-local additions go in ~/.env.local, sourced right after this
+# Machine-local helper scripts belong in ~/scripts.local, which overrides
+# ~/scripts below and is the eventual replacement for the ~/scripts.* dirs
+# (scripts.home, scripts.work, ...) that shrc still globs for now. Other
+# machine-local additions go in ~/.env.local, sourced right after this
 # file, e.g.:  PATH=$HOME/scripts.work:$PATH
 # (optionally mirrored for systemd user services with:
 #  ln -s ~/.env.local ~/.config/environment.d/60-env.local.conf)
 GOPATH=$HOME
-PATH=$HOME/scripts:$HOME/bin:$PATH
+PATH=$HOME/scripts.local:$HOME/scripts:$HOME/bin:$PATH
 PATH=$PATH:/usr/local/bin
 PATH=$PATH:$HOME/android-sdk-linux/platform-tools:$HOME/android-studio/bin:$HOME/Android/Sdk/platform-tools
 PATH=$PATH:$HOME/depot_tools:$HOME/google-cloud-sdk/bin
