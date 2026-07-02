@@ -18,18 +18,12 @@
 # monitor = DP-1, 2560x1440@144, 0x0, 1
 # monitor = eDP-1, 1920x1080, 2560x0, 1
 
-# --- Per-machine PATH dirs ----------------------------------------------------
-# The shared config's `env = PATH` line covers ~/scripts and ~/bin, but
-# hyprlang can't glob the ~/scripts.* override dirs -- name them here so the
-# launcher binds prefer them. This file is sourced after that line, so the
-# prepend here wins (in uwsm sessions too):
-# env = PATH,$HOME/scripts.work:$PATH
-
 # --- Extra launchers ---------------------------------------------------------
 # SUPER+D (code) and SUPER+S (secureshell) are left unbound in the shared
-# config because those helper scripts aren't in the repo:
-# bind = $mainMod, D, exec, code
-# bind = $mainMod, S, exec, secureshell
+# config because those helper scripts aren't in the repo. $run sources .shrc
+# so the bind sees the login-shell PATH, including ~/scripts.* override dirs:
+# bind = $mainMod, D, exec, $run code
+# bind = $mainMod, S, exec, $run secureshell
 
 # --- Rebinding an already-bound key -------------------------------------------
 # Hyprland executes ALL binds on a key in order (a later bind adds, it does

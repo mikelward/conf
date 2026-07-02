@@ -20,6 +20,7 @@ Files (all live under this repo's `config/` and map to `~/.config/`):
 | `config/hypr/scripts/theme.sh` | Apply light/dark theme by time of day |
 | `config/hypr/scripts/theme-daemon.sh` | Re-apply theme at each 07:00/19:00 boundary |
 | `config/hypr/scripts/launch-fuzzel.sh` | Launch fuzzel with the current theme's colours |
+| `config/hypr/scripts/run.sh` | Exec with the login-shell PATH (sources `.shrc`) for launcher binds |
 | `config/waybar/config.jsonc` | Bar: workspaces, clocks, tray, battery, net, volume |
 | `config/waybar/{style,style-light,common,colors-dark,colors-light}.css` | Bar theme (dark + light) |
 | `config/fuzzel/fuzzel.ini` | Launcher (SUPER+Space) |
