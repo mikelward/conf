@@ -400,6 +400,21 @@ _ws_active=$(grep -E '^[[:space:]]*workspace_swipe' "$_hypr" || true)
 assert_equal "" "$_ws_active"
 
 ################################################################################
+# Window rules use the Hyprland 0.53+ match-first syntax (`match:<prop>
+# <regex>, <effect> <value>`); the old effect-first form (`float, class:...`)
+# fails to parse with "invalid field float: missing a value".
+################################################################################
+start_test "window rules float the common transient dialogs (0.53 syntax)"
+assert_contains "windowrule = match:class ^(pavucontrol)$, float on" "$_hypr_body"
+assert_contains "windowrule = match:class ^(nm-connection-editor)$, float on" "$_hypr_body"
+assert_contains "windowrule = match:title ^(Open File)$, float on" "$_hypr_body"
+assert_contains "windowrule = match:title ^(Save File)$, float on" "$_hypr_body"
+
+start_test "no pre-0.53 effect-first windowrule directives remain active"
+_old_rules=$(grep -E '^[[:space:]]*windowrule(v2)?[[:space:]]*=[[:space:]]*[a-z]+[[:space:]]*,' "$_hypr" || true)
+assert_equal "" "$_old_rules"
+
+################################################################################
 # Time-based light/dark theming.
 ################################################################################
 start_test "launcher bind uses the theme-aware fuzzel wrapper"
