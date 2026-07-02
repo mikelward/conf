@@ -12,8 +12,12 @@
 # expansion (both dialects expand those, and later lines may reference
 # earlier ones). Only put variables here that are safe to export to every
 # process (CDPATH, for example, must stay in shrc). Values needing quoting
-# (LESSOPEN) or logic (the ~/scripts.* glob, test -d guards) live in shrc;
-# fish and nushell keep equivalent PATH setup in their own configs.
+# (LESSOPEN) or globbing (~/scripts.*, /opt/*/bin) live in shrc; fish and
+# nushell keep equivalent PATH setup in their own configs.
+#
+# Dirs are listed unconditionally -- no test -d here. A PATH entry that
+# doesn't exist on this machine is skipped by lookup, so it costs nothing
+# beyond a little noise in `echo $PATH`.
 #
 # Machine-local additions go in ~/.env.local, sourced right after this
 # file, e.g.:  PATH=$HOME/scripts.work:$PATH
@@ -21,4 +25,8 @@
 #  ln -s ~/.env.local ~/.config/environment.d/60-env.local.conf)
 GOPATH=$HOME
 PATH=$HOME/scripts:$HOME/bin:$PATH
+PATH=$PATH:/usr/local/bin
+PATH=$PATH:$HOME/android-sdk-linux/platform-tools:$HOME/android-studio/bin:$HOME/Android/Sdk/platform-tools
+PATH=$PATH:$HOME/depot_tools:$HOME/google-cloud-sdk/bin
 PATH=$PATH:$HOME/.cargo/bin:$HOME/.local/bin
+PATH=$PATH:/sbin:/usr/sbin

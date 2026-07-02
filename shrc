@@ -1094,13 +1094,13 @@ uc() { systemctl --user "$@"; }
 # aliases at parse time.
 if test -z "${SHRC_LOAD_FUNCTIONS_ONLY:-}"; then
 
-# Shared environment (~/.env: the canonical user PATH dirs, GOPATH, ...)
-# and per-host overrides (~/.env.local). Login shells already applied
-# these via zshenv/profile and exported DOTENV_SOURCED, so this block is
-# for shells that source shrc directly (bashrc for `ssh host cmd`,
-# scripts that `. ~/.shrc`) -- same sentinel, same `set -a` form as
-# zshenv/profile. Only dirs needing logic (globs, test -d) stay as
-# add_path calls below; the plain always-wanted dirs live in ~/.env.
+# Shared environment (~/.env: the canonical PATH dirs, GOPATH, ...) and
+# per-host overrides (~/.env.local). Login shells already applied these
+# via zshenv/profile and exported DOTENV_SOURCED, so this block is for
+# shells that source shrc directly (bashrc for `ssh host cmd`, scripts
+# that `. ~/.shrc`) -- same sentinel, same `set -a` form as
+# zshenv/profile. Only dirs needing a glob stay as add_path calls below;
+# everything unconditional lives in ~/.env.
 if test -z "${DOTENV_SOURCED:-}"; then
     case $- in *a*) _dotenv_had_a=1;; *) _dotenv_had_a=0;; esac
     set -a
@@ -1116,17 +1116,12 @@ CDPATH=".:$HOME"
 GOPATH="${GOPATH:-$HOME}"
 export GOPATH
 
-add_path /usr/local/bin
-add_path "$HOME/android-sdk-linux/platform-tools"
-add_path "$HOME/android-studio/bin"
-add_path "$HOME/Android/Sdk/platform-tools"
-add_path "$HOME/depot_tools"
-add_path "$HOME/google-cloud-sdk/bin"
-# The always-wanted user dirs (~/scripts, ~/bin, ~/.cargo/bin,
-# ~/.local/bin) come from ~/.env above. GOPATH defaults to $HOME, so
-# $GOPATH/bin is normally already there as ~/bin; only add it when
-# ~/.env.local moved GOPATH elsewhere (an unconditional `start` would
-# also reorder ~/bin in front of ~/scripts).
+# Every unconditional dir (~/scripts, ~/bin, /usr/local/bin, the SDK
+# dirs, ~/.cargo/bin, ~/.local/bin, /sbin, /usr/sbin) comes from ~/.env
+# above; only the globs below can't be expressed there. GOPATH defaults
+# to $HOME, so $GOPATH/bin is normally already there as ~/bin; only add
+# it when ~/.env.local moved GOPATH elsewhere (an unconditional `start`
+# would also reorder ~/bin in front of ~/scripts).
 if test "$GOPATH" != "$HOME"; then
     add_path "$GOPATH/bin" start
 fi
@@ -1138,8 +1133,6 @@ done
 for dir in /opt/*/bin; do
     add_path "$dir" end
 done
-add_path /sbin end
-add_path /usr/sbin end
 if have_command brew; then
     eval "$(brew shellenv)"
 fi
