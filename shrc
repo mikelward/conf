@@ -1125,8 +1125,9 @@ export GOPATH
 if test "$GOPATH" != "$HOME"; then
     add_path "$GOPATH/bin" start
 fi
-# scripts.home, scripts.work, etc. override scripts (a glob, so it can't
-# live in ~/.env; name such dirs in ~/.env.local for non-shell consumers)
+# Legacy: scripts.home, scripts.work, etc. override scripts. A glob, so
+# it can't live in ~/.env -- prefer ~/scripts.local (already on PATH via
+# ~/.env, visible to every consumer), or name other dirs in ~/.env.local.
 for dir in "$HOME"/scripts.*; do
     add_path "$dir" start
 done

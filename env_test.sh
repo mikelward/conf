@@ -50,7 +50,7 @@ _before="/usr/bin:/bin"
 
 start_test "sourcing env builds the canonical PATH"
 _path=$(HOME="$_fakehome" PATH="$_before" sh -c 'set -a; . "$0"; printf %s "$PATH"' "$_env")
-assert_equal "$_fakehome/scripts:$_fakehome/bin:$_before:/usr/local/bin:$_fakehome/android-sdk-linux/platform-tools:$_fakehome/android-studio/bin:$_fakehome/Android/Sdk/platform-tools:$_fakehome/depot_tools:$_fakehome/google-cloud-sdk/bin:$_fakehome/.cargo/bin:$_fakehome/.local/bin:/sbin:/usr/sbin" "$_path"
+assert_equal "$_fakehome/scripts.local:$_fakehome/scripts:$_fakehome/bin:$_before:/usr/local/bin:$_fakehome/android-sdk-linux/platform-tools:$_fakehome/android-studio/bin:$_fakehome/Android/Sdk/platform-tools:$_fakehome/depot_tools:$_fakehome/google-cloud-sdk/bin:$_fakehome/.cargo/bin:$_fakehome/.local/bin:/sbin:/usr/sbin" "$_path"
 
 start_test "sourcing env exports GOPATH=\$HOME"
 _gopath=$(HOME="$_fakehome" PATH="$_before" sh -c 'set -a; . "$0"; env' "$_env" | grep '^GOPATH=')

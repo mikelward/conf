@@ -29,8 +29,9 @@ Files (all live under this repo's `config/` and map to `~/.config/`):
 
 The launcher keybinds run their helper scripts (`browser1`, `home`, `irc`, ...)
 through `runenv` from the scripts repo, which sources `~/.env` (the canonical
-user PATH dirs, from this repo) and `~/.env.local` (per-machine additions,
-e.g. `PATH=$HOME/scripts.work:$PATH`) before exec'ing, so binds see the
+user PATH dirs, from this repo — including `~/scripts.local` for per-machine
+scripts) and `~/.env.local` (other per-machine additions, e.g.
+`PATH=$HOME/scripts.work:$PATH`) before exec'ing, so binds see the
 login-shell PATH (a display-manager or uwsm session never runs
 `.profile`/`.shrc` itself).
 
