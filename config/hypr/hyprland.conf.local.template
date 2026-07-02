@@ -2,9 +2,11 @@
 #
 # TEMPLATE: setup-hypr copies this to hyprland.conf.local (same file name
 # plus a .local suffix, like .shrc.local and sway's config.local) if it
-# doesn't exist yet. hyprland.conf sources it LAST, so anything here
-# overrides the shared defaults; the file itself is machine-local and never
-# committed to the conf repo.
+# doesn't exist yet. hyprland.conf sources it LAST, so settings (general/
+# decoration/input values, monitor rules) here override the shared defaults;
+# the file itself is machine-local and never committed to the conf repo.
+# Binds are the exception: Hyprland runs every bind on a key in order, so
+# REBINDING an already-bound key needs an `unbind` first (example below).
 #
 # Everything below is commented out: an EMPTY hyprland.conf.local is valid --
 # the shared config auto-detects input devices, auto-places monitors, and
@@ -21,6 +23,13 @@
 # config because those helper scripts aren't in the repo:
 # bind = $mainMod, D, exec, code
 # bind = $mainMod, S, exec, secureshell
+
+# --- Rebinding an already-bound key -------------------------------------------
+# Hyprland executes ALL binds on a key in order (a later bind adds, it does
+# not replace), so unbind the shared bind first, e.g. to change SUPER+E's
+# file manager on this machine only:
+# unbind = $mainMod, E
+# bind = $mainMod, E, exec, nautilus
 
 # --- Input tweaks -------------------------------------------------------------
 # Per-device overrides on top of apply-input.sh's automatic classification

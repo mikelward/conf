@@ -369,6 +369,12 @@ _hypr_tmpl_body=$(cat "$_hypr_tmpl")
 start_test "template offers the unbound SUPER+D/S launchers"
 assert_contains "bind = \$mainMod, D, exec" "$_hypr_tmpl_body"
 assert_contains "bind = \$mainMod, S, exec" "$_hypr_tmpl_body"
+
+# Hyprland binds accumulate (all binds on a key fire in order), so the
+# template must document unbind-before-rebind rather than implying a later
+# bind replaces the shared one.
+start_test "template documents unbind before rebinding a shared key"
+assert_contains "unbind = \$mainMod" "$_hypr_tmpl_body"
 start_test "template has no active (uncommented) directives"
 _tmpl_active=$(grep -Ev '^[[:space:]]*(#|$)' "$_hypr_tmpl" || true)
 assert_equal "" "$_tmpl_active"
