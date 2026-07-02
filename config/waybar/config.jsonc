@@ -6,18 +6,19 @@
 // the compositor that isn't running (a logged warning at startup, otherwise
 // harmless).
 //
-// Left:   workspaces + focused window title (Hyprland or Sway)
-// Center: three clocks (local, London, San Francisco)
-// Right:  power profile, audio, battery, tray (StatusNotifierItem)
+// Left:   workspaces (Hyprland or Sway)
+// Center: focused window title (Hyprland or Sway)
+// Right:  three clocks (San Francisco, London, local), power profile, audio,
+//         battery, tray (StatusNotifierItem)
 {
     "layer": "top",
     "position": "top",
     "height": 30,
     "spacing": 6,
 
-    "modules-left": ["hyprland/workspaces", "hyprland/window", "sway/workspaces", "sway/window"],
-    "modules-center": ["clock", "clock#london", "clock#sf"],
-    "modules-right": ["power-profiles-daemon", "pulseaudio", "network", "battery", "tray"],
+    "modules-left": ["hyprland/workspaces", "sway/workspaces"],
+    "modules-center": ["hyprland/window", "sway/window"],
+    "modules-right": ["clock#sf", "clock#london", "clock", "power-profiles-daemon", "pulseaudio", "network", "battery", "tray"],
 
     "hyprland/workspaces": {
         "on-click": "activate",
@@ -58,7 +59,7 @@
     "clock#sf": {
         "interval": 10,
         "timezone": "America/Los_Angeles",
-        "format": "SF {:%H:%M}",
+        "format": "SFO {:%H:%M}",
         "tooltip-format": "San Francisco — {:%A %d %B, %H:%M %Z}"
     },
 
@@ -87,7 +88,7 @@
 
     "network": {
         "format-wifi": " {signalStrength}%",
-        "format-ethernet": " {ipaddr}",
+        "format-ethernet": "",
         "format-disconnected": "睊",
         "tooltip-format": "{ifname} via {gwaddr}",
         "on-click": "nm-connection-editor"

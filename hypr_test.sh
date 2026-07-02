@@ -301,16 +301,25 @@ start_test "hypridle turns the display off (DPMS)"
 assert_contains "dpms off" "$_idle_body"
 
 ################################################################################
-# Waybar: three timezone clocks, tray, and battery.
+# Waybar: window title centred; clocks (SFO, LON, local), tray, and battery
+# on the right.
 ################################################################################
 _waybar_body=$(cat "$_waybar_cfg")
 start_test "waybar has a London clock"
 assert_contains "Europe/London" "$_waybar_body"
 start_test "waybar has a San Francisco clock"
 assert_contains "America/Los_Angeles" "$_waybar_body"
-start_test "waybar centre has three clock modules"
-_clocks=$(sed -n '/"modules-center"/p' "$_waybar_cfg" | grep -o 'clock' | grep -c clock)
-assert_true test "$_clocks" -eq 3
+start_test "waybar centre shows the focused window title (both compositors)"
+_center=$(sed -n '/"modules-center"/p' "$_waybar_cfg")
+assert_contains "hyprland/window" "$_center"
+assert_contains "sway/window" "$_center"
+start_test "waybar right has the three clocks in SFO, LON, local order"
+_right=$(sed -n '/"modules-right"/p' "$_waybar_cfg")
+assert_contains "\"clock#sf\", \"clock#london\", \"clock\"" "$_right"
+start_test "waybar San Francisco clock is labelled SFO"
+assert_contains "SFO {:%H:%M}" "$_waybar_body"
+start_test "waybar network module shows no IP address"
+assert_not_contains "{ipaddr}" "$_waybar_body"
 start_test "waybar has a tray"
 assert_contains "\"tray\"" "$_waybar_body"
 start_test "waybar has a battery module"
