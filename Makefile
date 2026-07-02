@@ -284,6 +284,7 @@ $(CACHE)/test-sway.stamp: sway_test.sh shrc_test_lib.sh \
                           config/sway/config.local.example-desktop \
                           config/sway/README.md \
                           config/sway/scripts/lid.sh \
+                          config/sway/scripts/idle.sh \
                           config/swaylock/config \
                           config/waybar/config.jsonc \
                           config/hypr/scripts/theme.sh | $(CACHE)

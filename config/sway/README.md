@@ -26,6 +26,7 @@ Manual overrides (split direction, monocle, floating) are on keybinds below.
 | `config/sway/config.local.example-laptop` | Example per-host file: docking laptop |
 | `config/sway/config.local.example-desktop` | Example per-host file: dual-head desktop (no suspend) |
 | `config/sway/scripts/lid.sh` | Laptop lid: disable internal panel, conditional suspend |
+| `config/sway/scripts/idle.sh` | Reload-safe swayidle launcher (dim → lock → screen off → suspend) |
 | `config/swaylock/config` | Lock screen (flat, Nord dark) |
 | *shared with Hyprland:* | |
 | `config/waybar/*` | Bar: workspaces, 3 clocks, tray, battery, net, volume (carries both compositors' modules) |
@@ -155,8 +156,13 @@ dim the backlight at 2.5 min, lock at 5 min, screen off at 5.5 min, suspend
 at 30 min; locking before sleep so you wake to a lock screen. All four
 timeouts and the suspend command are `$idle_*` variables, overridable
 per-host (desktops set `$idle_suspend_cmd true` and never sleep; the dim
-step is a no-op without a backlight). `power-profiles-daemon` (shared) feeds
-the waybar power-profile module.
+step is a no-op without a backlight). swayidle is started through
+`scripts/idle.sh` via `exec_always`, which replaces the previous instance —
+so editing the `$idle_*` overrides in `config.local` takes effect on
+`swaymsg reload`, no re-login needed. (`$wallpaper` is the one override that
+still applies at the next login, since duplicating swaybg on every reload
+would be worse.) `power-profiles-daemon` (shared) feeds the waybar
+power-profile module.
 
 ## Bar / launcher / notifications / theming (shared)
 
