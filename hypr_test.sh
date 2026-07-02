@@ -522,18 +522,16 @@ assert_not_contains "HYPRCURSOR_SIZE" "$_uwsm_env"
 
 ################################################################################
 # Session PATH: the launcher binds run helper scripts (browser1, home, irc,
-# ...) from the scripts repo, but neither a display-manager session nor uwsm
-# runs .profile/.shrc, so both session flavours must put the user script dirs
-# on PATH themselves (keeping the inherited system $PATH).
+# ...) from the scripts repo, but no session flavour runs .profile/.shrc, so
+# hyprland.conf must put the user script dirs on PATH itself (keeping the
+# inherited system $PATH). That env line is the ONLY PATH mechanism: setting
+# PATH in uwsm/env too would re-prepend ~/scripts ahead of the ~/scripts.*
+# override dirs named in hyprland.conf.local.
 ################################################################################
 start_test "hyprland.conf puts the user script dirs on PATH for the binds"
 assert_contains 'env = PATH,$HOME/scripts:$HOME/bin:$PATH' "$_hypr_body"
 
-start_test "uwsm env sets the same PATH dirs"
-assert_contains 'PATH="$HOME/scripts:$HOME/bin:$PATH' "$_uwsm_env"
-assert_contains "export PATH" "$_uwsm_env"
-
-start_test "uwsm env globs the per-machine scripts.* override dirs"
-assert_contains 'for _dir in "$HOME"/scripts.' "$_uwsm_env"
+start_test "uwsm env leaves PATH to hyprland.conf (scripts.local precedence)"
+assert_not_contains "export PATH" "$_uwsm_env"
 
 test_summary "hypr_test"
