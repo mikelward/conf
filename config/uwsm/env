@@ -13,16 +13,8 @@ export MOZ_ENABLE_WAYLAND=1
 export NIXOS_OZONE_WL=1
 export GTK_OVERLAY_SCROLLING=0
 
-# User script dirs for the launcher binds, fuzzel, and waybar click actions,
-# mirroring .shrc's add_path setup: uwsm doesn't run .profile/.shrc either, so
-# without this the session PATH lacks ~/scripts and `exec, browser1` fails.
-# Unlike the `env = PATH` line in hyprland.conf, a shell can also glob the
-# per-machine ~/scripts.* override dirs.
-PATH="$HOME/scripts:$HOME/bin:$PATH:$HOME/.cargo/bin:$HOME/.local/bin"
-for _dir in "$HOME"/scripts.*; do
-    if test -d "$_dir"; then
-        PATH="$_dir:$PATH"
-    fi
-done
-unset _dir
-export PATH
+# PATH is intentionally NOT set here, unlike the other mirrored vars: the
+# `env = PATH` line in hyprland.conf applies to uwsm sessions too (Hyprland
+# parses its config however it's launched), and prepending ~/scripts both
+# here and there would put the generic ~/scripts ahead of any ~/scripts.*
+# per-machine override dirs named in hyprland.conf.local.

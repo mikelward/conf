@@ -21,7 +21,8 @@
 # --- Per-machine PATH dirs ----------------------------------------------------
 # The shared config's `env = PATH` line covers ~/scripts and ~/bin, but
 # hyprlang can't glob the ~/scripts.* override dirs -- name them here so the
-# launcher binds prefer them (uwsm sessions already glob them in uwsm/env):
+# launcher binds prefer them. This file is sourced after that line, so the
+# prepend here wins (in uwsm sessions too):
 # env = PATH,$HOME/scripts.work:$PATH
 
 # --- Extra launchers ---------------------------------------------------------
