@@ -256,6 +256,7 @@ $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
                           config/hypr/scripts/theme-daemon.sh \
                           config/hypr/scripts/launch-fuzzel.sh \
                           config/waybar/config.jsonc \
+                          config/waybar/scripts/power-menu.sh \
                           config/waybar/style.css \
                           config/waybar/style-light.css \
                           config/waybar/common.css \
@@ -288,6 +289,7 @@ $(CACHE)/test-sway.stamp: sway_test.sh shrc_test_lib.sh \
                           config/sway/scripts/idle.sh \
                           config/swaylock/config \
                           config/waybar/config.jsonc \
+                          config/waybar/scripts/power-menu.sh \
                           config/hypr/scripts/theme.sh | $(CACHE)
 	@bash sway_test.sh
 	@touch $@
