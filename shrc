@@ -2,8 +2,10 @@
 #
 # Configuration for bash, zsh, ksh, dash, etc.
 #
-# Configuration for all shells is in this one file so that it can be easily
-# copied to many hosts.
+# Configuration for all shells is in this one file. (It was once fully
+# self-contained so it could be copied to config-less hosts; since the
+# ~/.env split it also sources ~/.env and ~/.env.local for the PATH dirs
+# and shared exports.)
 #
 # bashrc and zshrc should be symlinks to this file.
 #
