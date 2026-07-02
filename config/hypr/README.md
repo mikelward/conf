@@ -25,11 +25,14 @@ Files (all live under this repo's `config/` and map to `~/.config/`):
 | `config/fuzzel/fuzzel.ini` | Launcher (SUPER+Space) |
 | `config/swaync/config.json` + `{style,style-light,common,colors-*}.css` | Notifications + control center (dark + light) |
 | `config/uwsm/env` + `env-hyprland` | Environment for the optional uwsm session |
+| `config/environment.d/50-env.conf` | Symlink to `env` so systemd user services see the shared PATH |
 
 The launcher keybinds run their helper scripts (`browser1`, `home`, `irc`, ...)
-through `runenv` from the scripts repo, which sources `.shrc` before exec'ing
-so binds see the login-shell PATH (a display-manager or uwsm session never
-runs `.profile`/`.shrc` itself).
+through `runenv` from the scripts repo, which sources `~/.env` (the canonical
+user PATH dirs, from this repo) and `~/.env.local` (per-machine additions,
+e.g. `PATH=$HOME/scripts.work:$PATH`) before exec'ing, so binds see the
+login-shell PATH (a display-manager or uwsm session never runs
+`.profile`/`.shrc` itself).
 
 ## Installing
 

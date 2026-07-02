@@ -17,18 +17,23 @@ is_zsh() {
     test -n "${ZSH_VERSION:-}"
 }
 
-# Per-host environment overrides, sourced before .shrc so that anything set
-# here (e.g. SHELL) is visible to the shrc re-exec and the rest of startup.
-# Covers bash and other login shells; zsh already picked this up via .zshenv.
-# The DOTENV_SOURCED sentinel (set there too) keeps a zsh login from applying
-# ~/.env a second time via .zlogin, and keeps the zsh-to-bash re-exec from
-# re-applying it on top of the inherited values. Keep ~/.env to plain
-# variable assignments only; `set -a` auto-exports them so the file can use
-# the bare `VAR=val` format that gcloud and other tools expect.
-if test -z "${DOTENV_SOURCED:-}" && test -f "$HOME/.env"; then
+# Shared environment (~/.env, from the conf repo: PATH and other exports)
+# and per-host overrides (~/.env.local, e.g. SHELL or extra PATH dirs),
+# sourced before .shrc so that anything set here is visible to the shrc
+# re-exec and the rest of startup. Covers bash and other login shells; zsh
+# already picked these up via .zshenv. The DOTENV_SOURCED sentinel (set
+# there too) keeps a zsh login from applying them a second time via
+# .zlogin, and keeps the zsh-to-bash re-exec from re-applying them on top
+# of the inherited values (PATH prepends would stack). Keep both files to
+# plain variable assignments only; `set -a` auto-exports them so they can
+# use the bare `VAR=val` format that gcloud and other tools expect.
+if test -z "${DOTENV_SOURCED:-}"; then
     case $- in *a*) _dotenv_had_a=1;; *) _dotenv_had_a=0;; esac
     set -a
-    . "$HOME/.env"
+    for _dotenv in "$HOME/.env" "$HOME/.env.local"; do
+        test -f "$_dotenv" && . "$_dotenv"
+    done
+    unset _dotenv
     test "$_dotenv_had_a" = 1 || set +a
     unset _dotenv_had_a
     export DOTENV_SOURCED=1

@@ -1094,8 +1094,26 @@ uc() { systemctl --user "$@"; }
 # aliases at parse time.
 if test -z "${SHRC_LOAD_FUNCTIONS_ONLY:-}"; then
 
+# Shared environment (~/.env: the canonical user PATH dirs, GOPATH, ...)
+# and per-host overrides (~/.env.local). Login shells already applied
+# these via zshenv/profile and exported DOTENV_SOURCED, so this block is
+# for shells that source shrc directly (bashrc for `ssh host cmd`,
+# scripts that `. ~/.shrc`) -- same sentinel, same `set -a` form as
+# zshenv/profile. Only dirs needing logic (globs, test -d) stay as
+# add_path calls below; the plain always-wanted dirs live in ~/.env.
+if test -z "${DOTENV_SOURCED:-}"; then
+    case $- in *a*) _dotenv_had_a=1;; *) _dotenv_had_a=0;; esac
+    set -a
+    for dir in "$HOME/.env" "$HOME/.env.local"; do
+        test -f "$dir" && . "$dir"
+    done
+    test "$_dotenv_had_a" = 1 || set +a
+    unset _dotenv_had_a
+    export DOTENV_SOURCED=1
+fi
+
 CDPATH=".:$HOME"
-GOPATH="$HOME"
+GOPATH="${GOPATH:-$HOME}"
 export GOPATH
 
 add_path /usr/local/bin
@@ -1104,12 +1122,16 @@ add_path "$HOME/android-studio/bin"
 add_path "$HOME/Android/Sdk/platform-tools"
 add_path "$HOME/depot_tools"
 add_path "$HOME/google-cloud-sdk/bin"
-add_path "$HOME/.cargo/bin"
-add_path "$HOME/.local/bin"
-add_path "$HOME/bin" start
-add_path "$GOPATH/bin" start
-add_path "$HOME/scripts" start
-# scripts.home, scripts.work, etc. override scripts
+# The always-wanted user dirs (~/scripts, ~/bin, ~/.cargo/bin,
+# ~/.local/bin) come from ~/.env above. GOPATH defaults to $HOME, so
+# $GOPATH/bin is normally already there as ~/bin; only add it when
+# ~/.env.local moved GOPATH elsewhere (an unconditional `start` would
+# also reorder ~/bin in front of ~/scripts).
+if test "$GOPATH" != "$HOME"; then
+    add_path "$GOPATH/bin" start
+fi
+# scripts.home, scripts.work, etc. override scripts (a glob, so it can't
+# live in ~/.env; name such dirs in ~/.env.local for non-shell consumers)
 for dir in "$HOME"/scripts.*; do
     add_path "$dir" start
 done

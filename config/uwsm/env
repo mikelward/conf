@@ -15,6 +15,6 @@ export GTK_OVERLAY_SCROLLING=0
 
 # PATH is intentionally NOT set here, unlike the other mirrored vars: binds
 # that run helper scripts go through hyprland.conf's $runenv wrapper, which
-# sources .shrc for the real login PATH (add_path dirs plus the per-machine
-# ~/scripts.* override globs). Duplicating a directory list here would just
-# drift from .shrc.
+# sources ~/.env and ~/.env.local (the canonical user PATH dirs), and
+# systemd user services get the same via the environment.d 50-env.conf
+# symlink. Duplicating a directory list here would just drift from ~/.env.

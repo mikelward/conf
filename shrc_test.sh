@@ -1059,9 +1059,10 @@ start_test "setup_shell_compat_interactive runs without error"
 assert_true setup_shell_compat_interactive
 
 ######################################
-# ~/.env is applied once per process tree via the exported DOTENV_SOURCED
-# sentinel, so a zsh login's .zlogin re-read and a zsh->bash re-exec don't
-# re-apply self-referential assignments like `export PATH="$HOME/bin:$PATH"`.
+# ~/.env (shared, from this repo) and ~/.env.local (per-host overrides) are
+# applied once per process tree via the exported DOTENV_SOURCED sentinel, so
+# a zsh login's .zlogin re-read and a zsh->bash re-exec don't re-apply
+# self-referential assignments like `PATH=$HOME/bin:$PATH`.
 
 start_test "zshenv guards ~/.env sourcing with the DOTENV_SOURCED sentinel"
 assert_contains "export DOTENV_SOURCED=1" \
@@ -1070,6 +1071,17 @@ assert_contains "export DOTENV_SOURCED=1" \
 start_test "profile guards ~/.env sourcing with the DOTENV_SOURCED sentinel"
 assert_contains "export DOTENV_SOURCED=1" \
     "$(grep -F 'export DOTENV_SOURCED=1' "$_srcdir/profile")"
+
+start_test "shrc guards ~/.env sourcing with the DOTENV_SOURCED sentinel"
+assert_contains "export DOTENV_SOURCED=1" \
+    "$(grep -F 'export DOTENV_SOURCED=1' "$_srcdir/shrc")"
+
+# All three sourcing sites apply ~/.env then ~/.env.local, in that order,
+# so per-host PATH prepends land in front of the shared dirs.
+for _dotenv_file in zshenv profile shrc; do
+    start_test "$_dotenv_file sources ~/.env then ~/.env.local"
+    assert_contains '"$HOME/.env" "$HOME/.env.local"' "$(cat "$_srcdir/$_dotenv_file")"
+done
 
 # Behavioural check of the guard pattern: running the guarded source twice
 # (as zshenv then profile would) applies ~/.env only once.
