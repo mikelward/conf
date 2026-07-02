@@ -1,0 +1,331 @@
+# Sway configuration
+# ~/.config/sway/config
+#
+# A dynamic-tiling Wayland desktop (i3-style), sharing its look, keybinds,
+# launcher, bar, notifications, and theme tooling with the Hyprland build in
+# config/hypr -- see README.md in this directory for packages, placeholders,
+# and per-host setup.
+#
+# Dynamic tiling comes from `autotiling` (BSP/dwindle-style: each new window
+# splits the focused one along its longer side). Sway has no master/stack
+# layout, so there is no Krohnkite "Tile" equivalent here.
+#
+# MULTI-MACHINE: this file is identical on every machine. Machine-specific
+# values (output names/positions, per-device input tweaks, idle overrides)
+# live in ~/.config/sway/config.local -- the same file name plus a .local
+# suffix, like .shrc.local -- included near the end of this file. A missing
+# config.local just logs a warning at startup; an unconfigured machine runs
+# fine on the defaults below.
+
+################################################################################
+# VARIABLES / PROGRAMS
+################################################################################
+set $mod Mod4
+set $term kitty
+set $lock pidof swaylock || swaylock -f
+
+# Wallpaper for swaybg (plain, static). The image path is shared with the
+# Hyprland build so one file serves both desktops. If the file is missing you
+# just get a black desktop. Overridable in config.local (it takes effect
+# because swaybg is started after the include below).
+set $wallpaper ~/.config/hypr/wallpaper.jpg
+
+# Idle timeouts (seconds) and suspend command, mirroring hypridle.conf:
+# dim -> lock -> screen off -> suspend. Override in config.local; e.g. a
+# desktop that must never suspend sets:
+#     set $idle_suspend_cmd true
+set $idle_dim_timeout 150
+set $idle_lock_timeout 300
+set $idle_dpms_timeout 330
+set $idle_suspend_timeout 1800
+set $idle_suspend_cmd systemctl suspend
+
+################################################################################
+# LOOK
+################################################################################
+# Traditional and flat: no gaps, thin borders, no titlebars. The colours are
+# the shared Nord-ish scheme (dark defaults; theme.sh re-applies them at each
+# light/dark boundary, matching the Hyprland build's border colours).
+default_border pixel 2
+default_floating_border pixel 2
+gaps inner 0
+gaps outer 0
+font pango:JetBrainsMono Nerd Font 10
+
+# class                 border  background text    indicator child_border
+client.focused          #88c0d0 #88c0d0    #2e3440 #88c0d0   #88c0d0
+client.focused_inactive #3b4252 #3b4252    #d8dee9 #3b4252   #3b4252
+client.unfocused        #3b4252 #3b4252    #d8dee9 #3b4252   #3b4252
+client.urgent           #bf616a #bf616a    #eceff4 #bf616a   #bf616a
+
+# NOTE: Sway cannot dim inactive windows (no equivalent of Hyprland's
+# dim_inactive); the distinct focused/unfocused border colours above are the
+# visual cue instead.
+
+################################################################################
+# INPUT
+################################################################################
+# Keyboard: US Dvorak with Caps Lock as Compose, matching `setup`'s
+# configure_keyboard and the Hyprland build.
+input type:keyboard {
+    xkb_layout us
+    xkb_variant dvorak
+    xkb_options compose:caps
+}
+
+# MOUSE-BUTTON HANDEDNESS (static policy, zero per-device / per-machine
+# config):
+#   mice / other pointers -> LEFT-handed  (libinput swaps: RIGHT button primary)
+#   touchpads             -> RIGHT-handed (no swap:       LEFT button primary)
+# Touchpads can match BOTH type blocks, so the touchpad block comes AFTER the
+# pointer block and wins for touchpads. (Hyprland has no type matching, so
+# there the same policy is applied per-device by apply-input.sh -- the POLICY
+# is shared, the mechanism is not.)
+input type:pointer {
+    left_handed enabled
+    accel_profile flat
+    pointer_accel 0
+}
+
+input type:touchpad {
+    left_handed disabled
+    natural_scroll enabled
+    tap enabled
+    dwt enabled
+}
+
+# Per-device scroll speed is deliberately NOT set globally -- add it in
+# config.local only where a device actually needs it, e.g.:
+#     input "1133:45091:MX_Master_3" scroll_factor 1.5
+# (identifiers: swaymsg -t get_inputs)
+
+# Focus follows the mouse; no click needed to focus a window.
+focus_follows_mouse yes
+
+# SUPER+drag moves a window, SUPER+right-drag resizes it ("normal": left
+# button moves, right button resizes -- matching the Hyprland bindm pair).
+floating_modifier $mod normal
+
+################################################################################
+# AUTOSTART
+################################################################################
+# Dynamic tiling: autotiling flips the split direction to the longer side of
+# the focused window (BSP/dwindle-style). Guarded so a machine without
+# autotiling installed still starts -- you just get plain manual i3 splits.
+exec command -v autotiling >/dev/null && autotiling
+
+# Time-based light/dark theming, SHARED with the Hyprland build. The daemon
+# applies the current theme (light 07:00-19:00, dark otherwise) and LAUNCHES
+# waybar + swaync with the matching style, then re-applies at each boundary --
+# so waybar/swaync are intentionally not started by their own exec lines.
+# theme.sh detects the running compositor (swaymsg vs hyprctl) for border
+# colours and the wallpaper.
+exec ~/.config/hypr/scripts/theme-daemon.sh
+
+# Tray applets (waybar's StatusNotifierItem tray): network + bluetooth, same
+# as the Hyprland build. Comment out any you don't use.
+exec nm-applet --indicator
+exec blueman-applet
+
+# Polkit authentication agent (needed for GUI privilege prompts). Uncomment
+# the one you have installed.
+# exec /usr/lib/polkit-kde-authentication-agent-1
+# exec /usr/libexec/polkit-gnome-authentication-agent-1
+
+################################################################################
+# KEYBINDS
+################################################################################
+# --- Applications / session (same launchers as the Hyprland build; the
+# --- helper scripts live in the scripts repo on $PATH) ---
+bindsym $mod+t exec $term
+bindsym $mod+w exec terminal_on_workstation
+bindsym $mod+g exec browser1
+bindsym $mod+Shift+g exec browser3
+bindsym $mod+f exec browser2
+bindsym $mod+b exec bluetooth-connect
+bindsym $mod+Shift+b exec pulseprofile.py
+bindsym $mod+c exec google-calendar
+bindsym $mod+Shift+c exec google-chat
+bindsym $mod+h exec home
+bindsym $mod+i exec irc
+bindsym $mod+m exec google-meet
+bindsym $mod+n exec notepad
+bindsym $mod+r exec remote-desktop
+bindsym $mod+y exec youtube-music
+# NOTE: SUPER+D (code) and SUPER+S (secureshell) are intentionally left
+# unbound, matching the Hyprland build -- add them in config.local.
+bindsym $mod+e exec $term -e yazi
+bindsym $mod+space exec ~/.config/hypr/scripts/launch-fuzzel.sh
+bindsym $mod+BackSpace kill
+bindsym $mod+l exec $lock
+bindsym $mod+Shift+e exit
+
+# --- Tiling (autotiling handles day-to-day splits; these are the manual
+# --- overrides) ---
+# Split direction for the NEXT window (a one-shot override of autotiling).
+bindsym $mod+bracketleft splith
+bindsym $mod+bracketright splitv
+# Toggle the split direction of the focused container (SUPER+O echoes the
+# Hyprland orientation key).
+bindsym $mod+o split toggle
+
+# Monocle: fullscreen toggle, on the same key as the Hyprland build. (Sway
+# has no fullscreen-with-bar state; tabbed layout below is the alternative
+# that keeps the bar.)
+bindsym $mod+grave fullscreen toggle
+
+# Layout styles: SUPER+. cycles split/tabbed/stacking (echoing Hyprland's
+# layout cycle); SUPER+, toggles the split axis of the current layout.
+bindsym $mod+period layout toggle all
+bindsym $mod+comma layout toggle split
+
+# Toggle floating for the focused window (two keys, matching Hyprland).
+bindsym $mod+Shift+f floating toggle
+bindsym $mod+Insert floating toggle
+
+# --- Focus / move ---
+# Cycle through windows (≈ Hyprland's stack cycle on the same keys).
+bindsym $mod+j focus next
+bindsym $mod+k focus prev
+bindsym $mod+Shift+j move down
+bindsym $mod+Shift+k move up
+# Directional focus / move (arrow keys, matching Hyprland).
+bindsym $mod+Left focus left
+bindsym $mod+Right focus right
+bindsym $mod+Up focus up
+bindsym $mod+Down focus down
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Right move right
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Down move down
+
+# --- Resize mode (modal, entered with SUPER+Shift+R like the Hyprland
+# --- submap; h/j/k/l or arrows resize, Esc/Enter exits) ---
+mode "resize" {
+    bindsym h resize shrink width 40 px
+    bindsym l resize grow width 40 px
+    bindsym k resize shrink height 40 px
+    bindsym j resize grow height 40 px
+    bindsym Left resize shrink width 40 px
+    bindsym Right resize grow width 40 px
+    bindsym Up resize shrink height 40 px
+    bindsym Down resize grow height 40 px
+    bindsym Escape mode "default"
+    bindsym Return mode "default"
+}
+bindsym $mod+Shift+r mode "resize"
+
+# --- Workspaces (virtual desktops 1-10) ---
+bindsym $mod+1 workspace number 1
+bindsym $mod+2 workspace number 2
+bindsym $mod+3 workspace number 3
+bindsym $mod+4 workspace number 4
+bindsym $mod+5 workspace number 5
+bindsym $mod+6 workspace number 6
+bindsym $mod+7 workspace number 7
+bindsym $mod+8 workspace number 8
+bindsym $mod+9 workspace number 9
+bindsym $mod+0 workspace number 10
+
+# Move the focused window to a workspace (stays on the current workspace,
+# like Hyprland's movetoworkspacesilent).
+bindsym $mod+Shift+1 move container to workspace number 1
+bindsym $mod+Shift+2 move container to workspace number 2
+bindsym $mod+Shift+3 move container to workspace number 3
+bindsym $mod+Shift+4 move container to workspace number 4
+bindsym $mod+Shift+5 move container to workspace number 5
+bindsym $mod+Shift+6 move container to workspace number 6
+bindsym $mod+Shift+7 move container to workspace number 7
+bindsym $mod+Shift+8 move container to workspace number 8
+bindsym $mod+Shift+9 move container to workspace number 9
+bindsym $mod+Shift+0 move container to workspace number 10
+
+# Touchpad gesture: 3-finger horizontal swipe cycles workspaces (parity with
+# the Hyprland `gesture` line).
+bindgesture swipe:3:right workspace next_on_output
+bindgesture swipe:3:left workspace prev_on_output
+
+# --- Media / brightness keys (laptop friendly; --locked = work while the
+# --- screen is locked, like Hyprland's bindl/bindel) ---
+bindsym --locked XF86AudioRaiseVolume exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+
+bindsym --locked XF86AudioLowerVolume exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+bindsym --locked XF86AudioMute exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+bindsym --locked XF86MonBrightnessUp exec brightnessctl set 5%+
+bindsym --locked XF86MonBrightnessDown exec brightnessctl set 5%-
+bindsym --locked XF86AudioPlay exec playerctl play-pause
+bindsym --locked XF86AudioPause exec playerctl play-pause
+bindsym --locked XF86AudioNext exec playerctl next
+bindsym --locked XF86AudioPrev exec playerctl previous
+# Calculator: a plain bindsym (NOT --locked) so it can't launch a GUI app
+# behind the lock screen.
+bindsym XF86Calculator exec gnome-calculator
+
+# --- Screenshots (grim + slurp -> clipboard; the X `screenshot` script
+# --- doesn't work under Wayland) ---
+bindsym Print exec grim - | wl-copy --type image/png
+bindsym $mod+Print exec grim -g "$(slurp)" - | wl-copy --type image/png
+bindsym Shift+Print exec grim -g "$(slurp)" - | wl-copy --type image/png
+
+################################################################################
+# LAPTOP LID
+################################################################################
+# lid.sh disables the internal panel on lid close -- and suspends ONLY when no
+# external output is active, so a docked laptop with the lid shut keeps
+# running on its external screen -- then re-enables the panel on open. The
+# panel is auto-detected (first eDP/LVDS/DSI output); if detection picks the
+# wrong output, re-bind with an explicit name in config.local:
+#     bindswitch --locked --reload lid:on exec ~/.config/sway/scripts/lid.sh close eDP-2
+# --locked keeps the binding working on the lock screen; --reload re-fires it
+# on config reload so the panel state stays in sync with the real lid
+# position. On machines without a lid these bindings simply never fire.
+# systemd-logind must be told to ignore the lid for this to be the sole
+# handler; setup-sway installs that drop-in (shared with the Hyprland build).
+bindswitch --locked --reload lid:on exec ~/.config/sway/scripts/lid.sh close
+bindswitch --locked --reload lid:off exec ~/.config/sway/scripts/lid.sh open
+
+# EXTERNAL DISPLAY HOTPLUG needs no config: Sway auto-enables outputs on
+# attach and drops them on detach (no kanshi, no output names).
+
+################################################################################
+# WINDOW RULES
+################################################################################
+# Float common transient dialogs so they don't disrupt the tiling (same set
+# as the Hyprland windowrules).
+for_window [app_id="pavucontrol"] floating enable
+for_window [app_id="nm-connection-editor"] floating enable
+for_window [title="^Open File$"] floating enable
+for_window [title="^Save File$"] floating enable
+
+################################################################################
+# PER-HOST OVERRIDES
+################################################################################
+# ~/.config/sway/config.local -- see config.local.template (and the laptop /
+# desktop examples) in this directory. Included LATE so its input/output/
+# bindsym/bindswitch lines override the shared defaults above, but BEFORE
+# swaybg and swayidle are started so it can override $wallpaper and the
+# $idle_* variables. If the file doesn't exist sway logs a warning and
+# carries on -- an unconfigured machine runs fine on the defaults.
+include ~/.config/sway/config.local
+
+################################################################################
+# WALLPAPER + IDLE/LOCK (after the include, so config.local's variable
+# overrides take effect; these consume $wallpaper and $idle_*)
+################################################################################
+# Wallpaper via swaybg (plain, static). theme.sh swaps it for
+# wallpaper-light.jpg / wallpaper-dark.jpg at the theme boundary if you keep
+# per-mode images (shared with the Hyprland build).
+exec test -f $wallpaper && swaybg -i $wallpaper -m fill
+
+# Idle/lock is Sway-specific (swayidle + swaylock; Hyprland uses hypridle +
+# hyprlock). Mirrors hypridle.conf: dim -> lock -> screen off -> suspend.
+# `lock` responds to `loginctl lock-session`, and before-sleep locks first so
+# you always wake to a lock screen. On a desktop with no backlight the dim
+# step is a harmless no-op.
+exec swayidle -w \
+    timeout $idle_dim_timeout 'brightnessctl -s set 10%' resume 'brightnessctl -r' \
+    timeout $idle_lock_timeout 'loginctl lock-session' \
+    timeout $idle_dpms_timeout 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' \
+    timeout $idle_suspend_timeout '$idle_suspend_cmd' \
+    before-sleep 'loginctl lock-session' \
+    after-resume 'swaymsg "output * power on"' \
+    lock '$lock'

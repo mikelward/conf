@@ -1,11 +1,14 @@
 #!/bin/sh
 #
-# Time-based light/dark theming for the Hyprland desktop.
+# Time-based light/dark theming, SHARED by the Hyprland and Sway desktops
+# (it lives under config/hypr/scripts for historical reasons).
 # Light from 07:00 to 18:59, dark otherwise. Drives:
 #   - the freedesktop colour-scheme preference (kitty and GTK apps follow it)
 #   - waybar   (relaunched with -s style.css / style-light.css)
 #   - swaync   (relaunched with --style style.css / style-light.css)
-#   - Hyprland window border colours (hyprctl)
+#   - window border colours, via whichever compositor is running
+#     (hyprctl under Hyprland, swaymsg under Sway)
+#   - the wallpaper, when per-mode images exist (swww / swaybg)
 #   - a mode marker read by launch-fuzzel.sh
 #
 # Usage:
@@ -86,8 +89,10 @@ apply() {
         swaync --style "$sstyle" >/dev/null 2>&1 &
     fi
 
-    # 4) Hyprland border colours.
-    if command -v hyprctl >/dev/null 2>&1; then
+    # 4) Window border colours, via whichever compositor is running. Detect
+    #    by the compositor's IPC handle, not just the installed binary --
+    #    both compositors may be installed at once.
+    if test -n "$HYPRLAND_INSTANCE_SIGNATURE" && command -v hyprctl >/dev/null 2>&1; then
         if test "$mode" = light; then
             hyprctl keyword general:col.active_border "rgba(5e81acff)" >/dev/null 2>&1
             hyprctl keyword general:col.inactive_border "rgba(d8dee9ff)" >/dev/null 2>&1
@@ -96,13 +101,32 @@ apply() {
             hyprctl keyword general:col.inactive_border "rgba(3b4252ff)" >/dev/null 2>&1
         fi
     fi
+    if test -n "$SWAYSOCK" && command -v swaymsg >/dev/null 2>&1; then
+        if test "$mode" = light; then
+            active=5e81ac; active_text=eceff4
+            inactive=d8dee9; inactive_text=4c566a
+        else
+            active=88c0d0; active_text=2e3440
+            inactive=3b4252; inactive_text=d8dee9
+        fi
+        # client.<class> <border> <background> <text> <indicator> <child_border>
+        swaymsg "client.focused #$active #$active #$active_text #$active #$active" >/dev/null 2>&1
+        swaymsg "client.focused_inactive #$inactive #$inactive #$inactive_text #$inactive #$inactive" >/dev/null 2>&1
+        swaymsg "client.unfocused #$inactive #$inactive #$inactive_text #$inactive #$inactive" >/dev/null 2>&1
+    fi
 
-    # 5) Optional wallpaper swap via swww if you keep per-mode wallpapers.
+    # 5) Optional wallpaper swap if you keep per-mode wallpapers (shared by
+    #    both desktops): swww under Hyprland, swaybg under Sway.
     #    >>> PLACEHOLDER: drop wallpaper-light.jpg / wallpaper-dark.jpg in
     #    ~/.config/hypr, or delete this block. <<<
     wall="$HOME/.config/hypr/wallpaper-$mode.jpg"
-    if command -v swww >/dev/null 2>&1 && test -f "$wall"; then
-        swww img "$wall" >/dev/null 2>&1
+    if test -f "$wall"; then
+        if test -n "$SWAYSOCK" && command -v swaybg >/dev/null 2>&1; then
+            pkill -x swaybg 2>/dev/null
+            swaybg -i "$wall" -m fill >/dev/null 2>&1 &
+        elif command -v swww >/dev/null 2>&1; then
+            swww img "$wall" >/dev/null 2>&1
+        fi
     fi
 
     # Record the active mode for launch-fuzzel.sh.

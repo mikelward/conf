@@ -1,7 +1,12 @@
 // Waybar configuration
 // ~/.config/waybar/config.jsonc
 //
-// Left:   Hyprland workspaces + focused window title
+// SHARED between the Hyprland and Sway builds: modules-left lists both
+// compositors' workspaces/window modules, and waybar disables the pair for
+// the compositor that isn't running (a logged warning at startup, otherwise
+// harmless).
+//
+// Left:   workspaces + focused window title (Hyprland or Sway)
 // Center: three clocks (local, London, San Francisco)
 // Right:  power profile, audio, battery, tray (StatusNotifierItem)
 {
@@ -10,7 +15,7 @@
     "height": 30,
     "spacing": 6,
 
-    "modules-left": ["hyprland/workspaces", "hyprland/window"],
+    "modules-left": ["hyprland/workspaces", "hyprland/window", "sway/workspaces", "sway/window"],
     "modules-center": ["clock", "clock#london", "clock#sf"],
     "modules-right": ["power-profiles-daemon", "pulseaudio", "network", "battery", "tray"],
 
@@ -23,6 +28,15 @@
     "hyprland/window": {
         "max-length": 60,
         "separate-outputs": true
+    },
+
+    "sway/workspaces": {
+        "format": "{name}",
+        "disable-scroll": false
+    },
+
+    "sway/window": {
+        "max-length": 60
     },
 
     // Local time (uses the system timezone).

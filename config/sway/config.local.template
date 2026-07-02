@@ -1,0 +1,47 @@
+# Per-host Sway overrides -- ~/.config/sway/config.local
+#
+# TEMPLATE: copy this file to config.local on each machine and keep only the
+# lines that machine actually needs (setup-sway seeds it for you). The base
+# ~/.config/sway/config is identical everywhere and includes config.local
+# late, so anything here overrides the shared defaults; config.local itself
+# is machine-local and never committed to the conf repo.
+#
+# Everything below is commented out: an EMPTY config.local (or none at all)
+# is valid -- the shared defaults auto-detect the lid panel, auto-place
+# hotplugged outputs, and use laptop-friendly idle timeouts.
+#
+# See also: config.local.example-laptop and config.local.example-desktop.
+
+# --- Outputs (names via `swaymsg -t get_outputs`) -------------------------
+# Only needed for a PINNED arrangement; unlisted outputs are auto-placed.
+# output DP-1 pos 0 0
+# output eDP-1 pos 2560 0
+# output eDP-1 scale 2
+
+# --- Laptop lid ------------------------------------------------------------
+# The internal panel is auto-detected (first eDP/LVDS/DSI output). If that
+# picks the wrong output, re-bind with the explicit name:
+# bindswitch --locked --reload lid:on exec ~/.config/sway/scripts/lid.sh close eDP-2
+# bindswitch --locked --reload lid:off exec ~/.config/sway/scripts/lid.sh open eDP-2
+
+# --- Idle / power ----------------------------------------------------------
+# Desktops: never suspend on idle (the timers still dim/lock/blank).
+# set $idle_suspend_cmd true
+# Or stretch the timers (seconds):
+# set $idle_lock_timeout 600
+# set $idle_dpms_timeout 660
+
+# --- Wallpaper -------------------------------------------------------------
+# set $wallpaper ~/pictures/this-machine.jpg
+
+# --- Input tweaks ----------------------------------------------------------
+# Per-device scroll speed (identifiers via `swaymsg -t get_inputs`); set it
+# here rather than globally, and only where a device needs it:
+# input "1133:45091:MX_Master_3" scroll_factor 1.5
+# Touchpad speed:
+# input type:touchpad pointer_accel 0.3
+
+# --- Extra keybinds --------------------------------------------------------
+# Launchers left unbound in the shared config (scripts not in the repo):
+# bindsym $mod+d exec code
+# bindsym $mod+s exec secureshell

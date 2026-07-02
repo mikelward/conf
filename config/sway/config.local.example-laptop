@@ -1,0 +1,16 @@
+# Per-host Sway overrides -- EXAMPLE: a laptop that docks to one external
+# monitor. Copy to ~/.config/sway/config.local and adjust the output names
+# (swaymsg -t get_outputs); see config.local.template for all the knobs.
+
+# Pin the external monitor to the left of the internal panel when docked.
+# Both outputs are auto-placed if you delete these lines -- only keep them if
+# you care about the ordering.
+# output DP-3 pos 0 0
+# output eDP-1 pos 2560 0
+
+# HiDPI internal panel.
+# output eDP-1 scale 2
+
+# The lid handler auto-detects the internal panel (eDP-1 here), and the
+# shared idle defaults (dim 2.5m, lock 5m, screen off 5.5m, suspend 30m) suit
+# a laptop -- nothing else to override.

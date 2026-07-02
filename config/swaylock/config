@@ -1,0 +1,48 @@
+# swaylock configuration
+# ~/.config/swaylock/config
+#
+# Sway-specific lock screen (the Hyprland build uses hyprlock). Flat,
+# traditional: a solid Nord-dark background and a thin indicator ring in the
+# shared colour scheme -- no blur, no effects. Launched as `swaylock -f` by
+# the SUPER+L bind and swayidle (config/sway/config).
+#
+# For a wallpaper instead of the solid colour, add e.g.:
+#     image=/home/you/.config/hypr/wallpaper.jpg
+# (swaylock does not expand ~ here, so use an absolute path.)
+
+ignore-empty-password
+show-failed-attempts
+
+# Solid background (Nord polar night).
+color=2e3440
+
+# Indicator: thin flat ring, matching the 2px window borders.
+indicator-radius=100
+indicator-thickness=2
+font=JetBrainsMono Nerd Font
+
+inside-color=2e3440
+line-color=2e3440
+separator-color=2e3440
+ring-color=88c0d0
+text-color=eceff4
+key-hl-color=a3be8c
+bs-hl-color=d08770
+
+# Verifying.
+inside-ver-color=2e3440
+line-ver-color=2e3440
+ring-ver-color=5e81ac
+text-ver-color=eceff4
+
+# Wrong password.
+inside-wrong-color=2e3440
+line-wrong-color=2e3440
+ring-wrong-color=bf616a
+text-wrong-color=eceff4
+
+# Cleared.
+inside-clear-color=2e3440
+line-clear-color=2e3440
+ring-clear-color=ebcb8b
+text-clear-color=2e3440

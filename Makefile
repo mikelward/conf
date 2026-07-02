@@ -115,7 +115,8 @@ test-all: \
 	test-gitconfig \
 	test-makefile \
 	test-amethyst \
-	test-hypr
+	test-hypr \
+	test-sway
 
 $(CACHE):
 	@mkdir -p $@
@@ -273,9 +274,26 @@ $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
 	@touch $@
 test-hypr: $(CACHE)/test-hypr.stamp
 
+# Static presence/parse checks for the Sway Wayland desktop configs. Depends
+# on the shared waybar/theme files too, since sway_test.sh asserts their
+# Sway-side behaviour.
+$(CACHE)/test-sway.stamp: sway_test.sh shrc_test_lib.sh \
+                          config/sway/config \
+                          config/sway/config.local.template \
+                          config/sway/config.local.example-laptop \
+                          config/sway/config.local.example-desktop \
+                          config/sway/README.md \
+                          config/sway/scripts/lid.sh \
+                          config/swaylock/config \
+                          config/waybar/config.jsonc \
+                          config/hypr/scripts/theme.sh | $(CACHE)
+	@bash sway_test.sh
+	@touch $@
+test-sway: $(CACHE)/test-sway.stamp
+
 .PHONY: all install install-dotfiles install-vcs bootstrap \
 	vcs-build vcs-sync vcs-fetch \
 	test test-verbose test-full test-all \
 	test-dash test-bash test-zsh test-prompt test-vcs \
 	test-fish test-nu test-lint \
-	test-gitconfig test-makefile test-amethyst test-hypr
+	test-gitconfig test-makefile test-amethyst test-hypr test-sway
