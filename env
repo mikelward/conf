@@ -1,0 +1,24 @@
+# Shared environment for every session and shell (installed as ~/.env).
+#
+# This file is dual-dialect: it is sourced by POSIX shells -- zshenv,
+# profile, and shrc apply it with `set -a` under the DOTENV_SOURCED
+# sentinel, and the scripts repo's runenv does the same for Hyprland's
+# launcher binds -- AND read by systemd's environment.d via the
+# ~/.config/environment.d/50-env.conf symlink, so systemd user services
+# (and a uwsm-managed session) see the same PATH as a login shell.
+#
+# Keep every line to plain KEY=VALUE: no quotes, no spaces in values, no
+# globs, no conditionals, no command substitution; only $VAR / ${VAR}
+# expansion (both dialects expand those, and later lines may reference
+# earlier ones). Only put variables here that are safe to export to every
+# process (CDPATH, for example, must stay in shrc). Values needing quoting
+# (LESSOPEN) or logic (the ~/scripts.* glob, test -d guards) live in shrc;
+# fish and nushell keep equivalent PATH setup in their own configs.
+#
+# Machine-local additions go in ~/.env.local, sourced right after this
+# file, e.g.:  PATH=$HOME/scripts.work:$PATH
+# (optionally mirrored for systemd user services with:
+#  ln -s ~/.env.local ~/.config/environment.d/60-env.local.conf)
+GOPATH=$HOME
+PATH=$HOME/scripts:$HOME/bin:$PATH
+PATH=$PATH:$HOME/.cargo/bin:$HOME/.local/bin

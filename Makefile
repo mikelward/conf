@@ -112,6 +112,7 @@ test-all: \
 	test-fish \
 	test-nu \
 	test-lint \
+	test-env \
 	test-gitconfig \
 	test-makefile \
 	test-amethyst \
@@ -219,6 +220,11 @@ $(CACHE)/test-lint.stamp: shrc shrc.vcs profile exitrc \
 	@bash -n gittemplates/hooks/pre-commit
 	@touch $@
 test-lint: $(CACHE)/test-lint.stamp
+
+$(CACHE)/test-env.stamp: env config/environment.d/50-env.conf env_test.sh shrc_test_lib.sh | $(CACHE)
+	@sh env_test.sh
+	@touch $@
+test-env: $(CACHE)/test-env.stamp
 
 $(CACHE)/test-gitconfig.stamp: gitconfig gitconfig_test.sh shrc_test_lib.sh | $(CACHE)
 	@sh gitconfig_test.sh
