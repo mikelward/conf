@@ -52,6 +52,9 @@ repos — no COPR/backport needed, unlike Hyprland):
     autotiling                            # dynamic (dwindle-style) tiling
     xdg-desktop-portal-wlr xdg-desktop-portal-gtk
     waybar fuzzel swaync                  # bar, launcher, notifications (shared)
+                                          #   (swaync is packaged as
+                                          #   sway-notification-center on apt,
+                                          #   SwayNotificationCenter on Fedora)
     power-profiles-daemon
     pipewire wireplumber pavucontrol      # volume/sound
     brightnessctl                         # backlight keys + idle dimming
