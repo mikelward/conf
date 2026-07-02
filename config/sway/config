@@ -313,19 +313,16 @@ include ~/.config/sway/config.local
 ################################################################################
 # Wallpaper via swaybg (plain, static). theme.sh swaps it for
 # wallpaper-light.jpg / wallpaper-dark.jpg at the theme boundary if you keep
-# per-mode images (shared with the Hyprland build).
+# per-mode images (shared with the Hyprland build). Plain exec: a $wallpaper
+# override takes effect at the next login (exec_always would stack swaybg
+# instances on every reload; run `pkill swaybg; swaybg -i <file> -m fill`
+# to apply one immediately).
 exec test -f $wallpaper && swaybg -i $wallpaper -m fill
 
 # Idle/lock is Sway-specific (swayidle + swaylock; Hyprland uses hypridle +
-# hyprlock). Mirrors hypridle.conf: dim -> lock -> screen off -> suspend.
-# `lock` responds to `loginctl lock-session`, and before-sleep locks first so
-# you always wake to a lock screen. On a desktop with no backlight the dim
-# step is a harmless no-op.
-exec swayidle -w \
-    timeout $idle_dim_timeout 'brightnessctl -s set 10%' resume 'brightnessctl -r' \
-    timeout $idle_lock_timeout 'loginctl lock-session' \
-    timeout $idle_dpms_timeout 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' \
-    timeout $idle_suspend_timeout '$idle_suspend_cmd' \
-    before-sleep 'loginctl lock-session' \
-    after-resume 'swaymsg "output * power on"' \
-    lock '$lock'
+# hyprlock). idle.sh mirrors hypridle.conf: dim -> lock -> screen off ->
+# suspend, responds to `loginctl lock-session`, and locks before sleep so
+# you always wake to a lock screen. exec_always (not exec) + the script's
+# own pkill make `swaymsg reload` restart swayidle, so editing the $idle_*
+# overrides in config.local takes effect on reload, not just at login.
+exec_always ~/.config/sway/scripts/idle.sh $idle_dim_timeout $idle_lock_timeout $idle_dpms_timeout $idle_suspend_timeout '$idle_suspend_cmd'

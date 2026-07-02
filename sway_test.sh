@@ -13,6 +13,7 @@
 
 _sway="$_srcdir/config/sway/config"
 _lid="$_srcdir/config/sway/scripts/lid.sh"
+_idle="$_srcdir/config/sway/scripts/idle.sh"
 _tmpl="$_srcdir/config/sway/config.local.template"
 _ex_laptop="$_srcdir/config/sway/config.local.example-laptop"
 _ex_desktop="$_srcdir/config/sway/config.local.example-desktop"
@@ -25,14 +26,15 @@ _theme="$_srcdir/config/hypr/scripts/theme.sh"
 # Files exist. Without these guards every assert_contains below would trivially
 # match against empty strings.
 ################################################################################
-for _f in "$_sway" "$_lid" "$_tmpl" "$_ex_laptop" "$_ex_desktop" \
+for _f in "$_sway" "$_lid" "$_idle" "$_tmpl" "$_ex_laptop" "$_ex_desktop" \
           "$_readme" "$_swaylock" "$_waybar_cfg" "$_theme"; do
     start_test "exists: ${_f##*/config/}"
     assert_true test -f "$_f"
 done
 
-start_test "lid.sh is executable"
+start_test "lid.sh and idle.sh are executable"
 assert_true test -x "$_lid"
+assert_true test -x "$_idle"
 
 _sway_body=$(cat "$_sway")
 
@@ -227,7 +229,7 @@ assert_contains "include ~/.config/sway/config.local" "$_sway_body"
 
 _include_line=$(grep -n '^include ~/.config/sway/config.local' "$_sway" | cut -d: -f1)
 _touchpad_line=$(grep -n '^input type:touchpad {' "$_sway" | cut -d: -f1)
-_idle_line=$(grep -n '^exec swayidle' "$_sway" | cut -d: -f1)
+_idle_line=$(grep -n '^exec_always ~/.config/sway/scripts/idle.sh' "$_sway" | cut -d: -f1)
 _bg_line=$(grep -n 'swaybg -i \$wallpaper' "$_sway" | cut -d: -f1)
 
 start_test "include comes after the input blocks"
@@ -252,11 +254,27 @@ assert_contains "set \$idle_dpms_timeout 330" "$_sway_body"
 assert_contains "set \$idle_suspend_timeout 1800" "$_sway_body"
 assert_contains "set \$idle_suspend_cmd systemctl suspend" "$_sway_body"
 
-start_test "swayidle dims, locks, blanks, and locks before sleep"
-assert_contains "brightnessctl -s set 10%" "$_sway_body"
-assert_contains "loginctl lock-session" "$_sway_body"
-assert_contains "output * power off" "$_sway_body"
-assert_contains "before-sleep 'loginctl lock-session'" "$_sway_body"
+# exec_always (not plain exec) so `swaymsg reload` restarts swayidle and
+# picks up config.local's $idle_* overrides; the script pkills the old
+# instance so reloads don't stack daemons.
+_idle_body=$(cat "$_idle")
+start_test "swayidle starts via exec_always so reload applies idle overrides"
+assert_contains "exec_always ~/.config/sway/scripts/idle.sh \$idle_dim_timeout \$idle_lock_timeout \$idle_dpms_timeout \$idle_suspend_timeout '\$idle_suspend_cmd'" "$_sway_body"
+_plain_idle=$(grep -E '^exec (swayidle|~/.config/sway/scripts/idle.sh)' "$_sway" || true)
+assert_equal "" "$_plain_idle"
+
+start_test "idle.sh replaces any previous swayidle instance"
+assert_contains "pkill -x swayidle" "$_idle_body"
+
+start_test "idle.sh dims, locks, blanks, suspends, and locks before sleep"
+assert_contains "brightnessctl -s set 10%" "$_idle_body"
+assert_contains "loginctl lock-session" "$_idle_body"
+assert_contains "output * power off" "$_idle_body"
+assert_contains "before-sleep 'loginctl lock-session'" "$_idle_body"
+assert_contains "\"\$suspend_cmd\"" "$_idle_body"
+
+start_test "idle.sh parses as shell"
+assert_true sh -n "$_idle"
 
 ################################################################################
 # Autostart: theming daemon (shared -- it launches waybar + swaync), swaybg,
