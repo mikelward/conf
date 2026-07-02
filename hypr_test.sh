@@ -351,6 +351,29 @@ start_test "monitor catch-all rule auto-places outputs"
 assert_contains "monitor = , preferred, auto, auto" "$_hypr_body"
 
 ################################################################################
+# Per-machine overrides: hyprland.conf.local (same file name + .local, like
+# sway's config.local) is sourced LAST so it overrides the shared defaults.
+################################################################################
+start_test "per-machine hyprland.conf.local is sourced"
+assert_contains "source = ~/.config/hypr/hyprland.conf.local" "$_hypr_body"
+
+start_test "the source line comes after the window rules (overrides win)"
+_source_line=$(grep -n '^source = ~/.config/hypr/hyprland.conf.local' "$_hypr" | cut -d: -f1)
+_last_rule_line=$(grep -n '^windowrule' "$_hypr" | tail -n1 | cut -d: -f1)
+assert_true test "$_source_line" -gt "$_last_rule_line"
+
+start_test "the override template ships (setup-hypr seeds it)"
+_hypr_tmpl="$_srcdir/config/hypr/hyprland.conf.local.template"
+assert_true test -f "$_hypr_tmpl"
+_hypr_tmpl_body=$(cat "$_hypr_tmpl")
+start_test "template offers the unbound SUPER+D/S launchers"
+assert_contains "bind = \$mainMod, D, exec" "$_hypr_tmpl_body"
+assert_contains "bind = \$mainMod, S, exec" "$_hypr_tmpl_body"
+start_test "template has no active (uncommented) directives"
+_tmpl_active=$(grep -Ev '^[[:space:]]*(#|$)' "$_hypr_tmpl" || true)
+assert_equal "" "$_tmpl_active"
+
+################################################################################
 # Zero placeholders anywhere in the shipped desktop config.
 ################################################################################
 start_test "no REPLACE-ME placeholders in any shipped config file"

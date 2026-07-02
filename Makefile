@@ -245,6 +245,7 @@ test-amethyst: $(CACHE)/test-amethyst.stamp
 # Depends on every config file it validates so editing any of them re-runs.
 $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
                           config/hypr/hyprland.conf \
+                          config/hypr/hyprland.conf.local.template \
                           config/hypr/hypridle.conf \
                           config/hypr/hyprlock.conf \
                           config/hypr/scripts/toggle-layout.sh \

@@ -10,6 +10,7 @@ Files (all live under this repo's `config/` and map to `~/.config/`):
 | Path | Purpose |
 |------|---------|
 | `config/hypr/hyprland.conf` | Compositor: layout, input, keybinds, look |
+| `config/hypr/hyprland.conf.local.template` | Per-machine override template (copied to `~/.config/hypr/hyprland.conf.local` by setup-hypr) |
 | `config/hypr/hypridle.conf` | Idle: dim → lock → DPMS off → suspend |
 | `config/hypr/hyprlock.conf` | Lock screen |
 | `config/hypr/scripts/toggle-layout.sh` | Master ⇄ dwindle quick toggle |
@@ -130,7 +131,8 @@ letters.
 
 > Launchers run the helper scripts of the same name from the scripts repo (on
 > `$PATH`). `SUPER + D` (code) and `SUPER + S` (secureshell) are **left unbound**
-> — those scripts aren't in this repo; add them in a local override.
+> — those scripts aren't in this repo; add them in
+> `~/.config/hypr/hyprland.conf.local`.
 
 ### Master/stack + layouts (Krohnkite equivalents)
 
@@ -199,7 +201,16 @@ Focus follows the mouse (`follow_mouse = 1`) — no click needed to focus.
   backlight the dim step is simply a no-op.
 - **Multi-machine.** The same configs run everywhere unchanged — input
   handedness and the laptop's internal panel are auto-detected, and Hyprland
-  auto-places monitors. Nothing is machine-specific.
+  auto-places monitors. Nothing is machine-specific. When a machine *does*
+  need something of its own (pinned monitor layout, the unbound `SUPER+D`/
+  `SUPER+S` launchers, device tweaks), it goes in
+  **`~/.config/hypr/hyprland.conf.local`** — the same file name plus a
+  `.local` suffix, like `.shrc.local` and sway's `config.local` — which
+  `hyprland.conf` sources last so it overrides the shared defaults.
+  `setup-hypr` seeds it from `hyprland.conf.local.template`; it is
+  machine-local and never committed. (Hyprland shows a config-error notice
+  if a sourced file is missing, so create it — via setup-hypr or `touch` —
+  rather than deleting it.)
 
 ## Placeholders
 
@@ -212,8 +223,9 @@ anywhere. Two things are optional:
    `lid.sh` handles clamshell, so single-monitor, docked, undocked, and
    dual-head all work with no config. For a *specific* layout (fixed
    positions/scale/order), add per-output `monitor = <name>, <mode>, <pos>,
-   <scale>` lines to `hyprland.conf` — find names with `hyprctl monitors` /
-   `wlr-randr`. (If you prefer a hotplug daemon with declarative profiles,
+   <scale>` lines to `~/.config/hypr/hyprland.conf.local` — find names with
+   `hyprctl monitors` / `wlr-randr`. (If you prefer a hotplug daemon with
+   declarative profiles,
    kanshi still works; it was dropped from the defaults to keep zero
    placeholders.)
 

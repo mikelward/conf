@@ -1,0 +1,37 @@
+# Per-machine Hyprland overrides -- ~/.config/hypr/hyprland.conf.local
+#
+# TEMPLATE: setup-hypr copies this to hyprland.conf.local (same file name
+# plus a .local suffix, like .shrc.local and sway's config.local) if it
+# doesn't exist yet. hyprland.conf sources it LAST, so anything here
+# overrides the shared defaults; the file itself is machine-local and never
+# committed to the conf repo.
+#
+# Everything below is commented out: an EMPTY hyprland.conf.local is valid --
+# the shared config auto-detects input devices, auto-places monitors, and
+# auto-detects the laptop panel, so most machines need nothing here at all.
+
+# --- Pinned monitor arrangement (names: hyprctl monitors) -------------------
+# Only needed for a SPECIFIC layout; the shared catch-all rule auto-places
+# every output left-to-right at its preferred mode.
+# monitor = DP-1, 2560x1440@144, 0x0, 1
+# monitor = eDP-1, 1920x1080, 2560x0, 1
+
+# --- Extra launchers ---------------------------------------------------------
+# SUPER+D (code) and SUPER+S (secureshell) are left unbound in the shared
+# config because those helper scripts aren't in the repo:
+# bind = $mainMod, D, exec, code
+# bind = $mainMod, S, exec, secureshell
+
+# --- Input tweaks -------------------------------------------------------------
+# Per-device overrides on top of apply-input.sh's automatic classification
+# (names: hyprctl devices).
+# device {
+#     name = logitech-mx-master-3
+#     scroll_factor = 2.0
+# }
+# Touchpad scroll speed for this machine only:
+# input {
+#     touchpad {
+#         scroll_factor = 1.5
+#     }
+# }
