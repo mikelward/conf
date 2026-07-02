@@ -1795,47 +1795,6 @@ short_hostname() {
     printf '%s' "$hostname"
 }
 
-# ssh to remote host using current shell's config
-mssh() {
-    case $SHELL in
-    *bash) bssh "$@";;
-    *zsh)  zssh "$@";;
-    *)     ssh  "$@";;
-    esac
-}
-
-# ssh to remote host using this host's bashrc
-bssh() {
-    # allow passing a single block of options to ssh/scp, e.g. -4
-    # TODO: handle more options
-    local ssh_opts=
-    case "$1" in -*)
-        ssh_opts="$1"
-        shift
-        ;;
-    esac
-    ssh $ssh_opts -t "$@" '
-export BASHRC=$(mktemp /tmp/bash.XXXXXXXX);
-scp '"$ssh_opts"' '"$HOSTNAME:${BASHRC:-.bashrc}"' "$BASHRC";
-exec bash --rcfile "$BASHRC" -i'
-}
-
-# ssh to remote host using this host's zshrc
-zssh() {
-    # allow passing a single block of options to ssh/scp, e.g. -4
-    # TODO: handle more options
-    local ssh_opts=
-    case "$1" in -*)
-        ssh_opts="$1"
-        shift
-        ;;
-    esac
-    ssh $ssh_opts -t "$@" '
-export ZDOTDIR=$(mktemp -d /tmp/zsh.XXXXXXXX);
-scp '"$ssh_opts"' '"$HOSTNAME:${ZDOTDIR:-$HOME}/.zshrc"' "$ZDOTDIR";
-exec zsh -i'
-}
-
 # print the string that should be used as the xterm title.
 # Format: "<hostname> <session> <project-or-pwd>", matching the session tag
 # used in host_info. Each leading part is omitted when empty.

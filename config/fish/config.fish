@@ -1661,47 +1661,6 @@ if is_interactive
         string replace --regex '^'$USERNAME'-' '' (string match --regex '^[^.]*' $HOSTNAME)
     end
 
-    # ssh to remote host using current shell's config
-    function mssh
-        switch $SHELL
-        case '*bash'; bssh $ssh_opts $argv
-        case '*zsh';  zssh $ssh_opts $argv
-        case '*';     ssh  $ssh_opts $argv
-        end
-    end
-
-    # ssh to remote host using this host's bashrc
-    function bssh
-        # pass options to ssh/scp
-        for arg in $argv
-            string match --regex '^-' $arg; or break
-            string match --regex '^--$' $arg; and break
-            set --append ssh_opts $arg
-            set --erase argv[1]
-        end
-        set -q BASHRC; or set BASHRC .bashrc
-        ssh $ssh_opts -t $argv '
-export BASHRC "$(mktemp /tmp/bash.XXXXXXXX)";
-scp $ssh_opts "'$HOSTNAME:$BASHRC'" "$BASHRC";
-exec bash --rcfile "$BASHRC" -i'
-    end
-
-    # ssh to remote host using this host's zshrc
-    function zssh
-        # pass options to ssh/scp
-        for arg in $argv
-            string match --regex '^-' $arg; or break
-            string match --regex '^--$' $arg; and break
-            set --append ssh_opts $arg
-            set --erase argv[1]
-        end
-        set -q ZDOTDIR; or set ZDOTDIR $HOME
-        ssh $ssh_opts -t $argv '
-export ZDOTDIR "$(mktemp -d /tmp/zsh.XXXXXXXX)";
-scp $ssh_opts "'$HOSTNAME:$ZDOTDIR/.zshrc'" "$ZDOTDIR";
-exec zsh -i'
-    end
-
     # print the string that should be used as the xterm title.
     # Format: "<hostname> <session> <project-or-pwd>", matching the session
     # tag used in host_info. Each leading part is omitted when empty.
