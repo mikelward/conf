@@ -41,6 +41,13 @@
 # Touchpad speed:
 # input type:touchpad pointer_accel 0.3
 
+# --- Touchpad gestures (Sway >= 1.8) ---------------------------------------
+# 3-finger horizontal swipe cycles workspaces, matching the Hyprland build.
+# bindgesture needs Sway >= 1.8, and Ubuntu 22.04 / Debian 12 still ship 1.7
+# (where it raises a config error at startup), so enable it per host:
+# bindgesture swipe:3:right workspace next_on_output
+# bindgesture swipe:3:left workspace prev_on_output
+
 # --- Extra keybinds --------------------------------------------------------
 # Launchers left unbound in the shared config (scripts not in the repo):
 # bindsym $mod+d exec code
