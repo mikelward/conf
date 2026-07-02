@@ -1,0 +1,5 @@
+# uwsm Hyprland-specific environment (~/.config/uwsm/env-hyprland).
+#
+# Sourced after env when the uwsm compositor is Hyprland. HYPR* variables
+# belong here per the uwsm docs. Opt-in — see config/hypr/README.md.
+export HYPRCURSOR_SIZE=24
