@@ -110,6 +110,10 @@ What belongs in `config.local` (everything optional):
   re-bind `bindswitch ... lid.sh close <name>`.
 - **Per-device input tweaks** — e.g. `input "<identifier>" scroll_factor 1.5`.
   Scroll speed is deliberately not set globally.
+- **Touchpad gestures** — the 3-finger-swipe workspace binds (matching the
+  Hyprland gesture) are in the template, commented: `bindgesture` needs
+  Sway ≥ 1.8, and Ubuntu 22.04 / Debian 12 still ship 1.7 where it would
+  raise a config error at startup, so the base config can't carry them.
 - **Extra launchers** — SUPER+D / SUPER+S are left unbound (their helper
   scripts aren't in the repo), same as the Hyprland build.
 
@@ -159,7 +163,10 @@ dim the backlight at 2.5 min, lock at 5 min, screen off at 5.5 min, suspend
 at 30 min; locking before sleep so you wake to a lock screen. All four
 timeouts and the suspend command are `$idle_*` variables, overridable
 per-host (desktops set `$idle_suspend_cmd true` and never sleep; the dim
-step is a no-op without a backlight). swayidle is started through
+step is a no-op without a backlight). Screen blanking uses `output * dpms`
+rather than the newer `power` spelling so it also works on the Sway 1.7
+still shipped by Ubuntu 22.04 / Debian 12 (on newer Sway, dpms is a
+deprecated-but-working alias). swayidle is started through
 `scripts/idle.sh` via `exec_always`, which replaces the previous instance —
 so editing the `$idle_*` overrides in `config.local` takes effect on
 `swaymsg reload`, no re-login needed. (`$wallpaper` is the one override that

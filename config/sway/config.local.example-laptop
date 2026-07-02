@@ -11,6 +11,12 @@
 # HiDPI internal panel.
 # output eDP-1 scale 2
 
+# Touchpad gestures: 3-finger swipe cycles workspaces. Needs Sway >= 1.8
+# (kept out of the shared base config because Ubuntu 22.04 / Debian 12 ship
+# 1.7, where bindgesture raises a config error).
+# bindgesture swipe:3:right workspace next_on_output
+# bindgesture swipe:3:left workspace prev_on_output
+
 # The lid handler auto-detects the internal panel (eDP-1 here), and the
 # shared idle defaults (dim 2.5m, lock 5m, screen off 5.5m, suspend 30m) suit
 # a laptop -- nothing else to override.

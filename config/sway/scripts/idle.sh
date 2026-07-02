@@ -23,6 +23,11 @@ suspend_cmd="${5:-systemctl suspend}"
 # Same lock command as the SUPER+L bind: never stack swaylock instances.
 lock_cmd='pidof swaylock || swaylock -f'
 
+# `output * dpms` rather than `output * power`: power only exists on Sway
+# >= 1.8, while dpms works everywhere (native on 1.7, a deprecated-but-
+# functional alias on newer versions -- expect a deprecation note in the
+# log there).
+
 # Replace any previous instance (reload-safe; -x matches the exact name so
 # this script's own process is not a candidate).
 pkill -x swayidle 2>/dev/null
@@ -30,8 +35,8 @@ pkill -x swayidle 2>/dev/null
 exec swayidle -w \
     timeout "$dim" 'brightnessctl -s set 10%' resume 'brightnessctl -r' \
     timeout "$lock_after" 'loginctl lock-session' \
-    timeout "$dpms" 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' \
+    timeout "$dpms" 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' \
     timeout "$suspend_after" "$suspend_cmd" \
     before-sleep 'loginctl lock-session' \
-    after-resume 'swaymsg "output * power on"' \
+    after-resume 'swaymsg "output * dpms on"' \
     lock "$lock_cmd"

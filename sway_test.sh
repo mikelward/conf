@@ -172,9 +172,14 @@ start_test "move-to-workspace binds present (10)"
 _wsmove=$(grep -c '^bindsym \$mod+Shift+[0-9] move container to workspace number' "$_sway")
 assert_true test "$_wsmove" -eq 10
 
-start_test "3-finger swipe cycles workspaces"
-assert_contains "bindgesture swipe:3:right workspace next_on_output" "$_sway_body"
-assert_contains "bindgesture swipe:3:left workspace prev_on_output" "$_sway_body"
+# bindgesture needs Sway >= 1.8 and errors on the 1.7 still shipped by
+# Ubuntu 22.04 / Debian 12, so the base config must not use it; the swipe
+# binds are offered per-host in the template instead.
+start_test "no bindgesture in the base config (Sway 1.7 compatible)"
+_gesture_active=$(grep -E '^[[:space:]]*bindgesture' "$_sway" || true)
+assert_equal "" "$_gesture_active"
+start_test "3-finger swipe workspace binds offered in the template"
+assert_contains "bindgesture swipe:3:right workspace next_on_output" "$(cat "$_tmpl")"
 
 ################################################################################
 # Media/brightness keys work while locked; the calculator must not.
@@ -269,9 +274,15 @@ assert_contains "pkill -x swayidle" "$_idle_body"
 start_test "idle.sh dims, locks, blanks, suspends, and locks before sleep"
 assert_contains "brightnessctl -s set 10%" "$_idle_body"
 assert_contains "loginctl lock-session" "$_idle_body"
-assert_contains "output * power off" "$_idle_body"
+assert_contains "output * dpms off" "$_idle_body"
 assert_contains "before-sleep 'loginctl lock-session'" "$_idle_body"
 assert_contains "\"\$suspend_cmd\"" "$_idle_body"
+
+# `output * power` only exists on Sway >= 1.8; dpms works on 1.7 and is a
+# functional (deprecated) alias on newer versions.
+start_test "idle.sh blanks via dpms, not the 1.8-only power command"
+_power_cmd=$(grep 'swaymsg "output \* power' "$_idle" || true)
+assert_equal "" "$_power_cmd"
 
 start_test "idle.sh parses as shell"
 assert_true sh -n "$_idle"
