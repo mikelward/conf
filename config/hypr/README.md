@@ -206,7 +206,9 @@ Focus follows the mouse (`follow_mouse = 1`) — no click needed to focus.
   `SUPER+S` launchers, device tweaks), it goes in
   **`~/.config/hypr/hyprland.conf.local`** — the same file name plus a
   `.local` suffix, like `.shrc.local` and sway's `config.local` — which
-  `hyprland.conf` sources last so it overrides the shared defaults.
+  `hyprland.conf` sources last so it overrides the shared defaults. (Binds
+  are the exception: Hyprland runs every bind on a key in order, so rebind
+  an already-bound key by `unbind`ing it first — see the template.)
   `setup-hypr` seeds it from `hyprland.conf.local.template`; it is
   machine-local and never committed. (Hyprland shows a config-error notice
   if a sourced file is missing, so create it — via setup-hypr or `touch` —
