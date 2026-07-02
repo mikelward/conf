@@ -1,0 +1,16 @@
+# Per-host Sway overrides -- EXAMPLE: a dual-head desktop workstation. Copy
+# to ~/.config/sway/config.local and adjust the output names
+# (swaymsg -t get_outputs); see config.local.template for all the knobs.
+
+# Never suspend on idle -- a desktop should keep serving ssh/builds. The
+# dim/lock/screen-off timers still apply (dim is a no-op without a
+# backlight).
+set $idle_suspend_cmd true
+
+# Pin the monitor order (left to right). Delete if auto-placement is fine.
+# output DP-1 pos 0 0
+# output DP-2 pos 2560 0
+
+# A desktop mouse that needs a faster wheel (identifier via
+# `swaymsg -t get_inputs`).
+# input "1133:45091:MX_Master_3" scroll_factor 1.5
