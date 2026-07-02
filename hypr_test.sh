@@ -19,6 +19,7 @@ _lid="$_srcdir/config/hypr/scripts/lid.sh"
 _theme="$_srcdir/config/hypr/scripts/theme.sh"
 _themed="$_srcdir/config/hypr/scripts/theme-daemon.sh"
 _fuzzellaunch="$_srcdir/config/hypr/scripts/launch-fuzzel.sh"
+_run="$_srcdir/config/hypr/scripts/run.sh"
 _powermenu="$_srcdir/config/waybar/scripts/power-menu.sh"
 _apply="$_srcdir/config/hypr/scripts/apply-input.sh"
 _waybar_cfg="$_srcdir/config/waybar/config.jsonc"
@@ -32,7 +33,7 @@ _swaync_css="$_srcdir/config/swaync/style.css"
 # match against empty strings.
 ################################################################################
 for _f in "$_hypr" "$_idle" "$_lock" "$_toggle" "$_layoutcycle" "$_lid" \
-          "$_theme" "$_themed" "$_fuzzellaunch" "$_apply" "$_powermenu" \
+          "$_theme" "$_themed" "$_fuzzellaunch" "$_run" "$_apply" "$_powermenu" \
           "$_waybar_cfg" "$_waybar_css" \
           "$_srcdir/config/waybar/common.css" \
           "$_srcdir/config/waybar/colors-dark.css" \
@@ -201,11 +202,12 @@ assert_contains "BackSpace, killactive" "$_hypr_body"
 start_test "terminal launcher bound to SUPER+T"
 assert_contains "\$mainMod, T, exec" "$_hypr_body"
 
-# SUPER+<letter> launchers from xbindkeysrc.
+# SUPER+<letter> launchers from xbindkeysrc. Each goes through the $run
+# wrapper: the helper scripts only exist on the login-shell PATH.
 for _app in browser1 browser2 browser3 home irc google-calendar google-chat \
             google-meet notepad bluetooth-connect remote-desktop youtube-music; do
     start_test "app-launch bind present: $_app"
-    assert_contains "exec, $_app" "$_hypr_body"
+    assert_contains "exec, \$run $_app" "$_hypr_body"
 done
 
 start_test "add/remove master moved off letters onto = / -"
@@ -214,7 +216,7 @@ assert_contains "\$mainMod, minus, layoutmsg, removemaster" "$_hypr_body"
 start_test "float is on SUPER+Shift+F and SUPER+Insert (F is browser2)"
 assert_contains "\$mainMod SHIFT, F, togglefloating" "$_hypr_body"
 assert_contains "\$mainMod, Insert, togglefloating" "$_hypr_body"
-assert_contains "\$mainMod, F, exec, browser2" "$_hypr_body"
+assert_contains "\$mainMod, F, exec, \$run browser2" "$_hypr_body"
 start_test "resize submap entered with SUPER+Shift+R"
 assert_contains "\$mainMod SHIFT, R, submap, resize" "$_hypr_body"
 start_test "no true-fullscreen (state 0) bind"
@@ -465,7 +467,7 @@ assert_equal "" "$_old_rules"
 # Time-based light/dark theming.
 ################################################################################
 start_test "launcher bind uses the theme-aware fuzzel wrapper"
-assert_contains "Space, exec, ~/.config/hypr/scripts/launch-fuzzel.sh" "$_hypr_body"
+assert_contains "Space, exec, \$run ~/.config/hypr/scripts/launch-fuzzel.sh" "$_hypr_body"
 
 start_test "file-manager bind (SUPER+E) launches yazi"
 assert_contains "\$mainMod, E, exec" "$_hypr_body"
@@ -523,15 +525,24 @@ assert_not_contains "HYPRCURSOR_SIZE" "$_uwsm_env"
 ################################################################################
 # Session PATH: the launcher binds run helper scripts (browser1, home, irc,
 # ...) from the scripts repo, but no session flavour runs .profile/.shrc, so
-# hyprland.conf must put the user script dirs on PATH itself (keeping the
-# inherited system $PATH). That env line is the ONLY PATH mechanism: setting
-# PATH in uwsm/env too would re-prepend ~/scripts ahead of the ~/scripts.*
-# override dirs named in hyprland.conf.local.
+# those binds go through the $run wrapper, which sources .shrc -- the single
+# source of truth for PATH (add_path dirs plus the ~/scripts.* override
+# globs). Neither hyprland.conf nor uwsm/env may set PATH from a duplicated
+# directory list.
 ################################################################################
-start_test "hyprland.conf puts the user script dirs on PATH for the binds"
-assert_contains 'env = PATH,$HOME/scripts:$HOME/bin:$PATH' "$_hypr_body"
+start_test "run.sh sources .shrc and execs its arguments"
+_run_body=$(cat "$_run")
+assert_contains '. "$HOME/.shrc"' "$_run_body"
+assert_contains 'exec "$@"' "$_run_body"
 
-start_test "uwsm env leaves PATH to hyprland.conf (scripts.local precedence)"
+start_test "hyprland.conf defines \$run pointing at run.sh"
+assert_contains "\$run = ~/.config/hypr/scripts/run.sh" "$_hypr_body"
+
+start_test "fuzzel launches through \$run so its app list sees user scripts"
+assert_contains "exec, \$run ~/.config/hypr/scripts/launch-fuzzel.sh" "$_hypr_body"
+
+start_test "no duplicated PATH directory list in hyprland.conf or uwsm env"
+assert_not_contains "env = PATH" "$_hypr_body"
 assert_not_contains "export PATH" "$_uwsm_env"
 
 test_summary "hypr_test"
