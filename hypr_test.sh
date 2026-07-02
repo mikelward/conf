@@ -427,6 +427,145 @@ _tmpl_active=$(grep -Ev '^[[:space:]]*(#|$)' "$_hypr_tmpl" || true)
 assert_equal "" "$_tmpl_active"
 
 ################################################################################
+# Lua config (Hyprland 0.55+). Since 0.55 hyprlang is deprecated in favour of
+# Lua: hyprland.lua is the primary config and takes precedence, while the
+# frozen hyprland.conf remains for machines on <= 0.54. Key behaviour must
+# stay in parity between the two.
+################################################################################
+_hypr_lua="$_srcdir/config/hypr/hyprland.lua"
+_hypr_lua_tmpl="$_srcdir/config/hypr/hyprland-local.lua.template"
+
+start_test "hyprland.lua and its local template exist"
+assert_true test -f "$_hypr_lua"
+assert_true test -f "$_hypr_lua_tmpl"
+
+if command -v lua >/dev/null 2>&1; then
+    start_test "hyprland.lua compiles as Lua"
+    assert_true lua -e "assert(loadfile('$_hypr_lua'))"
+    start_test "hyprland-local.lua.template compiles as Lua"
+    assert_true lua -e "assert(loadfile('$_hypr_lua_tmpl'))"
+else
+    echo "SKIP: Lua compile checks (lua not installed)"
+fi
+
+_hypr_lua_body=$(cat "$_hypr_lua")
+
+start_test "lua: keyboard is US Dvorak with Compose on Caps"
+assert_contains 'kb_variant = "dvorak"' "$_hypr_lua_body"
+assert_contains 'kb_options = "compose:caps"' "$_hypr_lua_body"
+
+start_test "lua: no gaps, master layout, new windows join the stack"
+assert_contains "gaps_in  = 0" "$_hypr_lua_body"
+assert_contains "gaps_out = 0" "$_hypr_lua_body"
+assert_contains 'layout = "master"' "$_hypr_lua_body"
+assert_contains 'new_status = "slave"' "$_hypr_lua_body"
+
+start_test "lua: inactive windows are dimmed"
+assert_contains "dim_inactive = true" "$_hypr_lua_body"
+
+start_test "lua: monitor catch-all auto-places outputs"
+assert_contains 'output   = ""' "$_hypr_lua_body"
+assert_contains '"preferred"' "$_hypr_lua_body"
+
+start_test "lua: 3-finger horizontal swipe cycles workspaces"
+assert_contains "fingers = 3" "$_hypr_lua_body"
+assert_contains '"horizontal"' "$_hypr_lua_body"
+
+start_test "lua: workspaces 1-10 switch and move silently (no follow)"
+assert_contains "for i = 1, 10 do" "$_hypr_lua_body"
+assert_contains "follow = false" "$_hypr_lua_body"
+
+start_test "lua: exit/logout and close binds present"
+assert_contains "hl.dsp.exit()" "$_hypr_lua_body"
+assert_contains "hl.dsp.window.close()" "$_hypr_lua_body"
+
+start_test "lua: monocle is maximize (keeps gaps/bar), no true fullscreen"
+assert_contains '"maximized"' "$_hypr_lua_body"
+assert_not_contains 'mode = "fullscreen"' "$_hypr_lua_body"
+
+start_test "lua: resize submap with reset binds"
+assert_contains 'hl.define_submap("resize"' "$_hypr_lua_body"
+assert_contains 'hl.dsp.submap("reset")' "$_hypr_lua_body"
+
+start_test "lua: lid switch binds invoke lid.sh"
+assert_contains "switch:on:Lid Switch" "$_hypr_lua_body"
+assert_contains "switch:off:Lid Switch" "$_hypr_lua_body"
+assert_contains "lid.sh close" "$_hypr_lua_body"
+assert_contains "lid.sh open" "$_hypr_lua_body"
+
+start_test "lua: window rules float the transient dialogs"
+assert_contains '"^(pavucontrol)$"' "$_hypr_lua_body"
+assert_contains '"^(nm-connection-editor)$"' "$_hypr_lua_body"
+assert_contains '"^(Open File)$"' "$_hypr_lua_body"
+assert_contains '"^(Save File)$"' "$_hypr_lua_body"
+assert_contains "float = true" "$_hypr_lua_body"
+
+start_test "lua: autostart parity (theme daemon owns waybar/swaync)"
+assert_contains 'hl.on("hyprland.start"' "$_hypr_lua_body"
+assert_contains "theme-daemon.sh" "$_hypr_lua_body"
+assert_contains "apply-input.sh" "$_hypr_lua_body"
+assert_contains "hypridle" "$_hypr_lua_body"
+assert_contains "swww-daemon" "$_hypr_lua_body"
+assert_contains "nm-applet" "$_hypr_lua_body"
+
+start_test "lua: binds are registered in hyprbinds for local rebinds"
+assert_contains "hyprbinds = {}" "$_hypr_lua_body"
+assert_contains "hyprbinds[keys] = hl.bind(keys, action, flags)" "$_hypr_lua_body"
+
+start_test "lua: per-machine hyprland-local.lua is required last via pcall"
+assert_contains 'pcall(require, "hyprland-local")' "$_hypr_lua_body"
+
+_hypr_lua_tmpl_body=$(cat "$_hypr_lua_tmpl")
+start_test "lua template documents hyprbinds rebinding and has no active code"
+assert_contains "hyprbinds" "$_hypr_lua_tmpl_body"
+assert_contains "set_enabled(false)" "$_hypr_lua_tmpl_body"
+_lua_tmpl_active=$(grep -Ev '^[[:space:]]*(--|$)' "$_hypr_lua_tmpl" || true)
+assert_equal "" "$_lua_tmpl_active"
+
+################################################################################
+# Scripts drive Hyprland 0.55 via `hyprctl eval` (Lua) with a legacy
+# `hyprctl keyword`/plain-dispatch fallback for <= 0.54, probed with
+# `hyprctl eval 'return true'`.
+################################################################################
+for _f in "$_lid" "$_toggle" "$_layoutcycle" "$_apply"; do
+    start_test "0.55 probe present: ${_f##*/}"
+    assert_contains "hyprctl eval 'return true'" "$(cat "$_f")"
+done
+
+start_test "lid.sh disables/enables the panel via hl.monitor with keyword fallback"
+_lid_body=$(cat "$_lid")
+assert_contains "hl.monitor" "$_lid_body"
+assert_contains "disabled = true" "$_lid_body"
+assert_contains "hyprctl keyword monitor" "$_lid_body"
+
+start_test "toggle-layout.sh sets the layout via hl.config with keyword fallback"
+_toggle_body=$(cat "$_toggle")
+assert_contains "hl.config({ general = { layout" "$_toggle_body"
+assert_contains "keyword general:layout" "$_toggle_body"
+assert_contains "getoption general.layout" "$_toggle_body"
+assert_contains "getoption general:layout" "$_toggle_body"
+
+start_test "layout-cycle.sh dispatches layout messages via hl.dsp.layout with fallback"
+_layoutcycle_body=$(cat "$_layoutcycle")
+assert_contains "hl.dsp.layout" "$_layoutcycle_body"
+assert_contains "dispatch layoutmsg" "$_layoutcycle_body"
+
+start_test "theme.sh sets border colours via hl.config with keyword fallback"
+assert_contains "col = { active_border" "$_theme_body"
+assert_contains "keyword general:col.active_border" "$_theme_body"
+
+start_test "apply-input.sh configures mice via hl.device with keyword fallback"
+_apply_body=$(cat "$_apply")
+assert_contains "hl.device" "$_apply_body"
+assert_contains "left_handed = true" "$_apply_body"
+assert_contains "keyword \"device[\$name]:left_handed\"" "$_apply_body"
+
+start_test "power-menu.sh logout dispatches hl.dsp.exit() with plain-exit fallback"
+_powermenu_body=$(cat "$_powermenu")
+assert_contains "hl.dsp.exit()" "$_powermenu_body"
+assert_contains "hyprctl dispatch exit" "$_powermenu_body"
+
+################################################################################
 # Zero placeholders anywhere in the shipped desktop config.
 ################################################################################
 start_test "no REPLACE-ME placeholders in any shipped config file"

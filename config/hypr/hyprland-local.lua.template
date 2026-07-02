@@ -1,0 +1,50 @@
+-- Per-machine Hyprland overrides -- ~/.config/hypr/hyprland-local.lua
+--
+-- TEMPLATE: setup-hypr copies this to hyprland-local.lua (the Lua
+-- counterpart of hyprland.conf.local, like .shrc.local and sway's
+-- config.local) if it doesn't exist yet. hyprland.lua requires it LAST, so
+-- hl.config values and monitor rules here override the shared defaults; the
+-- file itself is machine-local and never committed to the conf repo.
+-- Because the require is wrapped in pcall, the file is optional -- but
+-- setup-hypr seeds it anyway so this documentation is at hand.
+--
+-- Everything below is commented out: an EMPTY hyprland-local.lua is valid --
+-- the shared config auto-detects input devices, auto-places monitors, and
+-- auto-detects the laptop panel, so most machines need nothing here at all.
+
+-- --- Pinned monitor arrangement (names: hyprctl monitors) -------------------
+-- Only needed for a SPECIFIC layout; the shared catch-all rule auto-places
+-- every output left-to-right at its preferred mode.
+-- hl.monitor({ output = "DP-1",  mode = "2560x1440@144", position = "0x0",    scale = "1" })
+-- hl.monitor({ output = "eDP-1", mode = "1920x1080",     position = "2560x0", scale = "1" })
+
+-- --- Extra launchers ---------------------------------------------------------
+-- SUPER+D (code) and SUPER+S (secureshell) are left unbound in the shared
+-- config because those helper scripts aren't in the repo:
+-- hl.bind("SUPER + D", hl.dsp.exec_cmd("code"))
+-- hl.bind("SUPER + S", hl.dsp.exec_cmd("secureshell"))
+
+-- --- Rebinding an already-bound key ------------------------------------------
+-- Hyprland executes ALL binds on a key in order (a later bind adds, it does
+-- not replace). The shared config registers every bind's handle in the
+-- global `hyprbinds` table keyed by its key string, so disable the shared
+-- bind first (the Lua replacement for hyprlang's `unbind`), e.g. to change
+-- SUPER+E's file manager on this machine only:
+-- hyprbinds["SUPER + E"]:set_enabled(false)
+-- hl.bind("SUPER + E", hl.dsp.exec_cmd("nautilus"))
+
+-- --- Input tweaks -------------------------------------------------------------
+-- Per-device overrides on top of apply-input.sh's automatic classification
+-- (names: hyprctl devices).
+-- hl.device({
+--     name = "logitech-mx-master-3",
+--     scroll_factor = 2.0,
+-- })
+-- Touchpad scroll speed for this machine only:
+-- hl.config({
+--     input = {
+--         touchpad = {
+--             scroll_factor = 1.5,
+--         },
+--     },
+-- })
