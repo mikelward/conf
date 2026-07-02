@@ -42,7 +42,8 @@ for _f in "$_hypr" "$_idle" "$_lock" "$_toggle" "$_layoutcycle" "$_lid" \
           "$_srcdir/config/swaync/colors-light.css" \
           "$_srcdir/config/swaync/style-light.css" \
           "$_fuzzel" "$_srcdir/config/fuzzel/fuzzel-light.ini" \
-          "$_swaync_cfg" "$_swaync_css"; do
+          "$_swaync_cfg" "$_swaync_css" \
+          "$_srcdir/config/uwsm/env" "$_srcdir/config/uwsm/env-hyprland"; do
     start_test "exists: ${_f##*/config/}"
     assert_true test -f "$_f"
 done
@@ -404,5 +405,28 @@ assert_contains "theme.sh\" mode" "$_fuzzellaunch_body"
 start_test "theme.sh writes the mode marker and fuzzel launcher reads it"
 assert_contains "theme-mode" "$_theme_body"
 assert_contains "theme-mode" "$_fuzzellaunch_body"
+
+################################################################################
+# Optional uwsm session: env files are shell-sourced, so `export` form with
+# metacharacter values quoted; HYPR* vars live in env-hyprland.
+################################################################################
+_uwsm_env=$(cat "$_srcdir/config/uwsm/env")
+_uwsm_env_hypr=$(cat "$_srcdir/config/uwsm/env-hyprland")
+
+start_test "uwsm env files parse as shell"
+assert_true sh -n "$_srcdir/config/uwsm/env"
+assert_true sh -n "$_srcdir/config/uwsm/env-hyprland"
+
+start_test "uwsm env uses export form"
+assert_contains "export XCURSOR_SIZE=24" "$_uwsm_env"
+
+start_test "uwsm env quotes the QT_QPA_PLATFORM metacharacter value"
+assert_contains "export QT_QPA_PLATFORM='wayland;xcb'" "$_uwsm_env"
+# An unquoted value would end the statement at the ';'.
+assert_not_contains "export QT_QPA_PLATFORM=wayland;xcb" "$_uwsm_env"
+
+start_test "HYPR* vars live in env-hyprland, not env"
+assert_contains "export HYPRCURSOR_SIZE=24" "$_uwsm_env_hypr"
+assert_not_contains "HYPRCURSOR_SIZE" "$_uwsm_env"
 
 test_summary "hypr_test"

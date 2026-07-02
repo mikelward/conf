@@ -23,6 +23,7 @@ Files (all live under this repo's `config/` and map to `~/.config/`):
 | `config/waybar/{style,style-light,common,colors-dark,colors-light}.css` | Bar theme (dark + light) |
 | `config/fuzzel/fuzzel.ini` | Launcher (SUPER+Space) |
 | `config/swaync/config.json` + `{style,style-light,common,colors-*}.css` | Notifications + control center (dark + light) |
+| `config/uwsm/env` + `env-hyprland` | Environment for the optional uwsm session |
 
 ## Installing
 
@@ -71,22 +72,30 @@ logout). `setup` installs it, but enabling it is **opt-in** — it changes
 nothing about how you currently log in until you select the uwsm session:
 
 - **Display manager:** with uwsm installed, pick the "Hyprland (uwsm-managed)"
-  session entry at the greeter instead of plain "Hyprland".
+  session at the greeter. If your uwsm/Hyprland packages didn't add that entry,
+  create `/usr/share/wayland-sessions/hyprland-uwsm.desktop` (needs root):
+
+      [Desktop Entry]
+      Name=Hyprland (uwsm-managed)
+      Comment=Hyprland launched via uwsm (systemd user session)
+      Exec=uwsm start hyprland.desktop
+      Type=Application
+      DesktopNames=Hyprland
+
 - **TTY:** `uwsm start hyprland.desktop` (instead of `exec Hyprland`; the
   argument is the Hyprland desktop-entry ID, or use `uwsm start -- Hyprland`).
+
+The Wayland/toolkit environment is provided for uwsm in **`config/uwsm/env`**
+(general vars) and **`config/uwsm/env-hyprland`** (`HYPR*` vars). uwsm sources
+these as shell, so they use `export KEY=VAL` with values quoted where needed
+(e.g. `export QT_QPA_PLATFORM='wayland;xcb'`). They mirror the `env = ` lines in
+`hyprland.conf` — which still apply to a plain, non-uwsm session — so both
+launch paths get the same environment (edit both if you change a var).
 
 > **gdm3 / PAM note:** on some setups (e.g. a work laptop on gdm3) the
 > session/PAM wiring is picky — verify login, keyring unlock, and `hyprlock`
 > auth still work *before* making uwsm your default. Nothing changes until you
 > choose the uwsm session, so it's safe to try and switch back.
-
-For full systemd env propagation you can later *convert* the `env = KEY,VAL`
-lines from `hyprland.conf` into shell `export KEY=VAL` lines in
-`~/.config/uwsm/env` (put the `HYPR*` ones in `~/.config/uwsm/env-hyprland`).
-uwsm sources those files as shell, so the format must be `export …`, not the
-`env =` syntax — and **quote any value with shell metacharacters**, e.g.
-`env = QT_QPA_PLATFORM,wayland;xcb` becomes `export QT_QPA_PLATFORM='wayland;xcb'`
-(unquoted, the `;` would end the command). A follow-up, not required to try uwsm.
 
 ## Keybindings
 
