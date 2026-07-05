@@ -205,6 +205,28 @@ shell="$_saved_shell"
 unset FNM_MARKER FNM_PATH
 rm -rf "$_fnm_bin"
 
+# With FNM_PATH unset, the default install dir honours $XDG_DATA_HOME,
+# so a standalone install under $XDG_DATA_HOME/fnm is found and loaded.
+start_test "setup_fnm honours XDG_DATA_HOME for the default dir"
+_xdg=$(mktemp -d)
+mkdir -p "$_xdg/fnm"
+cat > "$_xdg/fnm/fnm" << 'SCRIPT'
+#!/bin/sh
+echo 'export FNM_MARKER=xdg'
+SCRIPT
+chmod +x "$_xdg/fnm/fnm"
+unset FNM_PATH
+XDG_DATA_HOME="$_xdg"
+PATH="$_saved_path"   # fnm reachable only via the derived dir
+shell=bash
+setup_fnm
+assert_true inpath "$_xdg/fnm"
+assert_equal "xdg" "${FNM_MARKER:-}"
+PATH="$_saved_path"
+shell="$_saved_shell"
+unset XDG_DATA_HOME FNM_MARKER
+rm -rf "$_xdg"
+
 start_test "setup_fnm loads env and adds dir when fnm present"
 _fnm_home=$(mktemp -d)
 _fnm_bin=$(mktemp -d)

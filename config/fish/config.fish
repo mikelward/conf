@@ -688,7 +688,8 @@ end
 # but a Homebrew/Cargo/release install puts fnm elsewhere on PATH and
 # creates the data dir via `fnm env`, so don't gate the eval on the dir.
 # Mirrors setup_fnm in shrc and config.nu.
-set -l _fnm_path (test -n "$FNM_PATH"; and echo $FNM_PATH; or echo $HOME/.local/share/fnm)
+set -l _fnm_data (test -n "$XDG_DATA_HOME"; and echo $XDG_DATA_HOME; or echo $HOME/.local/share)
+set -l _fnm_path (test -n "$FNM_PATH"; and echo $FNM_PATH; or echo $_fnm_data/fnm)
 test -d $_fnm_path; and add_path $_fnm_path start
 if have_command fnm
     fnm env --shell fish | source

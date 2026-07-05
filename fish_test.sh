@@ -872,6 +872,16 @@ start_test "fish skips fnm env when fnm not installed"
 result="$(HOME=$_testdir/fakehome FNM_PATH=/nonexistent-fnm-xyz run_with_timeout 15 fish --no-config -c "source $_config; echo done:\$FNM_MARKER" 2>/dev/null)"
 assert_equal "done:" "$result"
 
+# With FNM_PATH unset, the default install dir honours $XDG_DATA_HOME,
+# so a standalone install under $XDG_DATA_HOME/fnm is found and loaded.
+start_test "fish honours XDG_DATA_HOME for the default fnm dir"
+_xdg=$(mktemp -d)
+mkdir -p "$_xdg/fnm"
+cp "$_fnm_bin/fnm" "$_xdg/fnm/fnm"
+result="$(HOME=$_testdir/fakehome XDG_DATA_HOME=$_xdg run_with_timeout 15 fish --no-config -c "source $_config; echo \$FNM_MARKER" 2>/dev/null)"
+assert_equal "loaded" "$result"
+rm -rf "$_xdg"
+
 rm -rf "$_fnm_home" "$_fnm_bin"
 
 ###############
