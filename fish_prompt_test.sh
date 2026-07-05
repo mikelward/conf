@@ -302,6 +302,23 @@ result="$(_fish_run '
 ')"
 assert_equal "%1 sleep 30 &" "$result"
 
+start_test "fish job_info filters the preprompt's own command-vcs jobs"
+# The preprompt shells out to the vcs binary via `command vcs`
+# (maybe_background_fetch, and the vcs wrapper). Those can surface as
+# job entries and would leak the preprompt's own plumbing into the job
+# list. job_info drops the `command vcs` prefix; a user's deliberate
+# `vcs foo &` renders as `vcs foo` and survives. Parity with shrc.
+result="$(_fish_run '
+    function jobs
+        printf "%s\t%s\t%s\t%s\t%s\n" Job Group CPU State Command
+        printf "%s\t%s\t%s\t%s\t%s\n" 1 - 0% running "command vcs auto-fetch &"
+        printf "%s\t%s\t%s\t%s\t%s\n" 2 - 0% stopped vi
+        printf "%s\t%s\t%s\t%s\t%s\n" 3 - 0% running "vcs log &"
+    end
+    job_info
+')"
+assert_equal "%2 vi %3 vcs log &" "$result"
+
 ###############
 # TEST: fish_last_error (parity with bash_last_error / nushell last-job-info)
 # Exercises the real fish_last_error by setting last_job_status directly.

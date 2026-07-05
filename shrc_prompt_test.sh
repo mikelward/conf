@@ -461,6 +461,35 @@ jobs() {
 result="$(job_info)"
 assert_equal "%1 vi %3 cat" "$result"
 
+###############
+# The preprompt shells out to the vcs binary via `command vcs`
+# (maybe_background_fetch's `command vcs auto-fetch`, and the vcs()
+# wrapper's `command vcs "$@"`). Under bash's job control those can
+# surface in `jobs` and leak the preprompt's own plumbing into the
+# job list it prints. job_info filters the `command vcs` prefix so
+# they don't show up. A user's deliberately backgrounded `vcs foo &`
+# renders as `vcs foo` (not `command vcs`) and must survive the filter.
+start_test "job_info filters the preprompt's own command-vcs jobs"
+
+jobs() {
+    printf '[1]+  Running                 command vcs auto-fetch > /dev/null 2>&1 &\n'
+    printf '[2]-  Done                    command vcs "$@"\n'
+    printf '[3]+  Stopped                 vi\n'
+    printf '[4]-  Running                 vcs log &\n'
+}
+result="$(job_info)"
+assert_equal "%3 vi %4 vcs log &" "$result"
+
+###############
+start_test "job_info returns nothing when only command-vcs jobs are present"
+
+jobs() {
+    printf '[1]+  Running                 command vcs auto-fetch > /dev/null 2>&1 &\n'
+    printf '[2]-  Done                    command vcs "$@"\n'
+}
+result="$(job_info)"
+assert_equal "" "$result"
+
 unset -f jobs
 
 ###############

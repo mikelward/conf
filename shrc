@@ -1621,11 +1621,24 @@ on_dev_host() {
 
 # print information about all shell jobs on a single line.
 # intended to be used in the preprompt
+#
+# The preprompt itself shells out to the vcs binary via `command vcs`
+# (maybe_background_fetch's `command vcs auto-fetch`, and the vcs()
+# wrapper's `command vcs "$@"` behind unmerged / prompt-info). The
+# binary detaches a background fetch, and under bash's job control
+# those `command vcs ...` invocations can surface in `jobs` as
+# transient entries -- so the preprompt's own plumbing "leaks" into
+# the job list it prints (zsh doesn't track them the same way). A
+# deliberate `vcs foo &` a user backgrounds shows up as `vcs foo`, not
+# `command vcs`, so filtering the `command vcs` prefix drops the
+# preprompt's noise without hiding a real backgrounded vcs job. This
+# is the same class of filtering as the `(pwd now:` pushd noise below.
 job_info() {
         local _out
         _out="$(jobs |
             sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /' |
             grep -v '(pwd now:' |
+            grep -vE '^%[0-9][0-9]* command vcs( |$)' |
             tr '\n' ' ')"
         _out="${_out% }"
         test -n "$_out" && printf '%s\n' "$_out"

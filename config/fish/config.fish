@@ -1487,6 +1487,13 @@ if is_interactive
             set -l _fields (string split \t -- $_line)
             # Skip the header row (its first field is "Job", not numeric).
             string match --quiet --regex '^[0-9]+$' -- $_fields[1]; or continue
+            # Skip the preprompt's own vcs plumbing. maybe_background_fetch
+            # and the vcs wrapper shell out via `command vcs ...`; those can
+            # surface as transient job entries and would otherwise leak into
+            # the job list the preprompt prints. A user's deliberate `vcs foo
+            # &` shows as `vcs foo`, not `command vcs`, so it survives. Parity
+            # with shrc's job_info `command vcs` filter.
+            string match --quiet --regex '^command vcs( |$)' -- $_fields[-1]; and continue
             set --append _entries "%$_fields[1] $_fields[-1]"
         end
         if test (count $_entries) -gt 0
