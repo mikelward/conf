@@ -1097,14 +1097,19 @@ setup_fnm() {
     # elsewhere on PATH and treats this only as the data dir, which
     # `fnm env` creates on demand -- so don't gate the eval on the dir.
     test -d "$fnm_path" && add_path "$fnm_path" start
-    have_command fnm || return 1
     # fnm env needs the target shell; it speaks bash/zsh/fish, so map
     # everything that isn't zsh (ksh, dash, plain sh) onto bash syntax,
     # which is POSIX-compatible for the export lines fnm emits.
-    case "$shell" in
-        zsh) eval "$(fnm env --shell zsh)" ;;
-        *)   eval "$(fnm env --shell bash)" ;;
-    esac
+    if have_command fnm; then
+        case "$shell" in
+            zsh) eval "$(fnm env --shell zsh)" ;;
+            *)   eval "$(fnm env --shell bash)" ;;
+        esac
+    fi
+    # Always succeed: a missing fnm isn't an error, and a bare call under
+    # `set -e` (scripts source shrc that way) must not abort the rest of
+    # shrc's setup. Mirrors how add_path neutralizes its own failures.
+    return 0
 }
 
 ##################################

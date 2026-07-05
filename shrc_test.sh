@@ -166,9 +166,25 @@ _fnm_scrub=$(mktemp -d)   # empty dir on PATH: fnm not found
 PATH="$_fnm_scrub"
 FNM_PATH="/nonexistent-fnm-dir-xyz"
 setup_fnm
-_rc=$?
-assert_equal "1" "$_rc"
 assert_equal "$_fnm_scrub" "$PATH"
+assert_equal "" "${FNM_MARKER:-}"
+PATH="$_saved_path"
+unset FNM_PATH
+rm -rf "$_fnm_scrub"
+
+# setup_fnm is called bare in shrc's env-setup, so it must always succeed
+# -- a non-zero return would abort the rest of setup when a script sources
+# shrc under `set -e`.
+start_test "setup_fnm is errexit-safe when fnm absent"
+_fnm_scrub=$(mktemp -d)
+result=$(
+    set -e
+    PATH="$_fnm_scrub"
+    FNM_PATH="/nonexistent-fnm-dir-xyz"
+    setup_fnm
+    echo survived
+)
+assert_equal "survived" "$result"
 PATH="$_saved_path"
 unset FNM_PATH
 rm -rf "$_fnm_scrub"
@@ -178,9 +194,8 @@ _fnm_home=$(mktemp -d)
 PATH="$_fnm_home"   # scrub PATH so fnm is not found
 FNM_PATH="$_fnm_home"
 setup_fnm
-_rc=$?
-assert_equal "1" "$_rc"
 assert_true inpath "$_fnm_home"
+assert_equal "" "${FNM_MARKER:-}"
 PATH="$_saved_path"
 unset FNM_PATH
 rm -rf "$_fnm_home"
