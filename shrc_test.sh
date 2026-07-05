@@ -156,6 +156,54 @@ rm -rf "$_tmpdir"
 PATH="$_saved_path"
 
 ###############
+# SETUP_FNM (Fast Node Manager integration)
+
+_saved_path="$PATH"
+_saved_shell="$shell"
+
+start_test "setup_fnm no-op when FNM_PATH missing"
+FNM_PATH="/nonexistent-fnm-dir-xyz"
+setup_fnm
+_rc=$?
+assert_equal "1" "$_rc"
+assert_equal "$_saved_path" "$PATH"
+unset FNM_PATH
+
+start_test "setup_fnm adds dir to PATH but skips eval when fnm absent"
+_fnm_home=$(mktemp -d)
+PATH="$_fnm_home"   # scrub PATH so fnm is not found
+FNM_PATH="$_fnm_home"
+setup_fnm
+_rc=$?
+assert_equal "1" "$_rc"
+assert_true inpath "$_fnm_home"
+PATH="$_saved_path"
+unset FNM_PATH
+rm -rf "$_fnm_home"
+
+start_test "setup_fnm loads env and adds dir when fnm present"
+_fnm_home=$(mktemp -d)
+_fnm_bin=$(mktemp -d)
+cat > "$_fnm_bin/fnm" << 'SCRIPT'
+#!/bin/sh
+echo 'export FNM_MARKER=loaded'
+SCRIPT
+chmod +x "$_fnm_bin/fnm"
+PATH="$_fnm_bin:$_saved_path"
+FNM_PATH="$_fnm_home"
+shell=bash
+setup_fnm
+assert_equal "loaded" "${FNM_MARKER:-}"
+
+start_test "setup_fnm puts FNM_PATH on PATH when fnm present"
+assert_true inpath "$_fnm_home"
+
+PATH="$_saved_path"
+shell="$_saved_shell"
+unset FNM_MARKER FNM_PATH
+rm -rf "$_fnm_home" "$_fnm_bin"
+
+###############
 # UTILITY FUNCTIONS
 
 start_test "puts single arg"

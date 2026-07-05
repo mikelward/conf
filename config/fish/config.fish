@@ -682,6 +682,17 @@ if have_command brew
     brew shellenv | source
 end
 
+# fnm (Fast Node Manager): put its dir on PATH, then load its shell
+# environment. FNM_PATH honours an existing override, else defaults to
+# fnm's XDG install location. Mirrors setup_fnm in shrc and config.nu.
+set -l _fnm_path (test -n "$FNM_PATH"; and echo $FNM_PATH; or echo $HOME/.local/share/fnm)
+if test -d $_fnm_path
+    add_path $_fnm_path start
+    if have_command fnm
+        fnm env --shell fish | source
+    end
+end
+
 # set HISTORY_FILE for log_history
 set --export HISTORY_FILE $HOME/.history
 

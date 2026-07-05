@@ -922,6 +922,21 @@ for dir in $_opt_bins {
 add-path "/sbin" "end"
 add-path "/usr/sbin" "end"
 
+# fnm (Fast Node Manager): put its dir on PATH, then load its shell
+# environment. FNM_PATH honours an existing override, else defaults to
+# fnm's XDG install location. fnm speaks bash/zsh/fish but not nushell,
+# so pull its vars via `--json` and add the node shims dir ourselves.
+# Mirrors setup_fnm in shrc and config/fish/config.fish.
+def --env setup-fnm [] {
+    let fnm_path = ($env.FNM_PATH? | default ([$env.HOME ".local" "share" "fnm"] | path join))
+    if not ($fnm_path | path exists) { return }
+    add-path $fnm_path "start"
+    if not (have-command fnm) { return }
+    ^fnm env --json | from json | load-env
+    add-path ([$env.FNM_MULTISHELL_PATH "bin"] | path join) "start"
+}
+setup-fnm
+
 $env.LESS = "-R"
 let _lessopen_script = ([$env.HOME "scripts" "lessopen"] | path join)
 if ($_lessopen_script | path exists) {

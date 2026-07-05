@@ -844,6 +844,31 @@ result="$(HOME=$_testdir/fakehome TERM=linux run_with_timeout 15 fish --no-confi
 assert_equal "ExFxxxxxCxxxxx" "$result"
 
 ###############
+# TEST: fnm (Fast Node Manager) integration
+
+_fnm_home=$(mktemp -d)
+_fnm_bin=$(mktemp -d)
+cat > "$_fnm_bin/fnm" << 'SCRIPT'
+#!/bin/sh
+echo 'set -gx FNM_MARKER loaded'
+SCRIPT
+chmod +x "$_fnm_bin/fnm"
+
+start_test "fish loads fnm env when fnm present"
+result="$(HOME=$_testdir/fakehome FNM_PATH=$_fnm_home PATH="$_fnm_bin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config; echo \$FNM_MARKER" 2>/dev/null)"
+assert_equal "loaded" "$result"
+
+start_test "fish adds FNM_PATH dir to PATH when fnm present"
+result="$(HOME=$_testdir/fakehome FNM_PATH=$_fnm_home PATH="$_fnm_bin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config; contains $_fnm_home \$PATH; and echo yes" 2>/dev/null)"
+assert_equal "yes" "$result"
+
+start_test "fish skips fnm env when FNM_PATH dir is missing"
+result="$(HOME=$_testdir/fakehome FNM_PATH=/nonexistent-fnm-xyz PATH="$_fnm_bin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config; echo done:\$FNM_MARKER" 2>/dev/null)"
+assert_equal "done:" "$result"
+
+rm -rf "$_fnm_home" "$_fnm_bin"
+
+###############
 # TEST: rd cds to project root
 
 _rd_proj="$_testdir/rd_proj"
