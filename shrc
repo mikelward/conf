@@ -1083,6 +1083,25 @@ jc() { journalctl --no-hostname "$@"; }
 sc() { systemctl "$@"; }
 uc() { systemctl --user "$@"; }
 
+# fnm (Fast Node Manager): put its dir on PATH, then load its shell
+# environment (node shims, FNM_* vars). FNM_PATH defaults to fnm's XDG
+# install location but honours an existing override. Kept as a function
+# (rather than inline like brew) so the test harness can exercise it.
+# Mirrors config/fish/config.fish and config/nushell/config.nu.
+setup_fnm() {
+    local fnm_path="${FNM_PATH:-$HOME/.local/share/fnm}"
+    test -d "$fnm_path" || return 1
+    add_path "$fnm_path" start
+    have_command fnm || return 1
+    # fnm env needs the target shell; it speaks bash/zsh/fish, so map
+    # everything that isn't zsh (ksh, dash, plain sh) onto bash syntax,
+    # which is POSIX-compatible for the export lines fnm emits.
+    case "$shell" in
+        zsh) eval "$(fnm env --shell zsh)" ;;
+        *)   eval "$(fnm env --shell bash)" ;;
+    esac
+}
+
 ##################################
 # ENVIRONMENT SETUP FOR ALL SHELLS
 # Set $PATH early in case other stuff here needs it.
@@ -1139,6 +1158,7 @@ done
 if have_command brew; then
     eval "$(brew shellenv)"
 fi
+setup_fnm
 
 # set HISTORY_FILE for log_history
 HISTORY_FILE=$HOME/.history

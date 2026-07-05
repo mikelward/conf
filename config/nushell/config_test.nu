@@ -88,6 +88,27 @@ def --env fake-tmux-on-path [] {
     $env.PATH = ([$bin] ++ $env.PATH)
 }
 
+# Stub `fnm` on PATH so setup-fnm can be exercised without a real fnm.
+# The fake ignores its arguments and prints the JSON that `fnm env --json`
+# would emit: a FNM_MULTISHELL_PATH (whose bin/ subdir exists so add-path
+# keeps it) and a FNM_MARKER we can assert on. A fnm "home" dir is created
+# too and returned so callers can point $env.FNM_PATH at it. Plain
+# (non-$"") strings so the shell heredoc isn't treated as nu interpolation.
+def --env fake-fnm-on-path []: nothing -> string {
+    let root = (mktemp -d)
+    let bin = ($root | path join "bin")
+    let home = ($root | path join "home")
+    let multishell = ($root | path join "multishell")
+    mkdir $bin
+    mkdir $home
+    mkdir ($multishell | path join "bin")
+    let json = ('{"FNM_MARKER":"loaded","FNM_MULTISHELL_PATH":"' + $multishell + '"}')
+    ("#!/bin/sh\ncat <<'EOF'\n" + $json + "\nEOF\n") | save -f ($bin | path join "fnm")
+    ^chmod +x ($bin | path join "fnm")
+    $env.PATH = ([$bin] ++ $env.PATH)
+    $home
+}
+
 let results = [
     ###############
     # jd/hd/gd & mjd/mhd/mgd run autosession after the underlying command
@@ -318,6 +339,32 @@ let results = [
         $env.PATH = ["/var" "/usr/bin"]
         add-path "/var"
         assert equal $env.PATH ["/var" "/usr/bin"]
+    })
+
+    ###############
+    # setup-fnm (Fast Node Manager integration)
+    (run-test "nu setup-fnm loads env and adds shims when fnm present" {
+        let home = (fake-fnm-on-path)
+        $env.FNM_PATH = $home
+        setup-fnm
+        assert equal $env.FNM_MARKER "loaded"
+        assert ($env.PATH | any {|it| $it == $home })
+        assert ($env.PATH | any {|it| $it == ($env.FNM_MULTISHELL_PATH | path join "bin") })
+    })
+    (run-test "nu setup-fnm no-op when FNM_PATH dir missing" {
+        $env.FNM_PATH = "/nonexistent-fnm-dir-xyz"
+        let before = $env.PATH
+        setup-fnm
+        assert equal $env.PATH $before
+        assert (not ("FNM_MARKER" in $env))
+    })
+    (run-test "nu setup-fnm adds dir but skips env load when fnm absent" {
+        let home = (mktemp -d)
+        $env.FNM_PATH = $home
+        $env.PATH = [(mktemp -d)]   # scrub PATH so fnm is not resolvable
+        setup-fnm
+        assert ($env.PATH | any {|it| $it == $home })
+        assert (not ("FNM_MARKER" in $env))
     })
 
     ###############
