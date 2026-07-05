@@ -1089,7 +1089,9 @@ uc() { systemctl --user "$@"; }
 # (rather than inline like brew) so the test harness can exercise it.
 # Mirrors config/fish/config.fish and config/nushell/config.nu.
 setup_fnm() {
-    local fnm_path="${FNM_PATH:-$HOME/.local/share/fnm}"
+    # Default to fnm's XDG install location, following $XDG_DATA_HOME when
+    # set (the standalone installer honours it); FNM_PATH overrides.
+    local fnm_path="${FNM_PATH:-${XDG_DATA_HOME:-$HOME/.local/share}/fnm}"
     # The standalone installer drops the fnm binary in this dir, so add
     # it to PATH when present. A Homebrew/Cargo/release install puts fnm
     # elsewhere on PATH and treats this only as the data dir, which

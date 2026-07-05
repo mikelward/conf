@@ -103,7 +103,9 @@ def --env fake-fnm-on-path []: nothing -> string {
     mkdir $home
     mkdir ($multishell | path join "bin")
     let json = ('{"FNM_MARKER":"loaded","FNM_MULTISHELL_PATH":"' + $multishell + '"}')
-    ("#!/bin/sh\ncat <<'EOF'\n" + $json + "\nEOF\n") | save -f ($bin | path join "fnm")
+    # `echo` is a /bin/sh builtin, so this works even when a caller scrubs
+    # PATH to make fnm unreachable elsewhere.
+    ("#!/bin/sh\necho '" + $json + "'\n") | save -f ($bin | path join "fnm")
     ^chmod +x ($bin | path join "fnm")
     $env.PATH = ([$bin] ++ $env.PATH)
     $home
@@ -358,6 +360,24 @@ let results = [
         $env.FNM_PATH = "/nonexistent-fnm-dir-xyz"
         setup-fnm
         assert equal $env.FNM_MARKER "loaded"
+    })
+    # With FNM_PATH unset, the default install dir honours $XDG_DATA_HOME,
+    # so a standalone install under $XDG_DATA_HOME/fnm is found and loaded.
+    (run-test "nu setup-fnm honours XDG_DATA_HOME for the default dir" {
+        let root = (mktemp -d)
+        let xdg_fnm = ($root | path join "fnm")
+        let multishell = ($root | path join "multishell")
+        mkdir $xdg_fnm
+        mkdir ($multishell | path join "bin")
+        let json = ('{"FNM_MARKER":"xdg","FNM_MULTISHELL_PATH":"' + $multishell + '"}')
+        ("#!/bin/sh\necho '" + $json + "'\n") | save -f ($xdg_fnm | path join "fnm")
+        ^chmod +x ($xdg_fnm | path join "fnm")
+        $env.PATH = [(mktemp -d)]   # fnm reachable only via the derived dir
+        hide-env --ignore-errors FNM_PATH
+        $env.XDG_DATA_HOME = $root
+        setup-fnm
+        assert equal $env.FNM_MARKER "xdg"
+        assert ($env.PATH | any {|it| $it == $xdg_fnm })
     })
     (run-test "nu setup-fnm no-op when dir missing and fnm absent" {
         $env.PATH = [(mktemp -d)]   # scrub PATH so fnm is not resolvable
