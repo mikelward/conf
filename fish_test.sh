@@ -878,9 +878,36 @@ start_test "fish honours XDG_DATA_HOME for the default fnm dir"
 _xdg=$(mktemp -d)
 mkdir -p "$_xdg/fnm"
 cp "$_fnm_bin/fnm" "$_xdg/fnm/fnm"
-result="$(HOME=$_testdir/fakehome XDG_DATA_HOME=$_xdg run_with_timeout 15 fish --no-config -c "source $_config; echo \$FNM_MARKER" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome FNM_PATH= XDG_DATA_HOME=$_xdg run_with_timeout 15 fish --no-config -c "source $_config; echo \$FNM_MARKER" 2>/dev/null)"
 assert_equal "loaded" "$result"
 rm -rf "$_xdg"
+
+# Legacy ~/.fnm takes precedence over $XDG_DATA_HOME, matching the
+# installer's directory-resolution order. Both dirs hold an fnm emitting
+# a distinct marker, so the asserted value proves ~/.fnm won.
+start_test "fish prefers legacy ~/.fnm over XDG_DATA_HOME"
+_legacy_home=$(mktemp -d)
+_legacy_xdg=$(mktemp -d)
+mkdir -p "$_legacy_home/.fnm" "$_legacy_xdg/fnm"
+printf '#!/bin/sh\necho %s\n' "'set -gx FNM_MARKER legacy'" > "$_legacy_home/.fnm/fnm"
+printf '#!/bin/sh\necho %s\n' "'set -gx FNM_MARKER xdg'" > "$_legacy_xdg/fnm/fnm"
+chmod +x "$_legacy_home/.fnm/fnm" "$_legacy_xdg/fnm/fnm"
+result="$(HOME=$_legacy_home FNM_PATH= XDG_DATA_HOME=$_legacy_xdg run_with_timeout 15 fish --no-config -c "source $_config; echo \$FNM_MARKER" 2>/dev/null)"
+assert_equal "legacy" "$result"
+rm -rf "$_legacy_home" "$_legacy_xdg"
+
+# On macOS (Darwin), with no override/legacy/XDG dir, fnm installs under
+# ~/Library/Application Support/fnm. A fake `uname` forces the Darwin path.
+start_test "fish uses the macOS Application Support dir on Darwin"
+_mac_home=$(mktemp -d)
+_mac_unamebin=$(mktemp -d)
+mkdir -p "$_mac_home/Library/Application Support/fnm"
+cp "$_fnm_bin/fnm" "$_mac_home/Library/Application Support/fnm/fnm"
+printf '#!/bin/sh\necho Darwin\n' > "$_mac_unamebin/uname"
+chmod +x "$_mac_unamebin/uname"
+result="$(HOME=$_mac_home FNM_PATH= XDG_DATA_HOME= PATH="$_mac_unamebin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config; echo \$FNM_MARKER" 2>/dev/null)"
+assert_equal "loaded" "$result"
+rm -rf "$_mac_home" "$_mac_unamebin"
 
 rm -rf "$_fnm_home" "$_fnm_bin"
 
