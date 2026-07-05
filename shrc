@@ -1090,8 +1090,11 @@ uc() { systemctl --user "$@"; }
 # Mirrors config/fish/config.fish and config/nushell/config.nu.
 setup_fnm() {
     local fnm_path="${FNM_PATH:-$HOME/.local/share/fnm}"
-    test -d "$fnm_path" || return 1
-    add_path "$fnm_path" start
+    # The standalone installer drops the fnm binary in this dir, so add
+    # it to PATH when present. A Homebrew/Cargo/release install puts fnm
+    # elsewhere on PATH and treats this only as the data dir, which
+    # `fnm env` creates on demand -- so don't gate the eval on the dir.
+    test -d "$fnm_path" && add_path "$fnm_path" start
     have_command fnm || return 1
     # fnm env needs the target shell; it speaks bash/zsh/fish, so map
     # everything that isn't zsh (ksh, dash, plain sh) onto bash syntax,

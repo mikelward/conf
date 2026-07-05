@@ -862,8 +862,14 @@ start_test "fish adds FNM_PATH dir to PATH when fnm present"
 result="$(HOME=$_testdir/fakehome FNM_PATH=$_fnm_home PATH="$_fnm_bin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config; contains $_fnm_home \$PATH; and echo yes" 2>/dev/null)"
 assert_equal "yes" "$result"
 
-start_test "fish skips fnm env when FNM_PATH dir is missing"
+# A brew/cargo/release install has fnm on PATH but no data dir yet; the
+# eval must still run (fnm env creates the dir) rather than being skipped.
+start_test "fish runs fnm env when fnm present even if FNM_PATH dir missing"
 result="$(HOME=$_testdir/fakehome FNM_PATH=/nonexistent-fnm-xyz PATH="$_fnm_bin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config; echo done:\$FNM_MARKER" 2>/dev/null)"
+assert_equal "done:loaded" "$result"
+
+start_test "fish skips fnm env when fnm not installed"
+result="$(HOME=$_testdir/fakehome FNM_PATH=/nonexistent-fnm-xyz run_with_timeout 15 fish --no-config -c "source $_config; echo done:\$FNM_MARKER" 2>/dev/null)"
 assert_equal "done:" "$result"
 
 rm -rf "$_fnm_home" "$_fnm_bin"
