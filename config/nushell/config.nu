@@ -939,7 +939,13 @@ def --env setup-fnm [] {
     if ($fnm_path | path exists) { add-path $fnm_path "start" }
     if not (have-command fnm) { return }
     ^fnm env --json | from json | load-env
-    add-path ([$env.FNM_MULTISHELL_PATH "bin"] | path join) "start"
+    # fnm links the node shims into $FNM_MULTISHELL_PATH/bin lazily (on the
+    # first default/`fnm use`), so that dir may not exist yet at startup.
+    # bash/zsh/fish get it unconditionally from `fnm env`; match that here
+    # rather than using add-path, which would drop the not-yet-created dir
+    # and leave node/npm off PATH until the next reload.
+    let shim = ([$env.FNM_MULTISHELL_PATH "bin"] | path join)
+    $env.PATH = ([$shim] ++ ($env.PATH | where {|p| $p != $shim }))
 }
 setup-fnm
 

@@ -353,6 +353,25 @@ let results = [
         assert ($env.PATH | any {|it| $it == $home })
         assert ($env.PATH | any {|it| $it == ($env.FNM_MULTISHELL_PATH | path join "bin") })
     })
+    # fnm links the node shims into $FNM_MULTISHELL_PATH/bin lazily, so that
+    # dir may not exist at startup. It must still go on PATH (bash/zsh/fish
+    # add it unconditionally), or a later `fnm use` leaves node/npm off PATH
+    # until reload -- so the shim bypasses add-path's existence check.
+    (run-test "nu setup-fnm adds shim path even when it does not exist yet" {
+        let root = (mktemp -d)
+        let bin = ($root | path join "bin")
+        let multishell = ($root | path join "multishell")   # deliberately not created
+        mkdir $bin
+        let shim = ($multishell | path join "bin")
+        let json = ('{"FNM_MULTISHELL_PATH":"' + $multishell + '"}')
+        ("#!/bin/sh\necho '" + $json + "'\n") | save -f ($bin | path join "fnm")
+        ^chmod +x ($bin | path join "fnm")
+        $env.PATH = ([$bin] ++ $env.PATH)
+        $env.FNM_PATH = $root
+        setup-fnm
+        assert (not ($shim | path exists))
+        assert ($env.PATH | any {|it| $it == $shim })
+    })
     # A brew/cargo/release install has fnm on PATH but may lack the data
     # dir; the env load must still run (fnm creates it) rather than bail.
     (run-test "nu setup-fnm loads env when fnm present even if FNM_PATH dir missing" {
