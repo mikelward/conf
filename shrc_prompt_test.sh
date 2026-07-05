@@ -481,6 +481,21 @@ result="$(job_info)"
 assert_equal "%3 vi %4 vcs log &" "$result"
 
 ###############
+# A non-zero exit shows as a two-word `Exit N` status; the sed only
+# strips the first word, leaving the code as `%N M command vcs ...`.
+# The filter allows that leftover so a failed command-vcs job (e.g. a
+# helper error) is dropped too, while a failed real job is kept.
+start_test "job_info filters failed (Exit N) command-vcs jobs"
+
+jobs() {
+    printf '[1]+  Exit 1                  command vcs "$@"\n'
+    printf '[2]-  Exit 137                command vcs prompt-info\n'
+    printf '[3]+  Stopped                 vi\n'
+}
+result="$(job_info)"
+assert_equal "%3 vi" "$result"
+
+###############
 start_test "job_info returns nothing when only command-vcs jobs are present"
 
 jobs() {

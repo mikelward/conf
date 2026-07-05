@@ -1633,12 +1633,18 @@ on_dev_host() {
 # `command vcs`, so filtering the `command vcs` prefix drops the
 # preprompt's noise without hiding a real backgrounded vcs job. This
 # is the same class of filtering as the `(pwd now:` pushd noise below.
+#
+# The optional `[0-9]* ` before `command vcs` catches a failed job: a
+# non-zero exit shows as a two-word `Exit N` status, and the sed above
+# only strips the first status word (`Exit`), leaving the code behind
+# as `%1 N command vcs ...`. Allow that leftover so a `command vcs`
+# call that errors (bad repo, missing helper) is filtered too.
 job_info() {
         local _out
         _out="$(jobs |
             sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /' |
             grep -v '(pwd now:' |
-            grep -vE '^%[0-9][0-9]* command vcs( |$)' |
+            grep -vE '^%[0-9][0-9]* ([0-9][0-9]* +)?command vcs( |$)' |
             tr '\n' ' ')"
         _out="${_out% }"
         test -n "$_out" && printf '%s\n' "$_out"
