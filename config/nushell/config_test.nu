@@ -398,6 +398,27 @@ let results = [
         assert equal $env.FNM_MARKER "xdg"
         assert ($env.PATH | any {|it| $it == $xdg_fnm })
     })
+    # Legacy ~/.fnm takes precedence over $XDG_DATA_HOME, matching the
+    # installer's own directory-resolution order. (The macOS default,
+    # $nu.os-info.name == "macos", can't be mocked on Linux; the shrc
+    # suite covers that branch and the logic here mirrors it.)
+    (run-test "nu setup-fnm prefers legacy ~/.fnm over XDG_DATA_HOME" {
+        let home = (mktemp -d)
+        let legacy = ($home | path join ".fnm")
+        let multishell = ($home | path join "multishell")
+        mkdir $legacy
+        mkdir ($multishell | path join "bin")
+        let json = ('{"FNM_MARKER":"legacy","FNM_MULTISHELL_PATH":"' + $multishell + '"}')
+        ("#!/bin/sh\necho '" + $json + "'\n") | save -f ($legacy | path join "fnm")
+        ^chmod +x ($legacy | path join "fnm")
+        $env.HOME = $home
+        hide-env --ignore-errors FNM_PATH
+        $env.XDG_DATA_HOME = "/some/other/xdg"   # ~/.fnm should still win
+        $env.PATH = [(mktemp -d)]   # fnm reachable only via the legacy dir
+        setup-fnm
+        assert equal $env.FNM_MARKER "legacy"
+        assert ($env.PATH | any {|it| $it == $legacy })
+    })
     (run-test "nu setup-fnm no-op when dir missing and fnm absent" {
         $env.PATH = [(mktemp -d)]   # scrub PATH so fnm is not resolvable
         $env.FNM_PATH = "/nonexistent-fnm-dir-xyz"

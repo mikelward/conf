@@ -683,13 +683,25 @@ if have_command brew
 end
 
 # fnm (Fast Node Manager): put its dir on PATH, then load its shell
-# environment. FNM_PATH honours an existing override, else defaults to
-# fnm's XDG install location. The standalone installer lives in that dir,
-# but a Homebrew/Cargo/release install puts fnm elsewhere on PATH and
-# creates the data dir via `fnm env`, so don't gate the eval on the dir.
-# Mirrors setup_fnm in shrc and config.nu.
-set -l _fnm_data (test -n "$XDG_DATA_HOME"; and echo $XDG_DATA_HOME; or echo $HOME/.local/share)
-set -l _fnm_path (test -n "$FNM_PATH"; and echo $FNM_PATH; or echo $_fnm_data/fnm)
+# environment. The standalone installer lives in that dir, but a
+# Homebrew/Cargo/release install puts fnm elsewhere on PATH and creates
+# the data dir via `fnm env`, so don't gate the eval on the dir. The
+# default install dir mirrors fnm's own installer (legacy ~/.fnm, else
+# $XDG_DATA_HOME/fnm, else the macOS Application Support dir, else
+# ~/.local/share/fnm); FNM_PATH overrides. Mirrors setup_fnm in shrc and
+# config.nu.
+set -l _fnm_path
+if test -n "$FNM_PATH"
+    set _fnm_path $FNM_PATH
+else if test -d $HOME/.fnm
+    set _fnm_path $HOME/.fnm
+else if test -n "$XDG_DATA_HOME"
+    set _fnm_path $XDG_DATA_HOME/fnm
+else if test (uname -s) = Darwin
+    set _fnm_path "$HOME/Library/Application Support/fnm"
+else
+    set _fnm_path $HOME/.local/share/fnm
+end
 test -d $_fnm_path; and add_path $_fnm_path start
 if have_command fnm
     fnm env --shell fish | source

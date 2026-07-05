@@ -1089,9 +1089,22 @@ uc() { systemctl --user "$@"; }
 # (rather than inline like brew) so the test harness can exercise it.
 # Mirrors config/fish/config.fish and config/nushell/config.nu.
 setup_fnm() {
-    # Default to fnm's XDG install location, following $XDG_DATA_HOME when
-    # set (the standalone installer honours it); FNM_PATH overrides.
-    local fnm_path="${FNM_PATH:-${XDG_DATA_HOME:-$HOME/.local/share}/fnm}"
+    # Pick the default install dir the same way fnm's own installer does:
+    # legacy ~/.fnm if present, else $XDG_DATA_HOME/fnm, else the macOS
+    # Application Support dir on Darwin, else ~/.local/share/fnm. FNM_PATH
+    # overrides all of it.
+    local fnm_path
+    if test -n "${FNM_PATH:-}"; then
+        fnm_path="$FNM_PATH"
+    elif test -d "$HOME/.fnm"; then
+        fnm_path="$HOME/.fnm"
+    elif test -n "${XDG_DATA_HOME:-}"; then
+        fnm_path="$XDG_DATA_HOME/fnm"
+    elif test "$(uname -s)" = Darwin; then
+        fnm_path="$HOME/Library/Application Support/fnm"
+    else
+        fnm_path="$HOME/.local/share/fnm"
+    fi
     # The standalone installer drops the fnm binary in this dir, so add
     # it to PATH when present. A Homebrew/Cargo/release install puts fnm
     # elsewhere on PATH and treats this only as the data dir, which

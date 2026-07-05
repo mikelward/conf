@@ -160,6 +160,7 @@ PATH="$_saved_path"
 
 _saved_path="$PATH"
 _saved_shell="$shell"
+_saved_home="$HOME"
 
 start_test "setup_fnm no-op when dir missing and fnm absent"
 _fnm_scrub=$(mktemp -d)   # empty dir on PATH: fnm not found
@@ -220,8 +221,9 @@ shell="$_saved_shell"
 unset FNM_MARKER FNM_PATH
 rm -rf "$_fnm_bin"
 
-# With FNM_PATH unset, the default install dir honours $XDG_DATA_HOME,
-# so a standalone install under $XDG_DATA_HOME/fnm is found and loaded.
+# The default install dir mirrors fnm's own installer. With FNM_PATH
+# unset and no legacy ~/.fnm, $XDG_DATA_HOME/fnm is used when set. A clean
+# HOME keeps a real ~/.fnm (higher precedence) from shadowing the case.
 start_test "setup_fnm honours XDG_DATA_HOME for the default dir"
 _xdg=$(mktemp -d)
 mkdir -p "$_xdg/fnm"
@@ -230,6 +232,7 @@ cat > "$_xdg/fnm/fnm" << 'SCRIPT'
 echo 'export FNM_MARKER=xdg'
 SCRIPT
 chmod +x "$_xdg/fnm/fnm"
+HOME=$(mktemp -d)   # no ~/.fnm
 unset FNM_PATH
 XDG_DATA_HOME="$_xdg"
 PATH="$_saved_path"   # fnm reachable only via the derived dir
@@ -237,10 +240,61 @@ shell=bash
 setup_fnm
 assert_true inpath "$_xdg/fnm"
 assert_equal "xdg" "${FNM_MARKER:-}"
+rm -rf "$HOME"
+HOME="$_saved_home"
 PATH="$_saved_path"
 shell="$_saved_shell"
 unset XDG_DATA_HOME FNM_MARKER
 rm -rf "$_xdg"
+
+# Legacy ~/.fnm takes precedence over $XDG_DATA_HOME, matching the
+# installer's own directory-resolution order.
+start_test "setup_fnm prefers legacy ~/.fnm over XDG_DATA_HOME"
+_legacy_home=$(mktemp -d)
+mkdir -p "$_legacy_home/.fnm"
+cat > "$_legacy_home/.fnm/fnm" << 'SCRIPT'
+#!/bin/sh
+echo 'export FNM_MARKER=legacy'
+SCRIPT
+chmod +x "$_legacy_home/.fnm/fnm"
+HOME="$_legacy_home"
+unset FNM_PATH
+XDG_DATA_HOME="/some/other/xdg"   # ~/.fnm should still win
+PATH="$_saved_path"
+shell=bash
+setup_fnm
+assert_true inpath "$_legacy_home/.fnm"
+assert_equal "legacy" "${FNM_MARKER:-}"
+HOME="$_saved_home"
+PATH="$_saved_path"
+shell="$_saved_shell"
+unset XDG_DATA_HOME FNM_MARKER
+rm -rf "$_legacy_home"
+
+# On macOS (Darwin), with no override/legacy/XDG dir, fnm installs under
+# ~/Library/Application Support/fnm. A fake `uname` forces the Darwin path.
+start_test "setup_fnm uses the macOS Application Support dir on Darwin"
+_mac_home=$(mktemp -d)
+mkdir -p "$_mac_home/Library/Application Support/fnm"
+cat > "$_mac_home/Library/Application Support/fnm/fnm" << 'SCRIPT'
+#!/bin/sh
+echo 'export FNM_MARKER=macos'
+SCRIPT
+chmod +x "$_mac_home/Library/Application Support/fnm/fnm"
+HOME="$_mac_home"
+unset FNM_PATH XDG_DATA_HOME
+PATH="$_saved_path"
+shell=bash
+uname() { echo Darwin; }
+setup_fnm
+unset -f uname
+assert_true inpath "$_mac_home/Library/Application Support/fnm"
+assert_equal "macos" "${FNM_MARKER:-}"
+HOME="$_saved_home"
+PATH="$_saved_path"
+shell="$_saved_shell"
+unset FNM_MARKER
+rm -rf "$_mac_home"
 
 start_test "setup_fnm loads env and adds dir when fnm present"
 _fnm_home=$(mktemp -d)

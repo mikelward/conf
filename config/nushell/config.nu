@@ -928,10 +928,22 @@ add-path "/usr/sbin" "end"
 # so pull its vars via `--json` and add the node shims dir ourselves.
 # Mirrors setup_fnm in shrc and config/fish/config.fish.
 def --env setup-fnm [] {
-    # Default to fnm's XDG install location, following $XDG_DATA_HOME when
-    # set (the standalone installer honours it); FNM_PATH overrides.
-    let fnm_data = ($env.XDG_DATA_HOME? | default ([$env.HOME ".local" "share"] | path join))
-    let fnm_path = ($env.FNM_PATH? | default ($fnm_data | path join "fnm"))
+    # Pick the default install dir the same way fnm's own installer does:
+    # legacy ~/.fnm if present, else $XDG_DATA_HOME/fnm, else the macOS
+    # Application Support dir, else ~/.local/share/fnm. FNM_PATH overrides.
+    let fnm_path = (
+        if ($env.FNM_PATH? | is-not-empty) {
+            $env.FNM_PATH
+        } else if ([$env.HOME ".fnm"] | path join | path exists) {
+            [$env.HOME ".fnm"] | path join
+        } else if ($env.XDG_DATA_HOME? | is-not-empty) {
+            [$env.XDG_DATA_HOME "fnm"] | path join
+        } else if ($nu.os-info.name == "macos") {
+            [$env.HOME "Library" "Application Support" "fnm"] | path join
+        } else {
+            [$env.HOME ".local" "share" "fnm"] | path join
+        }
+    )
     # The standalone installer lives in that dir; add it when present. A
     # Homebrew/Cargo/release install puts fnm elsewhere on PATH and only
     # uses this as the data dir (created by fnm on demand), so don't gate
