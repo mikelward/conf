@@ -161,13 +161,17 @@ PATH="$_saved_path"
 _saved_path="$PATH"
 _saved_shell="$shell"
 
-start_test "setup_fnm no-op when FNM_PATH missing"
+start_test "setup_fnm no-op when dir missing and fnm absent"
+_fnm_scrub=$(mktemp -d)   # empty dir on PATH: fnm not found
+PATH="$_fnm_scrub"
 FNM_PATH="/nonexistent-fnm-dir-xyz"
 setup_fnm
 _rc=$?
 assert_equal "1" "$_rc"
-assert_equal "$_saved_path" "$PATH"
+assert_equal "$_fnm_scrub" "$PATH"
+PATH="$_saved_path"
 unset FNM_PATH
+rm -rf "$_fnm_scrub"
 
 start_test "setup_fnm adds dir to PATH but skips eval when fnm absent"
 _fnm_home=$(mktemp -d)
@@ -180,6 +184,26 @@ assert_true inpath "$_fnm_home"
 PATH="$_saved_path"
 unset FNM_PATH
 rm -rf "$_fnm_home"
+
+# A Homebrew/Cargo/release install has fnm on PATH already but may not
+# have created the data dir yet; setup_fnm must still run `fnm env`
+# (which creates it) rather than bailing on the missing dir.
+start_test "setup_fnm runs fnm env when fnm present even if dir missing"
+_fnm_bin=$(mktemp -d)
+cat > "$_fnm_bin/fnm" << 'SCRIPT'
+#!/bin/sh
+echo 'export FNM_MARKER=loaded'
+SCRIPT
+chmod +x "$_fnm_bin/fnm"
+PATH="$_fnm_bin:$_saved_path"
+FNM_PATH="/nonexistent-fnm-dir-xyz"
+shell=bash
+setup_fnm
+assert_equal "loaded" "${FNM_MARKER:-}"
+PATH="$_saved_path"
+shell="$_saved_shell"
+unset FNM_MARKER FNM_PATH
+rm -rf "$_fnm_bin"
 
 start_test "setup_fnm loads env and adds dir when fnm present"
 _fnm_home=$(mktemp -d)

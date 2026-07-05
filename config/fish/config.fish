@@ -684,13 +684,14 @@ end
 
 # fnm (Fast Node Manager): put its dir on PATH, then load its shell
 # environment. FNM_PATH honours an existing override, else defaults to
-# fnm's XDG install location. Mirrors setup_fnm in shrc and config.nu.
+# fnm's XDG install location. The standalone installer lives in that dir,
+# but a Homebrew/Cargo/release install puts fnm elsewhere on PATH and
+# creates the data dir via `fnm env`, so don't gate the eval on the dir.
+# Mirrors setup_fnm in shrc and config.nu.
 set -l _fnm_path (test -n "$FNM_PATH"; and echo $FNM_PATH; or echo $HOME/.local/share/fnm)
-if test -d $_fnm_path
-    add_path $_fnm_path start
-    if have_command fnm
-        fnm env --shell fish | source
-    end
+test -d $_fnm_path; and add_path $_fnm_path start
+if have_command fnm
+    fnm env --shell fish | source
 end
 
 # set HISTORY_FILE for log_history

@@ -929,8 +929,11 @@ add-path "/usr/sbin" "end"
 # Mirrors setup_fnm in shrc and config/fish/config.fish.
 def --env setup-fnm [] {
     let fnm_path = ($env.FNM_PATH? | default ([$env.HOME ".local" "share" "fnm"] | path join))
-    if not ($fnm_path | path exists) { return }
-    add-path $fnm_path "start"
+    # The standalone installer lives in that dir; add it when present. A
+    # Homebrew/Cargo/release install puts fnm elsewhere on PATH and only
+    # uses this as the data dir (created by fnm on demand), so don't gate
+    # the env load on the dir existing.
+    if ($fnm_path | path exists) { add-path $fnm_path "start" }
     if not (have-command fnm) { return }
     ^fnm env --json | from json | load-env
     add-path ([$env.FNM_MULTISHELL_PATH "bin"] | path join) "start"

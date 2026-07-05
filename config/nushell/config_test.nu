@@ -351,7 +351,16 @@ let results = [
         assert ($env.PATH | any {|it| $it == $home })
         assert ($env.PATH | any {|it| $it == ($env.FNM_MULTISHELL_PATH | path join "bin") })
     })
-    (run-test "nu setup-fnm no-op when FNM_PATH dir missing" {
+    # A brew/cargo/release install has fnm on PATH but may lack the data
+    # dir; the env load must still run (fnm creates it) rather than bail.
+    (run-test "nu setup-fnm loads env when fnm present even if FNM_PATH dir missing" {
+        fake-fnm-on-path   # puts a fake fnm on PATH
+        $env.FNM_PATH = "/nonexistent-fnm-dir-xyz"
+        setup-fnm
+        assert equal $env.FNM_MARKER "loaded"
+    })
+    (run-test "nu setup-fnm no-op when dir missing and fnm absent" {
+        $env.PATH = [(mktemp -d)]   # scrub PATH so fnm is not resolvable
         $env.FNM_PATH = "/nonexistent-fnm-dir-xyz"
         let before = $env.PATH
         setup-fnm
