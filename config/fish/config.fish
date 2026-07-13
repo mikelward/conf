@@ -693,8 +693,10 @@ end
 # Set $PATH early in case other stuff here needs it.
 
 set --export CDPATH . $HOME
-# keep an inherited GOPATH (e.g. from ~/.env.local) instead of clobbering it
-set --query GOPATH; or set --export GOPATH $HOME
+# keep an inherited GOPATH (e.g. from ~/.env.local) instead of clobbering
+# it. test -n rather than set --query so a set-but-empty GOPATH still gets
+# the default, matching shrc's ${GOPATH:-$HOME}.
+test -n "$GOPATH"; or set --export GOPATH $HOME
 
 add_path /usr/local/bin
 add_path $HOME/android-sdk-linux/platform-tools
