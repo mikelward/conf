@@ -497,6 +497,33 @@ start_test "project works on real git repo"
 assert_equal "realgit" "$result"
 
 ###############
+# _github_review argument parsing
+
+# A dangling two-argument option (-r/--head as the last argument) used to
+# spin the parse loop forever: shift 2 with one argument left fails
+# without shifting. The guard must error out instead. Run in a fenced
+# subprocess so a regression fails the test rather than hanging the run.
+start_test "_github_review dangling -r errors instead of looping"
+_SRCDIR="$_srcdir" run_with_timeout 5 bash -c '
+    have_command() { command -v "$1" >/dev/null 2>&1; }
+    error() { echo "error: $*" >&2; }
+    gh() { :; }
+    source "$_SRCDIR/shrc.vcs" >/dev/null 2>&1
+    _github_review -r
+' >/dev/null 2>&1
+assert_equal "1" "$?"
+
+start_test "_github_review dangling --head errors instead of looping"
+_SRCDIR="$_srcdir" run_with_timeout 5 bash -c '
+    have_command() { command -v "$1" >/dev/null 2>&1; }
+    error() { echo "error: $*" >&2; }
+    gh() { :; }
+    source "$_SRCDIR/shrc.vcs" >/dev/null 2>&1
+    _github_review --head
+' >/dev/null 2>&1
+assert_equal "1" "$?"
+
+###############
 # Performance: binary vcs detection should be fast. With a 200ms
 # budget we catch ~10x regressions without flaking on slow CI.
 # VCS_PERF_BUDGET_MS=0 disables the check for manual profiling.
