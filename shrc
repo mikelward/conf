@@ -2172,7 +2172,7 @@ if is_interactive; then
     # rg brace glob: one --glob argument, so no word-splitting is needed
     # (zsh doesn't split unquoted parameters). --include is a GNU grep
     # option that ripgrep rejects.
-    code_patterns="{*.c,*.h,*.cc,*.coffee,*.go,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}"
+    code_patterns="{*.c,*.h,*.cc,*.cpp,*.hh,*.coffee,*.go,*.hs,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}"
     c() { less --quit-if-one-screen --no-init "$@"; }
     cdf() { cdfile "$@"; }
     cg() { rg --glob="$code_patterns" "$@"; }
