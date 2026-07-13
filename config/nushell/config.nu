@@ -1256,7 +1256,7 @@ def --env cdf [file: path] { cdfile $file }
 # shrc/fish cg). --wrapped so rg flags (cg -i PATTERN) pass through
 # instead of being parsed as flags of this command.
 def --wrapped cg [...args: string] {
-    ^rg --follow --line-number --glob '{*.c,*.h,*.cc,*.coffee,*.go,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}' ...$args
+    ^rg --follow --line-number --glob '{*.c,*.h,*.cc,*.cpp,*.hh,*.coffee,*.go,*.hs,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}' ...$args
 }
 def ct [...args]  { ^ctags -R ...$args }
 def cx [...args]  { ^chmod +x ...$args }
