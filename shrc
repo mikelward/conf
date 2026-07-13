@@ -2169,11 +2169,13 @@ if is_interactive; then
     msp() { local rc; makeshpool "$@"; rc=$?; test $rc -eq 0 && test -n "$SHPOOL_SESSION_NAME" && exit; return $rc; }
     mtm() { maketmux "$@"; }
     bindkeys() { daemon xbindkeys "$@"; }
+    # rg brace glob: one --glob argument, so no word-splitting is needed
+    # (zsh doesn't split unquoted parameters). --include is a GNU grep
+    # option that ripgrep rejects.
     code_patterns="{*.c,*.h,*.cc,*.coffee,*.go,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}"
-    code_includes="$(eval echo --include=$code_patterns)"
     c() { less --quit-if-one-screen --no-init "$@"; }
     cdf() { cdfile "$@"; }
-    cg() { rg $code_includes "$@"; }
+    cg() { rg --glob="$code_patterns" "$@"; }
     ct() { ctags -R "$@"; }
     cx() { chmod +x "$@"; }
     d() { mycode "$@"; }

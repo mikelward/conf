@@ -1538,6 +1538,20 @@ _extract_oneliner mjd
 mjd repo
 assert_equal "jjd -f repo" "$(cat "$_vcsdir_calls")"
 
+# cg wraps rg (not grep), so its filter must be an rg-style --glob:
+# rg rejects grep's --include outright, and it must arrive as a single
+# argument because zsh doesn't word-split unquoted parameters.
+start_test "cg passes a single rg-style --glob filter"
+eval "$(sed -n 's/^[[:space:]]*\(code_patterns=.*\)$/\1/p' "$_srcdir/shrc")"
+assert_true test -n "$code_patterns"
+_extract_oneliner cg
+_cg_args="$_testdir/cg_args"
+rg() { printf '%s\n' "$@" > "$_cg_args"; }
+cg PATTERN
+assert_equal "--glob=$code_patterns
+PATTERN" "$(cat "$_cg_args")"
+unset -f rg
+
 # The session-manager aliases are the lean {verb}{backend} set, each a thin
 # wrapper that calls the matching command (a shell function for auto*, a script
 # on PATH for change*/detach*/make*). They live in the interactive block, so
