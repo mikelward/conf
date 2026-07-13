@@ -1479,4 +1479,10 @@ start_test "fish keeps an inherited GOPATH"
 result="$(_fish_run_config 'set -gx GOPATH /custom/gopath' '' 'echo $GOPATH')"
 assert_equal "/custom/gopath" "$result"
 
+# A set-but-empty GOPATH still gets the $HOME default, matching shrc's
+# \${GOPATH:-\$HOME} (set --query alone would treat empty as present).
+start_test "fish treats an empty GOPATH as missing"
+result="$(_fish_run_config 'set -gx GOPATH ""' '' 'echo $GOPATH')"
+assert_equal "$_testdir/fakehome" "$result"
+
 test_summary "fish_test"

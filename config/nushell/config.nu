@@ -896,8 +896,10 @@ $env.CDPATH = [
     "."
     $env.HOME
 ]
-# keep an inherited GOPATH (e.g. from ~/.env.local) instead of clobbering it
-$env.GOPATH = ($env.GOPATH? | default $env.HOME)
+# keep an inherited GOPATH (e.g. from ~/.env.local) instead of clobbering
+# it. --empty so a set-but-empty GOPATH still gets the default, matching
+# shrc's ${GOPATH:-$HOME}.
+$env.GOPATH = ($env.GOPATH? | default --empty $env.HOME)
 
 add-path "/usr/local/bin"
 add-path ([$env.HOME "android-sdk-linux" "platform-tools"] | path join)

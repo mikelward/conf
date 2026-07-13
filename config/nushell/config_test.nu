@@ -3205,6 +3205,15 @@ except OSError: pass
         })
         assert equal "/custom/gopath" ($out | lines | last)
     })
+
+    # A set-but-empty GOPATH still gets the $HOME default (default --empty),
+    # matching shrc's ${GOPATH:-$HOME}.
+    (run-test "nu treats an empty GOPATH as missing" {
+        let out = (with-env {GOPATH: ""} {
+            ^nu --no-config-file -c $"source \"($CONFIG)\"; print $env.GOPATH"
+        })
+        assert equal $env.HOME ($out | lines | last)
+    })
 ]
 
 for r in $results { print $r }
