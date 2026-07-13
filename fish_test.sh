@@ -1235,4 +1235,248 @@ case "$result" in
     *) assert_equal "%N sleep " "$result";;
 esac
 
+###############
+# TEST: cg builds rg-style glob filters
+
+start_test "fish cg passes rg-style --glob filters, one per pattern"
+result="$(_fish_run '
+    function rg
+        printf "%s\n" $argv
+    end
+    cg PATTERN | head -n 1
+')"
+assert_equal "--glob=*.c" "$result"
+
+start_test "fish cg passes the search pattern through"
+result="$(_fish_run '
+    function rg
+        printf "%s\n" $argv
+    end
+    cg PATTERN | tail -n 1
+')"
+assert_equal "PATTERN" "$result"
+
+###############
+# TEST: envgrep / peg argument handling
+
+start_test "fish envgrep drops the pattern from the pid list"
+result="$(_fish_run '
+    function grep
+        printf "grep %s\n" $argv
+    end
+    envgrep PAT 1 2
+')"
+assert_equal "grep -z PAT /proc/1/environ
+grep -z PAT /proc/2/environ" "$result"
+
+start_test "fish peg forwards its arguments to pegrep"
+result="$(_fish_run '
+    function pegrep
+        printf "%s\n" $argv
+    end
+    peg A B
+')"
+assert_equal "A
+B" "$result"
+
+###############
+# TEST: path resolves executables
+
+start_test "fish path prints the executable path"
+result="$(_fish_run 'path ls')"
+assert_equal "$(command -v ls)" "$result"
+
+###############
+# TEST: body header/body split
+
+start_test "fish body passes header and filters body"
+result="$(_fish_run 'printf "h1\nb1\nb2\n" | body grep b2')"
+assert_equal "h1
+b2" "$result"
+
+start_test "fish body -2 keeps two header lines"
+result="$(_fish_run 'printf "h1\nh2\nb1\nb2\n" | body -2 grep b2')"
+assert_equal "h1
+h2
+b2" "$result"
+
+###############
+# TEST: recent numeric option
+
+start_test "fish recent -1 shows only the newest file"
+result="$(_fish_run '
+    mkdir -p $HOME/recent_t
+    cd $HOME/recent_t
+    touch -t 202001010000 old
+    touch -t 202501010000 new
+    recent -1
+')"
+assert_equal "new" "$result"
+
+###############
+# TEST: tz2tz runs date (rather than assigning $TZ)
+
+start_test "fish tz2tz converts timezone"
+result="$(_fish_run 'tz2tz UTC UTC "2020-01-01 12:34:56"')"
+assert_contains "12:34:56" "$result"
+
+start_test "fish tz2tz leaves TZ unset"
+result="$(_fish_run '
+    set --erase TZ 2>/dev/null
+    tz2tz UTC UTC "2020-01-01 12:34:56" >/dev/null
+    set --query TZ; and echo polluted; or echo clean
+')"
+assert_equal "clean" "$result"
+
+###############
+# TEST: projectname is the basename of projectroot
+
+start_test "fish projectname takes the basename of projectroot"
+result="$(_fish_run '
+    function projectroot
+        echo /tmp/proj/dir
+    end
+    projectname
+')"
+assert_equal "dir" "$result"
+
+###############
+# TEST: unbak keeps files in their directory
+
+start_test "fish unbak restores next to the original, not into PWD"
+result="$(_fish_run '
+    mkdir -p $HOME/unbak_t
+    touch $HOME/unbak_t/f.bak
+    unbak $HOME/unbak_t/f.bak
+    test -e $HOME/unbak_t/f; and echo restored
+    test -e f; or echo no-stray
+')"
+assert_equal "restored
+no-stray" "$result"
+
+start_test "fish unbak restores from the original name"
+result="$(_fish_run '
+    mkdir -p $HOME/unbak_t2
+    touch $HOME/unbak_t2/g.bak
+    unbak $HOME/unbak_t2/g
+    test -e $HOME/unbak_t2/g; and echo restored
+')"
+assert_equal "restored" "$result"
+
+###############
+# TEST: find_test_file / trydiff do what their names say
+
+start_test "fish find_test_file finds the sibling _test file"
+result="$(_fish_run '
+    mkdir -p $HOME/ftf
+    cd $HOME/ftf
+    touch foo.sh foo_test.sh
+    find_test_file foo.sh
+')"
+assert_equal "./foo_test.sh" "$result"
+
+start_test "fish trydiff diffs command output against the file"
+result="$(_fish_run '
+    cd $HOME
+    printf "a\n" > td.txt
+    function upcase
+        tr a-z A-Z < $argv[1]
+    end
+    trydiff upcase td.txt
+    cat td.txt
+    ls td.txt.trydiff.* 2>/dev/null; or echo clean
+')"
+assert_contains "> A" "$result"
+assert_contains "clean" "$result"
+
+###############
+# TEST: e falls back when EDITOR is unset
+
+start_test "fish e falls back to vim when EDITOR is unset"
+result="$(_fish_run '
+    set --erase EDITOR 2>/dev/null
+    function vim
+        echo "vim $argv"
+    end
+    e file.txt
+')"
+assert_equal "vim file.txt" "$result"
+
+start_test "fish e uses EDITOR when set"
+result="$(_fish_run '
+    set -gx EDITOR myeditor
+    function myeditor
+        echo "myeditor $argv"
+    end
+    e file.txt
+')"
+assert_equal "myeditor file.txt" "$result"
+
+###############
+# TEST: retry supports --sleep and --sleep=
+
+start_test "fish retry --sleep=0 retries until success"
+result="$(_fish_run '
+    function bell; end
+    set -g tries 0
+    function flaky
+        set -g tries (math $tries + 1)
+        test $tries -ge 2
+    end
+    retry --sleep=0 flaky
+    echo $tries
+')"
+assert_equal "2" "$result"
+
+start_test "fish retry --sleep 0 retries until success"
+result="$(_fish_run '
+    function bell; end
+    set -g tries 0
+    function flaky
+        set -g tries (math $tries + 1)
+        test $tries -ge 2
+    end
+    retry --sleep 0 flaky
+    echo $tries
+')"
+assert_equal "2" "$result"
+
+###############
+# TEST: psgrep signals no-match failure
+
+start_test "fish psgrep returns 1 on no match"
+result="$(_fish_run 'psgrep no_such_process_xyz 2>/dev/null; echo $status')"
+assert_equal "1" "$result"
+
+###############
+# TEST: clone dispatch matches shrc.vcs
+
+start_test "fish clone prefers jj for git URLs"
+result="$(_fish_run '
+    function have_command
+        test $argv[1] = jj
+    end
+    function jj
+        echo "jj $argv"
+    end
+    clone https://example.com/r.git
+')"
+assert_equal "jj git clone https://example.com/r.git" "$result"
+
+start_test "fish clone uses hg only for hg-ish URLs"
+result="$(_fish_run '
+    function hg
+        echo "hg $argv"
+    end
+    clone https://example.com/hg/repo
+')"
+assert_equal "hg clone https://example.com/hg/repo" "$result"
+
+###############
+# TEST: inherited GOPATH survives config.fish
+
+start_test "fish keeps an inherited GOPATH"
+result="$(_fish_run_config 'set -gx GOPATH /custom/gopath' '' 'echo $GOPATH')"
+assert_equal "/custom/gopath" "$result"
+
 test_summary "fish_test"

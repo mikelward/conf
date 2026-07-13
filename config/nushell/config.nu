@@ -896,7 +896,8 @@ $env.CDPATH = [
     "."
     $env.HOME
 ]
-$env.GOPATH = $env.HOME
+# keep an inherited GOPATH (e.g. from ~/.env.local) instead of clobbering it
+$env.GOPATH = ($env.GOPATH? | default $env.HOME)
 
 add-path "/usr/local/bin"
 add-path ([$env.HOME "android-sdk-linux" "platform-tools"] | path join)
@@ -1251,11 +1252,17 @@ def render-transient-prompt [] {
 def c  [...args] { ^less --quit-if-one-screen --no-init ...$args }
 def --env cdf [file: path] { cdfile $file }
 
+# search code files: rg restricted to source-code globs (parity with
+# shrc/fish cg). --wrapped so rg flags (cg -i PATTERN) pass through
+# instead of being parsed as flags of this command.
+def --wrapped cg [...args: string] {
+    ^rg --follow --line-number --glob '{*.c,*.h,*.cc,*.coffee,*.go,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}' ...$args
+}
 def ct [...args]  { ^ctags -R ...$args }
 def cx [...args]  { ^chmod +x ...$args }
 def diga [...args] { ^dig +noall +answer +search ...$args }
 def digs [...args] { ^dig +short +search ...$args }
-def download [...args] {
+def --env download [...args] {
     cd ([$env.HOME "Downloads"] | path join)
     ^wget ...$args
 }
@@ -1272,7 +1279,7 @@ def gh-search [...args] {
 }
 def gitdir [...args] { ^git rev-parse --git-dir ...$args }
 def github [...args] { ^gh ...$args }
-def gl [] { cd "/var/log" }
+def --env gl [] { cd "/var/log" }
 def h [...args] { ^head ...$args }
 def headers [...args] { ^curl --location --include --silent --show-error --output /dev/null --dump-header - ...$args }
 def hms [...args] { ^date '+%H:%M:%S' ...$args }

@@ -1515,8 +1515,12 @@ except OSError: pass
         let bin = (mktemp -d)
         ("#!/bin/sh\necho \"SESSION_BACKEND=$SESSION_BACKEND\" >> \"" + $calls + "\"\n") | save -f ($bin | path join "changesession")
         ^chmod +x ($bin | path join "changesession")
-        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "shpool")
-        ^chmod +x ($bin | path join "shpool")
+        # session-backend requires autoshpool alongside shpool (the same
+        # gate as want-shpool), so stub both or it resolves to "".
+        for c in ["shpool" "autoshpool"] {
+            "#!/bin/sh\nexit 0\n" | save -f ($bin | path join $c)
+            ^chmod +x ($bin | path join $c)
+        }
         $env.WANT_TMUX = "0"
         $env.PATH = [$bin]
         cs work
@@ -3153,6 +3157,53 @@ except OSError: pass
         with-env {TTY: "/dev/pts/99", XDG_RUNTIME_DIR: "/proc/shell-jobs-test"} {
             publish-jobs
         }
+    })
+
+    # gl is only useful if the directory change survives the call, which
+    # needs `def --env` (a plain def discards the cd on return).
+    (run-test "nu gl changes the shell directory" {
+        gl
+        assert equal "/var/log" $env.PWD
+    })
+
+    # download's cd into ~/Downloads must survive too (parity with
+    # shrc/fish, where download leaves the shell in Downloads).
+    (run-test "nu download leaves the shell in Downloads" {
+        let bin = (mktemp -d)
+        ("#!/bin/sh\nexit 0\n") | save -f ($bin | path join "wget")
+        ^chmod +x ($bin | path join "wget")
+        $env.PATH = ([$bin] ++ $env.PATH)
+        let downloads = ([$env.HOME "Downloads"] | path join)
+        mkdir $downloads
+        download "http://example.com/x"
+        assert equal $downloads $env.PWD
+    })
+
+    # cg wraps rg, so its filter must be an rg-style --glob (rg rejects
+    # grep's --include), with the search pattern passed through last.
+    (run-test "nu cg passes rg-style glob filters" {
+        let bin = (mktemp -d)
+        ("#!/bin/sh\nprintf '%s\\n' \"$@\"\n") | save -f ($bin | path join "rg")
+        ^chmod +x ($bin | path join "rg")
+        $env.PATH = ([$bin] ++ $env.PATH)
+        let out = (cg "PATTERN" | lines)
+        assert equal "--glob" ($out | get 2)
+        assert (($out | get 3) | str starts-with "{*.c")
+        assert equal "PATTERN" ($out | last)
+        # --wrapped: rg flags pass through instead of being parsed as
+        # flags of the cg command itself
+        let flagged = (cg -i "PATTERN" | lines)
+        assert equal "-i" ($flagged | get 4)
+        assert equal "PATTERN" ($flagged | last)
+    })
+
+    # An inherited GOPATH (e.g. from ~/.env.local) must survive sourcing
+    # config.nu instead of being clobbered back to $HOME.
+    (run-test "nu keeps an inherited GOPATH" {
+        let out = (with-env {GOPATH: "/custom/gopath"} {
+            ^nu --no-config-file -c $"source \"($CONFIG)\"; print $env.GOPATH"
+        })
+        assert equal "/custom/gopath" ($out | lines | last)
     })
 ]
 

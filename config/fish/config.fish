@@ -345,14 +345,31 @@ end
 
 function unbak
     for file in $argv
-        test -e $file; and mv -i $file (basename $file .bak)
-        test -e $file.bak; and mv -i $file.bak $file
+        switch $file
+        case '*.bak'
+            # strip only the suffix; basename would also strip the
+            # directory and move the file into $PWD
+            test -e $file; and mv -i $file (string replace -r '\.bak$' '' -- $file)
+        case '*'
+            test -e $file.bak; and mv -i $file.bak $file
+        end
     end
 end
 
 # ring the terminal's bell
 function bell
     printf '\a'
+end
+
+# ask the user whether to do something, return true if they say yes or Enter
+function confirm
+    read --prompt-str "$argv? [Y/n] " REPLY
+    switch "$REPLY"
+    case Y y ''
+        true
+    case '*'
+        false
+    end
 end
 
 # print the first line of input (the header) as-is, run a command
@@ -366,14 +383,14 @@ function body
     set lines 1
     switch $argv[1]
     case -'*'
-        set lines (string trim --left --chars -- - $argv[1])
+        set lines (string sub --start 2 -- $argv[1])
         set --erase argv[1]
     end
 
     while test $lines -gt 0
         read header
         printf '%s\n' $header
-        set lines $lines - 1
+        set lines (math $lines - 1)
     end
     $argv
 end
@@ -396,7 +413,7 @@ end
 # print the name of the current project
 function projectname
     if set projectroot (projectroot | string collect)
-        echo "$projectroot"
+        basename "$projectroot"
     end
 end
 
@@ -438,18 +455,26 @@ function each0
     end
 end
 
-# see what changes a command would make to a file
-# e.g. trydiff mdformat <file>
-function trydiff
+# print the name of a source file's corresponding test file
+function find_test_file
     set file (basename $argv[1])
     set dir (dirname $argv[1])
     set dots (string split '.' $file)
     set base (string join '.' $dots[1..-2])
-    set ext $dots[-1]
+    set ext .$dots[-1]
 
     test -n "$dir"; and set dir $dir/
     set testfile $dir$base'_test'$ext
     test -e $testfile; and printf '%s' $testfile
+end
+
+# see what changes a command would make to a file
+# e.g. trydiff mdformat <file>
+function trydiff
+    set _temp $argv[2].trydiff.$fish_pid
+    $argv[1] $argv[2] > $_temp
+    diff $argv[2] $_temp
+    rm $_temp
 end
 
 # search for a file in parent directories, print the first one found
@@ -510,7 +535,7 @@ end
 
 # print the full path to an executable, ignoring aliases and functions
 function path
-    command search $argv[1]
+    command --search $argv[1]
 end
 
 # list processes in the specified process group
@@ -527,13 +552,13 @@ function pegrep
         printf '%s %s\n' (ps -o pid= -o args= -p $pid | string collect) (envgrep $argv[1] $pid | string collect)
     end
 end
-function peg; pegrep; end
+function peg; pegrep $argv; end
 
 # grep for a pattern in the environment of processes with the given pids
 # envgrep <environment pattern> <pid>...
 function envgrep
     set pattern $argv[1]
-    shift
+    set --erase argv[1]
     for pid in $argv
         grep -z $pattern /proc/$pid/environ
     end
@@ -557,6 +582,7 @@ function psgrep
         psc -p $pids $ps_args
     else
         error "No processes matching $pattern"
+        return 1
     end
 end
 
@@ -569,9 +595,10 @@ end
 # defaults to the showing the last 10, override with -<number>
 function recent
     set lines 10
-    switch $argv[1]
-    case -'*'
-        set lines (string trim --left --chars -- - $argv[1])
+    # numeric options only (-3): other flags pass through to ls; switch
+    # can't do this because fish wildcards have no [0-9] character class
+    if string match -rq -- '^-[0-9]+$' "$argv[1]"
+        set lines (string sub --start 2 -- $argv[1])
         set --erase argv[1]
     end
     ls -t -1 $argv | head -n $lines
@@ -579,13 +606,22 @@ end
 
 # keep trying a command until it works
 # (e.g. retry ping -c 1 host)
+# (e.g. retry --sleep 1 ping -c 1 host)
 function retry
+    set sleep 10
+    if test "$argv[1]" = --sleep
+        set sleep $argv[2]
+        set --erase argv[1..2]
+    else if string match -q -- '--sleep=*' "$argv[1]"
+        set sleep (string replace -- '--sleep=' '' $argv[1])
+        set --erase argv[1]
+    end
     while true
         if $argv
             bell
             break
         else
-            sleep 10
+            sleep $sleep
         end
     end
 end
@@ -632,7 +668,8 @@ function tz2tz
     set from $argv[1]
     set to $argv[2]
     set --erase argv[1..2]
-    set TZ $to date -d 'TZ="'$from'"'" ""$argv"
+    set epoch (env TZ=$from date -d "$argv" +%s); or return 1
+    env TZ=$to date -d "@$epoch"
 end
 
 
@@ -656,7 +693,8 @@ end
 # Set $PATH early in case other stuff here needs it.
 
 set --export CDPATH . $HOME
-set --export GOPATH $HOME
+# keep an inherited GOPATH (e.g. from ~/.env.local) instead of clobbering it
+set --query GOPATH; or set --export GOPATH $HOME
 
 add_path /usr/local/bin
 add_path $HOME/android-sdk-linux/platform-tools
@@ -1021,11 +1059,15 @@ if is_interactive
     alias mtm='maketmux'
     alias bindkeys='daemon xbindkeys'
     set code_patterns "*.c" "*.h" "*.cc" "*.cpp" "*.hh" "*.coffee" "*.go" "*.hs" "*.java" "*.js" "*.pl" "*.py" "*.sh" "*.rb" "*.swig" "*.ts"
-    set code_includes "--include="$code_patterns
     alias c='less -FX'
     alias cdf='cdfile'
     function rd; cd (projectroot); end
-    alias cg='rg "$code_includes"'
+    # one --glob per pattern, expanded as a list (the old quoted
+    # "$code_includes" collapsed to a single argument, and --include is a
+    # GNU grep option that ripgrep rejects)
+    function cg
+        rg "--glob="$code_patterns $argv
+    end
     alias ct='ctags -R'
     alias cx='chmod +x'
     alias cc='codeconfig'
@@ -1042,12 +1084,20 @@ if is_interactive
     alias d='codeconfig; codelocal'
     function daemon
         pkill $argv[1]
-        setsid $argv[1]
+        # background and disown so the daemon detaches from this shell
+        # (shrc runs it as `(setsid "$1"&)`)
+        setsid $argv[1] &
+        disown
     end
     alias diga='dig +noall +answer +search'
     alias digs='dig +short +search'
     function download; cd $HOME/Downloads; wget $argv; end
-    alias e='$EDITOR'
+    # not an alias: '$EDITOR' unset would execute the file argument itself
+    function e
+        set -l editor $EDITOR
+        test -n "$editor"; or set editor vim
+        $editor $argv
+    end
     alias eg='g -E'
     alias emacs='emacs -nw'
     alias f='command fg'
@@ -1107,7 +1157,11 @@ if is_interactive
     alias now='date +"%Y-%m-%dT%H:%M:%S"'
     alias nowns='date +"%Y-%m-%dT%H:%M:%S.%N"'
     alias nv='nvim'
-    alias p='$PAGER'
+    function p
+        set -l pager $PAGER
+        test -n "$pager"; or set pager more
+        $pager $argv
+    end
     alias pgrep,='pgrep -d , -f'
     alias pg,='pgrep'
     alias phup='pkill -HUP'
@@ -1660,12 +1714,17 @@ if is_interactive
         :
     end
 
-    # clone a version control system repo
+    # clone a version control system repo (parity with shrc.vcs: prefer jj
+    # for git URLs, and only hg-clone URLs that look like hg)
     function clone
         switch $argv[1]
         case '*.git'
-            git clone $argv
-        case '*'
+            if have_command jj
+                jj git clone $argv
+            else if confirm "jj is not installed. Clone using git"
+                git clone $argv
+            end
+        case '*/hg*'
             hg clone $argv
         end
     end
