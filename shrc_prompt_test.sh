@@ -420,7 +420,13 @@ assert_equal "" "$result"
 # job_info renders all background jobs on a single space-separated
 # line so the preprompt stays compact (one line for jobs rather than
 # one line per job). Stub `jobs` to feed deterministic shell-builtin
-# style output to the function's sed/grep pipeline.
+# style output to the function's sed/grep pipeline. bash-only: under
+# zsh job_info reads $jobtexts (the `jobs` builtin prints nothing in
+# command substitutions there), so a `jobs` stub never reaches it;
+# the zsh path's filter is covered by the _job_info_keep tests below
+# and by the real-job tests in shrc_test.sh.
+if test "$_real_shell" = bash; then
+
 start_test "job_info joins multiple jobs onto one line"
 
 jobs() {
@@ -506,6 +512,28 @@ result="$(job_info)"
 assert_equal "" "$result"
 
 unset -f jobs
+
+else
+    skip_block "job_info jobs-stub tests: zsh reads \$jobtexts, not \`jobs\` output"
+fi
+
+###############
+# _job_info_keep is the zsh branch's per-job filter (plain POSIX, so
+# test it under every shell): keep real jobs, drop pushd's pwd-change
+# noise and the preprompt's own `command vcs` plumbing.
+start_test "_job_info_keep keeps real jobs"
+assert_true _job_info_keep "vi notes.txt"
+assert_true _job_info_keep "vcs log"
+
+start_test "_job_info_keep drops pwd-change noise"
+assert_false _job_info_keep "pushd /tmp  (pwd now: /tmp)"
+
+start_test "_job_info_keep drops command-vcs plumbing"
+assert_false _job_info_keep "command vcs auto-fetch > /dev/null 2>&1"
+assert_false _job_info_keep "command vcs"
+
+start_test "_job_info_keep keeps commands merely mentioning command vcs"
+assert_true _job_info_keep "man command vcs"
 
 ###############
 start_test "preprompt integrates components"
