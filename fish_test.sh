@@ -1386,6 +1386,69 @@ result="$(_fish_run '
 ')"
 assert_equal "./foo_test.sh" "$result"
 
+start_test "fish find_test_file handles extension-less names"
+# Regression: splitting on "." with no dot present produced an empty
+# base and ext ".foo", so "foo" looked for "_test.foo" instead of
+# "foo_test".
+result="$(_fish_run '
+    mkdir -p $HOME/ftf2
+    cd $HOME/ftf2
+    touch foo foo_test
+    find_test_file foo
+')"
+assert_equal "./foo_test" "$result"
+
+###############
+# TEST: builddir mirrors shrc: "." at the root, root-relative path
+# (no leading slash) below it, and no error outside a project.
+
+start_test "fish builddir prints . at the project root"
+result="$(_fish_run '
+    mkdir -p $HOME/proj
+    cd $HOME/proj
+    function projectroot; echo $HOME/proj; end
+    builddir
+')"
+assert_equal "." "$result"
+
+start_test "fish builddir strips the root and its slash below the root"
+result="$(_fish_run '
+    mkdir -p $HOME/proj/sub/dir
+    cd $HOME/proj/sub/dir
+    function projectroot; echo $HOME/proj; end
+    builddir
+')"
+assert_equal "sub/dir" "$result"
+
+start_test "fish builddir degrades quietly outside a project"
+# projectroot prints nothing (the default stub); shrc strips the
+# empty-root prefix "/" and prints $PWD without its leading slash,
+# with no test(1) errors on stderr.
+result="$(_fish_run '
+    cd $HOME
+    builddir
+' 2>&1)"
+assert_not_contains "test:" "$result"
+assert_contains "fakehome" "$result"
+
+###############
+# TEST: auth runs ssh-add (it was a silent no-op, diverging from
+# shrc/nushell, and `a`/startup auth did nothing in fish)
+
+start_test "fish auth runs ssh-add"
+result="$(_fish_run '
+    function ssh-add; echo "ssh-add ran"; end
+    auth
+')"
+assert_equal "ssh-add ran" "$result"
+
+start_test "fish a is an alias for auth"
+result="$(_fish_run '
+    function ssh-add; echo "ssh-add ran"; end
+    a
+')"
+assert_equal "ssh-add ran" "$result"
+
 start_test "fish trydiff diffs command output against the file"
 result="$(_fish_run '
     cd $HOME
