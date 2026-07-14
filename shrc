@@ -2113,6 +2113,16 @@ ssh_to() {
                 continue
             fi
             case "$_arg" in
+                --)
+                    # end of options: rotate it along with the options
+                    # so it lands before the host (ssh accepts
+                    # `ssh [options] -- destination [command]`), and
+                    # everything after it is the remote command even
+                    # if it starts with a dash.
+                    _nopts=$((_nopts + 1))
+                    break;;
+                -)
+                    break;;
                 -[BbcDEeFIiJLlmOoPpQRSWw])
                     _expect_value=1
                     _nopts=$((_nopts + 1));;

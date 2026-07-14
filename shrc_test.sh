@@ -837,6 +837,15 @@ result="$(
 )"
 assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -P prod myhost uptime" "$result"
 
+start_test "ssh_to stops option collection at -- (dashed remote command)"
+result="$(
+    short_hostname() { puts "clienthost"; }
+    have_command() { return 1; }
+    ssh() { puts "args=$*"; }
+    ssh_to myhost -- -v
+)"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -- myhost -v" "$result"
+
 start_test "ssh_to with only a remote command and no flags"
 result="$(
     short_hostname() { puts "clienthost"; }
