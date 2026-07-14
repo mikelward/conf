@@ -880,7 +880,15 @@ function ssh_to
     if have_command rw; and test (count $argv) -eq 1
         rw -r $argv
     else
-        shift_options ssh -t -oSendEnv=LC_CLIENT_HOST $argv
+        # The host must be shift_options' target (its second argument)
+        # so any ssh flags the user typed after the host alias get
+        # moved in front of it. Passing -t as the target instead left
+        # user flags after the hostname, where ssh runs them as the
+        # remote command (e.g. `somehost -v uptime` remotely ran
+        # `-v uptime`).
+        set -l _host $argv[1]
+        set --erase argv[1]
+        shift_options ssh $_host -t -oSendEnv=LC_CLIENT_HOST $argv
     end
 end
 

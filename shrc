@@ -2093,7 +2093,15 @@ ssh_to() {
     if have_command rw && test "$#" -eq 1; then
         ( export LC_CLIENT_HOST="$_client_host"; rw -r "$@" )
     else
-        ( export LC_CLIENT_HOST="$_client_host"; shift_options ssh -t -oSendEnv=LC_CLIENT_HOST "$@" )
+        # The host must be shift_options' target (its second argument)
+        # so any ssh flags the user typed after the host alias get
+        # moved in front of it. Passing -t as the target instead left
+        # user flags after the hostname, where ssh runs them as the
+        # remote command (e.g. `somehost -v uptime` remotely ran
+        # `-v uptime`).
+        local _host="$1"
+        shift
+        ( export LC_CLIENT_HOST="$_client_host"; shift_options ssh "$_host" -t -oSendEnv=LC_CLIENT_HOST "$@" )
     fi
 }
 
