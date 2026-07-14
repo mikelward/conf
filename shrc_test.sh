@@ -2225,6 +2225,38 @@ else
 fi
 
 ###############
+# TEST: job_info sees real background jobs, and publish_jobs (which
+# needs the same summary) still sees them too. Regression: in zsh the
+# `jobs` builtin prints nothing inside $(...) (and nothing at all
+# non-interactively), so job_info rendered every prompt jobless and
+# publish_jobs always published an empty list; the summary is now
+# computed in the current shell (from $jobtexts under zsh) and shared
+# via _job_info_compute, never captured through a subshell. job_info
+# is exercised via a redirect, not $(...): redirects run in the
+# current shell, and publish_jobs no longer needs capturing at all.
+
+if test "$_real_shell" = bash || test "$_real_shell" = zsh; then
+    start_test "job_info lists a real background job"
+    sleep 5 &
+    job_info > "$_testdir/job_info_out"
+    _job_out=$(cat "$_testdir/job_info_out")
+    assert_contains "sleep 5" "$_job_out"
+    assert_contains "%" "$_job_out"
+
+    start_test "publish_jobs (real job table) publishes the job"
+    TTY=/dev/pts/98
+    XDG_RUNTIME_DIR="$_testdir/xdg"
+    unset _JOB_PUBLISH_FILE_INIT _JOB_PUBLISH_FILE
+    publish_jobs
+    assert_contains "sleep" "$(cat "$(publish_jobs_file)")"
+    kill %% 2>/dev/null
+    wait 2>/dev/null
+    unset _JOB_PUBLISH_FILE_INIT _JOB_PUBLISH_FILE
+else
+    skip_block "job_info tests: dash job table is empty non-interactively"
+fi
+
+###############
 # TEST: publish_jobs_file resolves a per-tty file under
 # $XDG_RUNTIME_DIR; publish_jobs writes a "%N command" summary string
 # there; unpublish_jobs removes it. We deliberately don't fall back
@@ -2263,25 +2295,26 @@ TTY=/dev/pts/99
 unset _JOB_PUBLISH_FILE_INIT _JOB_PUBLISH_FILE
 _file=$(publish_jobs_file)
 rm -f "$_file"
-# Override job_info with a stub that produces no lines so we exercise
-# the no-jobs path without depending on the test driver's job table.
-job_info() { :; }
+# Override _job_info_compute with a stub that produces an empty
+# summary so we exercise the no-jobs path without depending on the
+# test driver's job table.
+_job_info_compute() { _job_info_out=; }
 publish_jobs
 assert_true test -f "$_file"
 assert_equal "" "$(cat "$_file")"
 
 start_test "publish_jobs writes %N command per job, space-separated"
-# Stub job_info with the same single-line "%N cmd args & %M cmd args
-# &" shape the real job_info produces. The awk pair-walker should
+# Stub _job_info_compute with the same single-line "%N cmd args & %M
+# cmd args &" shape the real one produces. The awk pair-walker should
 # drop the args and keep only "%N cmd" tokens.
-job_info() {
-    printf '%s\n' "%1 vi notes.txt & %2 tail -f syslog &"
+_job_info_compute() {
+    _job_info_out="%1 vi notes.txt & %2 tail -f syslog &"
 }
 publish_jobs
 # Trailing space after the last entry mirrors the awk format and lets
 # consumers concatenate without inserting their own separator.
 assert_equal "%1 vi %2 tail " "$(cat "$_file")"
-unset -f job_info
+unset -f _job_info_compute
 
 start_test "unpublish_jobs removes the file"
 assert_true test -f "$_file"

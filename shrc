@@ -1682,15 +1682,60 @@ on_dev_host() {
 # only strips the first status word (`Exit`), leaving the code behind
 # as `%1 N command vcs ...`. Allow that leftover so a `command vcs`
 # call that errors (bad repo, missing helper) is filtered too.
+# Decide whether a job's command text belongs in the job summary.
+# Used by _job_info_compute's zsh branch (whose $jobtexts entries are
+# bare command text); mirrors the sed/grep filters in the bash branch:
+# drop pushd's "(pwd now: ...)" noise and the preprompt's own
+# `command vcs ...` plumbing. A user's deliberate `vcs foo &` shows
+# as `vcs foo` and is kept.
+_job_info_keep() {
+    case $1 in
+        *"(pwd now:"*) return 1;;
+        "command vcs"|"command vcs "*) return 1;;
+    esac
+    return 0
+}
+
+# Compute the single-line job summary into $_job_info_out (a shared
+# variable, not stdout) so callers never have to capture it via
+# $(...): in zsh the job table -- and even $jobtexts -- is empty
+# inside a command substitution subshell, so `$(job_info)` silently
+# returned nothing there and publish_jobs always published an empty
+# list. Computing in the current shell sidesteps that for both
+# consumers (job_info's own direct output, and publish_jobs).
+_job_info_compute() {
+        if is_zsh; then
+            # zsh's `jobs` builtin prints nothing inside a $(...) command
+            # substitution (the job table isn't propagated there, unlike
+            # bash), and prints nothing at all in non-interactive shells,
+            # so build the listing from zsh's $jobtexts association
+            # instead. eval keeps the zsh-only ${(k)...} syntax away from
+            # other shells' parsers, and `emulate -L zsh` undoes shrc's
+            # `emulate sh` (whose ksh-style arrays break ${(k)...} on
+            # associations) for the rest of this function only.
+            local _num _text
+            _job_info_out=
+            eval '
+                emulate -L zsh
+                for _num in ${(kno)jobtexts}; do
+                    _text=${jobtexts[$_num]}
+                    _job_info_keep "$_text" || continue
+                    _job_info_out="$_job_info_out%$_num $_text "
+                done
+            '
+        else
+            _job_info_out="$(jobs |
+                sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /' |
+                grep -v '(pwd now:' |
+                grep -vE '^%[0-9][0-9]* ([0-9][0-9]* +)?command vcs( |$)' |
+                tr '\n' ' ')"
+        fi
+        _job_info_out="${_job_info_out% }"
+}
+
 job_info() {
-        local _out
-        _out="$(jobs |
-            sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /' |
-            grep -v '(pwd now:' |
-            grep -vE '^%[0-9][0-9]* ([0-9][0-9]* +)?command vcs( |$)' |
-            tr '\n' ' ')"
-        _out="${_out% }"
-        test -n "$_out" && printf '%s\n' "$_out"
+        _job_info_compute
+        test -n "$_job_info_out" && printf '%s\n' "$_job_info_out"
 }
 
 # Resolve the per-shell file publish_jobs writes a short summary of
@@ -1735,13 +1780,13 @@ publish_jobs() {
     test -n "$_file" || return
     local _dir=${_file%/*}
     mkdir -p "$_dir" 2>/dev/null || return
-    # The `jobs` builtin's view of the job table is cleared in a
-    # pipeline left-side subshell, so `job_info | awk` would silently
-    # see zero jobs even when there are some. Command substitution
-    # preserves the table, so capture first and pipe the text.
-    local _info
-    _info=$(job_info)
-    printf '%s\n' "$_info" | awk '
+    # Neither `$(job_info)` nor `job_info | awk` is safe here: bash
+    # clears the job table in pipeline left-side subshells, and zsh
+    # clears it (and $jobtexts) in command substitutions. So compute
+    # the summary in the current shell and only pipe the resulting
+    # text.
+    _job_info_compute
+    printf '%s\n' "$_job_info_out" | awk '
         { for (i = 1; i <= NF; i++)
             if ($i ~ /^%[0-9]+$/ && (i+1) <= NF)
                 printf "%s %s ", $i, $(i+1) }
