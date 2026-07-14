@@ -528,9 +528,11 @@ assert_equal "1" "$?"
 # budget we catch ~10x regressions without flaking on slow CI.
 # VCS_PERF_BUDGET_MS=0 disables the check for manual profiling.
 
+_vcs_perf_budget_ms="${VCS_PERF_BUDGET_MS:-200}"
+start_test "vcs detect within ${_vcs_perf_budget_ms}ms budget"
+
 # Warmup: exclude first-call variance (binary load, cache file creation)
 # from the timed loop.
-        start_test "vcs detect within ${_vcs_perf_budget_ms}ms budget"
 (cd "$_testdir/gitrepo" && vcs >/dev/null 2>&1)
 _start=$(_now_ns)
 _i=0
@@ -539,7 +541,6 @@ while test $_i -lt 10; do
     _i=$((_i + 1))
 done
 _end=$(_now_ns)
-_vcs_perf_budget_ms="${VCS_PERF_BUDGET_MS:-200}"
 if test "$_start" != "0" && test "$_end" != "0"; then
     _elapsed_ms=$(( (_end - _start) / 1000000 ))
     echo "  10 x vcs detect: ${_elapsed_ms}ms (budget ${_vcs_perf_budget_ms}ms)"
