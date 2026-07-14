@@ -914,7 +914,7 @@ function ssh_to
                 continue
             end
             switch $_arg
-            case '-B' '-b' '-c' '-D' '-E' '-e' '-F' '-I' '-i' '-J' '-L' '-l' '-m' '-O' '-o' '-p' '-Q' '-R' '-S' '-W' '-w'
+            case '-B' '-b' '-c' '-D' '-E' '-e' '-F' '-I' '-i' '-J' '-L' '-l' '-m' '-O' '-o' '-P' '-p' '-Q' '-R' '-S' '-W' '-w'
                 set _expect_value 1
                 set _nopts (math $_nopts + 1)
             case '-*'

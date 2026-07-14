@@ -225,6 +225,15 @@ result="$(_fish_run '
 ')"
 assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -p 2222 -v myhost uptime now" "$result"
 
+start_test "fish ssh_to keeps -P's tag value with the flag (uppercase P)"
+result="$(_fish_run '
+    function short_hostname; echo clienthost; end
+    function have_command; test $argv[1] = ssh; end
+    function ssh; echo "args=$argv"; end
+    ssh_to myhost -P prod uptime
+')"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -P prod myhost uptime" "$result"
+
 start_test "fish ssh_to with only a remote command and no flags"
 result="$(_fish_run '
     function short_hostname; echo clienthost; end

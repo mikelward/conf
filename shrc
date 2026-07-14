@@ -2113,7 +2113,7 @@ ssh_to() {
                 continue
             fi
             case "$_arg" in
-                -[BbcDEeFIiJLlmOopQRSWw])
+                -[BbcDEeFIiJLlmOoPpQRSWw])
                     _expect_value=1
                     _nopts=$((_nopts + 1));;
                 -*)
