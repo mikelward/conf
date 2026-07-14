@@ -914,6 +914,16 @@ function ssh_to
                 continue
             end
             switch $_arg
+            case '--'
+                # end of options: rotate it along with the options so
+                # it lands before the host (ssh accepts
+                # `ssh [options] -- destination [command]`), and
+                # everything after it is the remote command even if it
+                # starts with a dash.
+                set _nopts (math $_nopts + 1)
+                break
+            case '-'
+                break
             case '-B' '-b' '-c' '-D' '-E' '-e' '-F' '-I' '-i' '-J' '-L' '-l' '-m' '-O' '-o' '-P' '-p' '-Q' '-R' '-S' '-W' '-w'
                 set _expect_value 1
                 set _nopts (math $_nopts + 1)

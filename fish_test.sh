@@ -234,6 +234,15 @@ result="$(_fish_run '
 ')"
 assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -P prod myhost uptime" "$result"
 
+start_test "fish ssh_to stops option collection at -- (dashed remote command)"
+result="$(_fish_run '
+    function short_hostname; echo clienthost; end
+    function have_command; test $argv[1] = ssh; end
+    function ssh; echo "args=$argv"; end
+    ssh_to myhost -- -v
+')"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -- myhost -v" "$result"
+
 start_test "fish ssh_to with only a remote command and no flags"
 result="$(_fish_run '
     function short_hostname; echo clienthost; end
