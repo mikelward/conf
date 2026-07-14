@@ -202,6 +202,17 @@ assert_contains "LC_CLIENT_HOST=clienthost" "$result"
 assert_contains "-oSendEnv=LC_CLIENT_HOST" "$result"
 assert_contains "myhost" "$result"
 
+start_test "fish ssh_to moves user ssh flags before the host"
+# Regression: -t used to be shift_options' target, so user flags
+# landed after the hostname and ssh ran them as the remote command.
+result="$(_fish_run '
+    function short_hostname; echo clienthost; end
+    function have_command; test $argv[1] = ssh; end
+    function ssh; echo "args=$argv"; end
+    ssh_to myhost -v uptime
+')"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -v myhost uptime" "$result"
+
 start_test "fish ssh_to rw path also sets LC_CLIENT_HOST"
 result="$(_fish_run '
     function short_hostname; echo clienthost; end
