@@ -828,6 +828,15 @@ result="$(
 )"
 assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -p 2222 -v myhost uptime now" "$result"
 
+start_test "ssh_to keeps -P's tag value with the flag (uppercase P)"
+result="$(
+    short_hostname() { puts "clienthost"; }
+    have_command() { return 1; }
+    ssh() { puts "args=$*"; }
+    ssh_to myhost -P prod uptime
+)"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -P prod myhost uptime" "$result"
+
 start_test "ssh_to with only a remote command and no flags"
 result="$(
     short_hostname() { puts "clienthost"; }
