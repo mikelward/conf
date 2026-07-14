@@ -85,8 +85,9 @@ end
 function a
     auth
 end
+# hook for authenticating (to ssh-agent, etc.)
 function auth
-    :
+    ssh-add
 end
 
 # hook for printing which things I need to authenticate to (ssh-agent, etc.)
@@ -397,11 +398,16 @@ end
 
 # print the path from buildroot to $PWD
 function builddir
-    set buildroot (buildroot)
-    if test $PWD = $buildroot
-        printf '.'
+    # string collect keeps an empty buildroot (no project) a string
+    # rather than an empty list, so the comparison and trim below
+    # degrade the same way shrc and nushell do instead of erroring.
+    set buildroot (buildroot | string collect)
+    if test "$PWD" = "$buildroot"
+        printf '%s\n' .
     else
-        trim_prefix (buildroot) $PWD
+        # strip the trailing slash too, so a subdir prints as
+        # "subdir" (not "/subdir"), matching shrc and nushell
+        trim_prefix "$buildroot/" $PWD
     end
 end
 
@@ -460,8 +466,15 @@ function find_test_file
     set file (basename $argv[1])
     set dir (dirname $argv[1])
     set dots (string split '.' $file)
-    set base (string join '.' $dots[1..-2])
-    set ext .$dots[-1]
+    if test (count $dots) -ge 2
+        set base (string join '.' $dots[1..-2])
+        set ext .$dots[-1]
+    else
+        # no extension (e.g. "Makefile", a script): the whole name is
+        # the base, so "foo" maps to "foo_test", not "_test.foo"
+        set base $file
+        set ext ''
+    end
 
     test -n "$dir"; and set dir $dir/
     set testfile $dir$base'_test'$ext
@@ -1205,7 +1218,7 @@ if is_interactive
     alias userjournal='journalctl --user'
     alias userjnl='userjournal'
     alias v='view'
-    alias view='vim -R'
+    alias view='vim -R -c ":set mouse="'
     alias vl='view /var/log/syslog'
     alias wcp='with_agent scp'
     alias wsh='with_agent ssh'
@@ -1866,6 +1879,16 @@ end
 
 # source local overrides file (work vs home, etc.)
 test -f $HOME/.config/fish/local.fish; and source $HOME/.config/fish/local.fish
+
+# authenticate on startup if needed, mirroring shrc's startup check.
+# Skipped when attached to a shpool session (credentials come from the
+# parent), and when stdin isn't a tty (ssh-add can't prompt there, and
+# the fish test harness runs `fish -i` with stdin detached).
+if is_interactive; and stdin_is_tty; and not in_shpool
+    if need_auth
+        auth
+    end
+end
 
 # finish with a zero exit status so the first prompt is '$' rather than '?'
 true
