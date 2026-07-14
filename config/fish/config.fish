@@ -893,15 +893,47 @@ function ssh_to
     if have_command rw; and test (count $argv) -eq 1
         rw -r $argv
     else
-        # The host must be shift_options' target (its second argument)
-        # so any ssh flags the user typed after the host alias get
-        # moved in front of it. Passing -t as the target instead left
-        # user flags after the hostname, where ssh runs them as the
-        # remote command (e.g. `somehost -v uptime` remotely ran
-        # `-v uptime`).
+        # ssh flags the user typed after the host alias must be moved
+        # in front of the host, or ssh runs them as the remote command
+        # (e.g. `somehost -v uptime` remotely ran `-v uptime`). Unlike
+        # shift_options, honor ssh flags whose value is a separate word
+        # (-p 2222, -i file, -o opt, ...): the value must travel with
+        # its flag, not stop the scan (`somehost -p 2222 uptime` must
+        # not pass `-p somehost`). The flag list is OpenSSH's usage
+        # line's value-taking options.
         set -l _host $argv[1]
         set --erase argv[1]
-        shift_options ssh $_host -t -oSendEnv=LC_CLIENT_HOST $argv
+        # Count the leading option words (flags plus their values);
+        # everything after them is the remote command.
+        set -l _nopts 0
+        set -l _expect_value 0
+        for _arg in $argv
+            if test $_expect_value -eq 1
+                set _expect_value 0
+                set _nopts (math $_nopts + 1)
+                continue
+            end
+            switch $_arg
+            case '-B' '-b' '-c' '-D' '-E' '-e' '-F' '-I' '-i' '-J' '-L' '-l' '-m' '-O' '-o' '-p' '-Q' '-R' '-S' '-W' '-w'
+                set _expect_value 1
+                set _nopts (math $_nopts + 1)
+            case '-*'
+                set _nopts (math $_nopts + 1)
+            case '*'
+                break
+            end
+        end
+        # Slice rather than rotate: fish reverses a range whose start
+        # exceeds its end, so guard the empty slices explicitly.
+        set -l _opts
+        set -l _cmd
+        if test $_nopts -gt 0
+            set _opts $argv[1..$_nopts]
+        end
+        if test $_nopts -lt (count $argv)
+            set _cmd $argv[(math $_nopts + 1)..-1]
+        end
+        ssh -t -oSendEnv=LC_CLIENT_HOST $_opts $_host $_cmd
     end
 end
 

@@ -816,6 +816,27 @@ result="$(
 )"
 assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -v myhost uptime" "$result"
 
+start_test "ssh_to keeps a flag's separate value with the flag"
+# Regression: shift_options stopped collecting at the first
+# non-dash word, so `-p 2222` became `-p myhost 2222 ...` with the
+# host consumed as the port.
+result="$(
+    short_hostname() { puts "clienthost"; }
+    have_command() { return 1; }
+    ssh() { puts "args=$*"; }
+    ssh_to myhost -p 2222 -v uptime now
+)"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -p 2222 -v myhost uptime now" "$result"
+
+start_test "ssh_to with only a remote command and no flags"
+result="$(
+    short_hostname() { puts "clienthost"; }
+    have_command() { return 1; }
+    ssh() { puts "args=$*"; }
+    ssh_to myhost uptime
+)"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST myhost uptime" "$result"
+
 start_test "ssh_to rw path also sets LC_CLIENT_HOST"
 result="$(
     short_hostname() { puts "clienthost"; }

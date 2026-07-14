@@ -2093,15 +2093,45 @@ ssh_to() {
     if have_command rw && test "$#" -eq 1; then
         ( export LC_CLIENT_HOST="$_client_host"; rw -r "$@" )
     else
-        # The host must be shift_options' target (its second argument)
-        # so any ssh flags the user typed after the host alias get
-        # moved in front of it. Passing -t as the target instead left
-        # user flags after the hostname, where ssh runs them as the
-        # remote command (e.g. `somehost -v uptime` remotely ran
-        # `-v uptime`).
+        # ssh flags the user typed after the host alias must be moved
+        # in front of the host, or ssh runs them as the remote command
+        # (e.g. `somehost -v uptime` remotely ran `-v uptime`). Unlike
+        # shift_options, honor ssh flags whose value is a separate word
+        # (-p 2222, -i file, -o opt, ...): the value must travel with
+        # its flag, not stop the scan (`somehost -p 2222 uptime` must
+        # not pass `-p somehost`). The flag list is OpenSSH's usage
+        # line's value-taking options.
         local _host="$1"
         shift
-        ( export LC_CLIENT_HOST="$_client_host"; shift_options ssh "$_host" -t -oSendEnv=LC_CLIENT_HOST "$@" )
+        # Count the leading option words (flags plus their values);
+        # everything after them is the remote command.
+        local _arg _nopts=0 _expect_value=0
+        for _arg in "$@"; do
+            if test "$_expect_value" = 1; then
+                _expect_value=0
+                _nopts=$((_nopts + 1))
+                continue
+            fi
+            case "$_arg" in
+                -[BbcDEeFIiJLlmOopQRSWw])
+                    _expect_value=1
+                    _nopts=$((_nopts + 1));;
+                -*)
+                    _nopts=$((_nopts + 1));;
+                *)
+                    break;;
+            esac
+        done
+        # Rearrange "$@" from OPTIONS COMMAND to OPTIONS HOST COMMAND
+        # by rotation, so arguments keep their exact words (no string
+        # splitting): move the options to the back, append the host,
+        # then move the command words to the back.
+        local _ncmd=$(($# - _nopts)) _i=0
+        while test "$_i" -lt "$_nopts"; do set -- "$@" "$1"; shift; _i=$((_i + 1)); done
+        set -- "$@" "$_host"
+        _i=0
+        while test "$_i" -lt "$_ncmd"; do set -- "$@" "$1"; shift; _i=$((_i + 1)); done
+        ( export LC_CLIENT_HOST="$_client_host"; ssh -t -oSendEnv=LC_CLIENT_HOST "$@" )
     fi
 }
 
