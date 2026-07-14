@@ -306,4 +306,4 @@ test-sway: $(CACHE)/test-sway.stamp
 	test test-verbose test-full test-all \
 	test-dash test-bash test-zsh test-prompt test-vcs \
 	test-fish test-nu test-lint \
-	test-gitconfig test-makefile test-amethyst test-hypr test-sway
+	test-env test-gitconfig test-makefile test-amethyst test-hypr test-sway
