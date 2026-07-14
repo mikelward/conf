@@ -213,6 +213,27 @@ result="$(_fish_run '
 ')"
 assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -v myhost uptime" "$result"
 
+start_test "fish ssh_to keeps a flag's separate value with the flag"
+# Regression: shift_options stopped collecting at the first
+# non-dash word, so `-p 2222` became `-p myhost 2222 ...` with the
+# host consumed as the port.
+result="$(_fish_run '
+    function short_hostname; echo clienthost; end
+    function have_command; test $argv[1] = ssh; end
+    function ssh; echo "args=$argv"; end
+    ssh_to myhost -p 2222 -v uptime now
+')"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -p 2222 -v myhost uptime now" "$result"
+
+start_test "fish ssh_to with only a remote command and no flags"
+result="$(_fish_run '
+    function short_hostname; echo clienthost; end
+    function have_command; test $argv[1] = ssh; end
+    function ssh; echo "args=$argv"; end
+    ssh_to myhost uptime
+')"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST myhost uptime" "$result"
+
 start_test "fish ssh_to rw path also sets LC_CLIENT_HOST"
 result="$(_fish_run '
     function short_hostname; echo clienthost; end
