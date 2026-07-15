@@ -3,6 +3,7 @@
 ## Style
 
 - Preserve existing code style unless there are correctness issues.
+- Keep comments brief. Explain the non-obvious parts and the *why*, not the *what*, and match the existing comment style.
 - Use `if test` rather than `if [`.
 - In `shrc` and `shrc.*`, use existing helper functions such as `error`, `warn`, `have_command`, `is_function`, `gets`, and `puts`.
 - When parsing options, support long flags in both `--option argument` and `--option=argument` formats.
