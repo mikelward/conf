@@ -111,6 +111,18 @@ def --env fake-fnm-on-path []: nothing -> string {
     $home
 }
 
+# Stub a brew install: a prefix dir with bin/brew (+ sbin). Returns the brew
+# path so callers can put it on PATH or point $env.BREW at it.
+def --env fake-brew []: nothing -> string {
+    let prefix = (mktemp -d)
+    let bin = ($prefix | path join "bin")
+    mkdir $bin
+    mkdir ($prefix | path join "sbin")
+    ("#!/bin/sh\nexit 0\n") | save -f ($bin | path join "brew")
+    ^chmod +x ($bin | path join "brew")
+    ($bin | path join "brew")
+}
+
 let results = [
     ###############
     # jd/hd/gd & mjd/mhd/mgd run autosession after the underlying command
@@ -434,6 +446,40 @@ let results = [
         setup-fnm
         assert ($env.PATH | any {|it| $it == $home })
         assert (not ("FNM_MARKER" in $env))
+    })
+
+    ###############
+    # setup-brew (Homebrew integration)
+    (run-test "nu setup-brew adds prefix bin when brew on PATH" {
+        let brew = (fake-brew)
+        $env.PATH = ([($brew | path dirname)] ++ $env.PATH)
+        setup-brew
+        let prefix = ($brew | path dirname | path dirname)
+        assert ($env.PATH | any {|it| $it == ($prefix | path join "bin") })
+        assert equal $env.HOMEBREW_PREFIX $prefix
+    })
+    # brew shellenv also exports CELLAR/REPOSITORY and prepends MANPATH/INFOPATH;
+    # setup-brew matches that. fake-brew has no prefix/Homebrew dir, so
+    # REPOSITORY falls back to the prefix.
+    (run-test "nu setup-brew exports the full shellenv vars" {
+        let brew = (fake-brew)
+        $env.PATH = ([($brew | path dirname)] ++ $env.PATH)
+        setup-brew
+        let prefix = ($brew | path dirname | path dirname)
+        assert equal $env.HOMEBREW_CELLAR ($prefix | path join "Cellar")
+        assert equal $env.HOMEBREW_REPOSITORY $prefix
+        assert ($env.MANPATH | str contains ($prefix | path join "share" "man"))
+        assert ($env.INFOPATH | str contains ($prefix | path join "share" "info"))
+    })
+    # brew off-PATH (the Linuxbrew case): discovered via a known location,
+    # stood in for here by $BREW so the test needn't write to /home/linuxbrew.
+    (run-test "nu setup-brew discovers brew off-PATH via BREW" {
+        let brew = (fake-brew)
+        $env.PATH = [(mktemp -d)]   # scrub PATH so brew is not resolvable
+        $env.BREW = $brew
+        setup-brew
+        let prefix = ($brew | path dirname | path dirname)
+        assert ($env.PATH | any {|it| $it == ($prefix | path join "bin") })
     })
 
     ###############

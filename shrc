@@ -1125,6 +1125,32 @@ setup_fnm() {
     return 0
 }
 
+# Load Homebrew's shell environment. brew is often off-PATH (Linuxbrew installs
+# under a prefix not on the default PATH), so fall back to known locations.
+# BREW overrides the search (tests). Mirrors config/fish/config.fish and
+# config/nushell/config.nu.
+setup_brew() {
+    local brew_bin candidate
+    if have_command brew; then
+        brew_bin=brew
+    else
+        brew_bin=
+        for candidate in "${BREW:-}" \
+                         /opt/homebrew/bin/brew /usr/local/bin/brew \
+                         /home/linuxbrew/.linuxbrew/bin/brew \
+                         "$HOME/.linuxbrew/bin/brew"; do
+            if test -n "$candidate" && test -x "$candidate"; then
+                brew_bin="$candidate"
+                break
+            fi
+        done
+    fi
+    test -n "$brew_bin" && eval "$("$brew_bin" shellenv)"
+    # Always succeed: a missing brew isn't an error, and a bare call under
+    # `set -e` (scripts source shrc that way) must not abort the rest of shrc.
+    return 0
+}
+
 ##################################
 # ENVIRONMENT SETUP FOR ALL SHELLS
 # Set $PATH early in case other stuff here needs it.
@@ -1178,9 +1204,7 @@ done
 for dir in /opt/*/bin; do
     add_path "$dir" end
 done
-if have_command brew; then
-    eval "$(brew shellenv)"
-fi
+setup_brew
 setup_fnm
 
 # set HISTORY_FILE for log_history
