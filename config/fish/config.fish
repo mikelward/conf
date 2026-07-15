@@ -731,8 +731,18 @@ for dir in /opt/*/bin
 end
 add_path /sbin end
 add_path /usr/sbin end
+# Load Homebrew. brew is often off-PATH (Linuxbrew lives under a prefix not on
+# the default PATH), so fall back to known locations. $BREW overrides the
+# search (tests). Mirrors setup_brew in shrc.
 if have_command brew
     brew shellenv | source
+else
+    for brew_bin in $BREW /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew $HOME/.linuxbrew/bin/brew
+        if test -x "$brew_bin"
+            $brew_bin shellenv | source
+            break
+        end
+    end
 end
 
 # fnm (Fast Node Manager): put its dir on PATH, then load its shell

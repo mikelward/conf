@@ -962,6 +962,46 @@ def --env setup-fnm [] {
     let shim = ([$env.FNM_MULTISHELL_PATH "bin"] | path join)
     $env.PATH = ([$shim] ++ ($env.PATH | where {|p| $p != $shim }))
 }
+
+# Load Homebrew. brew is often off-PATH (Linuxbrew lives under a prefix not on
+# the default PATH), so fall back to known locations. nu can't source
+# `brew shellenv`, so add the prefix bin/sbin directly. $BREW overrides the
+# search (tests). Mirrors setup_brew in shrc and config/fish/config.fish.
+def --env setup-brew [] {
+    let brew = (
+        if (have-command brew) {
+            (which brew | get 0.path?)
+        } else {
+            [
+                ($env.BREW? | default "")
+                "/opt/homebrew/bin/brew"
+                "/usr/local/bin/brew"
+                "/home/linuxbrew/.linuxbrew/bin/brew"
+                ([$env.HOME ".linuxbrew" "bin" "brew"] | path join)
+            ] | where {|p| ($p | is-not-empty) and ($p | path exists) } | get 0?
+        }
+    )
+    if ($brew | is-empty) { return }
+    let prefix = ($brew | path dirname | path dirname)
+    # Replicate `brew shellenv` (which shrc/fish run): prefix/cellar/repository,
+    # bin+sbin on PATH, and man/info prepended.
+    $env.HOMEBREW_PREFIX = $prefix
+    $env.HOMEBREW_CELLAR = ([$prefix "Cellar"] | path join)
+    # The Homebrew git repo is at $prefix/Homebrew (Linuxbrew, Intel macOS) or
+    # the prefix itself (Apple silicon); pick whichever exists.
+    let repo = ([$prefix "Homebrew"] | path join)
+    $env.HOMEBREW_REPOSITORY = (if ($repo | path exists) { $repo } else { $prefix })
+    add-path ([$prefix "bin"] | path join) "start"
+    add-path ([$prefix "sbin"] | path join) "start"
+    let man = ([$prefix "share" "man"] | path join)
+    $env.MANPATH = (if ($env.MANPATH? | is-not-empty) { $"($man):($env.MANPATH):" } else { $"($man):" })
+    let info = ([$prefix "share" "info"] | path join)
+    $env.INFOPATH = (if ($env.INFOPATH? | is-not-empty) { $"($info):($env.INFOPATH)" } else { $"($info):" })
+}
+
+# Run brew before fnm, matching shrc/fish: an fnm installed via Homebrew is
+# only reachable once brew's prefix is on PATH.
+setup-brew
 setup-fnm
 
 $env.LESS = "-R"

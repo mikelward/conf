@@ -962,6 +962,35 @@ rm -rf "$_mac_home" "$_mac_unamebin"
 rm -rf "$_fnm_home" "$_fnm_bin"
 
 ###############
+# TEST: brew shell environment is loaded (and discovered off-PATH)
+
+# brew on PATH: `brew shellenv | source` runs. The fake brew emits a fish env
+# line standing in for the real HOMEBREW_PREFIX/PATH exports; prepending its
+# dir makes it win over any real brew later on PATH, keeping the test
+# deterministic.
+_brew_bin=$(mktemp -d)
+printf '#!/bin/sh\necho %s\n' "'set -gx BREW_MARKER onpath'" > "$_brew_bin/brew"
+chmod +x "$_brew_bin/brew"
+
+start_test "fish loads brew shellenv when brew on PATH"
+result="$(HOME=$_testdir/fakehome PATH="$_brew_bin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config; echo \$BREW_MARKER" 2>/dev/null)"
+assert_equal "onpath" "$result"
+
+# brew off PATH (the Linuxbrew case: it installs under a prefix that isn't on
+# the default PATH): fall back to a known location. $BREW stands in for the
+# fixed install paths, and PATH is trimmed to the system dirs so no real brew
+# is discovered instead.
+_brew_off=$(mktemp -d)
+printf '#!/bin/sh\necho %s\n' "'set -gx BREW_MARKER discovered'" > "$_brew_off/brew"
+chmod +x "$_brew_off/brew"
+
+start_test "fish discovers brew off-PATH via a known location"
+result="$(HOME=$_testdir/fakehome BREW="$_brew_off/brew" PATH="/usr/bin:/bin" run_with_timeout 15 fish --no-config -c "source $_config; echo \$BREW_MARKER" 2>/dev/null)"
+assert_equal "discovered" "$result"
+
+rm -rf "$_brew_bin" "$_brew_off"
+
+###############
 # TEST: rd cds to project root
 
 _rd_proj="$_testdir/rd_proj"

@@ -318,6 +318,60 @@ shell="$_saved_shell"
 unset FNM_MARKER FNM_PATH
 rm -rf "$_fnm_home" "$_fnm_bin"
 
+# setup_brew loads `brew shellenv` from brew on PATH when present. The fake
+# brew emits an env line the eval picks up, standing in for the real
+# HOMEBREW_PREFIX/PATH exports.
+start_test "setup_brew uses brew from PATH when present"
+_brew_bin=$(mktemp -d)
+cat > "$_brew_bin/brew" << 'SCRIPT'
+#!/bin/sh
+echo 'export BREW_MARKER=onpath'
+SCRIPT
+chmod +x "$_brew_bin/brew"
+PATH="$_brew_bin:$_saved_path"
+unset BREW
+setup_brew
+assert_equal "onpath" "${BREW_MARKER:-}"
+PATH="$_saved_path"
+unset BREW_MARKER
+rm -rf "$_brew_bin"
+
+# When brew isn't on PATH (the Linuxbrew case: it lives under a prefix that
+# isn't on the default PATH), setup_brew falls back to a known location.
+# $BREW stands in for those fixed install paths so the test needn't write to
+# /home/linuxbrew or /opt.
+start_test "setup_brew discovers brew off-PATH via a known location"
+_brew_bin=$(mktemp -d)
+cat > "$_brew_bin/brew" << 'SCRIPT'
+#!/bin/sh
+echo 'export BREW_MARKER=discovered'
+SCRIPT
+chmod +x "$_brew_bin/brew"
+_brew_scrub=$(mktemp -d)   # PATH with no brew
+PATH="$_brew_scrub"
+BREW="$_brew_bin/brew"
+setup_brew
+assert_equal "discovered" "${BREW_MARKER:-}"
+PATH="$_saved_path"
+unset BREW BREW_MARKER
+rm -rf "$_brew_bin" "$_brew_scrub"
+
+# setup_brew is called bare in shrc's env-setup, so it must always succeed --
+# a non-zero return would abort the rest of setup when a script sources shrc
+# under `set -e`.
+start_test "setup_brew is errexit-safe when brew absent"
+_brew_scrub=$(mktemp -d)
+result=$(
+    set -e
+    PATH="$_brew_scrub"
+    unset BREW
+    setup_brew
+    echo survived
+)
+assert_equal "survived" "$result"
+PATH="$_saved_path"
+rm -rf "$_brew_scrub"
+
 ###############
 # UTILITY FUNCTIONS
 
