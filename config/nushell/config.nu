@@ -963,10 +963,8 @@ def --env setup-fnm [] {
     $env.PATH = ([$shim] ++ ($env.PATH | where {|p| $p != $shim }))
 }
 
-# Load Homebrew. brew is often off-PATH (Linuxbrew lives under a prefix not on
-# the default PATH), so fall back to known locations. nu can't source
-# `brew shellenv`, so add the prefix bin/sbin directly. $BREW overrides the
-# search (tests). Mirrors setup_brew in shrc and config/fish/config.fish.
+# brew is often off-PATH (Linuxbrew's prefix isn't on the default PATH), so
+# fall back to known locations; $BREW overrides the search (tests).
 def --env setup-brew [] {
     let brew = (
         if (have-command brew) {
@@ -983,8 +981,7 @@ def --env setup-brew [] {
     )
     if ($brew | is-empty) { return }
     let prefix = ($brew | path dirname | path dirname)
-    # Replicate `brew shellenv` (which shrc/fish run): prefix/cellar/repository,
-    # bin+sbin on PATH, and man/info prepended.
+    # nu can't run `brew shellenv`, so set by hand what it would export.
     $env.HOMEBREW_PREFIX = $prefix
     $env.HOMEBREW_CELLAR = ([$prefix "Cellar"] | path join)
     # The Homebrew git repo is at $prefix/Homebrew (Linuxbrew, Intel macOS) or
@@ -999,8 +996,8 @@ def --env setup-brew [] {
     $env.INFOPATH = (if ($env.INFOPATH? | is-not-empty) { $"($info):($env.INFOPATH)" } else { $"($info):" })
 }
 
-# Run brew before fnm, matching shrc/fish: an fnm installed via Homebrew is
-# only reachable once brew's prefix is on PATH.
+# Before fnm: a Homebrew-installed fnm is only reachable once brew's prefix is
+# on PATH.
 setup-brew
 setup-fnm
 
