@@ -1125,10 +1125,8 @@ setup_fnm() {
     return 0
 }
 
-# Load Homebrew's shell environment. brew is often off-PATH (Linuxbrew installs
-# under a prefix not on the default PATH), so fall back to known locations.
-# BREW overrides the search (tests). Mirrors config/fish/config.fish and
-# config/nushell/config.nu.
+# brew is often off-PATH (Linuxbrew's prefix isn't on the default PATH), so
+# fall back to known locations; BREW overrides the search (tests).
 setup_brew() {
     local brew_bin candidate
     if have_command brew; then

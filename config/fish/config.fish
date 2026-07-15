@@ -731,9 +731,8 @@ for dir in /opt/*/bin
 end
 add_path /sbin end
 add_path /usr/sbin end
-# Load Homebrew. brew is often off-PATH (Linuxbrew lives under a prefix not on
-# the default PATH), so fall back to known locations. $BREW overrides the
-# search (tests). Mirrors setup_brew in shrc.
+# brew is often off-PATH (Linuxbrew's prefix isn't on the default PATH), so
+# fall back to known locations; $BREW overrides the search (tests).
 if have_command brew
     brew shellenv | source
 else
