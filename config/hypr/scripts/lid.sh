@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Laptop lid handler for Hyprland, bound to the Lid Switch in hyprland.conf.
+# Laptop lid handler for Hyprland, bound to the Lid Switch in hyprland.lua / hyprland.conf.
 #
 #   close: disable the internal panel. Suspend ONLY when no external display
 #          is connected -- a docked laptop with the lid shut keeps running on
@@ -27,6 +27,15 @@ fi
 
 action="$1"
 
+# Hyprland 0.55 replaced `hyprctl keyword` with Lua (`hyprctl eval`, which
+# prints "ok" on success); probe once and fall back to the legacy hyprlang
+# syntax on <= 0.54.
+if test "$(hyprctl eval 'return true' 2>/dev/null)" = "ok"; then
+    hypr_lua=1
+else
+    hypr_lua=
+fi
+
 # External displays = currently ACTIVE monitors (plain `monitors`) that aren't
 # the internal panel. We want active outputs here, so a disabled/disconnected
 # external doesn't count toward "keep running while docked".
@@ -35,7 +44,11 @@ external=$(printf '%s\n' "$active" | grep -v "^${INTERNAL}\$")
 
 case "$action" in
     close)
-        hyprctl keyword monitor "${INTERNAL}, disable"
+        if test -n "$hypr_lua"; then
+            hyprctl eval "hl.monitor({ output = \"${INTERNAL}\", disabled = true })"
+        else
+            hyprctl keyword monitor "${INTERNAL}, disable"
+        fi
         if test -z "$external"; then
             # No external display -> safe to sleep. hypridle's before_sleep_cmd
             # locks the session first.
@@ -45,7 +58,11 @@ case "$action" in
     open)
         # auto scale, matching the catch-all `monitor = , preferred, auto, auto`
         # rule -- a hardcoded scale here would reset a HiDPI panel to 1x.
-        hyprctl keyword monitor "${INTERNAL}, preferred, auto, auto"
+        if test -n "$hypr_lua"; then
+            hyprctl eval "hl.monitor({ output = \"${INTERNAL}\", mode = \"preferred\", position = \"auto\", scale = \"auto\" })"
+        else
+            hyprctl keyword monitor "${INTERNAL}, preferred, auto, auto"
+        fi
         ;;
     *)
         echo "usage: $0 close|open" >&2

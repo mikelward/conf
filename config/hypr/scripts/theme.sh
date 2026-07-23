@@ -94,11 +94,18 @@ apply() {
     #    both compositors may be installed at once.
     if test -n "$HYPRLAND_INSTANCE_SIGNATURE" && command -v hyprctl >/dev/null 2>&1; then
         if test "$mode" = light; then
-            hyprctl keyword general:col.active_border "rgba(5e81acff)" >/dev/null 2>&1
-            hyprctl keyword general:col.inactive_border "rgba(d8dee9ff)" >/dev/null 2>&1
+            active_border="rgba(5e81acff)"; inactive_border="rgba(d8dee9ff)"
         else
-            hyprctl keyword general:col.active_border "rgba(88c0d0ff)" >/dev/null 2>&1
-            hyprctl keyword general:col.inactive_border "rgba(3b4252ff)" >/dev/null 2>&1
+            active_border="rgba(88c0d0ff)"; inactive_border="rgba(3b4252ff)"
+        fi
+        # Hyprland 0.55 replaced `hyprctl keyword` with Lua (`hyprctl eval`,
+        # which prints "ok" on success); fall back to the legacy hyprlang
+        # syntax on <= 0.54.
+        if test "$(hyprctl eval 'return true' 2>/dev/null)" = "ok"; then
+            hyprctl eval "hl.config({ general = { col = { active_border = \"$active_border\", inactive_border = \"$inactive_border\" } } })" >/dev/null 2>&1
+        else
+            hyprctl keyword general:col.active_border "$active_border" >/dev/null 2>&1
+            hyprctl keyword general:col.inactive_border "$inactive_border" >/dev/null 2>&1
         fi
     fi
     if test -n "$SWAYSOCK" && command -v swaymsg >/dev/null 2>&1; then

@@ -252,6 +252,8 @@ test-amethyst: $(CACHE)/test-amethyst.stamp
 $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
                           config/hypr/hyprland.conf \
                           config/hypr/hyprland.conf.local.template \
+                          config/hypr/hyprland.lua \
+                          config/hypr/hyprland-local.lua.template \
                           config/hypr/hypridle.conf \
                           config/hypr/hyprlock.conf \
                           config/hypr/scripts/toggle-layout.sh \
