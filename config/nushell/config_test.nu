@@ -3260,6 +3260,24 @@ except OSError: pass
         })
         assert equal $env.HOME ($out | lines | last)
     })
+
+    (run-test "nu puts home bins and /usr/local/bin before system PATH" {
+        let home = (mktemp -d)
+        mkdir ($home | path join ".cargo" "bin")
+        mkdir ($home | path join ".local" "bin")
+        mkdir ($home | path join "android-sdk-linux" "platform-tools")
+        let script = $'$env.HOME = "($home)"; $env.PATH = ["/usr/bin" "/bin"]; source "($CONFIG)"; $env.PATH | first 6 | str join ":" | print'
+        let out = (^nu --no-config-file -c $script | lines | last)
+        let expected = ([
+            ($home | path join ".cargo" "bin")
+            ($home | path join ".local" "bin")
+            ($home | path join "android-sdk-linux" "platform-tools")
+            "/usr/local/bin"
+            "/usr/bin"
+            "/bin"
+        ] | str join ":")
+        assert equal $expected $out
+    })
 ]
 
 for r in $results { print $r }

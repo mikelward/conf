@@ -1627,4 +1627,11 @@ start_test "fish treats an empty GOPATH as missing"
 result="$(_fish_run_config 'set -gx GOPATH ""' '' 'echo $GOPATH')"
 assert_equal "$_testdir/fakehome" "$result"
 
+start_test "fish puts home bins and /usr/local/bin before system PATH"
+result="$(_fish_run_config '
+    mkdir -p $HOME/.cargo/bin $HOME/.local/bin $HOME/android-sdk-linux/platform-tools
+    set -gx PATH /usr/bin /bin
+' '' 'string join : $PATH[1..6]')"
+assert_equal "$_testdir/fakehome/.cargo/bin:$_testdir/fakehome/.local/bin:$_testdir/fakehome/android-sdk-linux/platform-tools:/usr/local/bin:/usr/bin:/bin" "$result"
+
 test_summary "fish_test"
