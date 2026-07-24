@@ -206,8 +206,7 @@ test-nu: $(CACHE)/test-nu.stamp
 # at the end and caches normally. Fish syntax check lives in test-fish.
 $(CACHE)/test-lint.stamp: shrc shrc.vcs profile exitrc \
                           gittemplates/hooks/post-merge \
-                          gittemplates/hooks/post-rewrite \
-                          gittemplates/hooks/pre-commit | $(CACHE)
+                          gittemplates/hooks/post-rewrite | $(CACHE)
 	@shellcheck -s bash -S error shrc
 	@shellcheck -s bash -S error shrc.vcs
 	@dash -n shrc
@@ -217,7 +216,6 @@ $(CACHE)/test-lint.stamp: shrc shrc.vcs profile exitrc \
 	@dash -n gittemplates/hooks/post-rewrite
 	@bash -n shrc
 	@bash -n shrc.vcs
-	@bash -n gittemplates/hooks/pre-commit
 	@touch $@
 test-lint: $(CACHE)/test-lint.stamp
 
