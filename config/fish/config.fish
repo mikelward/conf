@@ -711,14 +711,14 @@ set --export CDPATH . $HOME
 # the default, matching shrc's ${GOPATH:-$HOME}.
 test -n "$GOPATH"; or set --export GOPATH $HOME
 
-add_path /usr/local/bin
-add_path $HOME/android-sdk-linux/platform-tools
-add_path $HOME/android-studio/bin
-add_path $HOME/Android/Sdk/platform-tools
-add_path $HOME/depot_tools
-add_path $HOME/google-cloud-sdk/bin
-add_path $HOME/.cargo/bin
-add_path $HOME/.local/bin
+add_path /usr/local/bin start
+add_path $HOME/android-sdk-linux/platform-tools start
+add_path $HOME/android-studio/bin start
+add_path $HOME/Android/Sdk/platform-tools start
+add_path $HOME/depot_tools start
+add_path $HOME/google-cloud-sdk/bin start
+add_path $HOME/.local/bin start
+add_path $HOME/.cargo/bin start
 add_path $HOME/bin start
 add_path $GOPATH/bin start
 add_path $HOME/scripts start

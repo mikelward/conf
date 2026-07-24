@@ -49,16 +49,16 @@ assert_true test "$_bad" -eq 0
 
 ################################################################################
 # Behaviour: sourcing with `set -a` (as zshenv/profile/shrc/runenv do) must
-# put the dirs on PATH in login-shell order -- scripts and bin prepended,
-# everything else appended (unconditionally: entries for dirs a machine
-# lacks are skipped by lookup) -- and export GOPATH=$HOME.
+# put every home directory before /usr/local/bin, and both before the
+# inherited system PATH (unconditionally: entries for dirs a machine lacks
+# are skipped by lookup) -- and export GOPATH=$HOME.
 ################################################################################
 _fakehome="/nonexistent-home-for-env-test"
 _before="/usr/bin:/bin"
 
 start_test "sourcing env builds the canonical PATH"
 _path=$(HOME="$_fakehome" PATH="$_before" sh -c 'set -a; . "$0"; printf %s "$PATH"' "$_env")
-assert_equal "$_fakehome/scripts.local:$_fakehome/scripts:$_fakehome/bin:$_before:/usr/local/bin:$_fakehome/android-sdk-linux/platform-tools:$_fakehome/android-studio/bin:$_fakehome/Android/Sdk/platform-tools:$_fakehome/depot_tools:$_fakehome/google-cloud-sdk/bin:$_fakehome/.cargo/bin:$_fakehome/.local/bin:/sbin:/usr/sbin" "$_path"
+assert_equal "$_fakehome/scripts.local:$_fakehome/scripts:$_fakehome/bin:$_fakehome/.cargo/bin:$_fakehome/.local/bin:$_fakehome/android-sdk-linux/platform-tools:$_fakehome/android-studio/bin:$_fakehome/Android/Sdk/platform-tools:$_fakehome/depot_tools:$_fakehome/google-cloud-sdk/bin:/usr/local/bin:$_before:/sbin:/usr/sbin" "$_path"
 
 start_test "sourcing env exports GOPATH=\$HOME"
 _gopath=$(HOME="$_fakehome" PATH="$_before" sh -c 'set -a; . "$0"; env' "$_env" | grep '^GOPATH=')

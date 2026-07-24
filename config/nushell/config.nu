@@ -901,14 +901,14 @@ $env.CDPATH = [
 # shrc's ${GOPATH:-$HOME}.
 $env.GOPATH = ($env.GOPATH? | default --empty $env.HOME)
 
-add-path "/usr/local/bin"
-add-path ([$env.HOME "android-sdk-linux" "platform-tools"] | path join)
-add-path ([$env.HOME "android-studio" "bin"] | path join)
-add-path ([$env.HOME "Android" "Sdk" "platform-tools"] | path join)
-add-path ([$env.HOME "depot_tools"] | path join)
-add-path ([$env.HOME "google-cloud-sdk" "bin"] | path join)
-add-path ([$env.HOME ".cargo" "bin"] | path join)
-add-path ([$env.HOME ".local" "bin"] | path join)
+add-path "/usr/local/bin" "start"
+add-path ([$env.HOME "android-sdk-linux" "platform-tools"] | path join) "start"
+add-path ([$env.HOME "android-studio" "bin"] | path join) "start"
+add-path ([$env.HOME "Android" "Sdk" "platform-tools"] | path join) "start"
+add-path ([$env.HOME "depot_tools"] | path join) "start"
+add-path ([$env.HOME "google-cloud-sdk" "bin"] | path join) "start"
+add-path ([$env.HOME ".local" "bin"] | path join) "start"
+add-path ([$env.HOME ".cargo" "bin"] | path join) "start"
 add-path ([$env.HOME "bin"] | path join) "start"
 add-path ([$env.GOPATH "bin"] | path join) "start"
 add-path ([$env.HOME "scripts"] | path join) "start"

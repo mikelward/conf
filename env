@@ -31,9 +31,5 @@
 # (optionally mirrored for systemd user services with:
 #  ln -s ~/.env.local ~/.config/environment.d/env.local.conf)
 GOPATH=$HOME
-PATH=$HOME/scripts.local:$HOME/scripts:$HOME/bin:$PATH
-PATH=$PATH:/usr/local/bin
-PATH=$PATH:$HOME/android-sdk-linux/platform-tools:$HOME/android-studio/bin:$HOME/Android/Sdk/platform-tools
-PATH=$PATH:$HOME/depot_tools:$HOME/google-cloud-sdk/bin
-PATH=$PATH:$HOME/.cargo/bin:$HOME/.local/bin
+PATH=$HOME/scripts.local:$HOME/scripts:$HOME/bin:$HOME/.cargo/bin:$HOME/.local/bin:$HOME/android-sdk-linux/platform-tools:$HOME/android-studio/bin:$HOME/Android/Sdk/platform-tools:$HOME/depot_tools:$HOME/google-cloud-sdk/bin:/usr/local/bin:$PATH
 PATH=$PATH:/sbin:/usr/sbin
