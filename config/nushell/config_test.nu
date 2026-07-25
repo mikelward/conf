@@ -3361,6 +3361,36 @@ except OSError: pass
         assert equal (ls $target | first | get modified) $before
     })
 
+    # The autoload directory is parsed before config.nu runs, so an init
+    # that doesn't parse would break every future shell -- including the
+    # code that would replace it.
+    (run-test "nu sync-tool-init refuses an init that doesn't parse" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\necho 'def broken [ {'" | save ($dir | path join "brokentool")
+        ^chmod +x ($dir | path join "brokentool")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        let target = ((tool-autoload-dir) | path join "generated-brokentool.nu")
+        sync-tool-init brokentool [init nu]
+        assert (not ($target | path exists)) "malformed init must not be installed"
+    })
+
+    (run-test "nu sync-tool-init keeps the previous init when a new one is malformed" {
+        let good = (mktemp -d)
+        "#!/bin/sh\necho 'def works [] { 1 }'" | save ($good | path join "flipflop")
+        ^chmod +x ($good | path join "flipflop")
+        $env.PATH = [$good "/usr/bin" "/bin"]
+        sync-tool-init flipflop [init nu]
+        let target = ((tool-autoload-dir) | path join "generated-flipflop.nu")
+        assert (open --raw $target | str contains "def works")
+
+        let bad = (mktemp -d)
+        "#!/bin/sh\necho 'def broken [ {'" | save ($bad | path join "flipflop")
+        ^chmod +x ($bad | path join "flipflop")
+        $env.PATH = [$bad "/usr/bin" "/bin"]
+        sync-tool-init flipflop [init nu]
+        assert (open --raw $target | str contains "def works") "the working init must survive"
+    })
+
     (run-test "nu sync-tool-init drops the init when the tool is gone" {
         let target = ((tool-autoload-dir) | path join "generated-gonetool.nu")
         mkdir (tool-autoload-dir)
