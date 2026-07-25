@@ -2010,11 +2010,13 @@ if is_interactive
         eval_tool_init carapace carapace _carapace fish
     end
 
-    # atuin's history search on Ctrl-R. --disable-up-arrow keeps Up on
-    # fish's own prefix search. Last, so its Ctrl-R wins over fzf's.
+    # atuin's history search, on Ctrl-R and on Up. config/atuin/config.toml
+    # keeps the Up binding prefix-matched and host-scoped, so it still
+    # means what fish's own up-or-search does. Last, so its Ctrl-R wins
+    # over fzf's.
     function init_atuin
         is_runnable atuin; or return 0
-        eval_tool_init atuin atuin init fish --disable-up-arrow
+        eval_tool_init atuin atuin init fish
     end
 
     function init_shell_tools

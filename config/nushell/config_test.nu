@@ -2822,6 +2822,18 @@ except OSError: pass
     })
 
     ###############
+    # The atuin invocation itself, not just the helper that runs it. The
+    # stub-based tests above pass any arguments they're given, so only
+    # this catches a flag creeping back into the real call -- the shell
+    # configs each invoke atuin themselves, and bash/zsh and fish assert
+    # their own.
+    (run-test "nu invokes atuin without disabling its Up binding" {
+        let content = (open --raw $CONFIG)
+        assert ($content | str contains "sync-tool-init atuin [init nu]")
+        assert (not ($content | str contains "--disable-up-arrow"))
+    })
+
+    ###############
     # config.nu has no manual source statement
     (run-test "nu config.nu has no manual source statement" {
         let content = (open --raw $CONFIG)
@@ -3322,9 +3334,9 @@ except OSError: pass
         "#!/bin/sh\necho \"# args: $*\"" | save ($dir | path join "argtool")
         ^chmod +x ($dir | path join "argtool")
         $env.PATH = [$dir "/usr/bin" "/bin"]
-        sync-tool-init argtool [init nu --disable-up-arrow]
+        sync-tool-init argtool [init nu --some-flag]
         let target = ((tool-autoload-dir) | path join "generated-argtool.nu")
-        assert (open --raw $target | str contains "init nu --disable-up-arrow")
+        assert (open --raw $target | str contains "init nu --some-flag")
     })
 
     # The generator runs every startup and its output is compared, so a
@@ -3378,8 +3390,8 @@ echo '# second build'" | save --force $bin
         $env.PATH = [$dir "/usr/bin" "/bin"]
         sync-tool-init flagtool [init nu]
         let target = ((tool-autoload-dir) | path join "generated-flagtool.nu")
-        sync-tool-init flagtool [init nu --disable-up-arrow]
-        assert (open --raw $target | str contains "init nu --disable-up-arrow")
+        sync-tool-init flagtool [init nu --some-flag]
+        assert (open --raw $target | str contains "init nu --some-flag")
     })
 
     (run-test "nu sync-tool-init leaves an up-to-date file alone" {

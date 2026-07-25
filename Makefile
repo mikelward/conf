@@ -140,7 +140,11 @@ $(CACHE)/test-dash.stamp: shrc shrc.vcs shrc_test_lib.sh shrc_dash_test.sh | $(C
 	@touch $@
 test-dash: $(CACHE)/test-dash.stamp
 
-$(CACHE)/test-bash.stamp: shrc shrc_test_lib.sh shrc_test.sh shrc_bash_test.sh | $(CACHE)
+# The suites also assert on files they don't source -- inputrc and the
+# atuin config -- so those are dependencies too: editing one has to
+# re-run the test that guards it, not leave a stale stamp claiming pass.
+$(CACHE)/test-bash.stamp: shrc shrc_test_lib.sh shrc_test.sh shrc_bash_test.sh \
+                          inputrc config/atuin/config.toml | $(CACHE)
 	@bash shrc_test.sh
 	@bash shrc_bash_test.sh
 	@touch $@
@@ -149,7 +153,8 @@ test-bash: $(CACHE)/test-bash.stamp
 # zsh is optional; skip gracefully when it isn't installed. Only touch
 # the stamp when zsh was actually present and the tests ran, otherwise
 # installing zsh later wouldn't trigger a re-run.
-$(CACHE)/test-zsh.stamp: shrc shrc_test_lib.sh shrc_test.sh shrc_zsh_test.sh | $(CACHE)
+$(CACHE)/test-zsh.stamp: shrc shrc_test_lib.sh shrc_test.sh shrc_zsh_test.sh \
+                         config/atuin/config.toml | $(CACHE)
 	@if command -v zsh >/dev/null 2>&1; then \
 		zsh shrc_test.sh && zsh shrc_zsh_test.sh && touch $@; \
 	else \

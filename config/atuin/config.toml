@@ -1,0 +1,13 @@
+# Up opens atuin's search rather than the shell's own prefix search (see
+# init_atuin in shrc and the equivalents in the fish and nushell configs),
+# so the two settings below make it behave the way Up did before:
+#
+#   prefix  match on what's already typed, from the start of the line,
+#           rather than fuzzy-matching it anywhere in the command
+#   host    every session on this machine -- global would offer commands
+#           from other hosts, which may not have them installed
+#
+# Ctrl-R keeps the defaults, which is where the fuzzy, everywhere-search
+# belongs.
+search_mode_shell_up_key_binding = "prefix"
+filter_mode_shell_up_key_binding = "host"

@@ -2236,15 +2236,20 @@ init_carapace() {
     eval_tool_init carapace carapace _carapace "$shell"
 }
 
-# atuin's history search on Ctrl-R. --disable-up-arrow keeps Up bound to
-# the prefix search configured in inputrc / the zsh key bindings, which
-# searches the current line rather than opening a picker.
+# atuin's history search, on Ctrl-R and on Up. config/atuin/config.toml
+# makes the Up binding prefix-matched and host-scoped, so Up still means
+# "the commands I ran on this machine that start like this" -- what the
+# readline/zsh prefix search bound in inputrc gives, minus its one wart:
+# that search runs backwards from wherever the last one stopped, so after
+# walking back a few entries a fresh prefix can't reach anything newer.
+# atuin queries from scratch on every press. Up falls back to the inputrc
+# binding on hosts without atuin.
 #
 # Called last so its Ctrl-R binding wins over fzf's.
 init_atuin() {
     have_command atuin || return 0
     case "$shell" in bash|zsh) ;; *) return 0 ;; esac
-    eval_tool_init atuin atuin init "$shell" --disable-up-arrow || return 1
+    eval_tool_init atuin atuin init "$shell" || return 1
     # In bash, atuin records history by appending to bash-preexec's
     # preexec_functions/precmd_functions. bash-preexec drives those from
     # the DEBUG trap and PROMPT_COMMAND -- both of which shrc already

@@ -2559,13 +2559,22 @@ assert_equal "zsh" "$ATUIN_SHELL"
 assert_equal "" "$(cat "$_tool_err")"
 shell=bash
 
-start_test "init_atuin disables the up-arrow binding"
-# Up stays bound to the prefix search from inputrc / the zsh bindings.
+start_test "init_atuin leaves atuin bound to Up as well as Ctrl-R"
+# Up used to be kept on the inputrc prefix search with --disable-up-arrow.
+# atuin's own Up is prefix-matched and host-scoped via config/atuin, and
+# unlike readline's it searches from scratch each press rather than from
+# wherever the last one stopped.
 atuin() { printf 'ATUIN_FLAGS=%s\n__atuin_precmd() { :; }\n' "$3"; }
 ATUIN_FLAGS=
 init_atuin
-assert_equal "--disable-up-arrow" "$ATUIN_FLAGS"
+assert_equal "" "$ATUIN_FLAGS"
 unset -f __atuin_precmd
+
+start_test "the atuin config keeps Up prefix-matched and host-scoped"
+# Without these, Up would fuzzy-match anywhere in the line and offer
+# commands from other machines -- not what Up has ever meant here.
+assert_true grep -qx 'search_mode_shell_up_key_binding = "prefix"' "$_srcdir/config/atuin/config.toml"
+assert_true grep -qx 'filter_mode_shell_up_key_binding = "host"' "$_srcdir/config/atuin/config.toml"
 
 ###############
 # atuin history recording. shrc drives `atuin history start/end` from its
