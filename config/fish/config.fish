@@ -1930,23 +1930,25 @@ if is_interactive
     # rather than being silently dropped. Keep in parity with shrc and
     # config/nushell/config.nu.
 
-    # Run a tool's init generator and evaluate what it prints. Only
-    # stdout is captured, so the tool's own diagnostics stay visible on
-    # stderr. Emptiness is the failure test rather than $status: a
-    # generator that fails prints nothing to stdout, and `set` reports
-    # its own status, not the substitution's.
+    # Run a tool's init generator and source what it prints. The output
+    # goes to a temp file rather than a command substitution so `if` can
+    # test the generator's own exit status: a generator that prints part
+    # of a script and then fails must not leave the session half
+    # configured. Only stdout is captured, so the tool's diagnostics stay
+    # visible on stderr.
     function eval_tool_init
         set -l tool $argv[1]
+        set -l generated (mktemp)
         # `command $argv[2..]` runs the generator: the remaining arguments
-        # are the command and its arguments as separate words. Piping
-        # $argv[2..] instead would collect the argument text without ever
-        # running anything.
-        set -l generated (command $argv[2..] | string collect)
-        if test -z "$generated"
-            warn "$tool: shell integration skipped, '$argv[2..]' produced nothing"
-            return 1
+        # are the command and its arguments as separate words.
+        if command $argv[2..] >$generated
+            source $generated
+            rm -f $generated
+            return 0
         end
-        printf '%s\n' $generated | source
+        rm -f $generated
+        warn "$tool: shell integration skipped, '$argv[2..]' failed"
+        return 1
     end
 
     # fzf's key bindings (Ctrl-R history, Ctrl-T paths, Alt-C cd) and
@@ -1956,11 +1958,13 @@ if is_interactive
         is_runnable fzf; or return 0
         # Old fzf has no --fish flag and complains on stderr; that's an
         # expected version difference, so the fallback below reports it.
-        set -l generated (fzf --fish 2>/dev/null | string collect)
-        if test -n "$generated"
-            printf '%s\n' $generated | source
+        set -l generated (mktemp)
+        if fzf --fish >$generated 2>/dev/null
+            source $generated
+            rm -f $generated
             return 0
         end
+        rm -f $generated
         for candidate in \
                 $HOME/.fzf.fish \
                 /usr/share/fish/vendor_functions.d/fzf_key_bindings.fish \
