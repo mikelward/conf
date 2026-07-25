@@ -5,6 +5,9 @@ $include /etc/inputrc
 
 # general settings
 set bell-style visible
+# colour completion matches, which also resets the bold attribute the
+# prompt leaves on for user input so listings aren't bold
+set colored-stats on
 set completion-ignore-case on
 set horizontal-scroll-mode off
 set mark-directories on

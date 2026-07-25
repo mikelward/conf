@@ -92,4 +92,22 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
 ' </dev/null 2>/dev/null)
 assert_equal "DONE" "$result"
 
+# The prompt leaves the bold attribute on so typed input stands out
+# (see input_attribute in shrc). readline emits no reset of its own
+# when it prints a completion listing, so the matches would inherit the
+# bold; colored-stats makes it colour each match and reset afterwards.
+# `bind -v` warns "line editing not enabled" on a non-tty stdin but
+# still reports the variable, hence the stderr redirect.
+start_test "shrc enables readline colored-stats"
+result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    bind -v 2>/dev/null | sed -n "s/^set colored-stats //p"
+' </dev/null 2>/dev/null)
+assert_equal "on" "$result"
+
+# inputrc carries the same setting for readline users that never source
+# shrc (other readline programs, a login shell without it).
+start_test "inputrc sets colored-stats"
+assert_true grep -qx 'set colored-stats on' "$_srcdir/inputrc"
+
 test_summary "shrc_bash_test"

@@ -2769,6 +2769,11 @@ if is_interactive; then
         # these key bindings should be kept in sync with ~/.inputrc
         # they are duplicated here so scp ~/.shrc newhost: is sufficient
 
+        # colored-stats makes readline emit its own colour escapes --
+        # and a reset -- around each completion match, so a listing
+        # isn't printed in the bold left on by input_attribute.
+        bind 'set colored-stats on'
+
         _bind_vi() {
             bind -m vi-command "$@"
             bind -m vi-insert "$@"
