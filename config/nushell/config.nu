@@ -1679,6 +1679,34 @@ $env.config = ($env.config | upsert show_banner false)
 $env.config = ($env.config | upsert history.file_format "plaintext")
 $env.config = ($env.config | upsert history.max_size 100000)
 
+# --- Typed input stands out from output ---
+# Parity with zsh's `zle_highlight=(default:bold)`, fish's
+# `fish_color_command --bold` and the bold PS1 tail in shrc. Reedline
+# colours input per syntax shape rather than as one block, so there's no
+# single switch: every shape is listed here.
+#
+# Monochrome, with attributes doing the work -- the shapes keep the
+# terminal's own foreground and differ only in weight. shape_garbage adds
+# an underline so an unparseable word still stands out without spending a
+# colour on it.
+const INPUT_SHAPES = [
+    shape_and shape_binary shape_block shape_bool shape_closure
+    shape_custom shape_datetime shape_directory shape_external
+    shape_external_resolved shape_externalarg shape_filepath shape_flag
+    shape_float shape_glob_interpolation shape_globpattern shape_int
+    shape_internalcall shape_keyword shape_list shape_literal
+    shape_match_pattern shape_matching_brackets shape_nothing
+    shape_operator shape_or shape_pipe shape_range shape_record
+    shape_redirection shape_signature shape_string
+    shape_string_interpolation shape_table shape_variable shape_vardecl
+]
+
+$env.config = ($env.config | upsert color_config (
+    $INPUT_SHAPES
+    | reduce --fold $env.config.color_config {|shape, acc| $acc | upsert $shape {attr: "b"} }
+    | upsert shape_garbage {attr: "bu"}
+))
+
 # --- Interactive tool integrations ---
 # zoxide (frecency-ranked directory jumps), atuin (SQLite-backed history
 # search) and carapace (multi-shell completions), in parity with shrc and

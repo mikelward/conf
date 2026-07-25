@@ -2037,9 +2037,11 @@ input_reset() {
     # Whatever PS0 the shell already had (inherited, or set in
     # ~/.shrc.local) is kept and the reset appended, rather than being
     # replaced -- set_prompt runs on every prompt, so overwriting would
-    # silently drop a PS0 the user set. Captured on the first call,
-    # before we've written our own value.
-    if test "${_inherited_ps0+set}" != set; then
+    # silently drop a PS0 the user set. Recaptured whenever PS0 isn't the
+    # value we last wrote, which is how a later setter is noticed:
+    # ~/.shrc.local is sourced after the first basic_prompt, so capturing
+    # once at startup would cache the value from before it ran.
+    if test "${PS0-}" != "${_our_ps0-}"; then
         _inherited_ps0="${PS0-}"
     fi
     if bash_has_ps0; then
@@ -2047,6 +2049,7 @@ input_reset() {
     else
         PS0="$_inherited_ps0"
     fi
+    _our_ps0="$PS0"
 }
 
 # return whether the given shell option is on
@@ -2165,7 +2168,13 @@ eval_tool_init() {
         warn "$_tool: shell integration skipped, '$*' failed"
         return 1
     fi
-    eval "$_init"
+    # Loading is a second failure point: the generator can exit 0 and
+    # still emit something this shell won't take. Nothing can be undone
+    # by then, so report it rather than reporting success.
+    if ! eval "$_init"; then
+        warn "$_tool: shell integration may be incomplete, its init failed while loading"
+        return 1
+    fi
 }
 
 # fzf's key bindings (Ctrl-R history, Ctrl-T paths, Alt-C cd) and its
@@ -3009,6 +3018,11 @@ if is_interactive; then
         install_precommand_trap() {
             trap '_bash_debug_trap "$BASH_COMMAND"' DEBUG
             set_title "$(title)"
+            # Note the newest history entry before anything is typed, so
+            # a first command that HISTCONTROL keeps out of history isn't
+            # mistaken for it -- at startup the newest entry comes from
+            # the history file and belongs to an earlier session.
+            test -n "${_last_history_number:-}" || bash_input_line
             # Last, and a plain assignment: the trap fires before the
             # assignment takes effect, so this can't arm itself.
             _precommand_armed=yes
