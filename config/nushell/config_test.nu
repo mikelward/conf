@@ -3290,6 +3290,51 @@ except OSError: pass
         assert (open --raw $target | str contains "init nu --disable-up-arrow")
     })
 
+    # mtime alone isn't enough: a different installation of the same tool
+    # can carry an older or normalised timestamp (Nix and friends), and
+    # changing the init arguments doesn't touch the binary at all.
+    (run-test "nu sync-tool-init regenerates when the binary changes" {
+        let first = (mktemp -d)
+        "#!/bin/sh\necho '# from the first install'" | save ($first | path join "swaptool")
+        ^chmod +x ($first | path join "swaptool")
+        $env.PATH = [$first "/usr/bin" "/bin"]
+        sync-tool-init swaptool [init nu]
+        let target = ((tool-autoload-dir) | path join "generated-swaptool.nu")
+        assert (open --raw $target | str contains "the first install")
+
+        let second = (mktemp -d)
+        "#!/bin/sh\necho '# from the second install'" | save ($second | path join "swaptool")
+        ^chmod +x ($second | path join "swaptool")
+        # Backdate it: an mtime test alone would keep the stale file.
+        ^touch -t 200001010000 ($second | path join "swaptool")
+        $env.PATH = [$second "/usr/bin" "/bin"]
+        sync-tool-init swaptool [init nu]
+        assert (open --raw $target | str contains "the second install")
+    })
+
+    (run-test "nu sync-tool-init regenerates when the arguments change" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\necho \"# args: $*\"" | save ($dir | path join "flagtool")
+        ^chmod +x ($dir | path join "flagtool")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        sync-tool-init flagtool [init nu]
+        let target = ((tool-autoload-dir) | path join "generated-flagtool.nu")
+        sync-tool-init flagtool [init nu --disable-up-arrow]
+        assert (open --raw $target | str contains "init nu --disable-up-arrow")
+    })
+
+    (run-test "nu sync-tool-init leaves an up-to-date file alone" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\necho '# generated once'" | save ($dir | path join "steadytool")
+        ^chmod +x ($dir | path join "steadytool")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        sync-tool-init steadytool [init nu]
+        let target = ((tool-autoload-dir) | path join "generated-steadytool.nu")
+        let before = (ls $target | first | get modified)
+        sync-tool-init steadytool [init nu]
+        assert equal (ls $target | first | get modified) $before
+    })
+
     (run-test "nu sync-tool-init drops the init when the tool is gone" {
         let target = ((tool-autoload-dir) | path join "generated-gonetool.nu")
         mkdir (tool-autoload-dir)
