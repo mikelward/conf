@@ -1786,9 +1786,11 @@ def sync-tool-init [tool: string, args: list<string>] {
     # a rename (atomic, same filesystem): writing $target directly could
     # leave a half-written file behind if the disk fills mid-write. Its
     # name deliberately doesn't end in .nu, so nushell won't source the
-    # staged copy if a shell starts while it exists.
+    # staged copy if a shell starts while it exists, and carries the pid
+    # so two shells starting at once don't validate or rename each
+    # other's file.
     mkdir (tool-autoload-dir)
-    let staged = ((tool-autoload-dir) | path join $".($file).tmp")
+    let staged = ((tool-autoload-dir) | path join $".($file).($nu.pid).tmp")
     $content | save --force $staged
     let check = (do { ^$nu.current-exe --no-config-file --ide-check 10 $staged } | complete)
     if ($check.stdout | str contains '"severity":"Error"') {

@@ -3010,6 +3010,19 @@ if is_interactive; then
             # name in its place. bash sets READLINE_LINE only while a
             # widget runs, which tells the two apart.
             test "${READLINE_LINE+set}" = set && return 0
+            # When nothing ran -- an empty line, Ctrl-C at the prompt, a
+            # line that won't parse -- the arm from the last prompt is
+            # still in place, and the next thing to fire is the prompt's
+            # own first hook. Drop the arm there rather than filing the
+            # hook as a command: install_precommand_trap re-arms at the
+            # end of the cycle, and with the arm gone the hooks appended
+            # after it (zoxide's) are covered too.
+            case "${1%%[   ]*}" in
+            preprompt|install_precommand_trap)
+                _precommand_armed=
+                return 0
+                ;;
+            esac
             test "${_precommand_armed:-}" = yes || return 0
             _precommand_armed=
             precommand "$1"
