@@ -3327,9 +3327,31 @@ except OSError: pass
         assert (open --raw $target | str contains "init nu --disable-up-arrow")
     })
 
-    # mtime alone isn't enough: a different installation of the same tool
-    # can carry an older or normalised timestamp (Nix and friends), and
-    # changing the init arguments doesn't touch the binary at all.
+    # The generator runs every startup and its output is compared, so a
+    # changed tool is picked up however it changed -- including an
+    # in-place upgrade that keeps the same path and mtime, which a
+    # timestamp comparison could never see.
+    (run-test "nu sync-tool-init regenerates when the same binary changes in place" {
+        let dir = (mktemp -d)
+        let bin = ($dir | path join "steadypath")
+        "#!/bin/sh
+echo '# first build'" | save $bin
+        ^chmod +x $bin
+        ^touch -t 202001010000 $bin
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        sync-tool-init steadypath [init nu]
+        let target = ((tool-autoload-dir) | path join "generated-steadypath.nu")
+        assert (open --raw $target | str contains "first build")
+
+        # Same path, same mtime, different contents.
+        "#!/bin/sh
+echo '# second build'" | save --force $bin
+        ^chmod +x $bin
+        ^touch -t 202001010000 $bin
+        sync-tool-init steadypath [init nu]
+        assert (open --raw $target | str contains "second build")
+    })
+
     (run-test "nu sync-tool-init regenerates when the binary changes" {
         let first = (mktemp -d)
         "#!/bin/sh\necho '# from the first install'" | save ($first | path join "swaptool")
