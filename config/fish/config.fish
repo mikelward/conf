@@ -1981,7 +1981,9 @@ if is_interactive
                 /usr/share/doc/fzf/examples/key-bindings.fish
             if test -r $candidate
                 if not source $candidate
-                    warn "fzf: $candidate failed while loading"
+                    # The name only: these paths live under $HOME, which
+                    # can carry a real name into a terminal log.
+                    warn "fzf:" (basename $candidate) "failed while loading"
                     return 1
                 end
                 return 0

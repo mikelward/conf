@@ -2180,7 +2180,13 @@ init_fzf() {
     # expected version difference, not a failure, so the file fallback
     # below reports the problem instead.
     if _init="$(fzf "--$shell" 2>/dev/null)"; then
-        eval "$_init"
+        # Loading is a second failure point: fzf can exit 0 and still emit
+        # something this shell won't take. Nothing can be undone at that
+        # point, so report it rather than claiming success.
+        if ! eval "$_init"; then
+            warn "fzf: shell integration may be incomplete, its init failed while loading"
+            return 1
+        fi
         return 0
     fi
     for _candidate in \
@@ -2189,7 +2195,12 @@ init_fzf() {
         "/usr/share/doc/fzf/examples/key-bindings.$shell"
     do
         if test -r "$_candidate"; then
-            . "$_candidate"
+            # The name only: these paths live under $HOME, which can carry
+            # a real name into a terminal log.
+            if ! . "$_candidate"; then
+                warn "fzf: ${_candidate##*/} failed while loading"
+                return 1
+            fi
             return 0
         fi
     done
@@ -2249,8 +2260,14 @@ init_atuin() {
 atuin_preexec() {
     test "$shell" = bash || return 0
     test -n "${ATUIN_SESSION:-}" || return 0
-    local _command
-    _command="$(bash_input_line)" || _command="$1"
+    local _command="$1"
+    # bash_input_line sets $_input_line rather than printing it: the
+    # bookkeeping it does to spot a line that never reached history has to
+    # happen in this shell, and a command substitution would strand it in
+    # a subshell.
+    if bash_input_line; then
+        _command="$_input_line"
+    fi
     ATUIN_HISTORY_ID="$(atuin history start -- "$_command")"
 }
 
@@ -2268,12 +2285,15 @@ bash_input_line() {
     history_entry_command "$(HISTTIMEFORMAT= builtin history 1)"
 }
 
-# Print the command out of a `history 1` entry -- "  1234  cmd", or
-# "  1234* cmd" for one edited in place. Fails, printing nothing, when
-# the entry number is the one seen last: that means nothing was added to
-# history since, so this entry belongs to an earlier line.
+# Set $_input_line to the command out of a `history 1` entry --
+# "  1234  cmd", or "  1234* cmd" for one edited in place. Fails, leaving
+# $_input_line empty, when the entry number is the one seen last: that
+# means nothing was added to history since, so this entry belongs to an
+# earlier line. Sets rather than prints so $_last_history_number survives
+# -- in a command substitution the next call would never see it.
 history_entry_command() {
     local _entry _number _line
+    _input_line=
     _entry="$1"
     _entry="${_entry#"${_entry%%[![:space:]]*}"}"
     _number="${_entry%%[![:digit:]]*}"
@@ -2285,7 +2305,7 @@ history_entry_command() {
     _line="${_entry#"$_number"}"
     _line="${_line#[*[:space:]]}"
     _line="${_line#"${_line%%[![:space:]]*}"}"
-    puts "$_line"
+    _input_line="$_line"
 }
 
 # Close out the entry atuin_preexec opened, with the exit status of the
@@ -2974,6 +2994,13 @@ if is_interactive; then
         # PROMPT_COMMAND. The first fire after it is then the command the
         # user actually typed, and only that one reaches precommand.
         _bash_debug_trap() {
+            # A `bind -x` widget -- atuin's and fzf's Ctrl-R handlers,
+            # zoxide's zi -- runs as a command too, and it isn't what the
+            # user asked to run. Consuming the flag for it would leave the
+            # command they then accept unrecorded, and file the widget's
+            # name in its place. bash sets READLINE_LINE only while a
+            # widget runs, which tells the two apart.
+            test "${READLINE_LINE+set}" = set && return 0
             test "${_precommand_armed:-}" = yes || return 0
             _precommand_armed=
             precommand "$1"

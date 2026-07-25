@@ -131,4 +131,23 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
 ' </dev/null 2>/dev/null | grep '^SAW\[')
 assert_equal "SAW[echo the-user-command > /dev/null]" "$result"
 
+# A `bind -x` widget -- atuin's and fzf's Ctrl-R handlers, zoxide's zi --
+# runs as a command and would otherwise consume the armed flag, so the
+# command the user then accepts would go unrecorded and the widget's own
+# name would be filed in its place. bash sets READLINE_LINE only while a
+# widget runs, which is what distinguishes them.
+start_test "the DEBUG trap ignores commands run by readline widgets"
+result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    precommand() { printf "SAW[%s]\n" "$*"; }
+    __fake_widget() { :; }
+    install_precommand_trap
+    # bash sets this for the duration of a bind -x command.
+    READLINE_LINE=
+    __fake_widget
+    unset READLINE_LINE
+    echo the-user-command >/dev/null
+' </dev/null 2>/dev/null | grep '^SAW\[')
+assert_not_contains "__fake_widget" "$result"
+
 test_summary "shrc_bash_test"
