@@ -3275,16 +3275,27 @@ except OSError: pass
         assert equal $unbolded []
     })
 
-    (run-test "nu input shapes set no foreground colour" {
+    (run-test "nu input shapes set no foreground colour but garbage" {
+        # Unparseable input is the one thing worth a colour.
         let coloured = ($env.config.color_config | columns
             | where {|c| $c | str starts-with "shape_"}
             | where {|c| ($env.config.color_config | get $c | get fg? | default null) != null })
-        assert equal $coloured []
+        assert equal $coloured ["shape_garbage"]
     })
 
-    (run-test "nu underlines unparseable input" {
-        # An attribute rather than a colour, so garbage still stands out.
-        assert equal $env.config.color_config.shape_garbage.attr "bu"
+    (run-test "nu shows unparseable input in red" {
+        assert equal $env.config.color_config.shape_garbage.fg "red"
+        assert equal $env.config.color_config.shape_garbage.attr "b"
+    })
+
+    (run-test "nu sets no background on any input shape" {
+        # Nushell's default garbage style is white-on-red, which fights
+        # the terminal's own theme; inheriting the background is right on
+        # both light and dark.
+        let with_bg = ($env.config.color_config | columns
+            | where {|c| $c | str starts-with "shape_"}
+            | where {|c| ($env.config.color_config | get $c | get bg? | default null) != null })
+        assert equal $with_bg []
     })
 
     ###############

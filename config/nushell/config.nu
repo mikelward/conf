@@ -1685,10 +1685,12 @@ $env.config = ($env.config | upsert history.max_size 100000)
 # colours input per syntax shape rather than as one block, so there's no
 # single switch: every shape is listed here.
 #
-# Monochrome, with attributes doing the work -- the shapes keep the
-# terminal's own foreground and differ only in weight. shape_garbage adds
-# an underline so an unparseable word still stands out without spending a
-# colour on it.
+# Monochrome, with attributes doing the work: the shapes keep the
+# terminal's own foreground and differ only in weight. The exception is
+# shape_garbage -- unparseable input is the one thing worth a colour --
+# which is red on the terminal's own background. Nushell's default puts
+# it white-on-red, which fights whatever theme the terminal has; setting
+# no bg at all is the only way to be right on both light and dark.
 const INPUT_SHAPES = [
     shape_and shape_binary shape_block shape_bool shape_closure
     shape_custom shape_datetime shape_directory shape_external
@@ -1704,7 +1706,7 @@ const INPUT_SHAPES = [
 $env.config = ($env.config | upsert color_config (
     $INPUT_SHAPES
     | reduce --fold $env.config.color_config {|shape, acc| $acc | upsert $shape {attr: "b"} }
-    | upsert shape_garbage {attr: "bu"}
+    | upsert shape_garbage {fg: "red", attr: "b"}
 ))
 
 # --- Interactive tool integrations ---
