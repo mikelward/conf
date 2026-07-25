@@ -3410,8 +3410,13 @@ except OSError: pass
         sync-tool-init tidytool [init nu]
         # The install is a rename from a staging file in the same
         # directory, so writing $target can't be interrupted half way.
-        let staged = ((tool-autoload-dir) | path join ".generated-tidytool.nu.tmp")
-        assert (not ($staged | path exists)) "the staging file must be renamed or removed"
+        # The staging name carries the pid, so two shells starting at once
+        # can't validate or rename each other's file; whatever the name,
+        # none may survive the install.
+        let leftovers = (ls --all (tool-autoload-dir)
+            | get name | path basename
+            | where {|n| $n | str ends-with ".tmp"})
+        assert equal $leftovers []
         assert (((tool-autoload-dir) | path join "generated-tidytool.nu") | path exists)
     })
 

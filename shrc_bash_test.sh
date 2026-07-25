@@ -150,4 +150,22 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
 ' </dev/null 2>/dev/null | grep '^SAW\[')
 assert_not_contains "__fake_widget" "$result"
 
+# When nothing runs -- an empty line, Ctrl-C at the prompt, a line that
+# won't parse -- the arm from the previous prompt is still in place, and
+# the next thing to fire the trap is the prompt's own first hook. It must
+# be dropped rather than filed as a command: an empty Enter was otherwise
+# recorded as `preprompt`, with its title and timing to match.
+start_test "the DEBUG trap drops the arm when the prompt hooks run first"
+result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    precommand() { printf "SAW[%s]\n" "$*"; }
+    install_precommand_trap
+    # No user command in between: this stands in for a prompt cycle that
+    # follows an empty line.
+    preprompt >/dev/null 2>&1
+    __after_hooks() { :; }
+    __after_hooks
+' </dev/null 2>/dev/null | grep "^SAW\[")
+assert_equal "" "$result"
+
 test_summary "shrc_bash_test"
