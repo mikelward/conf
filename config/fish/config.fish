@@ -1969,7 +1969,9 @@ if is_interactive
         set -l generated (mktemp)
         if fzf --fish >$generated 2>/dev/null
             if not source $generated
+                rm -f $generated
                 warn "fzf: shell integration may be incomplete, its init failed while loading"
+                return 1
             end
             rm -f $generated
             return 0

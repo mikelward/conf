@@ -3262,6 +3262,32 @@ except OSError: pass
     })
 
     ###############
+    # Typed input is bold, the nushell half of the bold-input behaviour
+    # zsh and fish already had. Monochrome: attributes only, no foreground
+    # colours, so the shapes differ in weight rather than hue.
+
+    (run-test "nu makes every input shape bold" {
+        let shapes = ($env.config.color_config | columns | where {|c| $c | str starts-with "shape_"})
+        assert (($shapes | length) > 30) $"expected the shapes to be configured, got ($shapes | length)"
+        let unbolded = ($shapes | where {|c|
+            not (($env.config.color_config | get $c | get attr? | default "") | str contains "b")
+        })
+        assert equal $unbolded []
+    })
+
+    (run-test "nu input shapes set no foreground colour" {
+        let coloured = ($env.config.color_config | columns
+            | where {|c| $c | str starts-with "shape_"}
+            | where {|c| ($env.config.color_config | get $c | get fg? | default null) != null })
+        assert equal $coloured []
+    })
+
+    (run-test "nu underlines unparseable input" {
+        # An attribute rather than a colour, so garbage still stands out.
+        assert equal $env.config.color_config.shape_garbage.attr "bu"
+    })
+
+    ###############
     # Interactive tool integrations. Nushell can only `source` a path known
     # at parse time, so zoxide's and atuin's generated init is written into
     # the autoload directory instead, and picked up on the next startup.
