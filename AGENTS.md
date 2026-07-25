@@ -21,6 +21,12 @@
 - When touching `config/nushell/*` files, install `nu` locally before running tests so that the nu-native tests (`config/nushell/config_test.nu`) execute rather than being skipped.
 - Do not use `apt-get` or `apt` to install tools. Use direct binary downloads (e.g. from GitHub releases) or `cargo install` instead.
 
+## Talking to the user
+
+- One question at a time. Never stack multiple questions in a single turn — ask the most important one, wait for the answer, then ask the next if you still need it. A wall of bundled questions is harder to answer than a short back-and-forth.
+- Don't interrupt. Never fire off a question while the user is still typing. Let them finish; a half-typed message is not an invitation to jump in.
+- Keep replies short — don't dump a full page. Lead with the single most important point and stop. If there is more, say the first point and ask whether they are ready for the next one rather than emptying everything at once.
+
 ## Asking questions
 
 - Ask questions as plain chat messages. Claude specifically: never use `AskUserQuestion`, Claude Code's multiple-choice question prompt — it is broken in the Claude mobile app, so a question asked through it may be unanswerable. Chat also keeps the question, its context, and the answer in one readable thread.
@@ -30,6 +36,18 @@
 
 - Use `git worktree` when it is available. Give each branch its own worktree instead of switching branches in place, so work in progress on one branch is not disturbed by work on another.
 
+## Error handling
+
+- Don't silently swallow errors. A bare `2>/dev/null`, an unchecked exit status, or a `|| true` hides real failures and burns hours when something eventually breaks. Report the failure through the existing `error` / `warn` helpers with enough context to identify what failed and why — sanitized context only, since a message can easily carry a hostname, a token, or a path with the user's real name, and the Privacy rule applies to warnings and logs too — clean up anything the failed step created (temp files, half-written config, a partial symlink), and decide explicitly what the caller sees — a non-zero exit, a fallback value, or a skipped step. If you genuinely want to ignore a specific failure, name the reason in a one-line comment (`# not every host has shpool`) rather than leaving a bare redirect. Keep behavior identical across `shrc`, fish, and nushell, same as any other change.
+
+## Privacy
+
+- Never put user data in any artifact that leaves this machine — commit subjects and bodies, PR titles / descriptions / comments, review replies, branch names, code comments, or test fixtures. For a dotfiles repo that means: hostnames and internal domain names, absolute paths containing the user's real name, work machine names, SSH host aliases and keys, tokens or API keys pasted into shell config, private remote URLs, and shell history excerpts. Use generic placeholders (`/home/user`, `host1`, `git@example.com:org/repo.git`) in examples and fixtures. If a bug report contains any of it, paraphrase in the commit / PR — don't quote verbatim. When in doubt, ask before pushing.
+
 ## Pull requests
 
 - "Drive to merge" is shorthand for the whole loop: open the PR, send it for Codex review, address every review comment — fix it if you agree, reply on the thread saying why if you don't — and merge once CI is green and Codex has left its thumbs up.
+- Codex is the automated reviewer on this repo — not Copilot. Its reviews are triggered automatically; you don't request them. Address its comments without being asked, folding each fix into the commit it belongs to rather than tacking on an "address review" commit.
+- Never leave a review comment thread silently dismissed. Either reply on the thread or resolve it. When you think a comment is a false positive, say why on the thread (one or two sentences). Acknowledgement noise is fine and preferred over silence. `resolve_review_thread` works — pass the `PRRT_*` thread node ID from `pull_request_read` / `get_review_comments` (`review_threads[].id`); a comment's `PRRC_*` ID fails. Push the fix first, then reply citing the new sha, then resolve.
+- Skip echo events silently. Replies posted via the GitHub MCP come back moments later as webhook events authored by the same identity; if the body matches a comment you just posted, it's your own echo — continue without comment.
+- Keep watching merged PRs for late review comments. Stay subscribed after the merge and handle each new comment per the reply-or-resolve rule; stop once every post-merge comment is handled or after ~24h of silence.
