@@ -20,3 +20,8 @@
 - Per-VCS subcommand behaviour (git/hg/jj) lives in the `vcs` Go binary in the `vcs/` submodule (https://github.com/mikelward/vcs); add tests there for changes to subcommand semantics. `make test` builds the submodule binaries automatically.
 - When touching `config/nushell/*` files, install `nu` locally before running tests so that the nu-native tests (`config/nushell/config_test.nu`) execute rather than being skipped.
 - Do not use `apt-get` or `apt` to install tools. Use direct binary downloads (e.g. from GitHub releases) or `cargo install` instead.
+
+## Asking questions
+
+- Ask questions as plain chat messages. Claude specifically: never use `AskUserQuestion`, Claude Code's multiple-choice question prompt — it is broken in the Claude mobile app, so a question asked through it may be unanswerable. Chat also keeps the question, its context, and the answer in one readable thread.
+- After asking, stop and wait for the answer. Do not proceed on an assumed answer, pick a "recommended" option yourself, or keep working on the part the question affects.
