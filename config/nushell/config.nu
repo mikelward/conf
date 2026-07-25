@@ -1679,6 +1679,12 @@ $env.config = ($env.config | upsert show_banner false)
 $env.config = ($env.config | upsert history.file_format "plaintext")
 $env.config = ($env.config | upsert history.max_size 100000)
 
+# Tab matches a subsequence, so `mp<TAB>` offers "My Pictures". Parity
+# with the `r:|?=**` fallback in shrc's zsh matcher-list and with fish's
+# pager, which drops from prefix to substring to subsequence on its own.
+# Nushell defaults to prefix-only; bash's readline has no equivalent.
+$env.config = ($env.config | upsert completions.algorithm "fuzzy")
+
 # --- Typed input stands out from output ---
 # Parity with zsh's `zle_highlight=(default:bold)`, fish's
 # `fish_color_command --bold` and the bold PS1 tail in shrc. Reedline

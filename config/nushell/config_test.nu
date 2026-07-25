@@ -2234,6 +2234,12 @@ except OSError: pass
     (run-test "nu history max_size is 100000" {
         assert equal $env.config.history.max_size 100000
     })
+    # Prefix-only is nushell's default, and the odd one out: zsh's
+    # matcher-list falls back to a subsequence match and fish's pager does
+    # the same, so `mp<TAB>` offers "My Pictures" in both.
+    (run-test "nu completes on a subsequence, not just a prefix" {
+        assert equal $env.config.completions.algorithm "fuzzy"
+    })
 
     ###############
     # PROMPT_COMMAND and related env closures are set
