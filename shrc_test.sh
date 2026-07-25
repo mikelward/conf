@@ -2581,6 +2581,53 @@ ATUIN_HISTORY_ID=
 atuin_preexec "ls -l"
 assert_equal "id-for-ls -l" "$ATUIN_HISTORY_ID"
 
+start_test "atuin_preexec records the whole command line, not just the first command"
+# The DEBUG trap only sees $BASH_COMMAND -- `false` out of
+# `false || echo recovered` -- so the full line comes from history.
+ATUIN_SESSION=session-1
+ATUIN_HISTORY_ID=
+bash_input_line() { puts "false || echo recovered"; }
+atuin_preexec "false"
+assert_equal "id-for-false || echo recovered" "$ATUIN_HISTORY_ID"
+
+start_test "atuin_preexec falls back to the trap's command when history has none"
+# Truncated beats wrong: a line kept out of history (HISTCONTROL) would
+# otherwise be recorded as whatever came before it.
+bash_input_line() { return 1; }
+ATUIN_HISTORY_ID=
+atuin_preexec "cd /tmp"
+assert_equal "id-for-cd /tmp" "$ATUIN_HISTORY_ID"
+unset -f bash_input_line
+
+###############
+# history_entry_command parses `history 1` output.
+
+start_test "history_entry_command extracts the command"
+unset _last_history_number
+assert_equal "false || echo recovered" \
+    "$(history_entry_command "  1234  false || echo recovered")"
+
+start_test "history_entry_command handles an edited entry's marker"
+unset _last_history_number
+assert_equal "echo edited" "$(history_entry_command " 99* echo edited")"
+
+start_test "history_entry_command keeps interior spacing"
+unset _last_history_number
+assert_equal "echo  two   spaces" "$(history_entry_command "  7  echo  two   spaces")"
+
+start_test "history_entry_command fails when the entry number repeats"
+unset _last_history_number
+history_entry_command "  42  echo first" >/dev/null
+assert_false history_entry_command "  42  echo first"
+
+start_test "history_entry_command accepts the next entry"
+assert_equal "echo second" "$(history_entry_command "  43  echo second")"
+
+start_test "history_entry_command fails on an entry with no number"
+unset _last_history_number
+assert_false history_entry_command "not a history line"
+unset _last_history_number
+
 start_test "atuin_preexec is a no-op without an atuin session"
 ATUIN_SESSION=
 ATUIN_HISTORY_ID=
