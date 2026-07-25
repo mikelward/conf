@@ -2599,6 +2599,32 @@ atuin_preexec "cd /tmp"
 assert_equal "id-for-cd /tmp" "$ATUIN_HISTORY_ID"
 unset -f bash_input_line
 
+_atuin_warnings="$_testdir/atuin-warnings.log"
+
+start_test "atuin_preexec keeps no id when atuin can't open an entry"
+# Half an id is worse than none: the next prompt would close an entry
+# that was never opened, and the command after that would find the id
+# already spent.
+ATUIN_SESSION=session-1
+ATUIN_HISTORY_ID=id-from-the-last-command
+atuin() { printf 'half-an'; return 1; }
+atuin_preexec "ls -l" 2>"$_atuin_warnings"
+assert_equal "" "$ATUIN_HISTORY_ID"
+
+start_test "atuin_preexec says so rather than dropping the entry silently"
+assert_contains "atuin" "$(cat "$_atuin_warnings")"
+
+start_test "atuin_preexec keeps no id when atuin prints nothing"
+ATUIN_HISTORY_ID=id-from-the-last-command
+atuin() { :; }
+atuin_preexec "ls -l" 2>"$_atuin_warnings"
+assert_equal "" "$ATUIN_HISTORY_ID"
+
+start_test "atuin_preexec reports a failed open to the caller"
+atuin() { return 1; }
+assert_false atuin_preexec "ls -l" 2>"$_atuin_warnings"
+atuin() { printf '%s\n' "$*" >>"$_atuin_log"; printf 'id-for-%s\n' "$4"; }
+
 ###############
 # history_entry_command parses `history 1` output.
 
@@ -2649,6 +2675,23 @@ ATUIN_SESSION=
 ATUIN_HISTORY_ID=
 atuin_preexec "ls -l"
 assert_equal "" "$ATUIN_HISTORY_ID"
+
+start_test "atuin_preexec is a no-op once atuin is gone"
+# The session variable outlives the binary: uninstalling atuin under a
+# running shell must not print "command not found" before every command.
+have_command() { return 1; }
+ATUIN_SESSION=session-1
+ATUIN_HISTORY_ID=
+atuin_preexec "ls -l"
+assert_equal "" "$ATUIN_HISTORY_ID"
+
+start_test "atuin_precmd drops a stale entry once atuin is gone"
+rm -f "$_atuin_log"
+ATUIN_HISTORY_ID=entry-9
+atuin_precmd 0
+assert_false test -s "$_atuin_log"
+assert_equal "" "$ATUIN_HISTORY_ID"
+have_command() { test "$1" = atuin; }
 
 start_test "atuin_preexec is a no-op outside bash"
 # zsh records through atuin's own add-zsh-hook hooks; doing it here too
