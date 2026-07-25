@@ -2586,7 +2586,7 @@ start_test "atuin_preexec records the whole command line, not just the first com
 # `false || echo recovered` -- so the full line comes from history.
 ATUIN_SESSION=session-1
 ATUIN_HISTORY_ID=
-bash_input_line() { puts "false || echo recovered"; }
+bash_input_line() { _input_line="false || echo recovered"; }
 atuin_preexec "false"
 assert_equal "id-for-false || echo recovered" "$ATUIN_HISTORY_ID"
 
@@ -2602,31 +2602,47 @@ unset -f bash_input_line
 ###############
 # history_entry_command parses `history 1` output.
 
+# It sets $_input_line rather than printing: a command substitution would
+# run it in a subshell, where the entry number it remembers would be lost
+# and the repeat guard below could never fire.
+
 start_test "history_entry_command extracts the command"
 unset _last_history_number
-assert_equal "false || echo recovered" \
-    "$(history_entry_command "  1234  false || echo recovered")"
+history_entry_command "  1234  false || echo recovered"
+assert_equal "false || echo recovered" "$_input_line"
 
 start_test "history_entry_command handles an edited entry's marker"
 unset _last_history_number
-assert_equal "echo edited" "$(history_entry_command " 99* echo edited")"
+history_entry_command " 99* echo edited"
+assert_equal "echo edited" "$_input_line"
 
 start_test "history_entry_command keeps interior spacing"
 unset _last_history_number
-assert_equal "echo  two   spaces" "$(history_entry_command "  7  echo  two   spaces")"
+history_entry_command "  7  echo  two   spaces"
+assert_equal "echo  two   spaces" "$_input_line"
 
 start_test "history_entry_command fails when the entry number repeats"
 unset _last_history_number
-history_entry_command "  42  echo first" >/dev/null
+history_entry_command "  42  echo first"
 assert_false history_entry_command "  42  echo first"
 
+start_test "history_entry_command clears the line it won't vouch for"
+assert_equal "" "$_input_line"
+
 start_test "history_entry_command accepts the next entry"
-assert_equal "echo second" "$(history_entry_command "  43  echo second")"
+history_entry_command "  43  echo second"
+assert_equal "echo second" "$_input_line"
+
+start_test "history_entry_command remembers the number across calls"
+# The state has to outlive the call: in a subshell every entry would look
+# new, and a line kept out of history would be recorded as the previous
+# command instead of falling back to $BASH_COMMAND.
+assert_equal "43" "$_last_history_number"
 
 start_test "history_entry_command fails on an entry with no number"
 unset _last_history_number
 assert_false history_entry_command "not a history line"
-unset _last_history_number
+unset _last_history_number _input_line
 
 start_test "atuin_preexec is a no-op without an atuin session"
 ATUIN_SESSION=
