@@ -937,6 +937,57 @@ result="$(host_info)"
 assert_contains "["$'\033[31m'"root"$'\033[0m'"]" "$result"
 i_am_root() { false; }
 
+###############
+# INPUT ATTRIBUTE
+# readline has no equivalent of zsh's zle_highlight, so bash gets bold
+# user input by leaving the attribute on at the end of the prompt and
+# resetting it in PS0 before the command runs.
+_saved_bold="$bold"
+bold=$'\033[1m'
+
+start_test "ps1 ends with the bold input attribute under bash"
+assert_equal '$ \['$'\033[1m''\]' "$(ps1)"
+
+start_test "set_prompt resets the attribute in PS0"
+PS0=""
+set_prompt
+assert_equal $'\033[0m' "$PS0"
+
+start_test "basic_prompt bolds input on PS1 and PS2"
+basic_prompt
+assert_equal '$ \['$'\033[1m''\]' "$PS1"
+assert_equal '_ \['$'\033[1m''\]' "$PS2"
+assert_equal $'\033[0m' "$PS0"
+
+start_test "zsh leaves input highlighting to zle_highlight"
+shell="zsh"
+assert_equal '$ ' "$(ps1)"
+PS0="stale"
+set_prompt
+assert_equal "" "$PS0"
+shell="bash"
+
+start_test "no input attribute when colour is off"
+color=false
+assert_equal '$ ' "$(ps1)"
+color=true
+
+# PS0 is a bash 4.4 feature. Without it nothing turns the attribute off
+# before the command runs, so bolding input would bold its output too.
+start_test "no input attribute on bash too old for PS0"
+_saved_bash_version="$BASH_VERSION"
+BASH_VERSION="3.2.57(1)-release"
+assert_equal '$ ' "$(ps1)"
+BASH_VERSION="4.3.48(1)-release"
+assert_equal '$ ' "$(ps1)"
+
+start_test "input attribute on bash new enough for PS0"
+BASH_VERSION="4.4.20(1)-release"
+assert_equal '$ \['$'\033[1m''\]' "$(ps1)"
+BASH_VERSION="$_saved_bash_version"
+
+bold="$_saved_bold"
+
 # Restore color variables
 color="$_saved_color"
 red="$_saved_red"

@@ -1447,9 +1447,10 @@ path_or_empty() {
 
 # set a basic prompt that doesn't rely on precommand and preprompt hooks
 basic_prompt() {
-    PS1='$ '
-    PS2='_ '
+    PS1='$ '"$(input_attribute)"
+    PS2='_ '"$(input_attribute)"
     PS3='#? '
+    input_reset
     set_title "$(title)"
 }
 
@@ -1946,6 +1947,7 @@ title() {
 # done this way so that \[ (bash) and \{ (zsh) are handled consistently
 set_prompt() {
     PS1="$(ps1)"
+    input_reset
 }
 
 # output the string that should be used as the prompt
@@ -1953,6 +1955,7 @@ ps1() {
     keymap_character
     ps1_character
     printf ' '
+    input_attribute
 }
 
 # Print a character that should be the last part of the prompt.
@@ -1983,6 +1986,42 @@ _ps1_red_char() {
     bash) printf '\[%s\]%s\[%s\]' "$red" "$_char" "$normal" ;;
     zsh)  printf '%%{%s%%}%s%%{%s%%}' "$red" "$_char" "$normal" ;;
     *)    printf '%s%s%s' "$red" "$_char" "$normal" ;;
+    esac
+}
+
+# Print the escape that makes text typed at the prompt bold, wrapped in
+# bash's zero-width markers so readline's line-wrap accounting stays
+# correct. readline has no equivalent of zsh's `zle_highlight`, so the
+# attribute is simply left on at the end of the prompt; input_reset
+# turns it off again once the line is read. zsh does this itself via
+# zle_highlight, so it must not double up here.
+input_attribute() {
+    test "$shell" = bash || return 0
+    # PS0, the only hook that can turn the attribute back off before a
+    # command runs, arrived in bash 4.4 -- on older bash (macOS ships
+    # 3.2) it's an ordinary variable, so every command's output would
+    # be bold. Leave input unbolded there rather than bolding output.
+    case "$BASH_VERSION" in
+    [0-3].*|4.[0-3]*) return 0 ;;
+    esac
+    $color || return 0
+    test -n "$bold" || return 0
+    printf '\[%s\]' "$bold"
+}
+
+# Set PS0, which bash prints after reading the command line but before
+# running it, so the attribute input_attribute left on doesn't bleed
+# into command output. Other shells don't use PS0.
+#
+# A line that fails to parse (`echo )`) never reaches that point, so
+# bash's syntax error is printed bold; preprompt emits `normal` before
+# it renders, so the leak ends with that one diagnostic. Nothing runs
+# between the accepted line and the parser, so there's nowhere earlier
+# to hook.
+input_reset() {
+    case "$shell" in
+    bash) PS0="$normal" ;;
+    *)    PS0= ;;
     esac
 }
 
