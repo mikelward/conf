@@ -2249,7 +2249,43 @@ init_atuin() {
 atuin_preexec() {
     test "$shell" = bash || return 0
     test -n "${ATUIN_SESSION:-}" || return 0
-    ATUIN_HISTORY_ID="$(atuin history start -- "$1")"
+    local _command
+    _command="$(bash_input_line)" || _command="$1"
+    ATUIN_HISTORY_ID="$(atuin history start -- "$_command")"
+}
+
+# Print the whole command line the user just entered, or fail if it can't
+# be had. The DEBUG trap only sees $BASH_COMMAND -- the first simple
+# command of the line -- so `false || echo recovered` would be recorded
+# as `false` and then closed with the compound's exit status. bash appends
+# the line to history before running it, so the newest entry is it.
+#
+# Unless it isn't: HISTCONTROL and HISTIGNORE can keep a line out of
+# history, leaving the previous entry newest. The history number catches
+# that -- unchanged means nothing was added -- and the caller falls back
+# to $BASH_COMMAND, which is truncated but never someone else's command.
+bash_input_line() {
+    history_entry_command "$(HISTTIMEFORMAT= builtin history 1)"
+}
+
+# Print the command out of a `history 1` entry -- "  1234  cmd", or
+# "  1234* cmd" for one edited in place. Fails, printing nothing, when
+# the entry number is the one seen last: that means nothing was added to
+# history since, so this entry belongs to an earlier line.
+history_entry_command() {
+    local _entry _number _line
+    _entry="$1"
+    _entry="${_entry#"${_entry%%[![:space:]]*}"}"
+    _number="${_entry%%[![:digit:]]*}"
+    test -n "$_number" || return 1
+    if test "$_number" = "${_last_history_number:-}"; then
+        return 1
+    fi
+    _last_history_number="$_number"
+    _line="${_entry#"$_number"}"
+    _line="${_line#[*[:space:]]}"
+    _line="${_line#"${_line%%[![:space:]]*}"}"
+    puts "$_line"
 }
 
 # Close out the entry atuin_preexec opened, with the exit status of the

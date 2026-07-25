@@ -1941,14 +1941,22 @@ if is_interactive
         set -l generated (mktemp)
         # `command $argv[2..]` runs the generator: the remaining arguments
         # are the command and its arguments as separate words.
-        if command $argv[2..] >$generated
-            source $generated
+        if not command $argv[2..] >$generated
             rm -f $generated
-            return 0
+            warn "$tool: shell integration skipped, '$argv[2..]' failed"
+            return 1
+        end
+        # Sourcing is the second place this can fail -- a generator can
+        # exit 0 and still emit something fish won't take. Nothing can be
+        # rolled back at that point, so say so rather than reporting a
+        # setup that didn't happen.
+        if not source $generated
+            rm -f $generated
+            warn "$tool: shell integration may be incomplete, its init failed while loading"
+            return 1
         end
         rm -f $generated
-        warn "$tool: shell integration skipped, '$argv[2..]' failed"
-        return 1
+        return 0
     end
 
     # fzf's key bindings (Ctrl-R history, Ctrl-T paths, Alt-C cd) and
@@ -1960,7 +1968,9 @@ if is_interactive
         # expected version difference, so the fallback below reports it.
         set -l generated (mktemp)
         if fzf --fish >$generated 2>/dev/null
-            source $generated
+            if not source $generated
+                warn "fzf: shell integration may be incomplete, its init failed while loading"
+            end
             rm -f $generated
             return 0
         end
@@ -1970,7 +1980,10 @@ if is_interactive
                 /usr/share/fish/vendor_functions.d/fzf_key_bindings.fish \
                 /usr/share/doc/fzf/examples/key-bindings.fish
             if test -r $candidate
-                source $candidate
+                if not source $candidate
+                    warn "fzf: $candidate failed while loading"
+                    return 1
+                end
                 return 0
             end
         end
