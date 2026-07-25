@@ -204,6 +204,22 @@ assert_contains "vcs/vcs" "$_test_vcs_deps"
 start_test "test-vcs stamp does not depend on vcs-build"
 assert_not_contains "vcs-build" "$_test_vcs_deps"
 
+# A suite asserting on a file it never sources -- inputrc, the atuin
+# config -- still has to re-run when that file changes. Without the
+# dependency the stamp stays fresh and `make test` reports a pass for a
+# setting nothing looked at.
+start_test "test-bash stamp depends on the files its tests assert on"
+_test_bash_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null |
+    grep '^\.test-cache/test-bash\.stamp:')
+assert_contains "inputrc" "$_test_bash_deps"
+assert_contains "config/atuin/config.toml" "$_test_bash_deps"
+
+start_test "test-zsh stamp depends on the atuin config too"
+# shrc_test.sh runs under both shells, so the assertion exists in both.
+_test_zsh_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null |
+    grep '^\.test-cache/test-zsh\.stamp:')
+assert_contains "config/atuin/config.toml" "$_test_zsh_deps"
+
 # test-full must wipe the stamp cache before delegating to test, so a
 # `make test-full` invocation always re-runs every test even if stamps
 # would otherwise be up-to-date.

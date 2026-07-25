@@ -1657,6 +1657,13 @@ cat > "$_fish_tool_dir/carapace" << 'STUB'
 printf '# carapace %s\n' "$2"
 STUB
 chmod +x "$_fish_tool_dir/carapace"
+# Echoes its own arguments back as a fish function, so a test can see
+# exactly how init_atuin invoked it.
+cat > "$_fish_tool_dir/atuin" << 'STUB'
+#!/bin/sh
+printf 'function atuin_init_args; echo "%s"; end\n' "$*"
+STUB
+chmod +x "$_fish_tool_dir/atuin"
 
 start_test "fish init_zoxide sources zoxide's generated init"
 result="$(_fish_run "
@@ -1680,6 +1687,18 @@ result="$(_fish_run '
     echo survived
 ')"
 assert_contains "survived" "$result"
+
+start_test "fish init_atuin leaves atuin bound to Up as well as Ctrl-R"
+# --disable-up-arrow used to keep Up on fish's own prefix search; atuin's
+# Up is prefix-matched and host-scoped via config/atuin instead. Asserted
+# per shell because each config invokes atuin itself -- the bash and zsh
+# assertion in shrc_test.sh can't see this one.
+result="$(_fish_run "
+    set -gx PATH $_fish_tool_dir \$PATH
+    init_atuin
+    atuin_init_args
+")"
+assert_equal "init fish" "$result"
 
 start_test "fish init_carapace sets up the completer bridges"
 result="$(_fish_run "

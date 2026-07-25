@@ -1812,10 +1812,11 @@ def sync-tool-init [tool: string, args: list<string>] {
     mv --force $staged $target
 }
 
-# --disable-up-arrow keeps Up on nushell's own prefix search rather than
-# opening atuin's picker.
+# atuin takes both Ctrl-R and Up; config/atuin/config.toml keeps the Up
+# binding prefix-matched and host-scoped, so it still means what
+# reedline's own prefix search does.
 sync-tool-init zoxide [init nushell]
-sync-tool-init atuin [init nu --disable-up-arrow]
+sync-tool-init atuin [init nu]
 
 # carapace's completions. CARAPACE_BRIDGES is the fallback for commands
 # it has no spec of its own for: bash-completion (which scrapes
