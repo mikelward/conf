@@ -3272,7 +3272,7 @@ except OSError: pass
         ^chmod +x ($dir | path join "faketool")
         $env.PATH = [$dir "/usr/bin" "/bin"]
         sync-tool-init faketool [init nu]
-        let target = ((tool-autoload-dir) | path join "faketool.nu")
+        let target = ((tool-autoload-dir) | path join "generated-faketool.nu")
         assert ($target | path exists) $"($target) should have been written"
         assert (open --raw $target | str contains "fake-jump")
     })
@@ -3286,17 +3286,29 @@ except OSError: pass
         ^chmod +x ($dir | path join "argtool")
         $env.PATH = [$dir "/usr/bin" "/bin"]
         sync-tool-init argtool [init nu --disable-up-arrow]
-        let target = ((tool-autoload-dir) | path join "argtool.nu")
+        let target = ((tool-autoload-dir) | path join "generated-argtool.nu")
         assert (open --raw $target | str contains "init nu --disable-up-arrow")
     })
 
     (run-test "nu sync-tool-init drops the init when the tool is gone" {
-        let target = ((tool-autoload-dir) | path join "faketool.nu")
+        let target = ((tool-autoload-dir) | path join "generated-gonetool.nu")
         mkdir (tool-autoload-dir)
-        "# stale" | save --force $target
+        $"($GENERATED_MARKER)\n# stale" | save --force $target
         $env.PATH = ["/usr/bin" "/bin"]
-        sync-tool-init faketool [init nu]
+        sync-tool-init gonetool [init nu]
         assert (not ($target | path exists)) "a stale init must not outlive the tool"
+    })
+
+    # The autoload directory is the user's own: a file we didn't generate
+    # is never overwritten or removed, however it's named.
+    (run-test "nu sync-tool-init never touches a file it didn't generate" {
+        let target = ((tool-autoload-dir) | path join "generated-handwritten.nu")
+        mkdir (tool-autoload-dir)
+        "# my own zoxide setup" | save --force $target
+        $env.PATH = ["/usr/bin" "/bin"]
+        sync-tool-init handwritten [init nu]
+        assert ($target | path exists) "a hand-written file must survive"
+        assert equal (open --raw $target | str trim) "# my own zoxide setup"
     })
 
     (run-test "nu sync-tool-init warns and writes nothing when the tool fails" {
@@ -3304,7 +3316,7 @@ except OSError: pass
         "#!/bin/sh\nexit 3" | save ($dir | path join "failtool")
         ^chmod +x ($dir | path join "failtool")
         $env.PATH = [$dir "/usr/bin" "/bin"]
-        let target = ((tool-autoload-dir) | path join "failtool.nu")
+        let target = ((tool-autoload-dir) | path join "generated-failtool.nu")
         sync-tool-init failtool [init nu]
         assert (not ($target | path exists)) "a failed generator must not be saved"
     })

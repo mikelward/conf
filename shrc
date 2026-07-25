@@ -2034,10 +2034,18 @@ bash_has_ps0() {
 # between the accepted line and the parser, so there's nowhere earlier
 # to hook.
 input_reset() {
+    # Whatever PS0 the shell already had (inherited, or set in
+    # ~/.shrc.local) is kept and the reset appended, rather than being
+    # replaced -- set_prompt runs on every prompt, so overwriting would
+    # silently drop a PS0 the user set. Captured on the first call,
+    # before we've written our own value.
+    if test "${_inherited_ps0+set}" != set; then
+        _inherited_ps0="${PS0-}"
+    fi
     if bash_has_ps0; then
-        PS0="$normal"
+        PS0="$_inherited_ps0$normal"
     else
-        PS0=
+        PS0="$_inherited_ps0"
     fi
 }
 
@@ -2247,9 +2255,14 @@ atuin_preexec() {
 # Close out the entry atuin_preexec opened, with the exit status of the
 # command that just finished. Runs detached: `history end` can block on
 # the sync daemon, and a prompt must not wait for it.
+#
+# Only stdout is discarded. A failure here means the entry is stranded
+# unfinished, so atuin's own diagnostic is left on stderr rather than
+# swallowed -- it arrives asynchronously, after the prompt has been
+# drawn, which is the price of not blocking on the sync daemon.
 atuin_precmd() {
     test -n "${ATUIN_HISTORY_ID:-}" || return 0
-    (atuin history end --exit "$1" -- "$ATUIN_HISTORY_ID" >/dev/null 2>&1 &)
+    (atuin history end --exit "$1" -- "$ATUIN_HISTORY_ID" >/dev/null &)
     ATUIN_HISTORY_ID=
 }
 

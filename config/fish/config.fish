@@ -1937,7 +1937,11 @@ if is_interactive
     # its own status, not the substitution's.
     function eval_tool_init
         set -l tool $argv[1]
-        set -l generated ($argv[2..] | string collect)
+        # `command $argv[2..]` runs the generator: the remaining arguments
+        # are the command and its arguments as separate words. Piping
+        # $argv[2..] instead would collect the argument text without ever
+        # running anything.
+        set -l generated (command $argv[2..] | string collect)
         if test -z "$generated"
             warn "$tool: shell integration skipped, '$argv[2..]' produced nothing"
             return 1
@@ -1972,7 +1976,7 @@ if is_interactive
     # zoxide's `z`/`zi` jumps. `cd` is deliberately left alone.
     function init_zoxide
         is_runnable zoxide; or return 0
-        eval_tool_init zoxide "zoxide init fish"
+        eval_tool_init zoxide zoxide init fish
     end
 
     # carapace's completions. CARAPACE_BRIDGES is the fallback for
@@ -1982,14 +1986,14 @@ if is_interactive
     function init_carapace
         is_runnable carapace; or return 0
         set -q CARAPACE_BRIDGES; or set -gx CARAPACE_BRIDGES bash,fish,inshellisense
-        eval_tool_init carapace "carapace _carapace fish"
+        eval_tool_init carapace carapace _carapace fish
     end
 
     # atuin's history search on Ctrl-R. --disable-up-arrow keeps Up on
     # fish's own prefix search. Last, so its Ctrl-R wins over fzf's.
     function init_atuin
         is_runnable atuin; or return 0
-        eval_tool_init atuin "atuin init fish --disable-up-arrow"
+        eval_tool_init atuin atuin init fish --disable-up-arrow
     end
 
     function init_shell_tools

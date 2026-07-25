@@ -950,8 +950,25 @@ assert_equal '$ \['$'\033[1m''\]' "$(ps1)"
 
 start_test "set_prompt resets the attribute in PS0"
 PS0=""
+unset _inherited_ps0
 set_prompt
 assert_equal $'\033[0m' "$PS0"
+
+# set_prompt runs on every prompt, so overwriting PS0 outright would wipe
+# one set in ~/.shrc.local on the first render. The reset is appended to
+# whatever was there instead.
+start_test "set_prompt keeps a PS0 the user set"
+PS0="user-ps0 "
+unset _inherited_ps0
+set_prompt
+assert_equal "user-ps0 "$'\033[0m' "$PS0"
+
+start_test "set_prompt doesn't re-append the user's PS0 each prompt"
+set_prompt
+set_prompt
+assert_equal "user-ps0 "$'\033[0m' "$PS0"
+PS0=
+unset _inherited_ps0
 
 start_test "basic_prompt bolds input on PS1 and PS2"
 basic_prompt
@@ -962,9 +979,14 @@ assert_equal $'\033[0m' "$PS0"
 start_test "zsh leaves input highlighting to zle_highlight"
 shell="zsh"
 assert_equal '$ ' "$(ps1)"
-PS0="stale"
+# zsh doesn't use PS0 at all, so there's nothing to reset -- and nothing
+# to justify clobbering a value the user put there.
+PS0="untouched"
+unset _inherited_ps0
 set_prompt
-assert_equal "" "$PS0"
+assert_equal "untouched" "$PS0"
+PS0=
+unset _inherited_ps0
 shell="bash"
 
 start_test "no input attribute when colour is off"
