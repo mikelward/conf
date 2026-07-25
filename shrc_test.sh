@@ -2706,6 +2706,15 @@ assert_false bash_has_ps0
 shell=bash
 BASH_VERSION="$_saved_bash_version"
 
+start_test "_prompt_cycle_start hands the status on to preprompt"
+# The marker runs first in the prompt cycle, ahead of preprompt reading
+# $?. If it reported its own success instead, every failed command would
+# get the success colour, no job report, and an --exit 0 atuin entry.
+(exit 3)
+_prompt_cycle_start
+_rc=$?
+assert_equal 3 "$_rc"
+
 ###############
 # The DEBUG trap is armed by the last PROMPT_COMMAND entry, so anything
 # appended after it (zoxide adds a hook) would be taken for the user's
@@ -2717,14 +2726,28 @@ dash|sh)
 *)
     start_test "arm_precommand_trap_last moves the arming to the end"
     install_precommand_trap() { :; }
-    PROMPT_COMMAND='preprompt; install_precommand_trap; __zoxide_hook'
+    PROMPT_COMMAND='_prompt_cycle_start; preprompt; install_precommand_trap; __zoxide_hook'
     arm_precommand_trap_last
-    assert_equal 'preprompt; __zoxide_hook; install_precommand_trap' "$PROMPT_COMMAND"
+    assert_equal '_prompt_cycle_start; preprompt; __zoxide_hook; install_precommand_trap' \
+        "$PROMPT_COMMAND"
 
-    start_test "arm_precommand_trap_last leaves an already-last arming alone"
-    PROMPT_COMMAND='preprompt; install_precommand_trap'
+    start_test "arm_precommand_trap_last leaves an already-ordered chain alone"
+    PROMPT_COMMAND='_prompt_cycle_start; preprompt; install_precommand_trap'
     arm_precommand_trap_last
-    assert_equal 'preprompt; install_precommand_trap' "$PROMPT_COMMAND"
+    assert_equal '_prompt_cycle_start; preprompt; install_precommand_trap' "$PROMPT_COMMAND"
+
+    start_test "arm_precommand_trap_last keeps the cycle marker first"
+    # A tool that prepends its own hook would otherwise consume the arm
+    # left over from a prompt where nothing ran.
+    PROMPT_COMMAND='__other_hook; _prompt_cycle_start; preprompt; install_precommand_trap'
+    arm_precommand_trap_last
+    assert_equal '_prompt_cycle_start; __other_hook; preprompt; install_precommand_trap' \
+        "$PROMPT_COMMAND"
+
+    start_test "arm_precommand_trap_last copes with an empty PROMPT_COMMAND"
+    PROMPT_COMMAND=
+    arm_precommand_trap_last
+    assert_equal '_prompt_cycle_start; install_precommand_trap' "$PROMPT_COMMAND"
 
     start_test "arm_precommand_trap_last is a no-op outside bash"
     shell=zsh

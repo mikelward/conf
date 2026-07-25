@@ -2359,10 +2359,29 @@ init_shell_tools() {
 arm_precommand_trap_last() {
     test "$shell" = bash || return 0
     is_function install_precommand_trap || return 0
-    # The separator goes with it, so removing the entry can't leave an
+    # Separators go with the entries, so removing them can't leave an
     # empty command (`; ;`) behind.
-    PROMPT_COMMAND="${PROMPT_COMMAND//; install_precommand_trap/}"
-    PROMPT_COMMAND="$PROMPT_COMMAND; install_precommand_trap"
+    local _hooks="$PROMPT_COMMAND"
+    _hooks="${_hooks//_prompt_cycle_start; /}"
+    _hooks="${_hooks//; install_precommand_trap/}"
+    if test -n "$_hooks"; then
+        PROMPT_COMMAND="_prompt_cycle_start; $_hooks; install_precommand_trap"
+    else
+        PROMPT_COMMAND="_prompt_cycle_start; install_precommand_trap"
+    fi
+}
+
+# The first thing every prompt cycle runs, and nothing else.
+# _bash_debug_trap recognises it to tell "the prompt is starting" from
+# "the user typed something", which no real function name could do
+# unambiguously -- someone can always type `preprompt` themselves.
+#
+# It runs ahead of preprompt, so it has to hand the status on rather than
+# report its own: preprompt reads $? for the prompt's status colour, the
+# job report, and atuin's `history end --exit`, and a marker that always
+# succeeded would make every failed command look fine.
+_prompt_cycle_start() {
+    return "$?"
 }
 
 #########################
@@ -3012,13 +3031,15 @@ if is_interactive; then
             test "${READLINE_LINE+set}" = set && return 0
             # When nothing ran -- an empty line, Ctrl-C at the prompt, a
             # line that won't parse -- the arm from the last prompt is
-            # still in place, and the next thing to fire is the prompt's
-            # own first hook. Drop the arm there rather than filing the
-            # hook as a command: install_precommand_trap re-arms at the
-            # end of the cycle, and with the arm gone the hooks appended
-            # after it (zoxide's) are covered too.
-            case "${1%%[   ]*}" in
-            preprompt|install_precommand_trap)
+            # still in place, and the next thing to fire is the first
+            # command of the prompt cycle. That's _prompt_cycle_start,
+            # which exists only to be recognised here: dropping the arm
+            # on it costs nothing and covers every later hook in the
+            # cycle, including ones tools append. Matching a real
+            # function name would swallow the command of someone who
+            # typed `preprompt` themselves.
+            case "${1%%[ 	]*}" in
+            _prompt_cycle_start)
                 _precommand_armed=
                 return 0
                 ;;
@@ -3044,7 +3065,7 @@ if is_interactive; then
             trap - DEBUG
         }
         enable_prompt_hooks() {
-            PROMPT_COMMAND='preprompt; install_precommand_trap'
+            PROMPT_COMMAND='_prompt_cycle_start; preprompt; install_precommand_trap'
         }
         disable_prompt_hooks() {
             remove_precommand_trap
