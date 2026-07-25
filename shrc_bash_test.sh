@@ -110,4 +110,25 @@ assert_equal "on" "$result"
 start_test "inputrc sets colored-stats"
 assert_true grep -qx 'set colored-stats on' "$_srcdir/inputrc"
 
+# bash restores the DEBUG trap after the handler returns, so the trap's
+# own `trap - DEBUG` doesn't stick and it keeps firing for every command
+# the prompt hooks run. install_precommand_trap arms a flag as its last
+# step, and only the first command after that -- the one the user typed
+# -- reaches precommand. Without the flag, every prompt hook would be
+# recorded as a command: the wrong title, the wrong timing, and a bogus
+# atuin history entry, with the real command then going unrecorded.
+start_test "the DEBUG trap passes only the user's command to precommand"
+result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    precommand() { printf "SAW[%s]\n" "$*"; }
+    __fake_prompt_hook() { :; }
+    install_precommand_trap
+    echo the-user-command >/dev/null
+    # Everything below stands in for the rest of a prompt cycle, which
+    # runs with the trap still armed but the flag cleared.
+    preprompt >/dev/null 2>&1
+    __fake_prompt_hook
+' </dev/null 2>/dev/null | grep '^SAW\[')
+assert_equal "SAW[echo the-user-command > /dev/null]" "$result"
+
 test_summary "shrc_bash_test"

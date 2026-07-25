@@ -1679,6 +1679,85 @@ $env.config = ($env.config | upsert show_banner false)
 $env.config = ($env.config | upsert history.file_format "plaintext")
 $env.config = ($env.config | upsert history.max_size 100000)
 
+# --- Interactive tool integrations ---
+# zoxide (frecency-ranked directory jumps), atuin (SQLite-backed history
+# search) and carapace (multi-shell completions), in parity with shrc and
+# config/fish/config.fish. Nushell differs in two ways:
+#
+#   * `source` needs a path known at parse time, so zoxide's and atuin's
+#     generated init can't be evaluated inline. It's written into the
+#     autoload directory instead, where nushell picks it up on the next
+#     startup -- so a freshly installed tool is live one shell later.
+#   * fzf ships no nushell key bindings, so only its binary is used here
+#     (the session pickers in the scripts repo call it directly).
+
+# Where generated tool init lands: the autoload directory nushell
+# already sources for local overrides.
+def tool-autoload-dir []: nothing -> string {
+    let dirs = $nu.user-autoload-dirs
+    if ($dirs | is-empty) {
+        # Older nushell without $nu.user-autoload-dirs: the documented
+        # location, same one the local-override notes at the end use.
+        [$nu.home-dir ".config" "nushell" "autoload"] | path join
+    } else {
+        $dirs | first
+    }
+}
+
+# Write <tool>.nu into the autoload directory, regenerating when the
+# binary is newer than what was generated from it. When the tool isn't
+# installed, a previously generated file is removed so uninstalling it
+# actually takes effect rather than leaving dead bindings behind.
+def sync-tool-init [tool: string, args: list<string>] {
+    let target = ((tool-autoload-dir) | path join $"($tool).nu")
+    let found = (which $tool | where type == "external")
+    if ($found | is-empty) {
+        if ($target | path exists) { rm --force $target }
+        return
+    }
+    let bin = ($found | first | get path)
+    if ($target | path exists) {
+        let generated_at = (ls $target | first | get modified)
+        let installed_at = (ls $bin | first | get modified)
+        if $generated_at >= $installed_at { return }
+    }
+    let result = (do { ^$tool ...$args } | complete)
+    if $result.exit_code != 0 {
+        warn $"($tool): shell integration skipped, `($tool) ($args | str join ' ')` failed"
+        return
+    }
+    mkdir (tool-autoload-dir)
+    $result.stdout | save --force $target
+}
+
+# --disable-up-arrow keeps Up on nushell's own prefix search rather than
+# opening atuin's picker.
+sync-tool-init zoxide [init nushell]
+sync-tool-init atuin [init nu --disable-up-arrow]
+
+# carapace's completions. CARAPACE_BRIDGES is the fallback for commands
+# it has no spec of its own for: bash-completion (which scrapes
+# `cmd --help`), fish's man-page-derived completions, and the CLI
+# frameworks' own completers.
+if (have-command carapace) {
+    $env.CARAPACE_BRIDGES = ($env.CARAPACE_BRIDGES? | default "bash,fish,inshellisense")
+    $env.config = ($env.config | upsert completions.external {
+        enable: true
+        completer: {|spans|
+            # A completer runs on every Tab, so a carapace failure returns
+            # no candidates rather than warning -- a warning here would
+            # scribble over the prompt on every keystroke. Nushell falls
+            # back to its own file completions.
+            let completed = (do { ^carapace $spans.0 nushell ...$spans } | complete)
+            if $completed.exit_code != 0 or ($completed.stdout | is-empty) {
+                null
+            } else {
+                $completed.stdout | from json
+            }
+        }
+    })
+}
+
 # Capture command timing so render-prompt can show the previous command's
 # duration via last-job-info. pre_execution fires just before the user's
 # command runs; pre_prompt fires just before the next prompt is drawn.

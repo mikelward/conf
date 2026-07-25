@@ -1456,7 +1456,13 @@ basic_prompt() {
 
 # commands to execute before the prompt is displayed
 preprompt() {
+    # Grab the finished command's status before anything else can clobber
+    # it, then put it back for last_job_info (which reads $?) and hand it
+    # to atuin's hook, which needs it to close out the history entry.
+    _last_status=$?
+    set_status "$_last_status"
     last_job_info
+    atuin_precmd "$_last_status"
     current_command=
     SECONDS=0
     maybe_background_fetch
@@ -1996,33 +2002,43 @@ _ps1_red_char() {
 # turns it off again once the line is read. zsh does this itself via
 # zle_highlight, so it must not double up here.
 input_attribute() {
-    test "$shell" = bash || return 0
-    # PS0, the only hook that can turn the attribute back off before a
-    # command runs, arrived in bash 4.4 -- on older bash (macOS ships
-    # 3.2) it's an ordinary variable, so every command's output would
-    # be bold. Leave input unbolded there rather than bolding output.
-    case "$BASH_VERSION" in
-    [0-3].*|4.[0-3]*) return 0 ;;
-    esac
+    # Without PS0 nothing turns the attribute back off before a command
+    # runs, so every command's output would be bold. Leave input
+    # unbolded on those shells rather than bolding output.
+    bash_has_ps0 || return 0
     $color || return 0
     test -n "$bold" || return 0
     printf '\[%s\]' "$bold"
 }
 
-# Set PS0, which bash prints after reading the command line but before
-# running it, so the attribute input_attribute left on doesn't bleed
-# into command output. Other shells don't use PS0.
+# Whether this shell expands PS0 -- after a command line is read, just
+# before it runs. bash 4.4+ only (macOS ships 3.2). Two things ride on
+# it: turning off the bold input attribute, and marking the user's
+# command for _bash_debug_trap.
+bash_has_ps0() {
+    test "$shell" = bash || return 1
+    case "$BASH_VERSION" in
+    [0-3].*|4.[0-3]*) return 1 ;;
+    esac
+    return 0
+}
+
+# Set PS0, expanded after the command line is read and before it runs,
+# to turn off the bold attribute input_attribute left on -- so command
+# output isn't bold. Only the escape sequence goes in it: shrc turns
+# promptvars off, so PS0 gets no parameter expansion.
 #
-# A line that fails to parse (`echo )`) never reaches that point, so
-# bash's syntax error is printed bold; preprompt emits `normal` before
-# it renders, so the leak ends with that one diagnostic. Nothing runs
+# A line that fails to parse (`echo )`) never reaches PS0, so bash's
+# syntax error is printed bold; preprompt emits `normal` before it
+# renders, so the leak ends with that one diagnostic. Nothing runs
 # between the accepted line and the parser, so there's nowhere earlier
 # to hook.
 input_reset() {
-    case "$shell" in
-    bash) PS0="$normal" ;;
-    *)    PS0= ;;
-    esac
+    if bash_has_ps0; then
+        PS0="$normal"
+    else
+        PS0=
+    fi
 }
 
 # return whether the given shell option is on
@@ -2057,6 +2073,7 @@ keymap_character() {
 # the first argument is the command line being run
 precommand() {
     log_history "$*"
+    atuin_preexec "$*"
     current_command="$(expand_job "$*")"
     set_title "$(title)"
     set_color 'normal'
@@ -2115,6 +2132,160 @@ set_color() {
 }
 escape_start=
 escape_end=
+
+##############################
+# INTERACTIVE TOOL INTEGRATIONS
+# Optional third-party tools wired into the interactive shell: fzf
+# (fuzzy picker key bindings), zoxide (frecency-ranked directory jumps),
+# atuin (SQLite-backed history search) and carapace (multi-shell
+# completions). Each is skipped when the tool isn't installed, so a host
+# without them behaves exactly as before. A tool that IS installed but
+# whose init fails is a real problem and warns rather than being
+# silently dropped.
+#
+# Keep in parity with config/fish/config.fish and config/nushell/config.nu.
+
+# Run a tool's init generator and evaluate what it prints. The generator
+# runs once, and only its stdout is captured -- stderr goes to the
+# terminal so the tool's own diagnostics stay visible -- with the exit
+# status deciding whether the output is safe to evaluate.
+eval_tool_init() {
+    local _tool="$1"
+    shift
+    local _init
+    if ! _init="$("$@")"; then
+        warn "$_tool: shell integration skipped, '$*' failed"
+        return 1
+    fi
+    eval "$_init"
+}
+
+# fzf's key bindings (Ctrl-R history, Ctrl-T paths, Alt-C cd) and its
+# completions. `fzf --bash`/`--zsh` needs fzf 0.48+; older builds ship
+# the same snippets as files, so fall back to where packages put them.
+init_fzf() {
+    have_command fzf || return 0
+    case "$shell" in bash|zsh) ;; *) return 0 ;; esac
+
+    local _init _candidate
+    # Old fzf has no --bash/--zsh flag and complains on stderr; that's an
+    # expected version difference, not a failure, so the file fallback
+    # below reports the problem instead.
+    if _init="$(fzf "--$shell" 2>/dev/null)"; then
+        eval "$_init"
+        return 0
+    fi
+    for _candidate in \
+        "$HOME/.fzf.$shell" \
+        "/usr/share/fzf/key-bindings.$shell" \
+        "/usr/share/doc/fzf/examples/key-bindings.$shell"
+    do
+        if test -r "$_candidate"; then
+            . "$_candidate"
+            return 0
+        fi
+    done
+    warn "fzf: no shell integration found (needs fzf 0.48+ or its key-bindings.$shell)"
+}
+
+# zoxide's `z`/`zi` directory jumps. `cd` is deliberately left alone:
+# the builtin stays predictable, and z is the opt-in fuzzy version.
+init_zoxide() {
+    have_command zoxide || return 0
+    case "$shell" in bash|zsh) ;; *) return 0 ;; esac
+    eval_tool_init zoxide zoxide init "$shell"
+}
+
+# carapace's completions, which cover far more commands than the
+# per-package scripts sourced above. CARAPACE_BRIDGES is the fallback
+# for commands carapace has no spec of its own for: it delegates to
+# bash-completion (which scrapes `cmd --help`), fish's man-page-derived
+# completions, and the CLI frameworks' own completers.
+init_carapace() {
+    have_command carapace || return 0
+    case "$shell" in bash|zsh) ;; *) return 0 ;; esac
+    export CARAPACE_BRIDGES="${CARAPACE_BRIDGES:-bash,fish,inshellisense}"
+    eval_tool_init carapace carapace _carapace "$shell"
+}
+
+# atuin's history search on Ctrl-R. --disable-up-arrow keeps Up bound to
+# the prefix search configured in inputrc / the zsh key bindings, which
+# searches the current line rather than opening a picker.
+#
+# Called last so its Ctrl-R binding wins over fzf's.
+init_atuin() {
+    have_command atuin || return 0
+    case "$shell" in bash|zsh) ;; *) return 0 ;; esac
+    eval_tool_init atuin atuin init "$shell" --disable-up-arrow || return 1
+    # In bash, atuin records history by appending to bash-preexec's
+    # preexec_functions/precmd_functions. bash-preexec drives those from
+    # the DEBUG trap and PROMPT_COMMAND -- both of which shrc already
+    # owns -- so loading it would leave two implementations fighting over
+    # the same hooks. Instead the hooks atuin defines are called from
+    # shrc's own precommand/preprompt (see atuin_preexec/atuin_precmd),
+    # and bash-preexec isn't needed at all. zsh needs none of this:
+    # atuin registers with add-zsh-hook, which coexists with shrc's
+    # precmd/preexec functions.
+    if test "$shell" = bash && ! is_function __atuin_precmd; then
+        warn "atuin: no __atuin_precmd hook after init; history won't be recorded"
+    fi
+}
+
+# Record the command about to run, via atuin's documented history CLI
+# rather than its __atuin_preexec hook: that hook compares $BASH_COMMAND
+# against its argument to spot bash-preexec firing for a keybinding, and
+# from inside shrc's DEBUG trap $BASH_COMMAND is the trap's own command,
+# so atuin would file the entry as a failure and record it twice.
+#
+# bash only -- zsh drives atuin's own hooks through add-zsh-hook.
+atuin_preexec() {
+    test "$shell" = bash || return 0
+    test -n "${ATUIN_SESSION:-}" || return 0
+    ATUIN_HISTORY_ID="$(atuin history start -- "$1")"
+}
+
+# Close out the entry atuin_preexec opened, with the exit status of the
+# command that just finished. Runs detached: `history end` can block on
+# the sync daemon, and a prompt must not wait for it.
+atuin_precmd() {
+    test -n "${ATUIN_HISTORY_ID:-}" || return 0
+    (atuin history end --exit "$1" -- "$ATUIN_HISTORY_ID" >/dev/null 2>&1 &)
+    ATUIN_HISTORY_ID=
+}
+
+# Set $? to the given value. A function call rather than a subshell so
+# the prompt path doesn't fork just to restore a status.
+set_status() {
+    return "$1"
+}
+
+# Wire up whichever of the optional tools are installed. Ordered so the
+# later ones win the key bindings they share: fzf binds Ctrl-R, atuin
+# replaces it.
+init_shell_tools() {
+    init_fzf
+    init_zoxide
+    init_carapace
+    init_atuin
+    arm_precommand_trap_last
+}
+
+# Keep arming the DEBUG trap the last thing the prompt does. zoxide
+# appends its own PROMPT_COMMAND entry, and anything running after
+# install_precommand_trap trips the freshly armed trap: shrc would take
+# that hook for the user's command (wrong title, wrong timing, a bogus
+# atuin entry) and then disarm, so the command actually typed next
+# wouldn't register at all. Moving our entry back to the end fixes the
+# order. Anything hooked in later -- from ~/.shrc.local, say -- should
+# call this again.
+arm_precommand_trap_last() {
+    test "$shell" = bash || return 0
+    is_function install_precommand_trap || return 0
+    # The separator goes with it, so removing the entry can't leave an
+    # empty command (`; ;`) behind.
+    PROMPT_COMMAND="${PROMPT_COMMAND//; install_precommand_trap/}"
+    PROMPT_COMMAND="$PROMPT_COMMAND; install_precommand_trap"
+}
 
 #########################
 # INTERACTIVE SHELL SETUP
@@ -2745,13 +2916,26 @@ if is_interactive; then
         # install preprompt and precommand functions
         # the DEBUG trap is disabled during running of preprompt to avoid lots
         # of extra processing and several pointless title changes
+        # bash restores the DEBUG trap after the handler returns, so the
+        # `trap - DEBUG` below doesn't stick: the trap keeps firing for
+        # every command the prompt hooks run, which is where those
+        # "several pointless title changes" came from. So gate on a flag
+        # that install_precommand_trap sets as its very last step, with
+        # arm_precommand_trap_last keeping that call last in
+        # PROMPT_COMMAND. The first fire after it is then the command the
+        # user actually typed, and only that one reaches precommand.
         _bash_debug_trap() {
+            test "${_precommand_armed:-}" = yes || return 0
+            _precommand_armed=
             precommand "$1"
             remove_precommand_trap
         }
         install_precommand_trap() {
             trap '_bash_debug_trap "$BASH_COMMAND"' DEBUG
             set_title "$(title)"
+            # Last, and a plain assignment: the trap fires before the
+            # assignment takes effect, so this can't arm itself.
+            _precommand_armed=yes
         }
         remove_precommand_trap() {
             trap - DEBUG
@@ -2859,6 +3043,12 @@ if is_interactive; then
         done
         ;;
     esac
+
+    # fzf/zoxide/carapace/atuin, for the hosts that have them. Runs after
+    # the completion setup above because carapace needs zsh's compinit to
+    # have happened, and after the key bindings because fzf and atuin
+    # rebind Ctrl-R.
+    init_shell_tools
 
     # set a simple prompt for non-bash non-zsh
     # (will be overridden immediately by bash and zsh)
