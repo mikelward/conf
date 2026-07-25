@@ -1761,21 +1761,20 @@ def sync-tool-init [tool: string, args: list<string>] {
         if $existing != null { rm --force $target }
         return
     }
-    let bin = ($found | first | get path)
-    # What the file was generated from. Compared verbatim, so a different
-    # binary or a change to the arguments regenerates even when the mtime
-    # says otherwise -- switching PATH to a Nix-style build with a
-    # normalised timestamp is the case an mtime test alone gets wrong.
-    let stamp = $"# from ($bin) ($args | str join ' ') at (ls $bin | first | get modified | format date '%s')"
-    if $existing != null and ($existing | lines | get 1? | default "") == $stamp {
-        return
-    }
+    # Regenerate every startup and compare, which is what bash, zsh and
+    # fish do by running the generator each time. Deciding from the
+    # binary's path and mtime instead was cheaper but wrong whenever
+    # neither changes: an in-place upgrade with a normalised timestamp
+    # (reproducible builds, Nix) kept the old init indefinitely.
     let result = (do { ^$tool ...$args } | complete)
     if $result.exit_code != 0 {
         warn $"($tool): shell integration skipped, `($tool) ($args | str join ' ')` failed"
         return
     }
-    let content = $"($GENERATED_MARKER)\n($stamp)\n($result.stdout)"
+    let content = $"($GENERATED_MARKER)\n($result.stdout)"
+    if $existing == $content {
+        return
+    }
 
     # Validate before installing. A malformed file in the autoload
     # directory breaks every future shell -- and breaks the very code
@@ -1793,6 +1792,18 @@ def sync-tool-init [tool: string, args: list<string>] {
     let staged = ((tool-autoload-dir) | path join $".($file).($nu.pid).tmp")
     $content | save --force $staged
     let check = (do { ^$nu.current-exe --no-config-file --ide-check 10 $staged } | complete)
+    # A failed check means the same thing as a failed parse here: nothing
+    # vouched for this file. `--ide-check` reports diagnostics on stdout
+    # and exits 0 either way, so a non-zero status means the validator
+    # itself couldn't run -- an older nushell without the flag, a killed
+    # process -- and installing unvalidated would risk breaking every
+    # future shell. The message stays generic: the staged path sits under
+    # $nu.home-dir, which can carry a real name.
+    if $check.exit_code != 0 {
+        rm --force $staged
+        warn $"($tool): couldn't validate its generated init; keeping the previous one"
+        return
+    }
     if ($check.stdout | str contains '"severity":"Error"') {
         rm --force $staged
         warn $"($tool): its generated init doesn't parse; keeping the previous one"
