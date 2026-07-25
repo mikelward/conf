@@ -161,11 +161,40 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     precommand() { printf "SAW[%s]\n" "$*"; }
     install_precommand_trap
     # No user command in between: this stands in for a prompt cycle that
-    # follows an empty line.
+    # follows an empty line, starting with the cycle marker as a real one
+    # does.
+    _prompt_cycle_start
     preprompt >/dev/null 2>&1
     __after_hooks() { :; }
     __after_hooks
 ' </dev/null 2>/dev/null | grep "^SAW\[")
 assert_equal "" "$result"
+
+# The marker is what identifies a prompt cycle, not the names of the
+# functions it runs -- so someone who types `preprompt` at the prompt gets
+# it recorded like any other command.
+start_test "the DEBUG trap records a prompt-hook name the user typed"
+result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    precommand() { printf "SAW[%s]\n" "$*"; }
+    preprompt() { :; }
+    install_precommand_trap
+    preprompt
+' </dev/null 2>/dev/null | grep "^SAW\[")
+assert_equal "SAW[preprompt]" "$result"
+
+# End-to-end: the whole PROMPT_COMMAND chain has to carry the exit status
+# of the command the user ran through to preprompt, which reads $? for the
+# prompt colour, the job report, and atuin's `history end --exit`. The
+# cycle marker runs first, so a marker that returned its own status would
+# make every failure look like a success.
+start_test "the prompt cycle carries the exit status through to preprompt"
+result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    preprompt() { printf "\nSTATUS[%s]\n" "$?"; }
+    (exit 3)
+    eval "$PROMPT_COMMAND"
+' </dev/null 2>/dev/null | sed -n 's/.*STATUS\[\([0-9]*\)\].*/\1/p')
+assert_equal "3" "$result"
 
 test_summary "shrc_bash_test"
