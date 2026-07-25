@@ -3402,6 +3402,33 @@ except OSError: pass
         assert (open --raw $target | str contains "def works") "the working init must survive"
     })
 
+    (run-test "nu sync-tool-init leaves no staging file behind" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\necho 'def tidy [] { 1 }'" | save ($dir | path join "tidytool")
+        ^chmod +x ($dir | path join "tidytool")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        sync-tool-init tidytool [init nu]
+        # The install is a rename from a staging file in the same
+        # directory, so writing $target can't be interrupted half way.
+        let staged = ((tool-autoload-dir) | path join ".generated-tidytool.nu.tmp")
+        assert (not ($staged | path exists)) "the staging file must be renamed or removed"
+        assert (((tool-autoload-dir) | path join "generated-tidytool.nu") | path exists)
+    })
+
+    # Hooks are appended, never assigned: atuin's generated init adds its
+    # own pre_execution/pre_prompt hooks, and an assignment on either side
+    # would drop the other's.
+    (run-test "nu appends its timing hooks rather than replacing the list" {
+        assert (($env.config.hooks.pre_execution | length) >= 1)
+        assert (($env.config.hooks.pre_prompt | length) >= 1)
+    })
+
+    (run-test "nu keeps hooks another integration added first" {
+        let hooks = ($env.config.hooks | upsert pre_execution (
+            $env.config.hooks.pre_execution | prepend {|| null }))
+        assert (($hooks.pre_execution | length) > ($env.config.hooks.pre_execution | length))
+    })
+
     (run-test "nu sync-tool-init drops the init when the tool is gone" {
         let target = ((tool-autoload-dir) | path join "generated-gonetool.nu")
         mkdir (tool-autoload-dir)
