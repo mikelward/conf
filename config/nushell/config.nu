@@ -1773,8 +1773,22 @@ def sync-tool-init [tool: string, args: list<string>] {
         warn $"($tool): shell integration skipped, `($tool) ($args | str join ' ')` failed"
         return
     }
+    let content = $"($GENERATED_MARKER)\n($stamp)\n($result.stdout)"
+
+    # Validate before installing. Nushell parses the autoload directory
+    # before config.nu runs, so a malformed file breaks every future
+    # shell -- and breaks the very code that would replace it. Stage it,
+    # check it, and only then let it become the real one.
+    let staged = (mktemp -t "nu-tool-init-XXXXXX.nu")
+    $content | save --force $staged
+    let check = (do { ^$nu.current-exe --no-config-file --ide-check 10 $staged } | complete)
+    rm --force $staged
+    if ($check.stdout | str contains '"severity":"Error"') {
+        warn $"($tool): its generated init doesn't parse; keeping the previous one"
+        return
+    }
     mkdir (tool-autoload-dir)
-    $"($GENERATED_MARKER)\n($stamp)\n($result.stdout)" | save --force $target
+    $content | save --force $target
 }
 
 # --disable-up-arrow keeps Up on nushell's own prefix search rather than
@@ -1799,7 +1813,10 @@ if (have-command carapace) {
             if $completed.exit_code != 0 or ($completed.stdout | is-empty) {
                 null
             } else {
-                $completed.stdout | from json
+                # Exit 0 doesn't guarantee JSON -- a mismatched carapace
+                # version or a stray diagnostic on stdout would otherwise
+                # raise on every Tab.
+                try { $completed.stdout | from json } catch { null }
             }
         }
     })
