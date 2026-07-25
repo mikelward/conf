@@ -3261,6 +3261,70 @@ except OSError: pass
         assert equal $env.HOME ($out | lines | last)
     })
 
+    ###############
+    # Interactive tool integrations. Nushell can only `source` a path known
+    # at parse time, so zoxide's and atuin's generated init is written into
+    # the autoload directory instead, and picked up on the next startup.
+
+    (run-test "nu sync-tool-init writes the generated init to the autoload dir" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\necho 'def fake-jump [] { 1 }'" | save ($dir | path join "faketool")
+        ^chmod +x ($dir | path join "faketool")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        sync-tool-init faketool [init nu]
+        let target = ((tool-autoload-dir) | path join "faketool.nu")
+        assert ($target | path exists) $"($target) should have been written"
+        assert (open --raw $target | str contains "fake-jump")
+    })
+
+    # A separate tool name: sync-tool-init only regenerates when the binary
+    # is newer than the file it generated, so reusing faketool here would
+    # assert against the previous case's output.
+    (run-test "nu sync-tool-init passes its arguments to the tool" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\necho \"# args: $*\"" | save ($dir | path join "argtool")
+        ^chmod +x ($dir | path join "argtool")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        sync-tool-init argtool [init nu --disable-up-arrow]
+        let target = ((tool-autoload-dir) | path join "argtool.nu")
+        assert (open --raw $target | str contains "init nu --disable-up-arrow")
+    })
+
+    (run-test "nu sync-tool-init drops the init when the tool is gone" {
+        let target = ((tool-autoload-dir) | path join "faketool.nu")
+        mkdir (tool-autoload-dir)
+        "# stale" | save --force $target
+        $env.PATH = ["/usr/bin" "/bin"]
+        sync-tool-init faketool [init nu]
+        assert (not ($target | path exists)) "a stale init must not outlive the tool"
+    })
+
+    (run-test "nu sync-tool-init warns and writes nothing when the tool fails" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nexit 3" | save ($dir | path join "failtool")
+        ^chmod +x ($dir | path join "failtool")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        let target = ((tool-autoload-dir) | path join "failtool.nu")
+        sync-tool-init failtool [init nu]
+        assert (not ($target | path exists)) "a failed generator must not be saved"
+    })
+
+    # A completer runs on every Tab, so a carapace failure yields no
+    # candidates rather than an error at the prompt.
+    (run-test "nu external completer returns null when carapace fails" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nexit 1" | save ($dir | path join "carapace")
+        ^chmod +x ($dir | path join "carapace")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        let completer = ($env.config.completions.external.completer? | default null)
+        if $completer == null {
+            # carapace wasn't installed when config.nu loaded, so no
+            # completer was registered -- nothing to exercise.
+            return
+        }
+        assert equal (do $completer ["git" "sta"]) null
+    })
+
     (run-test "nu puts home bins and /usr/local/bin before system PATH" {
         let home = (mktemp -d)
         mkdir ($home | path join ".cargo" "bin")

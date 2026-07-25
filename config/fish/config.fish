@@ -1922,6 +1922,85 @@ if is_interactive
         end
     end
 
+    # --- Interactive tool integrations ---
+    # fzf (fuzzy picker key bindings), zoxide (frecency-ranked directory
+    # jumps), atuin (SQLite-backed history search) and carapace
+    # (multi-shell completions). Each is skipped when the tool isn't
+    # installed; a tool that IS installed but whose init fails warns
+    # rather than being silently dropped. Keep in parity with shrc and
+    # config/nushell/config.nu.
+
+    # Run a tool's init generator and evaluate what it prints. Only
+    # stdout is captured, so the tool's own diagnostics stay visible on
+    # stderr. Emptiness is the failure test rather than $status: a
+    # generator that fails prints nothing to stdout, and `set` reports
+    # its own status, not the substitution's.
+    function eval_tool_init
+        set -l tool $argv[1]
+        set -l generated ($argv[2..] | string collect)
+        if test -z "$generated"
+            warn "$tool: shell integration skipped, '$argv[2..]' produced nothing"
+            return 1
+        end
+        printf '%s\n' $generated | source
+    end
+
+    # fzf's key bindings (Ctrl-R history, Ctrl-T paths, Alt-C cd) and
+    # completions. `fzf --fish` needs fzf 0.48+; older builds ship the
+    # same snippet as a file, so fall back to where packages put it.
+    function init_fzf
+        is_runnable fzf; or return 0
+        # Old fzf has no --fish flag and complains on stderr; that's an
+        # expected version difference, so the fallback below reports it.
+        set -l generated (fzf --fish 2>/dev/null | string collect)
+        if test -n "$generated"
+            printf '%s\n' $generated | source
+            return 0
+        end
+        for candidate in \
+                $HOME/.fzf.fish \
+                /usr/share/fish/vendor_functions.d/fzf_key_bindings.fish \
+                /usr/share/doc/fzf/examples/key-bindings.fish
+            if test -r $candidate
+                source $candidate
+                return 0
+            end
+        end
+        warn "fzf: no shell integration found (needs fzf 0.48+ or its key-bindings.fish)"
+    end
+
+    # zoxide's `z`/`zi` jumps. `cd` is deliberately left alone.
+    function init_zoxide
+        is_runnable zoxide; or return 0
+        eval_tool_init zoxide "zoxide init fish"
+    end
+
+    # carapace's completions. CARAPACE_BRIDGES is the fallback for
+    # commands it has no spec for: bash-completion (which scrapes
+    # `cmd --help`), fish's own man-page-derived completions, and the
+    # CLI frameworks' completers.
+    function init_carapace
+        is_runnable carapace; or return 0
+        set -q CARAPACE_BRIDGES; or set -gx CARAPACE_BRIDGES bash,fish,inshellisense
+        eval_tool_init carapace "carapace _carapace fish"
+    end
+
+    # atuin's history search on Ctrl-R. --disable-up-arrow keeps Up on
+    # fish's own prefix search. Last, so its Ctrl-R wins over fzf's.
+    function init_atuin
+        is_runnable atuin; or return 0
+        eval_tool_init atuin "atuin init fish --disable-up-arrow"
+    end
+
+    function init_shell_tools
+        init_fzf
+        init_zoxide
+        init_carapace
+        init_atuin
+    end
+
+    init_shell_tools
+
     # set a simple prompt for non-bash non-zsh
     # (will be overridden immediately by bash and zsh)
     # TODO: configure prompt

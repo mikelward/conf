@@ -1634,4 +1634,60 @@ result="$(_fish_run_config '
 ' '' 'string join : $PATH[1..6]')"
 assert_equal "$_testdir/fakehome/.cargo/bin:$_testdir/fakehome/.local/bin:$_testdir/fakehome/android-sdk-linux/platform-tools:/usr/local/bin:/usr/bin:/bin" "$result"
 
+###############
+# TEST: interactive tool integrations (fzf, zoxide, carapace, atuin).
+# Each is skipped when its tool isn't installed; when one is, its
+# generated init is sourced. Failure is detected by empty output rather
+# than $status: `set` reports its own status, not the substitution's.
+
+_fish_tool_dir=$(mktemp -d)
+cat > "$_fish_tool_dir/zoxide" << 'STUB'
+#!/bin/sh
+printf 'function zoxide_init_marker; echo %s; end\n' "$2"
+STUB
+chmod +x "$_fish_tool_dir/zoxide"
+cat > "$_fish_tool_dir/brokentool" << 'STUB'
+#!/bin/sh
+echo "boom" >&2
+exit 1
+STUB
+chmod +x "$_fish_tool_dir/brokentool"
+cat > "$_fish_tool_dir/carapace" << 'STUB'
+#!/bin/sh
+printf '# carapace %s\n' "$2"
+STUB
+chmod +x "$_fish_tool_dir/carapace"
+
+start_test "fish init_zoxide sources zoxide's generated init"
+result="$(_fish_run "
+    set -gx PATH $_fish_tool_dir \$PATH
+    init_zoxide
+    zoxide_init_marker
+")"
+assert_equal "fish" "$result"
+
+start_test "fish eval_tool_init warns when the generator produces nothing"
+result="$(_fish_run "
+    set -gx PATH $_fish_tool_dir \$PATH
+    eval_tool_init brokentool brokentool init fish 2>&1
+")"
+assert_contains "brokentool" "$result"
+
+start_test "fish init functions are no-ops when the tool isn't installed"
+result="$(_fish_run '
+    set -gx PATH /nonexistent-tool-dir
+    init_shell_tools
+    echo survived
+')"
+assert_contains "survived" "$result"
+
+start_test "fish init_carapace sets up the completer bridges"
+result="$(_fish_run "
+    set -gx PATH $_fish_tool_dir \$PATH
+    set -e CARAPACE_BRIDGES
+    init_carapace
+    echo \$CARAPACE_BRIDGES
+")"
+assert_contains "bash" "$result"
+
 test_summary "fish_test"

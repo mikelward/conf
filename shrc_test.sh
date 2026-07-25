@@ -2433,4 +2433,259 @@ unset _JOB_PUBLISH_FILE_INIT _JOB_PUBLISH_FILE
 unpublish_jobs
 assert_equal "" "$(publish_jobs_file)"
 
+###############
+# INTERACTIVE TOOL INTEGRATIONS
+# fzf / zoxide / carapace / atuin are optional: absent on a host means
+# the init functions do nothing, present means their generated init is
+# evaluated. have_command is stubbed rather than the tools themselves --
+# the real have_command uses `path`, which rejects shell functions.
+
+_saved_shell="$shell"
+shell=bash
+
+start_test "eval_tool_init evaluates the generator's output"
+_gen() { printf 'TOOL_INIT_RAN=yes\n'; }
+TOOL_INIT_RAN=no
+eval_tool_init faketool _gen
+assert_equal "yes" "$TOOL_INIT_RAN"
+
+start_test "eval_tool_init warns and skips evaluation when the generator fails"
+# stderr goes to a file rather than a command substitution: the function
+# has to run in THIS shell for the assertion on TOOL_INIT_RAN to mean
+# anything (a subshell couldn't set it either way).
+_tool_err="$_testdir/tool-init.err"
+_gen() { printf 'TOOL_INIT_RAN=yes\n'; return 1; }
+TOOL_INIT_RAN=no
+eval_tool_init faketool _gen 2>"$_tool_err"
+assert_equal "no" "$TOOL_INIT_RAN"
+assert_contains "faketool" "$(cat "$_tool_err")"
+
+start_test "eval_tool_init reports failure to the caller"
+assert_false eval_tool_init faketool _gen 2>/dev/null
+unset -f _gen
+
+start_test "init functions are no-ops when the tool isn't installed"
+have_command() { return 1; }
+TOOL_INIT_RAN=no
+fzf() { printf 'TOOL_INIT_RAN=yes\n'; }
+zoxide() { printf 'TOOL_INIT_RAN=yes\n'; }
+carapace() { printf 'TOOL_INIT_RAN=yes\n'; }
+atuin() { printf 'TOOL_INIT_RAN=yes\n'; }
+init_shell_tools
+assert_equal "no" "$TOOL_INIT_RAN"
+
+start_test "init functions are no-ops in shells without integrations"
+have_command() { return 0; }
+shell=dash
+TOOL_INIT_RAN=no
+init_shell_tools
+assert_equal "no" "$TOOL_INIT_RAN"
+shell=bash
+
+start_test "init_fzf evaluates the output of fzf --bash"
+have_command() { test "$1" = fzf; }
+fzf() { printf 'FZF_MODE=%s\n' "$1"; }
+FZF_MODE=
+init_fzf
+assert_equal "--bash" "$FZF_MODE"
+
+start_test "init_fzf uses --zsh under zsh"
+shell=zsh
+FZF_MODE=
+init_fzf
+assert_equal "--zsh" "$FZF_MODE"
+shell=bash
+
+start_test "init_fzf falls back to the packaged key bindings on old fzf"
+# Pre-0.48 fzf has no --bash flag, so the shipped snippet is sourced.
+fzf() { return 2; }
+HOME="$_testdir/fzfhome"
+mkdir -p "$HOME"
+printf 'FZF_FALLBACK_RAN=yes\n' >"$HOME/.fzf.bash"
+FZF_FALLBACK_RAN=no
+init_fzf
+assert_equal "yes" "$FZF_FALLBACK_RAN"
+
+start_test "init_fzf warns when no integration is available at all"
+rm -f "$HOME/.fzf.bash"
+_err="$(init_fzf 2>&1)"
+assert_contains "fzf" "$_err"
+
+start_test "init_zoxide evaluates zoxide's init output"
+have_command() { test "$1" = zoxide; }
+zoxide() { printf 'ZOXIDE_SHELL=%s\n' "$2"; }
+ZOXIDE_SHELL=
+init_zoxide
+assert_equal "bash" "$ZOXIDE_SHELL"
+
+start_test "init_carapace evaluates carapace's init and sets up bridges"
+have_command() { test "$1" = carapace; }
+carapace() { printf 'CARAPACE_SHELL=%s\n' "$2"; }
+CARAPACE_SHELL=
+unset CARAPACE_BRIDGES
+init_carapace
+assert_equal "bash" "$CARAPACE_SHELL"
+assert_contains "bash" "$CARAPACE_BRIDGES"
+assert_contains "fish" "$CARAPACE_BRIDGES"
+
+start_test "init_carapace keeps a CARAPACE_BRIDGES set by the user"
+CARAPACE_BRIDGES="zsh"
+init_carapace
+assert_equal "zsh" "$CARAPACE_BRIDGES"
+unset CARAPACE_BRIDGES
+
+start_test "init_atuin evaluates atuin's init output"
+have_command() { test "$1" = atuin; }
+# `atuin init bash` defines __atuin_precmd; init_atuin warns without it.
+atuin() { printf 'ATUIN_SHELL=%s\n__atuin_precmd() { :; }\n' "$2"; }
+ATUIN_SHELL=
+init_atuin
+assert_equal "bash" "$ATUIN_SHELL"
+
+start_test "init_atuin warns when the bash hook is missing after init"
+unset -f __atuin_precmd
+atuin() { printf 'ATUIN_SHELL=%s\n' "$2"; }
+ATUIN_SHELL=
+init_atuin 2>"$_tool_err"
+assert_equal "bash" "$ATUIN_SHELL"
+assert_contains "atuin" "$(cat "$_tool_err")"
+
+start_test "init_atuin needs no bash hook under zsh"
+# zsh registers atuin's own hooks with add-zsh-hook, so nothing to check.
+shell=zsh
+ATUIN_SHELL=
+init_atuin 2>"$_tool_err"
+assert_equal "zsh" "$ATUIN_SHELL"
+assert_equal "" "$(cat "$_tool_err")"
+shell=bash
+
+start_test "init_atuin disables the up-arrow binding"
+# Up stays bound to the prefix search from inputrc / the zsh bindings.
+atuin() { printf 'ATUIN_FLAGS=%s\n__atuin_precmd() { :; }\n' "$3"; }
+ATUIN_FLAGS=
+init_atuin
+assert_equal "--disable-up-arrow" "$ATUIN_FLAGS"
+unset -f __atuin_precmd
+
+###############
+# atuin history recording. shrc drives `atuin history start/end` from its
+# own precommand/preprompt hooks: atuin's bash hooks are shaped for
+# bash-preexec, whose DEBUG trap and PROMPT_COMMAND would fight shrc's.
+
+_atuin_log="$_testdir/atuin-calls.log"
+atuin() { printf '%s\n' "$*" >>"$_atuin_log"; printf 'id-for-%s\n' "$4"; }
+
+start_test "atuin_preexec opens an entry for the command"
+ATUIN_SESSION=session-1
+ATUIN_HISTORY_ID=
+atuin_preexec "ls -l"
+assert_equal "id-for-ls -l" "$ATUIN_HISTORY_ID"
+
+start_test "atuin_preexec is a no-op without an atuin session"
+ATUIN_SESSION=
+ATUIN_HISTORY_ID=
+atuin_preexec "ls -l"
+assert_equal "" "$ATUIN_HISTORY_ID"
+
+start_test "atuin_preexec is a no-op outside bash"
+# zsh records through atuin's own add-zsh-hook hooks; doing it here too
+# would file every command twice.
+shell=zsh
+ATUIN_SESSION=session-1
+ATUIN_HISTORY_ID=
+atuin_preexec "ls -l"
+assert_equal "" "$ATUIN_HISTORY_ID"
+shell=bash
+
+start_test "atuin_precmd closes the entry with the command's exit status"
+rm -f "$_atuin_log"
+ATUIN_HISTORY_ID=entry-7
+atuin_precmd 3
+# `history end` is detached so the prompt doesn't wait on it.
+_waited=0
+while test $_waited -lt 30 && ! test -s "$_atuin_log"; do
+    sleep 0.1
+    _waited=$((_waited + 1))
+done
+assert_contains "history end --exit 3 -- entry-7" "$(cat "$_atuin_log")"
+
+start_test "atuin_precmd clears the entry so it's closed only once"
+assert_equal "" "$ATUIN_HISTORY_ID"
+
+start_test "atuin_precmd is a no-op with no entry open"
+rm -f "$_atuin_log"
+ATUIN_HISTORY_ID=
+atuin_precmd 0
+assert_false test -s "$_atuin_log"
+
+start_test "set_status sets \$? without forking a subshell"
+set_status 7
+_rc=$?
+assert_equal 7 "$_rc"
+
+###############
+start_test "bash_has_ps0 is false for bash older than 4.4"
+_saved_bash_version="${BASH_VERSION:-}"
+BASH_VERSION="4.3.48(1)-release"
+assert_false bash_has_ps0
+BASH_VERSION="3.2.57(1)-release"
+assert_false bash_has_ps0
+
+start_test "bash_has_ps0 is true from bash 4.4 on"
+BASH_VERSION="4.4.20(1)-release"
+assert_true bash_has_ps0
+BASH_VERSION="5.2.21(1)-release"
+assert_true bash_has_ps0
+
+start_test "bash_has_ps0 is false for other shells"
+shell=zsh
+assert_false bash_has_ps0
+shell=bash
+BASH_VERSION="$_saved_bash_version"
+
+###############
+# The DEBUG trap is armed by the last PROMPT_COMMAND entry, so anything
+# appended after it (zoxide adds a hook) would be taken for the user's
+# command. arm_precommand_trap_last puts the arming back at the end.
+case "$_real_shell" in
+dash|sh)
+    skip_block "arm_precommand_trap_last: needs \${var//pattern/} substitution"
+    ;;
+*)
+    start_test "arm_precommand_trap_last moves the arming to the end"
+    install_precommand_trap() { :; }
+    PROMPT_COMMAND='preprompt; install_precommand_trap; __zoxide_hook'
+    arm_precommand_trap_last
+    assert_equal 'preprompt; __zoxide_hook; install_precommand_trap' "$PROMPT_COMMAND"
+
+    start_test "arm_precommand_trap_last leaves an already-last arming alone"
+    PROMPT_COMMAND='preprompt; install_precommand_trap'
+    arm_precommand_trap_last
+    assert_equal 'preprompt; install_precommand_trap' "$PROMPT_COMMAND"
+
+    start_test "arm_precommand_trap_last is a no-op outside bash"
+    shell=zsh
+    PROMPT_COMMAND='preprompt; install_precommand_trap; __zoxide_hook'
+    arm_precommand_trap_last
+    assert_equal 'preprompt; install_precommand_trap; __zoxide_hook' "$PROMPT_COMMAND"
+    shell=bash
+    unset -f install_precommand_trap
+    ;;
+esac
+
+start_test "init_shell_tools runs atuin after fzf so Ctrl-R is atuin's"
+have_command() { return 0; }
+TOOL_ORDER=
+init_fzf() { TOOL_ORDER="$TOOL_ORDER fzf"; }
+init_zoxide() { TOOL_ORDER="$TOOL_ORDER zoxide"; }
+init_carapace() { TOOL_ORDER="$TOOL_ORDER carapace"; }
+init_atuin() { TOOL_ORDER="$TOOL_ORDER atuin"; }
+arm_precommand_trap_last() { TOOL_ORDER="$TOOL_ORDER arm-last"; }
+init_shell_tools
+assert_equal " fzf zoxide carapace atuin arm-last" "$TOOL_ORDER"
+
+unset -f fzf zoxide carapace atuin
+unset ATUIN_SESSION ATUIN_HISTORY_ID
+shell="$_saved_shell"
+
 test_summary "$_real_shell shrc_test"
