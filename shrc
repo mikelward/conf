@@ -2269,7 +2269,12 @@ init_atuin() {
 atuin_preexec() {
     test "$shell" = bash || return 0
     test -n "${ATUIN_SESSION:-}" || return 0
-    local _command="$1"
+    # The session survives the binary: uninstalling atuin from under a
+    # running shell (or a bundle install that never landed it) would
+    # otherwise print "command not found" before every command. Cheap to
+    # check -- have_command is builtins only, no fork.
+    have_command atuin || return 0
+    local _command="$1" _id
     # bash_input_line sets $_input_line rather than printing it: the
     # bookkeeping it does to spot a line that never reached history has to
     # happen in this shell, and a command substitution would strand it in
@@ -2277,7 +2282,16 @@ atuin_preexec() {
     if bash_input_line; then
         _command="$_input_line"
     fi
-    ATUIN_HISTORY_ID="$(atuin history start -- "$_command")"
+    # A half-written id is worse than none: atuin_precmd would close out
+    # an entry that doesn't exist, and keeping it would leave the next
+    # command closing this one. Drop it and say so -- the command goes
+    # unrecorded either way, but silently is how you find out weeks later.
+    if ! _id="$(atuin history start -- "$_command")" || test -z "$_id"; then
+        ATUIN_HISTORY_ID=
+        warn "atuin: history start failed; this command won't be recorded"
+        return 1
+    fi
+    ATUIN_HISTORY_ID="$_id"
 }
 
 # Print the whole command line the user just entered, or fail if it can't
@@ -2327,6 +2341,7 @@ history_entry_command() {
 # drawn, which is the price of not blocking on the sync daemon.
 atuin_precmd() {
     test -n "${ATUIN_HISTORY_ID:-}" || return 0
+    have_command atuin || { ATUIN_HISTORY_ID=; return 0; }
     (atuin history end --exit "$1" -- "$ATUIN_HISTORY_ID" >/dev/null &)
     ATUIN_HISTORY_ID=
 }
