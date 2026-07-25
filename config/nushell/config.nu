@@ -1777,20 +1777,26 @@ def sync-tool-init [tool: string, args: list<string>] {
     }
     let content = $"($GENERATED_MARKER)\n($stamp)\n($result.stdout)"
 
-    # Validate before installing. Nushell parses the autoload directory
-    # before config.nu runs, so a malformed file breaks every future
-    # shell -- and breaks the very code that would replace it. Stage it,
-    # check it, and only then let it become the real one.
-    let staged = (mktemp -t "nu-tool-init-XXXXXX.nu")
+    # Validate before installing. A malformed file in the autoload
+    # directory breaks every future shell -- and breaks the very code
+    # that would replace it. Stage it, check it, and only then let it
+    # become the real one.
+    #
+    # The staging file lives in the autoload directory so the install is
+    # a rename (atomic, same filesystem): writing $target directly could
+    # leave a half-written file behind if the disk fills mid-write. Its
+    # name deliberately doesn't end in .nu, so nushell won't source the
+    # staged copy if a shell starts while it exists.
+    mkdir (tool-autoload-dir)
+    let staged = ((tool-autoload-dir) | path join $".($file).tmp")
     $content | save --force $staged
     let check = (do { ^$nu.current-exe --no-config-file --ide-check 10 $staged } | complete)
-    rm --force $staged
     if ($check.stdout | str contains '"severity":"Error"') {
+        rm --force $staged
         warn $"($tool): its generated init doesn't parse; keeping the previous one"
         return
     }
-    mkdir (tool-autoload-dir)
-    $content | save --force $target
+    mv --force $staged $target
 }
 
 # --disable-up-arrow keeps Up on nushell's own prefix search rather than
@@ -1827,10 +1833,16 @@ if (have-command carapace) {
 # Capture command timing so render-prompt can show the previous command's
 # duration via last-job-info. pre_execution fires just before the user's
 # command runs; pre_prompt fires just before the next prompt is drawn.
-$env.config = ($env.config | upsert hooks.pre_execution [{||
+#
+# Appended rather than assigned: atuin's generated init adds its own
+# hooks to these same lists (that's how it opens and closes history
+# entries), and a plain assignment would drop whichever side ran first.
+$env.config = ($env.config | upsert hooks.pre_execution (
+    $env.config.hooks? | get pre_execution? | default [] | append {||
     $env.CMD_START_TIME = (date now)
-}])
-$env.config = ($env.config | upsert hooks.pre_prompt [{||
+}))
+$env.config = ($env.config | upsert hooks.pre_prompt (
+    $env.config.hooks? | get pre_prompt? | default [] | append {||
     let start = ($env.CMD_START_TIME? | default null)
     if $start != null {
         $env.CMD_DURATION = ((date now) - $start)
@@ -1840,7 +1852,7 @@ $env.config = ($env.config | upsert hooks.pre_prompt [{||
         $env.CMD_EXIT_CODE = 0
     }
     $env.CMD_START_TIME = null
-}])
+}))
 
 # Spawn a detached background fetch via the vcs binary. Overridable so
 # tests can intercept the call without invoking the real binary. The
@@ -1864,9 +1876,10 @@ def maybe-background-fetch [] {
 # Fire maybe-background-fetch after every cd. The hook receives
 # (before, after); we use $env.PWD inside the function so the args
 # aren't needed here.
-$env.config = ($env.config | upsert hooks.env_change.PWD [{|before, after|
+$env.config = ($env.config | upsert hooks.env_change.PWD (
+    $env.config.hooks? | get env_change? | default {} | get PWD? | default [] | append {|before, after|
     maybe-background-fetch
-}])
+}))
 
 # Maybe attach to a session manager (shpool by default, tmux fallback)
 # instead of running a bare nu interactively. Skipped in non-interactive
