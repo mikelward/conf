@@ -135,7 +135,8 @@ $(CACHE):
 # $HOME/.shrc.vcs to regression-test the failsafe-mode short-circuit, so
 # both files belong in the stamp deps even though dash never sources
 # shrc.vcs as a normal user.
-$(CACHE)/test-dash.stamp: shrc shrc.vcs shrc_test_lib.sh shrc_dash_test.sh | $(CACHE)
+$(CACHE)/test-dash.stamp: shrc shrc.vcs bashrc.fuzzytab shrc_test_lib.sh \
+                          shrc_dash_test.sh | $(CACHE)
 	@dash shrc_dash_test.sh
 	@touch $@
 test-dash: $(CACHE)/test-dash.stamp
@@ -143,8 +144,8 @@ test-dash: $(CACHE)/test-dash.stamp
 # The suites also assert on files they don't source -- inputrc and the
 # atuin config -- so those are dependencies too: editing one has to
 # re-run the test that guards it, not leave a stale stamp claiming pass.
-$(CACHE)/test-bash.stamp: shrc shrc_test_lib.sh shrc_test.sh shrc_bash_test.sh \
-                          inputrc config/atuin/config.toml | $(CACHE)
+$(CACHE)/test-bash.stamp: shrc bashrc.fuzzytab shrc_test_lib.sh shrc_test.sh \
+                          shrc_bash_test.sh inputrc config/atuin/config.toml | $(CACHE)
 	@bash shrc_test.sh
 	@bash shrc_bash_test.sh
 	@touch $@
@@ -153,8 +154,8 @@ test-bash: $(CACHE)/test-bash.stamp
 # zsh is optional; skip gracefully when it isn't installed. Only touch
 # the stamp when zsh was actually present and the tests ran, otherwise
 # installing zsh later wouldn't trigger a re-run.
-$(CACHE)/test-zsh.stamp: shrc shrc_test_lib.sh shrc_test.sh shrc_zsh_test.sh \
-                         config/atuin/config.toml | $(CACHE)
+$(CACHE)/test-zsh.stamp: shrc bashrc.fuzzytab shrc_test_lib.sh shrc_test.sh \
+                         shrc_zsh_test.sh config/atuin/config.toml | $(CACHE)
 	@if command -v zsh >/dev/null 2>&1; then \
 		zsh shrc_test.sh && zsh shrc_zsh_test.sh && touch $@; \
 	else \
@@ -209,11 +210,12 @@ test-nu: $(CACHE)/test-nu.stamp
 # since each check is sub-second. shellcheck, dash, and bash are all
 # required (no skip branch), so the stamp can be touched unconditionally
 # at the end and caches normally. Fish syntax check lives in test-fish.
-$(CACHE)/test-lint.stamp: shrc shrc.vcs profile exitrc \
+$(CACHE)/test-lint.stamp: shrc shrc.vcs bashrc.fuzzytab profile exitrc \
                           gittemplates/hooks/post-merge \
                           gittemplates/hooks/post-rewrite | $(CACHE)
 	@shellcheck -s bash -S error shrc
 	@shellcheck -s bash -S error shrc.vcs
+	@shellcheck -s bash -S error bashrc.fuzzytab
 	@dash -n shrc
 	@dash -n profile
 	@dash -n exitrc
@@ -221,6 +223,7 @@ $(CACHE)/test-lint.stamp: shrc shrc.vcs profile exitrc \
 	@dash -n gittemplates/hooks/post-rewrite
 	@bash -n shrc
 	@bash -n shrc.vcs
+	@bash -n bashrc.fuzzytab
 	@touch $@
 test-lint: $(CACHE)/test-lint.stamp
 

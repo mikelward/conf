@@ -2299,6 +2299,7 @@ atuin_preexec() {
     ATUIN_HISTORY_ID="$_id"
 }
 
+
 # Print the whole command line the user just entered, or fail if it can't
 # be had. The DEBUG trap only sees $BASH_COMMAND -- the first simple
 # command of the line -- so `false || echo recovered` would be recorded
@@ -3101,6 +3102,16 @@ if is_interactive; then
         # and a reset -- around each completion match, so a listing
         # isn't printed in the bold left on by input_attribute.
         bind 'set colored-stats on'
+
+        # Fuzzy Tab completion, if .bashrc.fuzzytab is installed: `mp<TAB>`
+        # offers "My Pictures", the way zsh's matcher-list and fish's
+        # pager already do. It's a big enough piece to keep in its own
+        # file, and nothing here depends on it -- without the file Tab is
+        # readline's, exactly as before. WANT_FUZZY_TAB=0 opts out; the
+        # file itself owns that, so there's one place to look.
+        if test -f "$HOME/.bashrc.fuzzytab"; then
+            . "$HOME/.bashrc.fuzzytab"
+        fi
 
         _bind_vi() {
             bind -m vi-command "$@"

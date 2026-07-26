@@ -2610,6 +2610,460 @@ unset -f bash_input_line
 
 _atuin_warnings="$_testdir/atuin-warnings.log"
 
+###############
+# Fuzzy Tab completion helpers. The widget itself is bash-only and lives
+# in shrc_bash_test.sh; the string work is here so dash and zsh check it
+# too.
+
+# The widget and its helpers live in bashrc.fuzzytab, which .shrc sources
+# when it's installed. Source it here too: these are its functions, not
+# shrc's.
+. "$_srcdir/bashrc.fuzzytab"
+
+start_test "fuzzy_tab_word splits off the word under the cursor"
+fuzzy_tab_word "cd mp"
+assert_equal "mp" "$_fuzzy_word"
+
+start_test "fuzzy_tab_word keeps everything before the word"
+assert_equal "cd " "$_fuzzy_head"
+
+start_test "fuzzy_tab_word treats an escaped space as part of the word"
+# The whole point of the feature is names with spaces, so a word already
+# containing one must not be split at it -- otherwise completing inside
+# `My\ Pictures/` would search from the wrong directory.
+fuzzy_tab_word "cd My\\ Pictures/sub"
+assert_equal "My\\ Pictures/sub" "$_fuzzy_word"
+
+start_test "fuzzy_tab_word handles a line that is only the first word"
+fuzzy_tab_word "mkd"
+assert_equal "mkd" "$_fuzzy_word"
+
+start_test "fuzzy_tab_word leaves an empty head for the first word"
+assert_equal "" "$_fuzzy_head"
+
+start_test "fuzzy_tab_word copes with an empty word after a space"
+fuzzy_tab_word "ls "
+assert_equal "" "$_fuzzy_word"
+
+start_test "fuzzy_tab_word keeps the whole head after several words"
+fuzzy_tab_word "git commit --amend fi"
+assert_equal "git commit --amend " "$_fuzzy_head"
+
+start_test "fuzzy_tab_segment is the whole line for a single command"
+assert_equal "git commit " "$(fuzzy_tab_segment "git commit ")"
+
+start_test "fuzzy_tab_segment restarts after a semicolon"
+# `echo done; gi` is a command position. Completing it as an argument to
+# echo would offer files from the current directory instead of commands.
+assert_equal "" "$(fuzzy_tab_segment "echo done; ")"
+
+start_test "fuzzy_tab_segment restarts after a pipe"
+assert_equal "" "$(fuzzy_tab_segment "ls | ")"
+
+start_test "fuzzy_tab_segment restarts after &&"
+assert_equal "" "$(fuzzy_tab_segment "make && ")"
+
+start_test "fuzzy_tab_segment keeps the command after a separator"
+# Past the command word it's that command's completion that matters --
+# grep's here, not ls's.
+assert_equal "grep -i " "$(fuzzy_tab_segment "ls | grep -i ")"
+
+start_test "fuzzy_tab_segment ignores an escaped separator"
+assert_equal "echo a\\;b " "$(fuzzy_tab_segment "echo a\\;b ")"
+
+start_test "fuzzy_tab_word ends a word at an operator without spaces"
+# `ls|gre` is grep being typed, not an argument to ls. Only a literal
+# space used to end a word, so the separator was never seen.
+fuzzy_tab_word "ls|gre"
+assert_equal "gre" "$_fuzzy_word"
+
+start_test "fuzzy_tab_word keeps the operator in the head"
+assert_equal "ls|" "$_fuzzy_head"
+
+start_test "fuzzy_tab_segment restarts after a newline"
+# A pasted or quoted-insert newline ends a command the way `;` does;
+# without this the first line's command would still be in the segment.
+assert_equal "" "$(fuzzy_tab_segment "echo done
+")"
+
+start_test "fuzzy_tab_word ends a word at a tab"
+# A tab reaches READLINE_LINE through a paste or a quoted insert, and
+# bash splits words on it. Without this the whole buffer is one word,
+# and completing would replace the lot.
+fuzzy_tab_word "echo	ec"
+assert_equal "ec" "$_fuzzy_word"
+
+start_test "fuzzy_tab_word keeps the tab in the head"
+assert_equal "echo	" "$_fuzzy_head"
+
+start_test "fuzzy_tab_first_word splits at a tab"
+fuzzy_tab_first_word "FOO=1	git"
+assert_equal "FOO=1" "$_fuzzy_first"
+
+start_test "fuzzy_tab_after_word stops at a tab"
+assert_equal "	ls" "$(fuzzy_tab_after_word "out	ls")"
+
+start_test "fuzzy_tab_word ends a word at a newline"
+fuzzy_tab_word "echo done
+gi"
+assert_equal "gi" "$_fuzzy_word"
+
+start_test "fuzzy_tab_after_word stops at a newline"
+assert_equal "
+ls" "$(fuzzy_tab_after_word "out
+ls")"
+
+start_test "fuzzy_tab_word ends a word at a semicolon"
+fuzzy_tab_word "echo done;gi"
+assert_equal "gi" "$_fuzzy_word"
+
+start_test "fuzzy_tab_word ignores an escaped operator"
+fuzzy_tab_word "echo a\\;b"
+assert_equal "a\\;b" "$_fuzzy_word"
+
+start_test "fuzzy_tab_after_word stops at an operator"
+assert_equal "|less" "$(fuzzy_tab_after_word "out|less")"
+
+###############
+# The guard. Anything needing a real parser -- or an evaluation -- is
+# declined, because a wrong insertion is worse than no completion.
+
+start_test "fuzzy_tab_can_complete accepts an ordinary line"
+assert_true fuzzy_tab_can_complete "cd docs/mp"
+
+start_test "fuzzy_tab_can_complete accepts a plain variable"
+assert_true fuzzy_tab_can_complete "cd \$HOME/mp"
+
+start_test "fuzzy_tab_can_complete accepts a braced variable"
+assert_true fuzzy_tab_can_complete "cd \${XDG_CONFIG_HOME}/nv"
+
+start_test "fuzzy_tab_can_complete accepts a variable name being typed"
+assert_true fuzzy_tab_can_complete "echo \$"
+
+start_test "fuzzy_tab_can_complete declines command substitution"
+# Expanding this would mean running it.
+assert_false fuzzy_tab_can_complete "cd \$(ls)/mp"
+
+start_test "fuzzy_tab_can_complete declines backticks"
+assert_false fuzzy_tab_can_complete "cd \`ls\`/mp"
+
+start_test "fuzzy_tab_can_complete declines a quoted word"
+# Quotes change what a word is, and the splitter doesn't track them.
+assert_false fuzzy_tab_can_complete "cd \"My Pic"
+
+start_test "fuzzy_tab_can_complete declines a single-quoted word"
+assert_false fuzzy_tab_can_complete "cd 'My Pic"
+
+start_test "fuzzy_tab_can_complete declines a positional parameter"
+assert_false fuzzy_tab_can_complete "cd \$1/mp"
+
+start_test "fuzzy_tab_can_complete declines a parameter expansion with operators"
+assert_false fuzzy_tab_can_complete "cd \${HOME:-/tmp}/mp"
+
+start_test "fuzzy_tab_can_complete declines a substitution mid-word"
+assert_false fuzzy_tab_can_complete "cd \${HOME/a/b}/mp"
+
+start_test "fuzzy_tab_can_complete declines an escaped dollar"
+# `cd \$HOME/mp` means a directory actually named $HOME. The escape is
+# dropped before the lookup, so completing it would search the real home
+# instead -- the wrong directory, silently.
+assert_false fuzzy_tab_can_complete "cd \\\$HOME/mp"
+
+start_test "fuzzy_tab_can_complete declines an escaped tilde"
+assert_false fuzzy_tab_can_complete "cd \\~/mp"
+
+start_test "fuzzy_tab_can_complete declines a >& redirection"
+# The & in `>&` is part of the operator, not the one that ends a
+# command: splitting there makes the target look like a command.
+assert_false fuzzy_tab_can_complete "echo >& ta"
+
+start_test "fuzzy_tab_can_complete declines a &> redirection"
+assert_false fuzzy_tab_can_complete "echo &> ta"
+
+start_test "fuzzy_tab_can_complete declines a closing paren"
+# `)` ends a case pattern, a subshell or a parameter list, and what
+# follows means something different in each.
+assert_false fuzzy_tab_can_complete "case x in x) ec"
+assert_false fuzzy_tab_can_complete "(ls) > ou"
+
+start_test "fuzzy_tab_can_complete accepts an escaped paren"
+assert_true fuzzy_tab_can_complete "cd a\\)b/ho"
+
+start_test "fuzzy_tab_can_complete declines an arithmetic command"
+# A filename means nothing inside (( )).
+assert_false fuzzy_tab_can_complete "(( mp"
+
+start_test "fuzzy_tab_can_complete declines a process substitution"
+# `cat >( my` is a command position inside what otherwise reads as an
+# argument, so offering files there puts a filename where a command goes.
+assert_false fuzzy_tab_can_complete "cat >( my"
+
+start_test "fuzzy_tab_can_complete declines an input process substitution"
+assert_false fuzzy_tab_can_complete "diff <( my"
+
+start_test "fuzzy_tab_can_complete declines a <& redirection"
+assert_false fuzzy_tab_can_complete "echo <& ta"
+
+start_test "fuzzy_tab_can_complete declines a >| redirection"
+# The | in `>|` is part of the operator, and splitting there makes the
+# target look like the start of a new command.
+assert_false fuzzy_tab_can_complete "echo >| ta"
+
+start_test "fuzzy_tab_can_complete accepts a plain redirection"
+assert_true fuzzy_tab_can_complete "echo > ta"
+
+start_test "fuzzy_tab_can_complete accepts an escaped quote"
+# `printf %q` writes an apostrophe this way, so declining it would stop
+# the user descending into a directory this feature just inserted.
+assert_true fuzzy_tab_can_complete "cd John\\'s/ho"
+
+start_test "fuzzy_tab_can_complete still declines a real quote"
+assert_false fuzzy_tab_can_complete "cd 'John"
+
+start_test "fuzzy_tab_can_complete accepts an escaped redirection"
+# Escaped, `>` and `&` are ordinary characters in a filename.
+assert_true fuzzy_tab_can_complete "cd a\\>\\&b/ho"
+
+start_test "fuzzy_tab_drop_escapes drops the escape and what it escaped"
+assert_equal "Johns" "$(fuzzy_tab_drop_escapes "John\\'s")"
+
+start_test "fuzzy_tab_drop_escapes leaves an unescaped string alone"
+assert_equal "John's" "$(fuzzy_tab_drop_escapes "John's")"
+
+start_test "fuzzy_tab_first_word splits at a space"
+fuzzy_tab_first_word "FOO=1 git commit"
+assert_equal "FOO=1" "$_fuzzy_first"
+
+start_test "fuzzy_tab_first_word returns the rest"
+assert_equal "git commit" "$_fuzzy_rest"
+
+start_test "fuzzy_tab_first_word keeps an escaped space in the word"
+fuzzy_tab_first_word "FOO=hello\\ world ec"
+assert_equal "FOO=hello\\ world" "$_fuzzy_first"
+
+start_test "fuzzy_tab_first_word reports a word a blank ended"
+assert_equal "yes" "$_fuzzy_more"
+
+start_test "fuzzy_tab_first_word reports a word still being typed"
+fuzzy_tab_first_word "gi"
+assert_equal "" "$_fuzzy_more"
+
+start_test "fuzzy_tab_can_complete still accepts an escaped space"
+assert_true fuzzy_tab_can_complete "cd My\\ Pic"
+
+start_test "fuzzy_tab_strip_keywords drops a leading keyword"
+# `if gi` is a command position; looking for a completion registered to
+# a command called `if` finds none and offers files instead.
+assert_equal "" "$(fuzzy_tab_strip_keywords "if ")"
+
+start_test "fuzzy_tab_strip_keywords drops several"
+assert_equal "" "$(fuzzy_tab_strip_keywords "while ! ")"
+
+start_test "fuzzy_tab_strip_keywords keeps the command after one"
+assert_equal "git " "$(fuzzy_tab_strip_keywords "if git ")"
+
+start_test "fuzzy_tab_strip_keywords leaves an ordinary command alone"
+assert_equal "iffy " "$(fuzzy_tab_strip_keywords "iffy ")"
+
+start_test "fuzzy_tab_strip_keywords keeps a keyword still being typed"
+# No space after it, so it's the word under the cursor.
+assert_equal "if" "$(fuzzy_tab_strip_keywords "if")"
+
+start_test "fuzzy_tab_strip_keywords keeps a keyword a name follows"
+# `for na` wants a loop variable, not a command: stripping `for` would
+# offer nawk as the name of the variable.
+assert_equal "for na" "$(fuzzy_tab_strip_keywords "for na")"
+
+start_test "fuzzy_tab_strip_keywords takes the name of a named coproc"
+# `coproc NAME compound-command`: a command follows the `{`.
+assert_equal "" "$(fuzzy_tab_strip_keywords "coproc worker { ")"
+
+start_test "fuzzy_tab_strip_keywords takes a coproc name before any compound"
+# Not only a brace group: bash accepts every compound command there.
+assert_equal "" "$(fuzzy_tab_strip_keywords "coproc worker if ")"
+assert_equal "" "$(fuzzy_tab_strip_keywords "coproc worker while ")"
+
+start_test "fuzzy_tab_strip_keywords keeps the command of a plain coproc"
+# Without a compound command after it, that word is the command itself.
+assert_equal "mycmd " "$(fuzzy_tab_strip_keywords "coproc mycmd ")"
+
+start_test "fuzzy_tab_strip_keywords keeps a terminator"
+# A word after `done` is a redirection target, so it's a file.
+assert_equal "done " "$(fuzzy_tab_strip_keywords "done ")"
+
+start_test "fuzzy_tab_strip_keywords drops the option time takes"
+# `time [-p] pipeline`: the command comes after the option.
+assert_equal "" "$(fuzzy_tab_strip_keywords "time -p ")"
+
+start_test "fuzzy_tab_strip_keywords keeps -p on its own"
+assert_equal "-p " "$(fuzzy_tab_strip_keywords "-p ")"
+
+start_test "fuzzy_tab_strip_keywords drops time's option terminator"
+# `time -- cmd` runs cmd, so this is a command position too.
+assert_equal "" "$(fuzzy_tab_strip_keywords "time -- ")"
+assert_equal "" "$(fuzzy_tab_strip_keywords "time -p -- ")"
+
+start_test "fuzzy_tab_strip_keywords keeps -- on its own"
+assert_equal "-- " "$(fuzzy_tab_strip_keywords "-- ")"
+
+start_test "fuzzy_tab_strip_assignments drops a leading assignment"
+# `FOO=1 gi` is still a command position; without this the widget would
+# look for a completion registered to a command called FOO=1.
+assert_equal "" "$(fuzzy_tab_strip_assignments "FOO=1 ")"
+
+start_test "fuzzy_tab_strip_assignments drops several"
+assert_equal "git " "$(fuzzy_tab_strip_assignments "FOO=1 BAR=2 git ")"
+
+start_test "fuzzy_tab_strip_assignments leaves a command alone"
+assert_equal "git commit " "$(fuzzy_tab_strip_assignments "git commit ")"
+
+start_test "fuzzy_tab_strip_assignments keeps an argument that has an ="
+assert_equal "git --author=me " "$(fuzzy_tab_strip_assignments "git --author=me ")"
+
+start_test "fuzzy_tab_strip_assignments keeps a name that isn't an identifier"
+# bash runs `A-B=1 ec` as a command called A-B=1, so `ec` is its
+# argument. Stripping it would offer commands in an argument position.
+assert_equal "A-B=1 ec" "$(fuzzy_tab_strip_assignments "A-B=1 ec")"
+
+start_test "fuzzy_tab_strip_assignments drops a name with digits in it"
+assert_equal "git " "$(fuzzy_tab_strip_assignments "F_O2=1 git ")"
+
+start_test "fuzzy_tab_strip_assignments drops an append assignment"
+# `NAME+=value` is an assignment too; the + belongs to the operator.
+assert_equal "git " "$(fuzzy_tab_strip_assignments "PATH+=:/opt git ")"
+
+start_test "fuzzy_tab_strip_assignments keeps a bad name that appends"
+assert_equal "A-B+=1 ec" "$(fuzzy_tab_strip_assignments "A-B+=1 ec")"
+
+start_test "fuzzy_tab_strip_assignments honours an escaped space in the value"
+# Splitting at the literal space would leave `world` looking like the
+# command and `ec` like its argument.
+assert_equal "" "$(fuzzy_tab_strip_assignments "FOO=hello\\ world ")"
+
+start_test "fuzzy_tab_strip_redirections drops one with the target attached"
+# `>out ec` is still a command position: bash wants the command after
+# the redirection, not a filename.
+assert_equal "" "$(fuzzy_tab_strip_redirections ">out ")"
+
+start_test "fuzzy_tab_strip_redirections drops a numbered one"
+assert_equal "" "$(fuzzy_tab_strip_redirections "2>>log ")"
+
+start_test "fuzzy_tab_strip_redirections drops an operator and its target"
+assert_equal "" "$(fuzzy_tab_strip_redirections "> out ")"
+
+start_test "fuzzy_tab_strip_redirections keeps a target being typed"
+# `> ou` is the target itself, which is a file rather than a command.
+assert_equal "> " "$(fuzzy_tab_strip_redirections "> ")"
+
+start_test "fuzzy_tab_strip_redirections leaves a command alone"
+assert_equal "echo > " "$(fuzzy_tab_strip_redirections "echo > ")"
+
+start_test "fuzzy_tab_strip_redirections takes bash's {fd} descriptor"
+# `{fd}>out cmd` assigns a descriptor and then runs cmd, so this is
+# still a command position.
+assert_equal "" "$(fuzzy_tab_strip_redirections "{fd}>out ")"
+
+start_test "fuzzy_tab_strip_redirections wants a name in the braces"
+assert_equal "{f d}>out ec" "$(fuzzy_tab_strip_redirections "{f d}>out ec")"
+
+start_test "fuzzy_tab_strip_redirections wants an identifier in the braces"
+# bash assigns the descriptor to a variable, so `{1}` isn't one -- that
+# line runs a command called {1} and `ec` is its argument.
+assert_equal "{1}>out ec" "$(fuzzy_tab_strip_redirections "{1}>out ec")"
+assert_equal "{1a}>out ec" "$(fuzzy_tab_strip_redirections "{1a}>out ec")"
+
+start_test "fuzzy_tab_strip_redirections wants a numeric descriptor"
+# bash runs `2to3>out ec` as 2to3 with a redirection, so `ec` is its
+# argument rather than a command.
+assert_equal "2to3>out ec" "$(fuzzy_tab_strip_redirections "2to3>out ec")"
+
+start_test "fuzzy_tab_strip_redirections keeps a target with a space in it"
+assert_equal "" "$(fuzzy_tab_strip_redirections ">my\\ log ")"
+
+start_test "fuzzy_tab_bash_version_ok accepts bash 4 and later"
+assert_true fuzzy_tab_bash_version_ok "4.0"
+assert_true fuzzy_tab_bash_version_ok "5.2.21(1)-release"
+
+start_test "fuzzy_tab_bash_version_ok declines bash 3.2"
+# READLINE_LINE and READLINE_POINT reach a bind -x command only from
+# bash 4.0; macOS still ships 3.2 as /bin/bash.
+assert_false fuzzy_tab_bash_version_ok "3.2.57(1)-release"
+
+start_test "fuzzy_tab_bash_version_ok declines an empty version"
+assert_false fuzzy_tab_bash_version_ok ""
+
+start_test "fuzzy_tab_bash_version_ok isn't fooled by a two-digit major"
+assert_true fuzzy_tab_bash_version_ok "10.0"
+
+start_test "fuzzy_tab_after_word finds nothing past the last word"
+assert_equal "" "$(fuzzy_tab_after_word "")"
+
+start_test "fuzzy_tab_after_word drops the rest of the word at the cursor"
+# Completing `git che|out` replaces the whole word, so the "out" the
+# cursor is sitting in front of goes -- otherwise it comes out as
+# `git checkoutout`.
+assert_equal "" "$(fuzzy_tab_after_word "out")"
+
+start_test "fuzzy_tab_after_word keeps what follows the word"
+assert_equal " && ls" "$(fuzzy_tab_after_word "out && ls")"
+
+start_test "fuzzy_tab_after_word steps over an escaped space"
+assert_equal " x" "$(fuzzy_tab_after_word "a\\ b x")"
+
+start_test "fuzzy_tab_dir returns the directory typed so far"
+assert_equal "docs/" "$(fuzzy_tab_dir docs/mp)"
+
+start_test "fuzzy_tab_dir returns nothing when there's no directory"
+assert_equal "" "$(fuzzy_tab_dir mp)"
+
+start_test "fuzzy_tab_dir keeps a leading slash"
+assert_equal "/usr/share/" "$(fuzzy_tab_dir /usr/share/xy)"
+
+start_test "fuzzy_tab_base is what's matched against"
+assert_equal "mp" "$(fuzzy_tab_base docs/mp)"
+
+start_test "fuzzy_tab_base is the whole word without a directory"
+assert_equal "mp" "$(fuzzy_tab_base mp)"
+
+start_test "fuzzy_tab_unescape turns a typed word back into a path"
+assert_equal "My Pictures/" "$(fuzzy_tab_unescape "My\\ Pictures/")"
+
+start_test "fuzzy_tab_unescape leaves an unescaped word alone"
+assert_equal "docs/" "$(fuzzy_tab_unescape "docs/")"
+
+start_test "fuzzy_tab_expand_tilde expands a bare tilde"
+# A quoted expansion won't do it, so `cd ~/Do<TAB>` would otherwise look
+# in a directory literally named "~".
+_saved_home="$HOME"
+HOME=/home/user
+assert_equal "/home/user" "$(fuzzy_tab_expand_tilde "~")"
+
+start_test "fuzzy_tab_expand_tilde expands a tilde path"
+assert_equal "/home/user/docs/" "$(fuzzy_tab_expand_tilde "~/docs/")"
+
+start_test "fuzzy_tab_expand_tilde leaves a path with no tilde alone"
+assert_equal "docs/" "$(fuzzy_tab_expand_tilde "docs/")"
+
+start_test "fuzzy_tab_expand_tilde leaves an interior tilde alone"
+assert_equal "docs/~backup/" "$(fuzzy_tab_expand_tilde "docs/~backup/")"
+
+start_test "fuzzy_tab_expand_tilde leaves an unknown user's tilde alone"
+# Inventing a path would be worse than leaving it: the candidate list
+# comes out empty and Tab does nothing, which is the honest answer.
+assert_equal "~nosuchuser4242/x" "$(fuzzy_tab_expand_tilde "~nosuchuser4242/x")"
+
+start_test "fuzzy_tab_expand_tilde won't evaluate a name that isn't one"
+# Only [A-Za-z0-9._-] reaches the eval that expands ~user; a name with a
+# command substitution in it must come back untouched, not run.
+_probe="$_testdir/tilde-probe"
+rm -f "$_probe"
+assert_equal '~$(touch '"$_probe"')/x' \
+    "$(fuzzy_tab_expand_tilde '~$(touch '"$_probe"')/x')"
+assert_false test -e "$_probe"
+HOME="$_saved_home"
+
+###############
+
 start_test "atuin_preexec keeps no id when atuin can't open an entry"
 # Half an id is worse than none: the next prompt would close an entry
 # that was never opened, and the command after that would find the id

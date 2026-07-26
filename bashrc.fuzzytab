@@ -1,0 +1,823 @@
+#!/bin/bash
+# Fuzzy Tab completion for bash, over fzf. Sourced by .shrc -- which is
+# what ~/.bashrc points at -- when it's installed; without it Tab is
+# whatever readline makes of it, which is what it was before this
+# existed. Nothing else in .shrc depends on it.
+#
+# Named for bash rather than the shell-agnostic .shrc because `bind -x`
+# is bash's alone: zsh and fish reach the same behaviour by other means
+# and need none of this.
+#
+# Self-contained, like .shrc.vcs, so it doesn't rely on .shrc's sourcing
+# order for the few helpers it uses -- but only where .shrc hasn't
+# already defined them. Defining them outright would replace .shrc's
+# have_command, which searches PATH and so ignores aliases and
+# functions, with one that accepts either, for every caller in .shrc
+# rather than only the ones here.
+if ! command -v have_command >/dev/null 2>&1; then
+    have_command() {
+        command -v "$1" >/dev/null 2>&1
+    }
+fi
+
+if ! command -v puts >/dev/null 2>&1; then
+    puts() {
+        printf '%s\n' "$*"
+    }
+fi
+
+# FUZZY TAB COMPLETION (bash)
+# `mp<TAB>` should offer "My Pictures". zsh's matcher-list ends with a
+# subsequence fallback and fish's pager falls back the same way, but
+# readline can only match a prefix and offers no hook to filter its
+# candidates. So Tab becomes a widget: gather the candidates for this
+# position, hand them to fzf, and put the choice back on the line.
+#
+# It completes three things and no more: a command name in command
+# position, a variable name after a bare `$`, and a path everywhere
+# else. A command's own registered completion -- git's subcommands,
+# ssh's hosts -- is not consulted; those arguments get filenames, which
+# is what readline does for a command with no completion installed.
+#
+# That's a deliberate stopping point rather than a to-do. Standing in
+# for `complete -F/-C/-W/-D/-I/-E` means reimplementing bash's
+# completion machinery from outside it, and a `bind -x` widget can't
+# hand the keypress back to readline to get the real thing. It was
+# built and it worked; what it didn't do was stop producing bugs, each
+# one a chance to put text on the line that the user didn't type.
+# Filenames for arguments is a smaller promise this can actually keep.
+# WANT_FUZZY_TAB=0 gives Tab back to readline for a shell that would
+# rather have git's completions than fuzzy paths.
+#
+# The helpers below are pure string work and live out here so both
+# shells' test suites can reach them. The widget itself is bash-only and
+# sits with the other key bindings.
+#
+# KNOWN LIMITS. Taking the key means reimplementing the part of bash
+# that reads a command line, and this reads less of it than bash does.
+# The rule that keeps that honest: anything unhandled must end in
+# "nothing offered", never in the wrong text on the line. A dead Tab
+# press is a nuisance you see immediately; a silent insertion is the
+# one that costs you. Wrong text is therefore a bug worth chasing --
+# nothing below is.
+#
+#   * Registered completions are ignored, as above: `git <TAB>` offers
+#     files where readline would offer subcommands.
+#   * Quotes aren't tracked. A word inside "..." or '...' is declined
+#     rather than completed (fuzzy_tab_can_complete) -- an escaped one
+#     is not a quote and doesn't count. Escaping with a backslash works,
+#     and this feature adds the escaping for you, so the quoted form is
+#     mostly a habit it makes unnecessary.
+#   * $(...), >(...), <(...), backticks, ${VAR:-x}, ${VAR/a/b} and $1
+#     are declined too, as is an escaped sigil (`cd \$HOME/`, `cd \~/`)
+#     -- the escape is lost before the lookup, and searching the real
+#     home for a path that named a literal one is exactly the wrong
+#     text. Plain $NAME and ${NAME} are expanded for the lookup and
+#     left as typed on the line.
+#   * Redirections are modelled only as far as "the command still comes
+#     after this": `>out cmd` and `2> log cmd` are command positions,
+#     and a target being typed gets files. The compound operators
+#     (`>&`, `&>`, `<&`, `>|`) are declined, since each carries a
+#     character that otherwise reads as the end of a command.
+#   * COMP_WORDBREAKS isn't modelled: bash breaks a word at `:` and `=`
+#     for completion, this doesn't. `--opt=va` and `host:/pa` are
+#     matched whole, so a path after either won't be found.
+#   * Tab in the middle of a word replaces the whole word; readline
+#     keeps the suffix. With a fuzzy match the readline behaviour is
+#     what produced `git checkoutout`.
+#   * No trailing space is added after a unique completion, where
+#     readline adds one.
+#   * A name `printf %q` can only render as ANSI-C quoting --
+#     $'My\tPictures', for a control character or a byte the locale
+#     rejects -- is never inserted. This reads back backslash escapes
+#     only, so it would be a directory you could enter and not leave.
+#   * Line structure is modelled as far as blanks -- spaces, tabs and
+#     newlines alike -- backslash escapes, `;` `|` `&`, leading
+#     assignments, leading keywords and leading redirections. A `)` is
+#     declined rather than modelled: it ends a case pattern, a subshell
+#     or a function's parameter list, and what follows means something
+#     different in each. `((` is declined for the same reason -- a
+#     filename means nothing inside an arithmetic command.
+
+# Split the line up to the cursor into the word being completed and
+# everything before it, in $_fuzzy_word and $_fuzzy_head. Splits on
+# spaces, honouring a backslash escape so `My\ Pictures` stays one word.
+# Quotes are not tracked: inside them the word comes out split, which
+# costs a Tab press rather than doing damage.
+fuzzy_tab_word() {
+    local _rest="$1"
+    local _word=
+    local _char
+    _fuzzy_head=
+    while test -n "$_rest"; do
+        # First character, then drop it -- ${_rest%"${_rest#?}"} is the
+        # POSIX way to say "head -c1" without forking.
+        _char="${_rest%"${_rest#?}"}"
+        _rest="${_rest#?}"
+        case "$_char" in
+        '\')
+            # Whatever follows is part of the word, space included.
+            _word="$_word$_char${_rest%"${_rest#?}"}"
+            _rest="${_rest#?}"
+            ;;
+        [[:space:]]|';'|'|'|'&')
+            # An operator ends a word as surely as a blank does, spaces
+            # around it or not: `ls|gre` is grep being typed, not an
+            # argument to ls. [[:space:]] rather than a literal space
+            # because a tab or a newline reaches READLINE_LINE through
+            # a paste or a quoted insert, and bash splits on those too.
+            _fuzzy_head="$_fuzzy_head$_word$_char"
+            _word=
+            ;;
+        *)
+            _word="$_word$_char"
+            ;;
+        esac
+    done
+    _fuzzy_word="$_word"
+}
+
+# The part of the line that belongs to the command being typed: what
+# follows the last unquoted `;`, `|` or `&`. Without this, `echo done; gi`
+# would be completed as an argument to echo, and `ls | gre` against ls.
+# Escapes are honoured, quotes are not -- same trade as fuzzy_tab_word.
+fuzzy_tab_segment() {
+    local _rest="$1"
+    local _segment=
+    local _char
+    local _nl='
+'
+    while test -n "$_rest"; do
+        _char="${_rest%"${_rest#?}"}"
+        _rest="${_rest#?}"
+        case "$_char" in
+        '\')
+            _segment="$_segment$_char${_rest%"${_rest#?}"}"
+            _rest="${_rest#?}"
+            ;;
+        "$_nl"|';'|'|'|'&')
+            # && and || end in the same character, so one case covers
+            # them: whatever came before is a finished command.
+            _segment=
+            ;;
+        *)
+            _segment="$_segment$_char"
+            ;;
+        esac
+    done
+    # Leading blanks would make a command position look like an argument
+    # position, so they go.
+    puts "${_segment#"${_segment%%[![:space:]]*}"}"
+}
+
+# True when a line is simple enough to complete without guessing at it.
+# Quotes, command substitution and the fancier parameter expansions need
+# a real parser; getting one wrong puts the wrong text on the line, which
+# is worse than not completing at all. So Tab declines instead -- a dead
+# keypress you notice beats an insertion you don't.
+fuzzy_tab_can_complete() {
+    # An escaped sigil is a literal one: `cd \$HOME/` means a directory
+    # actually called $HOME. The escape is dropped before the path is
+    # looked up, which would silently search the real home instead, so
+    # decline the line rather than look somewhere the user didn't ask
+    # about.
+    case "$1" in
+    *'\$'*|*'\~'*) return 1 ;;
+    esac
+    # Everything below asks whether a character is doing its special job,
+    # so escaped ones have to go first -- `John\'s` is a name this
+    # feature itself escaped that way, and declining it would leave the
+    # user unable to descend into a directory it just inserted.
+    local _bare
+    _bare="$(fuzzy_tab_drop_escapes "$1")"
+    # `>(` and `<(` open a process substitution, which is a command
+    # position inside a line that otherwise looks like arguments.
+    case "$_bare" in
+    *\"*|*\'*|*\`*|*'$('*|*'>('*|*'<('*) return 1 ;;
+    esac
+    # A compound redirection operator carries a character this splits
+    # commands on -- `>&`, `&>`, `<&`, `>|` -- so the target after one
+    # would look like a command position and be offered command names.
+    case "$_bare" in
+    *'>&'*|*'&>'*|*'<&'*|*'>|'*) return 1 ;;
+    esac
+    # A `)` ends a case pattern, a subshell or a function's parameter
+    # list, and what follows means something different in each. Reading
+    # it as none of them is what left `case x in x) ec` looking like an
+    # argument position.
+    # `((` opens an arithmetic command, where a filename means nothing
+    # at all. `$((` is already covered by the `$(` above.
+    case "$_bare" in
+    *')'*|*'(('*) return 1 ;;
+    esac
+    case "$_bare" in
+    *'$'*) fuzzy_tab_plain_vars "$_bare" || return 1 ;;
+    esac
+    return 0
+}
+
+# Drop backslash escapes and what they escape, leaving only the
+# characters still doing a shell's work. `John\'s` -> `Johns`, so a
+# quote that was escaped doesn't read as one that opens a string.
+fuzzy_tab_drop_escapes() {
+    local _rest="$1"
+    local _out=
+    local _char
+    while test -n "$_rest"; do
+        _char="${_rest%"${_rest#?}"}"
+        _rest="${_rest#?}"
+        if test "$_char" = '\'; then
+            _rest="${_rest#?}"
+            continue
+        fi
+        _out="$_out$_char"
+    done
+    puts "$_out"
+}
+
+# The first word of a segment, in $_fuzzy_first, and what follows it
+# with the blanks between removed, in $_fuzzy_rest. $_fuzzy_more says a
+# blank ended the word, so it's a finished one rather than the word
+# under the cursor. Escape-aware: `FOO=hello\ world` is one word, and
+# splitting it at the literal space would leave `world` looking like the
+# command.
+fuzzy_tab_first_word() {
+    local _rest="$1"
+    local _word=
+    local _char
+    _fuzzy_more=
+    while test -n "$_rest"; do
+        _char="${_rest%"${_rest#?}"}"
+        case "$_char" in
+        '\')
+            _rest="${_rest#?}"
+            _word="$_word\\${_rest%"${_rest#?}"}"
+            _rest="${_rest#?}"
+            ;;
+        [[:space:]])
+            _fuzzy_more=yes
+            break
+            ;;
+        *)
+            _word="$_word$_char"
+            _rest="${_rest#?}"
+            ;;
+        esac
+    done
+    _fuzzy_first="$_word"
+    _fuzzy_rest="${_rest#"${_rest%%[![:space:]]*}"}"
+}
+
+# True when every $ in the string introduces a plain variable name --
+# $HOME or ${HOME}. $1, $@, ${VAR:-x} and ${VAR/a/b} all need evaluation
+# or parsing this doesn't do.
+fuzzy_tab_plain_vars() {
+    local _rest="$1"
+    local _name
+    while :; do
+        case "$_rest" in
+        *'$'*) ;;
+        *) return 0 ;;
+        esac
+        _rest="${_rest#*$}"
+        case "$_rest" in
+        '{'*)
+            _name="${_rest#\{}"
+            case "$_name" in
+            *'}'*) _name="${_name%%\}*}" ;;
+            # Still being typed, so there's nothing to complete yet.
+            *) return 1 ;;
+            esac
+            _rest="${_rest#*\}}"
+            ;;
+        *)
+            _name="${_rest%%[!A-Za-z0-9_]*}"
+            _rest="${_rest#"$_name"}"
+            ;;
+        esac
+        case "$_name" in
+        # A bare $ at the end is a name not yet typed, which is fine;
+        # anywhere else it's something this can't read.
+        '') test -z "$_rest" || return 1 ;;
+        [0-9]*|*[!A-Za-z0-9_]*) return 1 ;;
+        esac
+    done
+}
+
+# Drop leading reserved words from a command segment. `if gi` is a
+# command position; without this it looks like an argument to a command
+# called `if`, and files get offered where bash expects something to run.
+#
+# Only the words a command actually follows. `for`, `select`, `case` and
+# `function` are followed by a name, and the terminators (`fi`, `done`,
+# `esac`, `}`, `)`) by a redirection -- offering a command name in any
+# of those positions puts something on the line that can't be one.
+fuzzy_tab_strip_keywords() {
+    local _rest="$1"
+    local _word
+    # `time [-p] pipeline` is the one keyword that takes options, `--`
+    # included, and the command comes after them.
+    local _after_time=
+    # `coproc [NAME] compound-command`. A word after `coproc` is the
+    # name only when a compound command follows it -- any of them, not
+    # just a brace group; otherwise it's the far commoner `coproc
+    # command`, and that word is the command.
+    local _after_coproc=
+    local _next
+    local _more
+    while test -n "$_rest"; do
+        fuzzy_tab_first_word "$_rest"
+        _word="$_fuzzy_first"
+        _next="$_fuzzy_rest"
+        _more="$_fuzzy_more"
+        case "$_word" in
+        if|then|elif|else|while|until|do|time|coproc|'!'|'{'|'(') ;;
+        -p|--) test -n "$_after_time" || break ;;
+        [A-Za-z_]*)
+            test -n "$_after_coproc" && test -n "$_more" || break
+            fuzzy_tab_first_word "$_next"
+            # Any compound command may follow the name, not just a
+            # brace group or a subshell.
+            case "$_fuzzy_first" in
+            '{'|'('|'(('|'[['|if|while|until|for|case|select) ;;
+            *) break ;;
+            esac
+            ;;
+        *) break ;;
+        esac
+        case "$_word" in
+        # `-p` keeps the option position open, since `time -p -- cmd`
+        # is one too; `--` closes it, so what follows is the command.
+        time|-p) _after_time=yes; _after_coproc= ;;
+        coproc) _after_coproc=yes; _after_time= ;;
+        *) _after_time=; _after_coproc= ;;
+        esac
+        # Nothing after it means it's the word being typed, not a
+        # keyword already entered.
+        test -n "$_more" || break
+        _rest="$_next"
+    done
+    puts "$_rest"
+}
+
+# Drop leading environment assignments from a command segment: after
+# `FOO=1 ` a command is still what comes next, not an argument to
+# something called FOO=1.
+fuzzy_tab_strip_assignments() {
+    local _rest="$1"
+    local _word
+    local _name
+    while test -n "$_rest"; do
+        fuzzy_tab_first_word "$_rest"
+        _word="$_fuzzy_first"
+        # The whole name has to be one, not just its first character:
+        # bash runs `A-B=1 ec` as a command called A-B=1, so stripping
+        # it would offer commands where an argument goes. The trailing
+        # `+` of bash's `NAME+=value` append form goes first, since it
+        # belongs to the operator rather than to the name.
+        case "$_word" in
+        [A-Za-z_]*=*) ;;
+        *) break ;;
+        esac
+        _name="${_word%%=*}"
+        case "${_name%+}" in
+        *[!A-Za-z0-9_]*) break ;;
+        esac
+        # No space after it means it's still being typed, so it's the
+        # word under the cursor rather than a finished assignment.
+        test -n "$_fuzzy_more" || break
+        _rest="$_fuzzy_rest"
+    done
+    puts "$_rest"
+}
+
+# Drop leading redirections from a command segment: after `>out ` or
+# `2> log ` bash is still waiting for the command, so without this the
+# command name would be looked for among filenames.
+fuzzy_tab_strip_redirections() {
+    local _rest="$1"
+    local _word
+    local _fd
+    while test -n "$_rest"; do
+        fuzzy_tab_first_word "$_rest"
+        _word="$_fuzzy_first"
+        case "$_word" in
+        *'<'*|*'>'*) ;;
+        *) break ;;
+        esac
+        # A descriptor is digits, or bash's `{name}` form that assigns
+        # one. `2>out` and `{fd}>out` are redirections; `2to3>out` is a
+        # command that has one, and stripping it would offer commands
+        # for that command's argument.
+        _fd="${_word%%[<>]*}"
+        case "$_fd" in
+        '') ;;
+        '{'?*'}')
+            # bash assigns the descriptor to a variable, so what's in
+            # the braces has to be a name: `{1}>out` is a command called
+            # {1} with a redirection, not a redirection.
+            _fd="${_fd#\{}"
+            case "${_fd%\}}" in
+            [!A-Za-z_]*|*[!A-Za-z0-9_]*) break ;;
+            esac
+            ;;
+        *[!0-9]*) break ;;
+        esac
+        # Nothing after it means it's the word being typed.
+        test -n "$_fuzzy_more" || break
+        case "$_word" in
+        # The target is attached: `>out`. `-` counts as part of the
+        # operator, so `<<- EOF` is the bare form and takes its
+        # delimiter with it.
+        *[!0-9'<>|-']) ;;
+        # The operator stands alone, so the target is the next word and
+        # goes with it -- unless it's the word under the cursor, which
+        # is a target being typed rather than a finished redirection.
+        *)
+            fuzzy_tab_first_word "$_fuzzy_rest"
+            test -n "$_fuzzy_first" && test -n "$_fuzzy_more" || break
+            ;;
+        esac
+        _rest="$_fuzzy_rest"
+    done
+    puts "$_rest"
+}
+
+# True for a bash new enough to give a `bind -x` command the line it was
+# pressed on. READLINE_LINE and READLINE_POINT arrived in bash 4.0; on
+# 3.2 -- still /bin/bash on macOS -- the widget would see an empty line
+# on every press and Tab would do nothing at all, which is worse than
+# leaving the key to readline.
+fuzzy_tab_bash_version_ok() {
+    case "$1" in
+    ''|[0-3].*) return 1 ;;
+    esac
+    return 0
+}
+
+# What follows the word under the cursor, given the line from the cursor
+# on. The completion replaces the whole word rather than only the part
+# before the cursor, so `git che|out` becomes `git checkout` instead of
+# `git checkoutout`.
+fuzzy_tab_after_word() {
+    local _rest="$1"
+    local _char
+    while test -n "$_rest"; do
+        _char="${_rest%"${_rest#?}"}"
+        case "$_char" in
+        '\')
+            _rest="${_rest#?}"
+            _rest="${_rest#?}"
+            ;;
+        [[:space:]]|';'|'|'|'&') break ;;
+        *) _rest="${_rest#?}" ;;
+        esac
+    done
+    puts "$_rest"
+}
+
+# The directory part of a word being completed, "" when there is none.
+# Completing `docs/mp` lists `docs/` and matches `mp` against what's in
+# it, rather than fuzzy-matching the whole path.
+fuzzy_tab_dir() {
+    case "$1" in
+    */*) puts "${1%/*}/" ;;
+    *) ;;
+    esac
+}
+
+# The part of the word to match on: everything after the last slash.
+fuzzy_tab_base() {
+    puts "${1##*/}"
+}
+
+# Expand a leading ~ or ~user, which a quoted expansion won't do -- so
+# `cd ~/Do<TAB>` looks in the home directory rather than in a directory
+# literally named "~". Anything else is returned unchanged.
+fuzzy_tab_expand_tilde() {
+    local _user
+    local _home
+    case "$1" in
+    '~') puts "$HOME" ;;
+    '~/'*) puts "$HOME/${1#'~/'}" ;;
+    '~'*)
+        _user="${1%%/*}"
+        _user="${_user#'~'}"
+        # Only a plausible user name reaches the eval below, which is
+        # the one way a shell will expand ~user. A name with anything
+        # else in it isn't one, so it's left alone rather than run.
+        case "$_user" in
+        *[!A-Za-z0-9._-]*) puts "$1" ; return ;;
+        esac
+        _home="$(eval "puts ~$_user")"
+        # ~nosuchuser expands to itself; passing that on unchanged beats
+        # inventing a path.
+        if test "$_home" = "~$_user"; then
+            puts "$1"
+        else
+            puts "$_home${1#"~$_user"}"
+        fi
+        ;;
+    *) puts "$1" ;;
+    esac
+}
+
+# Drop backslash escapes, so a word off the command line can be used as
+# a path. `My\ Pictures/` -> `My Pictures/`.
+fuzzy_tab_unescape() {
+    local _rest="$1"
+    local _out=
+    local _char
+    while test -n "$_rest"; do
+        _char="${_rest%"${_rest#?}"}"
+        _rest="${_rest#?}"
+        if test "$_char" = '\'; then
+            _char="${_rest%"${_rest#?}"}"
+            _rest="${_rest#?}"
+        fi
+        _out="$_out$_char"
+    done
+    puts "$_out"
+}
+
+# Expand $NAME and ${NAME} in a path prefix, for the directory
+# lookup only -- what goes back on the line stays as it was
+# typed, the same as a tilde. Indirect expansion reads the
+# variable; nothing here is evaluated. An unset name fails, so
+# the caller offers nothing rather than expanding to empty and
+# listing the root.
+_fuzzy_tab_expand_vars() {
+    local _rest="$1"
+    local _out=
+    local _name
+    while test -n "$_rest"; do
+        case "$_rest" in
+        '$'*)
+            _rest="${_rest#\$}"
+            case "$_rest" in
+            '{'*)
+                _rest="${_rest#\{}"
+                _name="${_rest%%\}*}"
+                _rest="${_rest#*\}}"
+                ;;
+            *)
+                _name="${_rest%%[!A-Za-z0-9_]*}"
+                _rest="${_rest#"$_name"}"
+                ;;
+            esac
+            test -n "${!_name+set}" || return 1
+            _out="$_out${!_name}"
+            ;;
+        *)
+            _out="$_out${_rest%"${_rest#?}"}"
+            _rest="${_rest#?}"
+            ;;
+        esac
+    done
+    puts "$_out"
+}
+
+# The names in $2, one per line, that name something runnable inside
+# the directory $1 -- an executable, or a directory to descend into.
+fuzzy_tab_runnable() {
+    local _dir="$1"
+    local _out=
+    local _one
+    while IFS= read -r _one; do
+        test -n "$_one" || continue
+        if test -x "${_dir%/}/$_one" || test -d "${_dir%/}/$_one"; then
+            _out="$_out$_one
+"
+        fi
+    done <<EOF
+$2
+EOF
+    # The loop leaves a trailing newline that would read as an empty
+    # candidate.
+    puts "${_out%?}"
+}
+
+# Tab: fuzzy-match the candidates for this position instead of
+# readline's prefix match. See FUZZY TAB COMPLETION above.
+_fuzzy_tab() {
+    # fzf can go away under a running shell (uninstalled, or a
+    # bundle that never landed it). Hand Tab back to readline
+    # rather than leaving the key dead.
+    # Both keymaps, matching where it was installed: giving the key
+    # back in only the current one would leave the first Tab in the
+    # other dead until the widget ran there too.
+    if ! have_command fzf; then
+        bind -m emacs '"\t": complete'
+        bind -m vi-insert '"\t": complete'
+        return 0
+    fi
+    local _head="${READLINE_LINE:0:$READLINE_POINT}"
+    # What's kept after the insert: everything past the word
+    # under the cursor, not everything past the cursor. Tab in
+    # the middle of a word replaces the word.
+    local _after="${READLINE_LINE:$READLINE_POINT}"
+    local _tail
+    _tail="$(fuzzy_tab_after_word "$_after")"
+    fuzzy_tab_word "$_head"
+    local _word="$_fuzzy_word"
+    local _before="$_fuzzy_head"
+    # Out of our depth: decline rather than guess. See
+    # fuzzy_tab_can_complete. The check covers the rest of the
+    # word past the cursor as well, since that goes too: `cd
+    # mp|" x"` looks unquoted up to the cursor, and dropping the
+    # `"` while keeping the one after the space would turn a
+    # working line into a syntax error.
+    fuzzy_tab_can_complete "$_head${_after%"$_tail"}" || return 0
+    local _candidates
+    # The query is matched against candidates that came off the
+    # filesystem or out of compgen, so it has to be the name rather
+    # than the escaped form on the line: `cat My\ Pic<TAB>` searching
+    # for a literal backslash matches nothing at all.
+    local _query
+    _query="$(fuzzy_tab_unescape "$_word")"
+    # What gets put back in front of the choice: the directory
+    # already typed, since the candidates are bare names.
+    local _prefix=
+    # Only filesystem candidates get a trailing slash, so a
+    # command that shares its name with a directory here -- an
+    # `echo/` in the current directory -- doesn't come out as
+    # `echo/`.
+    local _from_files=
+    # The directory the candidates were listed from, resolved. Kept for
+    # the trailing slash below, so the check runs against the same
+    # directory the listing came from.
+    local _dir=
+    # Not "the first word on the line" but the first word of this
+    # command: after `;`, `&&` or `|` a command starts again, and
+    # an empty segment is where a command name goes.
+    local _segment
+    _segment="$(fuzzy_tab_segment "$_before")"
+    # Keywords, assignments and redirections come in any order before
+    # the command -- `FOO=1 >out cmd` and `>out FOO=1 cmd` are both
+    # bash -- so strip until a pass takes nothing rather than assuming
+    # one order.
+    local _stripped
+    while :; do
+        _stripped="$(fuzzy_tab_strip_redirections \
+            "$(fuzzy_tab_strip_assignments \
+                "$(fuzzy_tab_strip_keywords "$_segment")")")"
+        test "$_stripped" != "$_segment" || break
+        _segment="$_stripped"
+    done
+    # `for`, `select`, `case` and `function` are followed by a name or
+    # a value, not a command and not a path. They're deliberately left
+    # in the segment, since a command doesn't follow them -- but that
+    # lands the word after one in the file branch, and `for mp<TAB>`
+    # completing to `for My\ Pictures/` hands bash an invalid
+    # identifier. Only the word straight after: `for x in mp<TAB>` is a
+    # list of values, where a filename is exactly right.
+    fuzzy_tab_first_word "$_segment"
+    case "$_fuzzy_first" in
+    for|select|case|function) test -n "$_fuzzy_rest" || return 0 ;;
+    esac
+    case "$_word" in
+    '$'|'$'[A-Za-z_]*)
+        # `$HO<TAB>` -> variable names, and a bare `$` -> all of
+        # them. With a slash in it, it's a path under a variable
+        # and belongs to the file branch.
+        case "$_word" in
+        */*) ;;
+        *)
+            _candidates="$(compgen -v)"
+            _query="${_word#\$}"
+            _prefix='$'
+            ;;
+        esac
+        ;;
+    esac
+    # A command position. An explicit path is one too, but its
+    # candidates come off the filesystem: `compgen -c` lists bare
+    # names, so nothing in it could match a query with a slash.
+    local _from_commands=
+    local _command_path=
+    if test -z "$_segment"; then
+        case "$_word" in
+        */*) _command_path=yes ;;
+        *) _from_commands=yes ;;
+        esac
+    fi
+    if test -n "$_candidates"; then
+        _from_commands=
+    elif test -n "$_from_commands"; then
+        _candidates="$(compgen -c)"
+    else
+        _from_files=yes
+        _prefix="$(fuzzy_tab_dir "$_word")"
+        _query="$(fuzzy_tab_unescape "$(fuzzy_tab_base "$_word")")"
+        # Listed from inside the directory so the names come out
+        # bare and the fuzzy match isn't run against the path
+        # already typed. `--` so a directory starting with a
+        # dash isn't read as an option; the cd's stderr goes
+        # because a half-typed path that doesn't exist yet is
+        # the normal case, and it leaves the candidate list
+        # empty, which the caller already treats as "nothing to
+        # offer".
+        _dir="$(fuzzy_tab_expand_tilde "$(fuzzy_tab_unescape "${_prefix:-.}")")"
+        # An unset variable in the path means there's nothing to
+        # look in, which is not the same as the current
+        # directory: offer nothing rather than the wrong thing.
+        if _dir="$(_fuzzy_tab_expand_vars "$_dir")"; then
+            _candidates="$(cd -- "$_dir" 2>/dev/null && compgen -f -- '')"
+            # In command position an explicit path has to name
+            # something runnable. Directories stay, so the next Tab
+            # can descend into one and find the executable in it.
+            test -z "$_command_path" ||
+                _candidates="$(fuzzy_tab_runnable "$_dir" "$_candidates")"
+        fi
+    fi
+    test -n "$_candidates" || return 0
+    local _choice
+    # fzf reads the list on stdin and draws on the terminal
+    # itself, so the widget's own stdout stays clear. --select-1
+    # takes the only match without a prompt; --height keeps the
+    # scrollback intact.
+    # --no-extended because the query is a word the user typed at a
+    # shell prompt, not one typed at fzf: `echo !foo<TAB>` means a file
+    # called !foo, where fzf's extended syntax reads `!foo` as "not
+    # foo" and --select-1 would insert whatever the sole non-match is.
+    _choice="$(printf '%s\n' "$_candidates" |
+        fzf --height=40% --reverse --select-1 --no-extended \
+            --query="$_query")" || return 0
+    test -n "$_choice" || return 0
+    # The candidate list is newline-delimited, so a filename with a
+    # newline in it arrives as two candidates and neither is a real
+    # path. Insert one only if it exists -- a broken symlink counts,
+    # since `test -e` follows it and the name is still real.
+    if test -n "$_from_files" &&
+            ! test -e "${_dir%/}/$_choice" &&
+            ! test -L "${_dir%/}/$_choice"; then
+        return 0
+    fi
+    # `compgen -c` is newline-delimited too, so a command whose name
+    # contains one splits the same way. `command -v` rather than
+    # have_command because a builtin, function, alias or keyword is a
+    # real command name here even though it isn't a file.
+    if test -n "$_from_commands" &&
+            ! command -v "$_choice" >/dev/null 2>&1; then
+        return 0
+    fi
+    local _insert
+    # The directory already typed goes back exactly as typed:
+    # it's escaped the way the user escaped it, and a leading ~
+    # has to stay a ~ rather than be quoted into a literal. Only
+    # the name coming from the picker is escaped, which is what
+    # makes the spaces this feature exists for survive.
+    local _quoted
+    _quoted="$(printf '%q' "$_choice")"
+    # `printf %q` falls back to ANSI-C quoting -- $'My\tPictures' --
+    # for a name it can't render with backslashes: control characters,
+    # and bytes that aren't valid in the locale. Nothing here reads
+    # $'...' back, so inserting one would make a directory you can
+    # enter and not leave. Asking what %q produced covers every name
+    # that forces it; guessing at the characters didn't.
+    case "$_quoted" in
+    \$\'*) return 0 ;;
+    esac
+    # A reserved word is only itself unquoted. `compgen -c` lists them,
+    # and `printf %q` renders the closing brace of `{ echo ok; }` as
+    # `\}` -- which bash reads as an ordinary command name, leaving the
+    # group unterminated. Command position only: a *file* called `}`
+    # still needs the escape. `type -t` is bash's own answer, and it
+    # prints nothing and fails for a name that isn't a keyword.
+    if test -n "$_from_commands" &&
+            test "$(type -t -- "$_choice")" = keyword; then
+        _quoted="$_choice"
+    fi
+    _insert="$_prefix$_quoted"
+    # Joined to the directory the listing came from, not re-expanded:
+    # the name came off the filesystem, so a directory actually called
+    # `$FZVAR` or `~jim` must be taken literally rather than run through
+    # the expansions the typed prefix needed.
+    if test -n "$_from_files" && test -d "${_dir%/}/$_choice"; then
+        _insert="$_insert/"
+    fi
+    READLINE_LINE="$_before$_insert$_tail"
+    READLINE_POINT=$(( ${#_before} + ${#_insert} ))
+}
+
+# bash only, because `bind -x` is: this is a readline widget, and zsh
+# would need a different implementation entirely. The helpers above are
+# plain string work, so sourcing this file anywhere is harmless -- the
+# test suites do exactly that under dash and zsh -- but the binding has
+# to be guarded or those runs would report `bind: not found` on any host
+# that has fzf.
+#
+# Off with WANT_FUZZY_TAB=0, and never bound when fzf is absent or bash
+# is older than 4.0: a widget is all or nothing, so anything it needs
+# and doesn't have would cost the key entirely rather than degrading.
+#
+# Bound in both insert keymaps rather than whichever is current, since
+# `set -o vi` later in the session would otherwise leave Tab on the old
+# behaviour there. .shrc's own bindings do the same through _bind_all,
+# which isn't defined yet when this file is sourced.
+if test -n "${BASH_VERSION:-}" &&
+        fuzzy_tab_bash_version_ok "$BASH_VERSION" &&
+        test "${WANT_FUZZY_TAB:-1}" != 0 && have_command fzf; then
+    bind -m emacs -x '"\t": _fuzzy_tab'
+    bind -m vi-insert -x '"\t": _fuzzy_tab'
+fi
