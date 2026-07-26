@@ -2368,6 +2368,26 @@ init_shell_tools() {
     arm_precommand_trap_last
 }
 
+# Fuzzy completion over fzf, in ~/.bashrc.fuzzycomplete when it is
+# installed. Called at the very end of this file rather than from
+# init_shell_tools, because it wraps whatever compspecs are registered
+# by the time it runs -- bash-completion's, carapace's, fzf's own, and
+# any that .shrc.local sets up, which is what that file is for.
+# Wrapping before they exist would leave them prefix-matched, and a
+# later `complete -F` would replace the wrapper outright.
+#
+# bash only: it works through `complete` and COMPREPLY, which zsh and
+# fish have no equivalent of and no need for, since both already match a
+# subsequence when a prefix finds nothing.
+init_fuzzy_complete() {
+    test "$shell" = bash || return 0
+    test -r "$HOME/.bashrc.fuzzycomplete" || return 0
+    if ! . "$HOME/.bashrc.fuzzycomplete"; then
+        warn "fuzzy completion: .bashrc.fuzzycomplete failed while loading"
+        return 1
+    fi
+}
+
 # Keep arming the DEBUG trap the last thing the prompt does. zoxide
 # appends its own PROMPT_COMMAND entry, and anything running after
 # install_precommand_trap trips the freshly armed trap: shrc would take
@@ -3205,6 +3225,13 @@ fi
 
 # source local overrides file (work vs home, etc.)
 test -f "${ZDOTDIR:-$HOME}/.shrc.local" && . "${ZDOTDIR:-$HOME}/.shrc.local"
+
+# After .shrc.local, so a compspec it registers is wrapped rather than
+# left prefix-matched, and a WANT_FUZZY_COMPLETE=0 set there is read
+# before anything is installed.
+if is_interactive; then
+    init_fuzzy_complete
+fi
 
 # TODO: move to .profile?
 if is_interactive && ! in_shpool; then

@@ -1,0 +1,1084 @@
+#!/bin/bash
+# Fuzzy completion for bash, over fzf. Sourced by .shrc when installed;
+# without it completion is whatever bash and bash-completion make of it,
+# and nothing else in .shrc depends on it. bash-only because the
+# programmable-completion machinery is: zsh and fish already fall back
+# to subsequence matching on their own.
+#
+# `mp<TAB>` should offer "My Pictures" and `git ck<TAB>` should offer
+# `checkout`, but readline matches only a prefix and gives no hook to
+# filter its candidates. Taking Tab with `bind -x` was tried and
+# abandoned: a widget gets the raw line and has to work out where the
+# words are, which one is the command, and whether the cursor is even
+# somewhere a filename belongs -- reimplementing the part of bash that
+# reads a command line, where every corner read wrong puts text on the
+# line nobody typed.
+#
+# So this registers an ordinary completion function and lets *bash*
+# split the line. Each command's own compspec is kept and called first,
+# so git still generates its subcommands; what comes back goes through
+# fzf rather than readline's prefix match. A command that generates
+# nothing gets filenames instead, if its spec asked for the fallback --
+# and for unquoted words only, since inside quotes a backslash means one
+# of three things while $2 arrives the same for all of them.
+#
+# The rule throughout: only ever add a match readline could not have
+# found, never take one away. WANT_FUZZY_COMPLETE=0 turns it off.
+
+# Self-contained, like .shrc.vcs, but only where .shrc hasn't already
+# defined these: defining them outright would replace .shrc's
+# have_command -- which searches PATH, so ignores aliases and functions
+# -- for every caller in .shrc rather than only the ones here.
+if ! command -v have_command >/dev/null 2>&1; then
+    have_command() {
+        command -v "$1" >/dev/null 2>&1
+    }
+fi
+
+if ! command -v warn >/dev/null 2>&1; then
+    warn() {
+        printf '%s\n' "$*" >&2
+    }
+fi
+
+# True for a bash with the completion features this needs: `complete -D`
+# for commands with no compspec of their own (4.1), associative arrays to
+# remember the compspecs being wrapped (4.0), and `declare -g` to keep
+# those maps alive past the function that sources this file (4.2). So
+# 4.2, and on 3.2 -- still /bin/bash on macOS -- this stays out of the
+# way entirely rather than half-installing.
+fuzzy_complete_bash_version_ok() {
+    case "$1" in
+    ''|[0-3].*) return 1 ;;
+    4.[01]*) return 1 ;;
+    esac
+    return 0
+}
+
+# Checked here, before anything below can be parsed or run, rather than
+# at the point of installing. `declare -A` is a syntax error's cousin on
+# 3.2 -- it runs and fails, printing `declare: -A: invalid option` on
+# every shell start -- so a version check further down would be a
+# promise this file had already broken by the time it was read.
+if test -z "${BASH_VERSION:-}" ||
+        ! fuzzy_complete_bash_version_ok "$BASH_VERSION"; then
+    return 0 2>/dev/null || exit 0
+fi
+
+# The directory part of a word being completed, "" when there is none.
+# Completing `docs/mp` lists `docs/` and matches `mp` against what's in
+# it, rather than fuzzy-matching the whole path.
+fuzzy_complete_dir() {
+    case "$1" in
+    */*) printf '%s\n' "${1%/*}/" ;;
+    *) ;;
+    esac
+}
+
+# The part of the word to match on: everything after the last slash.
+fuzzy_complete_base() {
+    printf '%s\n' "${1##*/}"
+}
+
+# Drop backslash escapes, so a word off the command line can be used as
+# a path. `My\ Pictures/` -> `My Pictures/`. COMP_WORDS carries the word
+# as typed, escapes included, and the filesystem doesn't.
+fuzzy_complete_unescape() {
+    local _rest="$1"
+    local _out=
+    local _char
+    while test -n "$_rest"; do
+        _char="${_rest%"${_rest#?}"}"
+        _rest="${_rest#?}"
+        if test "$_char" = '\'; then
+            _char="${_rest%"${_rest#?}"}"
+            _rest="${_rest#?}"
+        fi
+        _out="$_out$_char"
+    done
+    printf '%s\n' "$_out"
+}
+
+# True when a word was typed with no quoting at all, so a backslash in
+# it is an escape and bash handed over the whole word rather than the
+# tail after some quote. Takes the raw word from COMP_WORDS: $2 has had
+# the quotes removed and cannot answer this.
+fuzzy_complete_unquoted() {
+    case "$1" in
+    *\'*|*'"'*) return 1 ;;
+    esac
+    return 0
+}
+
+# Escape a candidate for the command line, or fail if it can't be. A
+# name with a control character or a byte the locale rejects comes back
+# from `printf %q` as ANSI-C quoting -- $'My\tPictures' -- which is a
+# form this doesn't read back, so it would be a directory you could
+# enter and not leave. Asking what %q produced covers every name that
+# forces it; guessing at the characters doesn't.
+fuzzy_complete_quote() {
+    local _quoted
+    _quoted="$(printf '%q' "$1")"
+    case "$_quoted" in
+    \$\'*) return 1 ;;
+    esac
+    printf '%s\n' "$_quoted"
+}
+
+# The option queries below all take a *flag string* -- the flags a
+# compspec was given, with the argument text left out, as built by
+# _fuzzy_complete_parse -- or `compopt`'s own output, which has the same
+# shape. Never the serialized spec: bash prints `complete -P ' -o
+# default ' -F fn demo` for a prefix that happens to contain option
+# text, and pattern-matching that string can't tell the two apart.
+
+# True when a spec asks for a fallback that *names a file*, which is the
+# only kind this can offer, and the distinction bash draws: `-o default` is readline's filename completion and
+# `-o dirnames` its directory completion, while `-o bashdefault` asks
+# for "the rest of bash's completions", which depend on the context and
+# are usually not filenames at all. Measured: `complete -o bashdefault
+# -F empty demo` completes nothing for `demo My` where `My Pictures` is
+# right there, and adding `-o bashdefault` beside `-o dirnames` still
+# offers no regular files.
+fuzzy_complete_wants_files() {
+    case " $1 " in
+    *' -o default '*|*' -o dirnames '*) return 0 ;;
+    esac
+    return 1
+}
+
+# True when the only fallback a spec asked for is directory completion:
+# `-o dirnames` without the `-o default` that would widen it to files.
+fuzzy_complete_dirs_only() {
+    case " $1 " in
+    *' -o default '*) return 1 ;;
+    esac
+    case " $1 " in
+    *' -o dirnames '*) return 0 ;;
+    esac
+    return 1
+}
+
+# True when the *generated* candidates are filenames, so they are
+# logical names readline will quote and the word off the line has to be
+# decoded before it can be matched against them.
+#
+# `-o filenames` alone. The other two look like they belong and do not:
+# both say what to do when the compspec generates *nothing*, and neither
+# marks what it generated. Measured -- a `-o dirnames` or `-o plusdirs`
+# spec returning `My Pictures` inserts it verbatim, exactly as a spec
+# with no options at all does, where `-o filenames` inserts
+# `My\ Pictures`. Decoding for those would match a query the generator's
+# own spelling never contained.
+fuzzy_complete_wants_filenames() {
+    case " $1 " in
+    *' -o filenames '*) return 0 ;;
+    esac
+    return 1
+}
+
+# True when readline will apply FIGNORE to whatever goes back. Narrower
+# than the above, and measured rather than reasoned: `-o filenames` and
+# `-o plusdirs` get the filter, `-o dirnames` looks like it should and
+# does not.
+fuzzy_complete_filters_fignore() {
+    case " $1 " in
+    *' -o filenames '*|*' -o plusdirs '*) return 0 ;;
+    esac
+    return 1
+}
+
+# True when directory completion will be merged in after this returns.
+# A spec carrying `-o plusdirs` is never wrapped at all, but a generator
+# can turn it on for one call with `compopt`, where only the live
+# options show it.
+fuzzy_complete_has_plusdirs() {
+    case " $1 " in
+    *' -o plusdirs '*) return 0 ;;
+    esac
+    return 1
+}
+
+# Drop the candidates FIGNORE tells readline to throw away, leaving the
+# rest in $_fuzzy_complete_kept.
+#
+# Readline applies FIGNORE *after* the list has been narrowed to one,
+# and discards a sole rejected candidate rather than replacing it -- so
+# picking `alpha.o` under `FIGNORE=.o` completes to nothing, where bash
+# would have dropped it first and completed `alpine.txt` beside it.
+#
+# bash's rule, suffix by suffix, including that a name must be strictly
+# longer than the suffix: `FIGNORE=alpha.o` does not hide `alpha.o`. A
+# list filtered to nothing goes back whole, which is what readline ends
+# up doing anyway and what `shopt -u force_fignore` asks for.
+fuzzy_complete_ignore_fignore() {
+    _fuzzy_complete_kept=("$@")
+    test -n "${FIGNORE-}" || return 0
+    local _kept=()
+    local _name _suffix _rest _keep
+    for _name in "$@"; do
+        _keep=yes
+        _rest="$FIGNORE"
+        while test -n "$_rest"; do
+            _suffix="${_rest%%:*}"
+            case "$_rest" in
+            *:*) _rest="${_rest#*:}" ;;
+            *) _rest= ;;
+            esac
+            test -n "$_suffix" || continue
+            test "${#_name}" -gt "${#_suffix}" || continue
+            test "${_name%"$_suffix"}" != "$_name" || continue
+            _keep=
+            break
+        done
+        test -z "$_keep" || _kept+=("$_name")
+    done
+    test "${#_kept[@]}" -gt 0 || return 0
+    _fuzzy_complete_kept=("${_kept[@]}")
+}
+
+# True when the parsed spec in $_fuzzy_complete_flagstr does nothing to
+# the candidates beyond running its -F function, so the function's
+# output is the whole answer and this can be the layer that picks.
+#
+# The refusal list is `complete`'s own synopsis rather than the cases
+# that have come up:
+#
+#   complete [-abcdefgjksuv] [-pr] [-DEI] [-o option] [-A action]
+#            [-G globpat] [-W wordlist] [-F function] [-C command]
+#            [-X filterpat] [-P prefix] [-S suffix] [name ...]
+#
+# Every generator but -F is refused, in both spellings, because bash
+# merges its results in after this has chosen -- putting back the
+# ambiguity picking was meant to remove. -X, -P and -S go for the
+# reverse reason: bash applies them *after* the function, so -X can
+# discard the picked candidate and -P/-S leave the word carrying an
+# affix the candidates don't (`PREgma` against a bare `gamma`).
+fuzzy_complete_only_function() {
+    local _opt
+    for _opt in ${_fuzzy_complete_flagstr-}; do
+        case "$_opt" in
+        -[abcdefgjksuv]|-A|-G|-W|-C|-X|-P|-S) return 1 ;;
+        esac
+    done
+    # `plusdirs` is bash's own directory generator wearing an option's
+    # clothes, and is applied the same way.
+    case " ${_fuzzy_complete_flagstr-} " in
+    *' plusdirs '*) return 1 ;;
+    esac
+    return 0
+}
+
+# How many progressively shorter prefixes to try before giving up and
+# asking with the empty word. Each one runs the command's completion
+# again, so this bounds what a single keypress can cost.
+_FUZZY_COMPLETE_MAX_RETRIES=4
+
+# The compspec bash already had for each wrapped command: its generator
+# function, the spec string kept whole so the uninstall can put it back,
+# and the flags with argument text stripped, which is what the option
+# queries read.
+#
+# -g because .shrc sources this from inside init_fuzzy_complete, and a
+# `declare` in a function is local to it -- the maps would go out of
+# scope while every command stayed registered to the wrapper, so every
+# Tab would find no saved generator. Sourcing at the top level, which is
+# what the tests do, hides it completely.
+declare -gA _fuzzy_complete_fn
+declare -gA _fuzzy_complete_spec
+declare -gA _fuzzy_complete_flags
+
+# The same for the `complete -D` installed before us. Kept across a
+# re-source rather than reset: by then -D is already ours, so clearing
+# these would drop the generator we stand in front of -- on a distro
+# box, bash-completion's lazy loader -- with nothing to reinstate it.
+_fuzzy_complete_default_fn="${_fuzzy_complete_default_fn-}"
+_fuzzy_complete_default_spec="${_fuzzy_complete_default_spec-}"
+_fuzzy_complete_default_flags="${_fuzzy_complete_default_flags-}"
+
+# Set once fzf has been reported broken, so the report doesn't repeat on
+# every keypress. Kept across a re-source for the same reason.
+_fuzzy_complete_warned="${_fuzzy_complete_warned-}"
+
+# fzf matches smart-case: case-insensitive for a lowercase query,
+# case-sensitive once the query has a capital in it. That refuses
+# `MY<TAB>` against `My Pictures`, a match bash makes when
+# `completion-ignore-case` is on -- taking a completion away -- so
+# `--ignore-case` goes in when readline says so.
+#
+# Deliberately not the other way round. With the setting off, which is
+# readline's default, smart-case still matches `mp` against
+# `My Pictures` where readline would not, and `--case-sensitive` would
+# stop it -- taking away the example this whole file exists for. Adding
+# a match readline could not have found is what this does; the rule it
+# holds to is never removing one.
+#
+# Read once, since `bind -v` forks; .inputrc is settled before .shrc.
+_fuzzy_complete_case_opt=()
+case "$(bind -v 2>/dev/null)" in
+*'set completion-ignore-case on'*) _fuzzy_complete_case_opt=(--ignore-case) ;;
+esac
+
+# Hand the candidates on stdin to fzf and print the one chosen, if any.
+# The query is $1 and each candidate is an argument after it.
+#
+# --select-1 takes an unambiguous match without drawing anything, so the
+# common case costs no keystroke; --exit-0 leaves the line alone rather
+# than opening an empty picker; --read0 because a filename may contain a
+# newline, and NUL is the one byte a candidate cannot; --no-extended
+# because `!foo` at a shell prompt names a file, where fzf would read it
+# as "not foo".
+#
+# The choice goes in $_fuzzy_complete_choice, and two flags say why
+# there wasn't one -- cancelled for a dismissed picker, failed for a
+# broken one -- because each wants something different: leave the line
+# alone, let bash complete as it would have, or hand the candidates
+# back untouched. Globals rather than stdout, since reading stdout means
+# a command substitution and a flag set in a subshell never comes back.
+_fuzzy_complete_pick() {
+    local _query="$1"
+    shift
+    local _status
+    local _raw
+    # Command substitution strips *every* trailing newline, not just the
+    # one fzf added, so a candidate ending in a newline would come back
+    # as a value the generator never offered. The X sentinel gives the
+    # stripping something to bite that isn't the candidate, and carries
+    # fzf's status out past it. Not --print0: its NUL lands in the
+    # substitution and bash warns on every completion.
+    _raw="$(printf '%s\0' "$@" |
+        fzf --height=40% --reverse --select-1 --exit-0 --no-extended \
+            --read0 ${_fuzzy_complete_case_opt[@]+"${_fuzzy_complete_case_opt[@]}"} \
+            --query="$_query"; _st=$?; printf X; exit "$_st")"
+    _status=$?
+    _raw="${_raw%X}"
+    # And now the one newline that is fzf's own.
+    _fuzzy_complete_choice="${_raw%$'\n'}"
+    _fuzzy_complete_cancelled=
+    _fuzzy_complete_failed=
+    if test "$_status" -eq 0 || test "$_status" -eq 1; then
+        # Chose something, or the query matched nothing. Both are
+        # ordinary answers.
+        :
+    elif test "$_status" -eq 130; then
+        # fzf's documented status for a picker dismissed with ESC or
+        # Ctrl-C. Only this one: a crash is not someone declining, and
+        # reading every signal as a dismissal would hold the line
+        # silently on every Tab for the rest of the shell's life.
+        _fuzzy_complete_cancelled=yes
+        _fuzzy_complete_choice=
+    else
+        # 2, 126, 127, or a signal. Falling back quietly would hide a
+        # broken install behind completion that merely feels worse than
+        # it should. Once per shell, and the status only, since a query
+        # or a candidate could carry a path.
+        _fuzzy_complete_failed=yes
+        _fuzzy_complete_choice=
+        if test -z "$_fuzzy_complete_warned"; then
+            _fuzzy_complete_warned=yes
+            warn "fuzzy completion: fzf exited $_status, using bash's completion instead"
+        fi
+    fi
+    # Only a choice from a picker that finished. Whatever a dying fzf
+    # managed to write before the signal is not one: it went back as the
+    # completion while the warning said bash's was being used instead,
+    # so a truncated write ended up on the line as text no generator
+    # ever offered.
+    test -n "$_fuzzy_complete_choice"
+}
+
+# Leave the line exactly as it is, because the user dismissed the picker.
+#
+# An empty COMPREPLY alone does not do it: `-o default` and friends send
+# the word to readline's filename completion, where it could still be
+# replaced. Switching the fallbacks off for this one call is the only
+# thing that means "no completion here" rather than "over to you".
+#
+# Handing the word back as a match says the same and still holds the
+# line if compopt didn't take -- but only unquoted. A unique match
+# inside an open quote is readline's cue to close it, so the sentinel
+# finishes `Base/"My Pic`, where bash with two candidates leaves the
+# quote open. Quoted words get the empty COMPREPLY alone.
+_fuzzy_complete_keep_line() {
+    local _word="$1"
+    compopt +o default +o bashdefault +o dirnames +o plusdirs 2>/dev/null
+    # -o nospace so bash doesn't append the space it gives a unique
+    # match. +o filenames because the word carries the escapes the user
+    # typed and readline would quote them again -- `My\ Pic` back as a
+    # literal.
+    compopt -o nospace +o filenames 2>/dev/null
+    if fuzzy_complete_unquoted "${COMP_WORDS[COMP_CWORD]-}"; then
+        COMPREPLY=("$_word")
+    else
+        COMPREPLY=()
+    fi
+}
+
+# Filenames for the word being completed, as bare names in COMPREPLY.
+# Listed from inside the directory already typed so the fuzzy match runs
+# against the names rather than against the path, then joined back to
+# the prefix exactly as the user wrote it -- their `~/` has to stay a
+# `~/` rather than be quoted into a literal.
+# Only ever called for an unquoted word -- see the caller -- so a
+# backslash here is always an escape.
+_fuzzy_complete_files() {
+    local _cur="$1"
+    # A word bash expands rather than reads as a path: `$HOME` names a
+    # variable and `~root` a user, and bash completes both as such. A
+    # file literally called `$HOME` is a subsequence match for `$HME`,
+    # so without this the picker offers a filename where bash offers a
+    # variable -- text of a different kind entirely. Declining any `$`
+    # rather than only an unescaped one costs the completion of a file
+    # whose name really does contain one, which is the cheaper mistake.
+    case "$_cur" in
+    '~'*|*'$'*) return 0 ;;
+    esac
+    # `-o dirnames` asks for directory completion, not filename
+    # completion, so a regular file here would be a candidate bash would
+    # never have offered.
+    local _what=-f
+    test "${2-}" != dirs || _what=-d
+    local _prefix _base _dir _choice
+    _prefix="$(fuzzy_complete_dir "$_cur")"
+    _base="$(fuzzy_complete_base "$_cur")"
+    _base="$(fuzzy_complete_unescape "$_base")"
+    # The prefix decoded too, which is both the directory to list and
+    # the thing to hand back: COMPREPLY holds logical names, not the
+    # spelling they were typed with.
+    _prefix="$(fuzzy_complete_unescape "$_prefix")"
+    _dir="${_prefix:-.}"
+    local _names
+    local _list=()
+    # A half-typed path that doesn't exist yet is the normal case, not a
+    # failure: it leaves the list empty, which the caller already treats
+    # as "nothing to offer".
+    _names="$(cd -- "$_dir" 2>/dev/null && compgen "$_what" -- '')" || return 0
+    test -n "$_names" || return 0
+    # compgen can only report names one per line, so a filename with a
+    # newline in it still arrives split. The existence check below is
+    # what refuses those halves; the picker is simply told about each
+    # candidate separately rather than handed one string to re-split.
+    mapfile -t _list <<< "$_names"
+    # These go back under `-o filenames` below, so readline runs its
+    # FIGNORE filter over whichever one is picked.
+    fuzzy_complete_ignore_fignore "${_list[@]}"
+    if ! _fuzzy_complete_pick "$_base" "${_fuzzy_complete_kept[@]}"; then
+        test -z "$_fuzzy_complete_cancelled" ||
+            _fuzzy_complete_keep_line "$_cur"
+        return 0
+    fi
+    _choice="$_fuzzy_complete_choice"
+    # Only a name that came back whole is usable: the list is
+    # newline-delimited, so a filename containing one arrives as two
+    # candidates and neither is a real path.
+    test -e "${_dir%/}/$_choice" || test -L "${_dir%/}/$_choice" || return 0
+    # A name `printf %q` can only render as ANSI-C quoting is refused
+    # rather than offered: $'My\tPictures' is a form nothing here reads
+    # back. The result is thrown away -- only the verdict is wanted,
+    # since readline does the quoting below.
+    fuzzy_complete_quote "$_choice" >/dev/null || return 0
+
+    # Readline quotes the candidate and adds the trailing slash, not
+    # this: it is the only layer that knows the quoting context. Which
+    # is why the *decoded* prefix goes back rather than the one typed --
+    # `-o filenames` has readline quote the whole string, so handing
+    # over `My\ Pictures/` escapes it twice and names a directory with a
+    # backslash in it. One layer quotes, and it isn't this one.
+    #
+    # compopt's status goes unchecked: it is only valid inside a real
+    # completion, which is not where the tests drive this.
+    compopt -o filenames 2>/dev/null
+    COMPREPLY=("$_prefix$_choice")
+}
+
+# Run a completion again with the word under the cursor blanked, so it
+# generates its whole list instead of the prefix-filtered one, and the
+# caller can match the typed word against that.
+#
+# COMP_WORDS, COMP_LINE and COMP_POINT move together and are put back
+# afterwards, since an inconsistent set is worse than the filtered list
+# this is trying to get past. When the cursor is not at the end of the
+# word it cannot be located in the line at all, and they are left as
+# bash set them -- no rescue, but a true line rather than an invented
+# one.
+#
+# The cost: a completion that branches on the word answers the blanked
+# question rather than the asked one, so the caller filters the result
+# back to the kind of word being completed before matching.
+_fuzzy_complete_call_bare() {
+    local _orig="$1"
+    shift
+    # Only the typed prefix is replaced. Anything past the cursor is
+    # still on the line and still part of the word, so removing the
+    # whole of COMP_WORDS would hand the generator a line the user never
+    # had.
+    local _prefix="$2"
+    local _word="${COMP_WORDS[COMP_CWORD]}"
+    local _saved_line="$COMP_LINE"
+    local _saved_point="$COMP_POINT"
+    local _tail="${COMP_LINE:COMP_POINT}"
+
+    # $2 and COMP_WORDS are in different alphabets: bash applies quote
+    # removal to $2 and none to the array, so inside `cat "My Pic` the
+    # array keeps a quote $2 never had. Neither length nor pattern
+    # relates them -- $2 need not even occur in the word -- and earlier
+    # attempts here assumed one or the other and fabricated lines out of
+    # the mismatch.
+    #
+    # So the word is located in the raw line instead, the one place both
+    # are true. The text before the cursor ends with the word exactly
+    # when the cursor is at its end, and only then can the line be
+    # rebuilt around a shortened word.
+    local _before="${COMP_LINE:0:COMP_POINT}"
+    local _head=
+    local _shrink_line=
+    case "$_before" in
+    *"$_word")
+        _head="${_before%"$_word"}"
+        _shrink_line=yes
+        ;;
+    esac
+
+    # Shorter and shorter prefixes rather than straight to the empty
+    # word: the prefix is what tells a generator which kind of thing is
+    # being completed, and `--ver` still says "an option" where the
+    # empty word says nothing and invites an answer from a different
+    # domain. Capped, since each attempt runs the generator again --
+    # and reaching the cap gives up rather than jumping to the empty
+    # word, which would be the widest question asked at exactly the
+    # point where care was abandoned.
+    local _try="$_prefix"
+    local _raw="$_word"
+    local _attempts=0
+    while :; do
+        # Only through an unbroken run of alphanumerics. Removing
+        # punctuation changes what the word *is* rather than how much of
+        # it has been typed: bash-completion's ssh and rsync branch on
+        # `*:*`, so `host:x` shortened past the colon stops being a
+        # remote path. Stopping costs a rescue; crossing costs a wrong
+        # insertion.
+        case "$_try" in
+        *[[:alnum:]]) ;;
+        *) break ;;
+        esac
+        # A character off each, in its own alphabet. They can drift, but
+        # each stays a real prefix of what the user typed, which a
+        # string spliced from both would not.
+        _try="${_try%?}"
+        _raw="${_raw%?}"
+        if test -n "$_shrink_line"; then
+            COMP_WORDS[COMP_CWORD]="$_raw"
+            COMP_LINE="$_head$_raw$_tail"
+            COMP_POINT=$((${#_head} + ${#_raw}))
+        fi
+        # $2 is the word being completed by bash's calling convention,
+        # so it moves with the rest -- most completions read it in
+        # preference to COMP_WORDS, and bash-completion's own helpers
+        # read the array.
+        COMPREPLY=()
+        "$_orig" "$1" "$_try" "$3"
+        test "${#COMPREPLY[@]}" -eq 0 || break
+        test -n "$_try" || break
+        _attempts=$((_attempts + 1))
+        test "$_attempts" -lt "$_FUZZY_COMPLETE_MAX_RETRIES" || break
+    done
+
+    COMP_WORDS[COMP_CWORD]="$_word"
+    COMP_LINE="$_saved_line"
+    COMP_POINT="$_saved_point"
+}
+
+# Drop candidates of a different kind from the word being completed. An
+# option is only ever completed from options, and anything else only
+# from non-options.
+#
+# Only for the blanked retry, whose candidates answered a different
+# question than the one asked -- without this, a positional value that
+# happened to fuzzy-match could be inserted where an option was being
+# typed. The honest call needs no such filter.
+_fuzzy_complete_same_kind() {
+    local _cur="$1"
+    local _keep=()
+    local _one
+    for _one in ${COMPREPLY[@]+"${COMPREPLY[@]}"}; do
+        case "$_cur" in
+        -*) case "$_one" in -*) _keep+=("$_one") ;; esac ;;
+        *) case "$_one" in -*) ;; *) _keep+=("$_one") ;; esac ;;
+        esac
+    done
+    COMPREPLY=(${_keep[@]+"${_keep[@]}"})
+}
+
+# Put the live options back the way the honest call left them: `compopt`
+# with no name changes the completion currently being executed, so a
+# retry that turns `nospace` off leaves it off. Replaying works because
+# `compopt` prints every option with an explicit sign, so the reading
+# says what was off as well as on. The trailing command name is skipped
+# -- passing it would edit that command's stored compspec.
+_fuzzy_complete_restore_opts() {
+    local _saved="${1-}"
+    test -n "$_saved" || return 0
+    local _word _sign=
+    for _word in $_saved; do
+        case "$_word" in
+        -o|+o) _sign="$_word" ;;
+        *)
+            test -n "$_sign" || continue
+            compopt "$_sign" "$_word" 2>/dev/null
+            _sign=
+            ;;
+        esac
+    done
+}
+
+# The completion bash calls for every wrapped command, and -- via
+# `complete -D` -- for every command that had no compspec of its own.
+#
+# Bash has already split the line by the time this runs: $1 is the
+# command, COMP_WORDS holds the words and COMP_CWORD says which one the
+# cursor is in. Nothing here looks at COMP_LINE.
+_fuzzy_complete() {
+    local _cmd="$1"
+    # The word being completed is bash's $2: the text from the start of
+    # the word up to the cursor. COMP_WORDS holds the whole word, which
+    # is a different thing whenever Tab is pressed in the middle of one,
+    # and querying with a suffix the user hasn't typed yet would reject
+    # candidates that do match what they have.
+    local _cur="$2"
+    # Bash finds a compspec by the whole command word first and by the
+    # part after the last slash second, but calls the function with the
+    # word as typed. So `/usr/bin/git ck<TAB>` runs git's completion and
+    # arrives here as `/usr/bin/git`, a name no map has ever held. Same
+    # order of lookup here, or completing a command by path silently
+    # loses everything that command knows.
+    local _key="$_cmd"
+    if test -z "${_fuzzy_complete_fn[$_key]-}"; then
+        case "$_cmd" in
+        */*) _key="${_cmd##*/}" ;;
+        esac
+    fi
+    local _orig="${_fuzzy_complete_fn[$_key]-}"
+    local _spec="${_fuzzy_complete_spec[$_key]-}"
+    local _flags="${_fuzzy_complete_flags[$_key]-}"
+    # What the options say right now: the saved flags until the honest
+    # call has run and the live ones can be read.
+    local _live=
+    local _status=0
+    local _honest=()
+    local _honest_opts=
+
+    # `complete -r cmd` takes the command's compspec away, and it then
+    # arrives here through -D instead -- but the saved generator would
+    # still be found and called, so unregistering a completion would
+    # not take effect. Ours being gone from the command means the entry
+    # is stale.
+    if test -n "$_orig" && ! _fuzzy_complete_is_ours "$_key"; then
+        unset "_fuzzy_complete_fn[$_key]" "_fuzzy_complete_spec[$_key]" \
+            "_fuzzy_complete_flags[$_key]"
+        _orig=
+        _spec=
+        _flags=
+    fi
+
+    # No compspec of its own, so this arrived through -D and the -D that
+    # was there before us is what bash would have run. On a distro box
+    # that is bash-completion's lazy loader, and skipping it would mean
+    # git's completion never loads at all.
+    if test -z "$_orig"; then
+        _orig="$_fuzzy_complete_default_fn"
+        _spec="$_fuzzy_complete_default_spec"
+        _flags="$_fuzzy_complete_default_flags"
+    fi
+    _live="$_flags"
+
+    COMPREPLY=()
+    if test -n "$_orig"; then
+        "$_orig" "$@" || _status=$?
+        # 124 is a lazy loader saying it has just registered the real
+        # completion and wants to be asked again -- which is what bash
+        # itself does at this point. Wrap what it installed before the
+        # retry, or the retry would run it unwrapped and prefix-match.
+        if test "$_status" -eq 124; then
+            # Under whichever name the loader chose, which for a command
+            # invoked by path is the basename rather than the word typed.
+            if ! _fuzzy_complete_install "$_cmd"; then
+                case "$_cmd" in
+                */*) _fuzzy_complete_install "${_cmd##*/}" ;;
+                esac
+            fi
+            return 124
+        fi
+        # Nothing came back, and for most completions that is the prefix
+        # failing rather than the position being empty: almost all of
+        # them end in `compgen -W ... -- "$cur"` and hand back an
+        # already-filtered list, so there is nothing left to match on.
+        # Asking again with the word blanked gets the unfiltered list.
+        #
+        # The options are read as the honest call left them, before any
+        # retry can rewrite them -- what a retry does to them for a
+        # shortened word is still in force when readline inserts the
+        # result, and the answer that matters is about the typed word.
+        _honest_opts="$(compopt 2>/dev/null)" || _honest_opts=
+        # And what the candidates *are*, which the saved spec often
+        # cannot say: bash-completion's helpers set `-o filenames` from
+        # inside the function, so a spec printed as `complete -o nospace
+        # -F _comp_cmd_cd cd` still produces filenames.
+        test -z "$_honest_opts" || _live="$_honest_opts"
+
+        # What bash would have offered without any of this, kept aside
+        # before the retry can replace it, so a picker that cannot run
+        # has something honest to fall back to.
+        _honest=(${COMPREPLY[@]+"${COMPREPLY[@]}"})
+
+        if test "${#COMPREPLY[@]}" -eq 0 && test -n "$_cur"; then
+            _fuzzy_complete_call_bare "$_orig" "$@"
+            _fuzzy_complete_same_kind "$_cur"
+            _fuzzy_complete_restore_opts "$_honest_opts"
+        fi
+    fi
+
+    # Bash merges matching directories in after this returns, so the one
+    # candidate the picker settled on is only one of several again by
+    # the time readline sees them -- and choosing it then inserts
+    # nothing. Bash's own merge is the whole answer here, so the honest
+    # candidates go back and it makes it.
+    if fuzzy_complete_has_plusdirs "$_live"; then
+        COMPREPLY=(${_honest[@]+"${_honest[@]}"})
+        return 0
+    fi
+
+    if test "${#COMPREPLY[@]}" -gt 0; then
+        # The command's own candidates go back exactly as it produced
+        # them; it escaped them the way it wanted them inserted.
+        #
+        # But the query must be in the same alphabet as what it is
+        # matched against. Filename candidates are unescaped, since
+        # readline quotes them, while the word off the line still
+        # carries the escapes the user typed -- so `My\ P` matched
+        # against `My Pictures` would reject it, losing a completion
+        # bash makes today.
+        #
+        # Decoding fixes that for an unquoted word. Inside quotes it
+        # cannot: the same $2 arrives for three different meanings, and
+        # `"Slash\\D` reaches us with both backslashes against a
+        # candidate holding one. Matching those two alphabets rejects
+        # the candidate and clears a completion bash already made, so
+        # the picker stands aside and readline matches as it always did.
+        local _query="$_cur"
+        if fuzzy_complete_wants_filenames "$_live"; then
+            if ! fuzzy_complete_unquoted "${COMP_WORDS[COMP_CWORD]-}"; then
+                COMPREPLY=(${_honest[@]+"${_honest[@]}"})
+                return 0
+            fi
+            _query="$(fuzzy_complete_unescape "$_cur")"
+        fi
+        # Only where readline will run FIGNORE over the result itself.
+        # Anywhere else these are not filenames, and a suffix match on
+        # them would hide candidates bash offers today.
+        if fuzzy_complete_filters_fignore "$_live"; then
+            fuzzy_complete_ignore_fignore "${COMPREPLY[@]}"
+        else
+            _fuzzy_complete_kept=("${COMPREPLY[@]}")
+        fi
+        if _fuzzy_complete_pick "$_query" "${_fuzzy_complete_kept[@]}"; then
+            COMPREPLY=("$_fuzzy_complete_choice")
+        elif test -n "$_fuzzy_complete_cancelled"; then
+            _fuzzy_complete_keep_line "$_cur"
+        else
+            # Nothing matched, or the picker could not run. Either way
+            # the honest call's candidates are what bash would have
+            # offered, and it inserts them without prefix-filtering: a
+            # generator may deliberately answer with something the typed
+            # word does not contain, and `COMPREPLY=(replacement)` for
+            # the word `x` completes to `replacement` unwrapped. Nothing
+            # here matches that, so clearing took the completion away.
+            #
+            # Empty when they came only from a shortened retry, which is
+            # the right answer too -- bash never offered those for this
+            # word, so there is nothing to preserve.
+            COMPREPLY=(${_honest[@]+"${_honest[@]}"})
+        fi
+        return 0
+    fi
+
+    # The command generated nothing. Filenames are the answer only if
+    # the spec asked for a fallback that names one -- an option-only
+    # completion with nothing left to offer means "there is nothing
+    # valid here", and `-o bashdefault` asks for something else again. A
+    # command with no compspec at all reaches us through -D, where
+    # filenames are exactly what bash would have done.
+    #
+    # Asked of the *live* options rather than the saved flags, since a
+    # generator can move between the two: `compopt +o dirnames
+    # -o bashdefault` leaves a stored `-o dirnames` spec asking for
+    # nothing that names a file, and reading the saved flags offered
+    # regular files where bash offers none. The reading was taken while
+    # it still described the word the user typed, so a shortened retry
+    # cannot have moved it, and it falls back to the saved flags when
+    # `compopt` had nothing to say.
+    if test -z "$_spec" || fuzzy_complete_wants_files "$_live"; then
+        # Unquoted words only. Inside quotes a backslash means three
+        # different things depending on which quote it is, while $2
+        # arrives identical in all three. A quote that isn't first is
+        # worse: bash hands over only the part after it, so
+        # `Base/'Slash\Dir/mp` comes as `Slash\Dir/mp` with `Base/`
+        # gone, and a name found relative to the wrong directory would
+        # be spliced back into the path actually typed.
+        #
+        # Telling those apart means finding the quote in the line and
+        # working out what context it opens -- reading the command line,
+        # which is what sank the widget this replaced. This is where the
+        # fuzzy fallback stops.
+        if ! fuzzy_complete_unquoted "${COMP_WORDS[COMP_CWORD]-}"; then
+            return 0
+        fi
+        if fuzzy_complete_dirs_only "$_live"; then
+            _fuzzy_complete_files "$_cur" dirs
+        else
+            _fuzzy_complete_files "$_cur" files
+        fi
+    fi
+    # Whatever happens, an empty COMPREPLY leaves bash to fall back the
+    # way the compspec already asked it to. This layer only ever adds a
+    # match readline could not have found; it never takes one away.
+    return 0
+}
+
+# Put our function in place of a command's own, keeping its options and
+# remembering what it was. Returns non-zero only when there is nothing
+# to wrap, which is not a failure -- the command keeps whatever bash
+# gave it.
+# True when a command's compspec is still the wrapper this installed.
+#
+# Reads the -F value rather than looking for the name in the printed
+# spec, for the reason the option queries do the same: bash prints
+# `complete -P ' -F _fuzzy_complete ' -F other demo` for a prefix that
+# happens to contain the text, and claiming that one would restore an
+# obsolete spec over someone else's newer completion on the way out.
+# Arguments are stepped over rather than examined, so a `-P` whose value
+# is `-F` cannot be read as the flag.
+#
+# A spec bash could not print back is not ours, which is the safe answer
+# both ways round: it leaves the command alone rather than replacing or
+# restoring anything.
+fuzzy_complete_is_ours() {
+    local _args=()
+    eval "_args=(${1#complete })" 2>/dev/null || return 1
+    local _i
+    for ((_i = 0; _i < ${#_args[@]}; _i++)); do
+        case "${_args[_i]}" in
+        -F) test "${_args[_i + 1]-}" = _fuzzy_complete; return ;;
+        -o|-A|-G|-W|-C|-X|-P|-S) _i=$((_i + 1)) ;;
+        esac
+    done
+    return 1
+}
+
+_fuzzy_complete_is_ours() {
+    local _spec
+    # No compspec at all is not ours either -- `complete -r` took it.
+    _spec="$(complete -p "$1" 2>/dev/null)" || return 1
+    fuzzy_complete_is_ours "$_spec"
+}
+
+# Split a compspec into the function it generates with, in
+# $_fuzzy_complete_fnname, and everything else in $_fuzzy_complete_opts,
+# so the wrapper goes in with the same options rather than a guess at
+# them. `cmd` as the second argument says the spec ends in a command
+# name, which -D, -E and -I specs do not.
+#
+# Bash prints a compspec with its own quoting, so re-splitting it this
+# way keeps `-W 'a b'` in one piece, where pattern-matching the raw
+# string couldn't tell a quoted argument from a real option.
+_fuzzy_complete_parse() {
+    local _spec="$1"
+    local _args=()
+    eval "_args=(${_spec#complete })" || return 1
+
+    local _n="${#_args[@]}"
+    test "${2-}" != cmd || _n=$((_n - 1))
+    _fuzzy_complete_fnname=
+    _fuzzy_complete_opts=()
+    # The flags alone, argument text left out, for the option queries.
+    # Only `-o` keeps its value, since which option it names is the
+    # whole question there; keeping the others is how a `-P` prefix
+    # reading ` -o default ` came to be read as a flag.
+    _fuzzy_complete_flagstr=
+    local _i
+    for ((_i = 0; _i < _n; _i++)); do
+        case "${_args[_i]}" in
+        -F)
+            _fuzzy_complete_fnname="${_args[_i + 1]}"
+            _i=$((_i + 1))
+            ;;
+        -o)
+            _fuzzy_complete_opts+=("${_args[_i]}" "${_args[_i + 1]}")
+            _fuzzy_complete_flagstr="$_fuzzy_complete_flagstr -o ${_args[_i + 1]}"
+            _i=$((_i + 1))
+            ;;
+        # Copied as a pair, and the argument stepped over rather than
+        # looked at: a spec may legitimately say `-P -F`, and reading
+        # that `-F` as a flag would take the prefix for the generator.
+        -C|-G|-W|-P|-S|-X|-A)
+            _fuzzy_complete_opts+=("${_args[_i]}" "${_args[_i + 1]}")
+            _fuzzy_complete_flagstr="$_fuzzy_complete_flagstr ${_args[_i]}"
+            _i=$((_i + 1))
+            ;;
+        # The position flags are re-added by the caller, which knows
+        # which position it is installing into.
+        -D|-E|-I) ;;
+        *)
+            _fuzzy_complete_opts+=("${_args[_i]}")
+            _fuzzy_complete_flagstr="$_fuzzy_complete_flagstr ${_args[_i]}"
+            ;;
+        esac
+    done
+}
+
+_fuzzy_complete_install() {
+    local _cmd="$1"
+    local _spec
+    # Not every command has a compspec; those reach us through -D.
+    _spec="$(complete -p "$_cmd" 2>/dev/null)" || return 1
+    # Ours already: wrapping again would make it call itself.
+    ! fuzzy_complete_is_ours "$_spec" || return 0
+
+    _fuzzy_complete_parse "$_spec" cmd || return 1
+
+    # Only a function compspec is wrapped. A -W word list or a -C
+    # program is left as bash had it: prefix-matched, but never broken
+    # by us. Running those generators ourselves would mean reproducing
+    # them, which is the guessing this design exists to avoid.
+    test -n "$_fuzzy_complete_fnname" || return 1
+
+    # Anything the spec does to the candidates besides run the function
+    # means this can't be the layer that picks.
+    fuzzy_complete_only_function || return 1
+
+    _fuzzy_complete_fn[$_cmd]="$_fuzzy_complete_fnname"
+    _fuzzy_complete_spec[$_cmd]="$_spec"
+    _fuzzy_complete_flags[$_cmd]="$_fuzzy_complete_flagstr"
+    complete ${_fuzzy_complete_opts[@]+"${_fuzzy_complete_opts[@]}"} \
+        -F _fuzzy_complete "$_cmd"
+}
+
+# Wrap everything that has a compspec now, and take -D so commands that
+# don't -- or that a lazy loader hasn't reached yet -- come here too.
+_fuzzy_complete_install_all() {
+    local _line _cmd
+    local _parts=()
+    while IFS= read -r _line; do
+        # The command is the last word, but `complete -p` prints
+        # reusable shell input, so a name needing quotes comes back
+        # quoted -- `'['` for `[`. Slicing the text would keep the
+        # quotes and look up a command that doesn't exist.
+        eval "_parts=(${_line#complete })" || continue
+        test "${#_parts[@]}" -gt 0 || continue
+        _cmd="${_parts[${#_parts[@]} - 1]}"
+        test -n "$_cmd" || continue
+        # These name no command, so the last word is the flag itself. -D
+        # is taken below once the one already there has been saved; -E
+        # and -I are left alone.
+        case "$_cmd" in
+        -D|-E|-I) continue ;;
+        esac
+        _fuzzy_complete_install "$_cmd" || continue
+    done < <(complete -p 2>/dev/null)
+
+    # Take -D, but keep whatever held it first: on a distro box that is
+    # bash-completion's lazy loader, and replacing it would stop every
+    # completion it loads on demand -- git's included -- from loading.
+    local _default
+    if _default="$(complete -p -D 2>/dev/null)"; then
+        ! fuzzy_complete_is_ours "$_default" || return 0
+        # A -D without a function is a generator this doesn't reproduce,
+        # the same as a -W or -C on a command. Left alone -- a decision,
+        # not a failure, so it returns success rather than having .shrc
+        # warn on every shell start about a supported case.
+        _fuzzy_complete_parse "$_default" || return 0
+        test -n "$_fuzzy_complete_fnname" || return 0
+        fuzzy_complete_only_function || return 0
+        _fuzzy_complete_default_fn="$_fuzzy_complete_fnname"
+        _fuzzy_complete_default_spec="$_default"
+        _fuzzy_complete_default_flags="$_fuzzy_complete_flagstr"
+        # Its own options, not ours: a -D that deliberately generates
+        # nothing must keep doing that, and its -o nospace, prefix,
+        # suffix and filter still describe what it produces.
+        complete ${_fuzzy_complete_opts[@]+"${_fuzzy_complete_opts[@]}"} \
+            -D -F _fuzzy_complete
+        return 0
+    fi
+    # Nothing held -D, so a command with no compspec would have got
+    # bash's own completion: filenames, which is what these options ask
+    # for, now fuzzy-matched.
+    #
+    # Anything saved from an earlier source is stale, with no live spec
+    # to overwrite it: `complete -r -D` has been run since, so keeping
+    # it would have every unknown command completing from a removed
+    # generator, and the uninstall restoring a spec deliberately taken
+    # away.
+    _fuzzy_complete_default_fn=
+    _fuzzy_complete_default_spec=
+    _fuzzy_complete_default_flags=
+    complete -D -F _fuzzy_complete -o default -o bashdefault
+}
+
+# Put every wrapped compspec back the way it was found. Sourcing again
+# with WANT_FUZZY_COMPLETE=0 has to turn the feature off in the shell
+# already running -- an opt-out that needs a fresh shell is no use to
+# someone who has just hit a completion they want out of.
+_fuzzy_complete_uninstall_all() {
+    local _cmd
+    # The count rather than a `+` guard on `${!map[@]}`: written that
+    # way the `!` reads as indirect expansion of the values instead of
+    # as the keys, and errors on them.
+    if test "${#_fuzzy_complete_spec[@]}" -gt 0; then
+        for _cmd in "${!_fuzzy_complete_spec[@]}"; do
+            # Only what is still ours: `complete -r` or a later
+            # `complete -F` on the same command means the saved spec is
+            # obsolete, and restoring it would undo that.
+            if _fuzzy_complete_is_ours "$_cmd"; then
+                # The saved string is bash's own printing of the spec,
+                # which is the command that reinstates it.
+                eval "${_fuzzy_complete_spec[$_cmd]}" ||
+                    warn "fuzzy completion: could not restore a completion while disabling"
+            fi
+            unset "_fuzzy_complete_fn[$_cmd]" \
+                "_fuzzy_complete_spec[$_cmd]" "_fuzzy_complete_flags[$_cmd]"
+        done
+    fi
+
+    # Only if -D is still ours: another tool may have taken it since,
+    # and restoring the saved one would overwrite a default that is now
+    # someone else's.
+    local _default
+    if _default="$(complete -p -D 2>/dev/null)" &&
+            fuzzy_complete_is_ours "$_default"; then
+        if test -n "$_fuzzy_complete_default_spec"; then
+            eval "$_fuzzy_complete_default_spec" ||
+                warn "fuzzy completion: could not restore the default completion while disabling"
+        else
+            # Nothing held -D before us, so ours is the only one there
+            # is and it goes rather than being replaced.
+            complete -r -D 2>/dev/null ||
+                warn "fuzzy completion: could not remove the default completion while disabling"
+        fi
+    fi
+    _fuzzy_complete_default_fn=
+    _fuzzy_complete_default_spec=
+    _fuzzy_complete_default_flags=
+}
+
+# Only where fzf is: a completion that cannot run its picker would leave
+# every wrapped command with no candidates at all, far worse than the
+# prefix matching it replaced. .shrc sources this last, after
+# bash-completion, carapace and fzf's own integration, so what gets
+# wrapped is the compspec the user would actually have had. The version
+# was established at the top of the file.
+if test "${WANT_FUZZY_COMPLETE:-1}" != 0 && have_command fzf; then
+    _fuzzy_complete_install_all
+else
+    # Turned off, or fzf has gone away under a running shell. Either way
+    # anything already wrapped has to be handed back.
+    _fuzzy_complete_uninstall_all
+fi
