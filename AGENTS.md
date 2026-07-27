@@ -35,6 +35,7 @@
 ## Git
 
 - Use `git worktree` when it is available. Give each branch its own worktree instead of switching branches in place, so work in progress on one branch is not disturbed by work on another.
+- One commit per logical change. Rewrite unmerged commits freely — amend, `git commit --fixup` + autosquash, squash, reorder, split — so each commit that lands is one coherent change. Fold fix-ups and review responses into the commit they belong to; `wip` / `fix typo` / `address review` churn doesn't survive into `main`.
 
 ## Error handling
 
@@ -46,6 +47,7 @@
 
 ## Pull requests
 
+- On every push, update the PR title and body so they describe the full, latest state of the branch — re-read the diff against `origin/main` and patch whatever drifted — and post the PR link in the chat reply for that push, not only at the end of the conversation.
 - "Drive to merge" is shorthand for the whole loop: open the PR, send it for Codex review, address every review comment — fix it if you agree, reply on the thread saying why if you don't — and merge once CI is green and Codex has left its thumbs up.
 - Codex is the automated reviewer on this repo — not Copilot. Its reviews are triggered automatically; you don't request them. Address its comments without being asked, folding each fix into the commit it belongs to rather than tacking on an "address review" commit.
 - Never leave a review comment thread silently dismissed. Either reply on the thread or resolve it. When you think a comment is a false positive, say why on the thread (one or two sentences). Acknowledgement noise is fine and preferred over silence. `resolve_review_thread` works — pass the `PRRT_*` thread node ID from `pull_request_read` / `get_review_comments` (`review_threads[].id`); a comment's `PRRC_*` ID fails. Push the fix first, then reply citing the new sha, then resolve.
