@@ -55,6 +55,11 @@
 # Pull requests and reviews
 
 - Open PRs ready for review (not draft) unless I say otherwise.
+- On every push, update the PR title and body so they describe the full,
+  latest state of the branch — not the scope it had when it was opened.
+  Re-read the diff against `origin/main` and patch whatever drifted, then
+  post the PR link in the chat reply for that push, not only at the end of
+  the conversation.
 - End every reply with the open-PR link (or `.../compare/main...<branch>`
   until a PR exists). Never link to a closed or merged PR.
 - When a feature has multiple open PRs in a stack, list **every** open PR
