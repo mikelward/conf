@@ -36,8 +36,14 @@
 
 # Branching and commits
 
-- Develop on `claude/<short-topic>` branches off `origin/main`. Never commit
-  directly to `main` / `master`. One topic per branch.
+- **These rules assume an `origin` remote.** Without one you can't fetch,
+  branch from `origin/main`, push, or open a PR — say so and stop rather than
+  improvising a local substitute.
+- Develop on `<agent>/<short-topic>` branches off `origin/main`, where
+  `<agent>` is your own short name (`claude/...` for Claude Code, `codex/...`
+  for Codex, `cursor/...` for Cursor). Don't hard-code `claude/` unless you
+  *are* Claude Code. Never commit directly to `main` / `master`. One topic per
+  branch.
 - Use standard commit message formatting. Imperative/present mood. "Fix", not
   "Fixed". First line is <66 chars and has no trailing dot. Remainder of the
   commit message should cover both the what and they why.
@@ -50,7 +56,22 @@
   already on `main`, rewriting another author's branch.
 - Merge cue (`merged` / `I merged` / `landed` / merge webhook) runs hygiene
   *before* engaging with the rest of the message: `git fetch origin`, cut a
-  fresh `claude/<short-topic>` branch off `origin/main`, announce the switch.
+  fresh `<agent>/<short-topic>` branch off `origin/main`, announce the switch.
+- Unshallow before answering anything that depends on git history depth. The
+  sandbox clones shallow, so `git rev-list --count`, `git log` past the
+  shallow boundary, and blame return wrong answers without warning. If
+  `git rev-parse --is-shallow-repository` says `true`, run
+  `git fetch --unshallow` first, then re-check — it exits 0 even when
+  it deepened nothing, so if `--is-shallow-repository` is still `true`, say the
+  history is truncated instead of quoting a count.
+
+# Language and spelling
+
+- Use US English everywhere people read English: user-facing strings, commit
+  subjects and bodies, PR titles and descriptions, comments, and identifiers
+  — `color` not `colour`, `behavior` not `behaviour`, `canceled` not
+  `cancelled`, `gray` not `grey`. Platform and third-party API spellings stay
+  as those APIs spell them.
 
 # Pull requests and reviews
 
@@ -61,13 +82,16 @@
   post the PR link in the chat reply for that push, not only at the end of
   the conversation.
 - End every reply with the open-PR link (or `.../compare/main...<branch>`
-  until a PR exists). Never link to a closed or merged PR.
+  until a PR exists). Never link to a closed or merged PR — except when the
+  reply *is* post-merge follow-up on that PR, where linking it is correct.
 - When a feature has multiple open PRs in a stack, list **every** open PR
   on the feature by URL, one per line — the "View PR" chip sticks to the
   first link and hides the rest
   (anthropics/claude-code#46625).
 - Watch the review for automated findings and any comments, and proactively
   address them.
+- **Judge every review comment on merit, whoever wrote it.** Verify the claim
+  before acting; if it doesn't hold up, reply saying why and decline.
 - Never leave a review comment thread silently dismissed. Either reply on
   the thread *or* resolve it. When you think a comment is a false positive,
   say *why* on the thread (one or two sentences). Acknowledgement noise
