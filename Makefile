@@ -111,6 +111,7 @@ test-all: \
 	test-vcs \
 	test-fish \
 	test-nu \
+	test-mesh \
 	test-lint \
 	test-env \
 	test-gitconfig \
@@ -206,6 +207,21 @@ $(CACHE)/test-nu.stamp: config/nushell/config.nu config/nushell/config_test.nu |
 		echo "SKIP: test-nu (nushell not installed)"; \
 	fi
 test-nu: $(CACHE)/test-nu.stamp
+
+# mesh_test.sh is a bash driver that tests config/mesh/env.mesh and
+# config/mesh/rc.mesh through `mesh -c`; mesh itself isn't a hard requirement.
+# Stamp only touched when mesh is present, so installing mesh later re-runs
+# the suite. There is no separate syntax-check step: mesh parses a file as one
+# unit and refuses to run any of it on a syntax error, so sourcing both files
+# in the first test is the parse check.
+$(CACHE)/test-mesh.stamp: config/mesh/env.mesh config/mesh/rc.mesh \
+                          shrc_test_lib.sh mesh_test.sh | $(CACHE)
+	@if command -v mesh >/dev/null 2>&1; then \
+		bash mesh_test.sh && touch $@; \
+	else \
+		echo "SKIP: test-mesh (mesh not installed)"; \
+	fi
+test-mesh: $(CACHE)/test-mesh.stamp
 
 # Static lint/parse checks for non-fish files; bundled into one target
 # since each check is sub-second. shellcheck, dash, and bash are all
@@ -312,5 +328,5 @@ test-sway: $(CACHE)/test-sway.stamp
 	vcs-build vcs-sync vcs-fetch \
 	test test-verbose test-full test-all \
 	test-dash test-bash test-zsh test-prompt test-vcs \
-	test-fish test-nu test-lint \
+	test-fish test-nu test-mesh test-lint \
 	test-env test-gitconfig test-makefile test-amethyst test-hypr test-sway

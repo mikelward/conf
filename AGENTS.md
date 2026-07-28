@@ -7,7 +7,8 @@
 - Use `if test` rather than `if [`.
 - In `shrc` and `shrc.*`, use existing helper functions such as `error`, `warn`, `have_command`, `is_function`, `gets`, and `puts`.
 - When parsing options, support long flags in both `--option argument` and `--option=argument` formats.
-- Preserve feature parity between `shrc` (bash/zsh), `config/fish/config.fish`, and `config/nushell/config.nu`. When adding or changing functionality in one shell config, apply the equivalent change to the others (bash, zsh, fish, and nushell).
+- Preserve feature parity between `shrc` (bash/zsh), `config/fish/config.fish`, `config/nushell/config.nu`, and the mesh pair `config/mesh/env.mesh` + `config/mesh/rc.mesh`. When adding or changing functionality in one shell config, apply the equivalent change to the others (bash, zsh, fish, nushell, and mesh).
+- In the mesh config, use kebab-case names (`have-command`, `tilde-pwd`) to match mesh's own vocabulary, and put anything a non-interactive `mesh script.mesh` needs in `env.mesh` rather than `rc.mesh`. Keep everything above `rc.mesh`'s interactive section side-effect free so `mesh -c 'source .../rc.mesh'` stays testable.
 - Session-manager startup lives behind `want_tmux`/`want_shpool`, `session_backend`, and the `autosession`/`autotmux`/`autoshpool` wrappers. shpool is the default; tmux is the fallback when shpool is missing or `WANT_SHPOOL=0`. `SESSION_BACKEND=tmux` flips the preference (tmux preferred, shpool fallback). Keep this logic in parity across all three shells.
 
 ## Testing
