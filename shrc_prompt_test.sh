@@ -343,7 +343,7 @@ prompt_info() { :; }
 start_test "last_job_info with exit status 1"
 
 current_command="false"
-SECONDS=0
+_elapsed_override=0
 
 bash_last_error() { echo "status 1"; }
 result="$(last_job_info)"
@@ -355,7 +355,7 @@ start_test "last_job_info with no error"
 
 bash_last_error() { :; }
 current_command="true"
-SECONDS=0
+_elapsed_override=0
 result="$(last_job_info)"
 assert_equal "" "$result"
 
@@ -364,7 +364,7 @@ start_test "last_job_info with duration"
 
 bash_last_error() { :; }
 current_command="sleep"
-SECONDS=5
+_elapsed_override=5
 result="$(last_job_info)"
 assert_equal "took 5 seconds" "$result"
 
@@ -373,7 +373,7 @@ start_test "last_job_info with error and duration"
 
 bash_last_error() { echo "status 1"; }
 current_command="failing_command"
-SECONDS=65
+_elapsed_override=65
 result="$(last_job_info)"
 assert_equal "status 1 took 1 minutes 5 seconds" "$result"
 
@@ -390,16 +390,32 @@ start_test "last_job_info with hours"
 
 bash_last_error() { :; }
 current_command="long_command"
-SECONDS=3661
+_elapsed_override=3661
 result="$(last_job_info)"
 assert_equal "took 1 hours 1 minutes 1 seconds" "$result"
+
+###############
+# Regression: these tests used to set $SECONDS, which bash keeps ticking after
+# the assignment, so one landing near the end of a second reported a second
+# more by the time last_job_info ran. The elapsed time is now read through
+# $_elapsed_override, which nothing advances -- assert that it really is the
+# source, by disagreeing with a live $SECONDS.
+start_test "last_job_info reads the pinned elapsed time, not \$SECONDS"
+
+bash_last_error() { :; }
+current_command="long_command"
+SECONDS=99999
+_elapsed_override=5
+result="$(last_job_info)"
+assert_equal "took 5 seconds" "$result"
+SECONDS=0
 
 ###############
 start_test "last_job_info with interrupted (exit 130)"
 
 bash_last_error() { echo "interrupted"; }
 current_command="interrupted_cmd"
-SECONDS=0
+_elapsed_override=0
 result="$(last_job_info)"
 assert_equal "interrupted" "$result"
 
@@ -412,7 +428,7 @@ start_test "last_job_info suppresses sub-threshold durations"
 
 bash_last_error() { :; }
 current_command="quick_command"
-SECONDS=1
+_elapsed_override=1
 result="$(last_job_info)"
 assert_equal "" "$result"
 
@@ -824,7 +840,7 @@ if test "${VISUAL_TEST:-}" = true; then
     echo "--- last_job_info (error, should be red) ---"
     in_shpool() { false; }
     current_command="failing"
-    SECONDS=0
+    _elapsed_override=0
     bash_last_error() { echo "status 1"; }
     last_job_info
     echo ""
@@ -832,7 +848,7 @@ if test "${VISUAL_TEST:-}" = true; then
     echo "--- last_job_info (duration, should be yellow) ---"
     bash_last_error() { :; }
     current_command="slow"
-    SECONDS=65
+    _elapsed_override=65
     last_job_info
     echo ""
 
@@ -908,7 +924,7 @@ bold=''
 start_test "last_job_info error is red"
 in_shpool() { false; }
 current_command="failing"
-SECONDS=0
+_elapsed_override=0
 bash_last_error() { echo "status 1"; }
 result="$(last_job_info)"
 assert_contains $'\033[31m'"status 1"$'\033[0m' "$result"
@@ -916,7 +932,7 @@ assert_contains $'\033[31m'"status 1"$'\033[0m' "$result"
 start_test "last_job_info duration is yellow"
 bash_last_error() { :; }
 current_command="slow"
-SECONDS=5
+_elapsed_override=5
 result="$(last_job_info)"
 assert_contains $'\033[33m'"took 5 seconds"$'\033[0m' "$result"
 
