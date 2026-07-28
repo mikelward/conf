@@ -1588,6 +1588,13 @@ last_job_info() {
     # Must be the very first thing.
     local last_error="$(${shell}_last_error)"
 
+    # Read once, so the >0 test and the arithmetic below cannot disagree.
+    # $_elapsed_override exists for the tests: bash's $SECONDS keeps ticking
+    # after it is assigned, so a test that sets it and then calls this races
+    # the wall clock and reports one second more whenever the assignment lands
+    # near the end of a second.
+    local elapsed="${_elapsed_override:-$SECONDS}"
+
     test -z "$current_command" && return
 
     set_color 'normal'
@@ -1597,9 +1604,9 @@ last_job_info() {
         printed=true
     fi
     local duration=
-    if test "$SECONDS" -gt 0; then
+    if test "$elapsed" -gt 0; then
         local hours minutes seconds
-        seconds="$SECONDS"
+        seconds="$elapsed"
         hours=$(($seconds/3600))
         seconds=$(($seconds-$hours*3600))
         minutes=$(($seconds/60))
