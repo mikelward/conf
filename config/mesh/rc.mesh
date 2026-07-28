@@ -1,0 +1,1835 @@
+# Interactive configuration for mesh (https://github.com/mikelward/mesh).
+#
+# This is the interactive half of the shrc port; config/mesh/env.mesh is the
+# environment half and mesh always reads it first, so the helpers it defines
+# (warn, error, have-command, is-runnable, path, quiet, add-path) are in scope
+# here.
+#
+# Things that are intrinsically bash/zsh-specific -- readline and zle keymaps,
+# the DEBUG trap, `alias`, bracketed-paste escapes, per-package completion
+# scripts -- are mesh's own job and are not ported: mesh ships emacs line
+# editing, prompt hooks, and completions it works out for itself.
+#
+# Kept in parity with shrc (bash/zsh), config/fish/config.fish, and
+# config/nushell/config.nu.
+#
+# Mikel Ward <mikel@mikelward.com>
+
+###############
+# FAILSAFE
+# Same escape hatch as env.mesh, restated because rc.mesh has to stand on its
+# own: env.mesh returns before defining failsafe-wanted only when failsafe is
+# already on, but a shell started with --norc-style surgery, or a checkout
+# with only rc.mesh linked, must still bail cleanly.
+if $env:get(FAILSAFE, "0") == "1" or $env:get(LC_FAILSAFE, "0") == "1" or "$env.HOME/.failsafe":exists {
+  puts "failsafe mode" >&2
+  prompt "$ "
+  return
+}
+
+#################
+# BASIC HELPERS
+#
+# One rule holds across this file and env.mesh: **nothing here declares a flag
+# of its own, so anything taking a `...rest` is a `wrapper func`.** A plain
+# `func` scans every `--`-leading argument against its signature, which breaks
+# both kinds of rest parameter -- one holding a delegated command's options
+# (`setx curl --location URL`) and one holding data that merely looks like an
+# option (`bak --weird-name`, `error "--x is unset"`). The three helpers that
+# do take an option of their own -- retry, body, recent -- read it off the
+# front by hand, because a declared flag would be matched anywhere in the list.
+
+# ask the user whether to do something; true on yes or a bare Enter
+wrapper func confirm(...question) {
+  # Bound first: an argument-taking modifier cannot be written inside a string,
+  # so the join happens here and only the result is interpolated.
+  text = $question:join(" ")
+  print "$text? [Y/n] "
+  gets reply
+  match $reply {
+    Y | y | "" => { return true }
+    _          => { return false }
+  }
+}
+
+# return true if this session came in over ssh
+func connected-via-ssh() {
+  if $env:get(SSH_CONNECTION, "") != "" { return true }
+  return false
+}
+
+# return true if this session is on a remote machine
+func connected-remotely() { return connected-via-ssh() }
+
+# return true if this session is attached to shpool
+func in-shpool() {
+  if $env:get(SHPOOL_SESSION_NAME, "") != "" { return true }
+  return false
+}
+
+# return true if this session is inside tmux
+func inside-tmux() {
+  if $env:get(TMUX, "") != "" { return true }
+  return false
+}
+
+# return true if stdin is a terminal. Pulled out as a helper so tests can
+# replace it without rigging up a pty, the same reason shrc has stdin-is-tty.
+func stdin-is-tty() { return $sh.stdin:tty }
+
+# return true if the current user is root. Reads the $UID env.mesh already
+# computed rather than forking `id -u`: bash, zsh and fish read their own $UID
+# for free and this runs on every prompt, so a fork per prompt is one this
+# config has no reason to pay.
+func i-am-root() {
+  if $env:get(UID, "") == "0" { return true }
+  return false
+}
+
+# return true if an ssh key is loaded
+func is-ssh-valid() {
+  if quiet(ssh-add, -L) { return true }
+  return false
+}
+
+# print which things need re-authenticating, pre-colored, or nothing
+func auth-info() {
+  return "" if is-ssh-valid()
+  return style("SSH", fg: yellow)
+}
+
+# return true if anything needs authenticating
+func need-auth() {
+  if auth-info() != "" { return true }
+  return false
+}
+
+# hook for authenticating (to ssh-agent, etc.)
+func auth() { ssh-add }
+func a() { auth }
+
+# print the connecting ssh client's hostname (best effort), or nothing.
+# Tries, in order: LC_CLIENT_HOST (smuggled through by ssh-to, since servers
+# commonly AcceptEnv LC_*), reverse DNS of the client IP, then the raw IP.
+func ssh-client-host() {
+  return $env.LC_CLIENT_HOST if $env:get(LC_CLIENT_HOST, "") != ""
+  return "" unless connected-via-ssh()
+  ip = fields($env.SSH_CONNECTION):get(0, "")
+  return "" if $ip == ""
+  name = ""
+  # Each lookup goes through capture-or-empty because a *miss* is the ordinary
+  # outcome of both -- getent exits 2 for an address with no entry, dig exits 9
+  # when the resolver doesn't answer -- and a plain capture would leave the name
+  # unbound rather than empty, so the fallback below it would never be reached.
+  if have-command(getent) {
+    # `getent hosts` pads its columns, so the hostname is the second
+    # whitespace-separated field rather than the second literal-space one.
+    hosts = capture-or-empty(getent, hosts, $ip)
+    if $hosts != "" { name = fields($hosts):get(1, "") }
+  }
+  if $name == "" and have-command(dig) {
+    answer = capture-or-empty(dig, +short, -x, $ip)
+    if $answer != "" { name = $answer:split("\n")[0]:replaceend(".", "") }
+  }
+  return $ip if $name == ""
+  return $name:split(".")[0]
+}
+
+# print this machine's name, per ~/.workstation. Cached, empty result
+# included, because the file is read on every prompt otherwise.
+func workstation() {
+  if $env:get(WORKSTATION_CACHED, "") == "" {
+    export WORKSTATION_CACHED = 1
+    file = "$env.HOME/.workstation"
+    if $file:read {
+      export WORKSTATION = $(cat $file)
+    } else {
+      export WORKSTATION = ""
+    }
+  }
+  return $env:get(WORKSTATION, "")
+}
+
+# return true if this machine is my workstation
+func on-my-workstation() {
+  host = $env:get(HOSTNAME, "")
+  return false if $host == ""
+  return true if $host == workstation()
+  return false if $host ~ *laptop*
+  user = $env:get(USERNAME, "")
+  return false if $user == ""
+  return starts-with($host, "$user-")
+}
+
+# return true if this machine is my laptop
+func on-my-laptop() {
+  return true if "$env.HOME/.laptop":exists
+  return true if $env:get(HOSTNAME, "") ~ *laptop*
+  return false
+}
+
+# return true if this is a non-production machine I use to get work done
+func on-my-machine() {
+  return true if on-my-workstation()
+  return on-my-laptop()
+}
+
+func on-test-host() {
+  if $env:get(HOSTNAME, "") ~ *test* { return true }
+  return false
+}
+
+func on-dev-host() {
+  if $env:get(HOSTNAME, "") ~ *dev* { return true }
+  return false
+}
+
+# return true if this machine is a production machine
+func on-production-host() {
+  return false if on-my-machine()
+  return false if on-test-host()
+  return false if on-dev-host()
+  return true
+}
+
+# return true if it isn't already obvious which host I'm on
+func show-hostname-in-title() {
+  return false if inside-tmux()
+  return true
+}
+
+# log the running of a command to a file
+wrapper func log-history(...args) {
+  file = $env:get(HISTORY_FILE, "")
+  return if $file == ""
+  stamp = $(date "+%Y%m%d %H%M%S %z")
+  tty = $env:get(TTY, "")
+  line = $args:join(" ")
+  puts "$stamp $tty $line" >> $file
+}
+
+# run a command, or just print what would be run when SIMULATE is true.
+# A wrapper: the flags belong to the delegated command, so `run curl --location`
+# must reach curl rather than be scanned against this signature.
+wrapper func run(cmd, ...args) {
+  if $env:get(SIMULATE, "false") == "true" {
+    puts "Would run $cmd" ...$args
+  } else {
+    rest = $args:join(" ")
+    logger -p user.info "Running $cmd $rest"
+    $cmd ...$args
+  }
+}
+
+# hook to run the given command under a custom ssh-agent
+wrapper func with-agent(cmd, ...args) { $cmd ...$args }
+
+# print the definition of the given command or function
+func what(name) { type -a $name }
+
+# run a command under a trace of what it does. mesh has no `set -x`, so this
+# is the nearest equivalent: announce the command, then run it.
+wrapper func setx(cmd, ...args) {
+  rest = $args:join(" ")
+  puts "+ $cmd $rest" >&2
+  $cmd ...$args
+}
+
+###################
+# GENERAL FUNCTIONS
+# Useful things that could be commands if distributing them wasn't impractical.
+
+# print the age of a file in seconds, or nothing when it can't be read.
+# `stat` has already said why; without the guard its diagnostic would be
+# followed by an `unbound variable` for the capture and another for the
+# subtraction, three messages for one cause.
+func age(file) {
+  stamp = $(stat -c "%Y" $file)
+  return "" if $sh.status != 0
+  return $(date +%s):int - $stamp:int
+}
+
+# look up a hostname in DNS, printing both A and AAAA records
+func addr(host) { dig +noall +answer +search $host a $host aaaa | get-address-records }
+func ptr(ip) { dig +noall +answer -x $ip ptr | get-ptr-records }
+
+# read hostnames on stdin, printing each one with its addresses on one line.
+# `join` is a function here rather than a command, and a value call can't be
+# interpolated, so the flattening is bound first -- the addresses come back one
+# per line and shrc collapses them with `join " "`.
+func with-address-records() {
+  while gets hostname {
+    line = one-line($(addr $hostname))
+    puts "$hostname $line"
+  }
+}
+
+# read IP addresses on stdin, printing each one with its names
+func with-hostnames() {
+  while gets ip {
+    line = one-line($(ptr $ip))
+    puts "$ip $line"
+  }
+}
+
+# collapse captured multi-line output to a single space-separated line
+func one-line(text) {
+  parts = []
+  for part in $text:split("\n") {
+    if $part != "" { parts += [$part] }
+  }
+  return $parts:join(" ")
+}
+
+# read BIND-style DNS entries, print the A and AAAA records
+func get-address-records() { awk '$3 == "IN" && $4 ~ /^A/ { print $5 }' }
+
+# read BIND-style DNS entries, print the PTR records
+func get-ptr-records() { awk '$3 == "IN" && $4 == "PTR" { print $5 }' }
+
+# list this machine's IP addresses, as "<iface> <address>" lines
+func ips() {
+  # `ip -o` aligns its columns, so the line is tokenized on whitespace runs:
+  # a literal-space split leaves empties and the family never lands in [2].
+  for line in $(ip -o a sh up primary scope global):split("\n") {
+    parts = fields($line)
+    continue if $parts:len < 4
+    if $parts[2] ~ inet* { puts "$parts[1] $parts[3]" }
+  }
+}
+func addrs() { ips }
+
+# list this machine's MAC addresses, as "<iface> <MAC>" lines. Same sed program
+# as shrc:602 and config.fish:325 -- it holds the interface name from the `N:`
+# line until the matching `link/ether` line arrives -- with two changes forced
+# by mesh: it is split across -e expressions because a mesh string is
+# single-line, and every backslash is doubled because mesh processes escapes
+# inside single quotes as well as double ones, where sh and fish do not.
+func macs() {
+  ip -s l sh | sed -n \
+    -e '/^[0-9][0-9]*:/{s/^[0-9][0-9]*: \\([^:]*\\).*/\\1/;h;}' \
+    -e '/^    link\\/ether/{s/^    link\\/ether \\([^ ]*\\).*/ \\1/;H;x;s/\\n//;p;}'
+}
+
+# get this machine's public IP address as seen by Google
+func myip() { dig +short o-o.myaddr.l.google.com txt @ns1.google.com | tr -d '"' }
+
+# print the list of nameservers
+func names() {
+  sed -ne '/^nameserver/{s/^nameserver[[:space:]]*//;p}' /etc/resolv.conf
+  nmcli dev show 2> /dev/null | sed -ne '/^IP..DNS/{s/[^ ]*: *//;p}'
+}
+
+# rename each file to <file>.bak
+wrapper func bak(...files) {
+  for file in $files { mv -i $file "${file}.bak" }
+}
+
+# undo bak
+wrapper func unbak(...files) {
+  for file in $files {
+    if $file ~ *.bak {
+      target = $file:replaceend(".bak", "")
+      mv -i $file $target if $file:exists
+    } else {
+      mv -i "${file}.bak" $file if "${file}.bak":exists
+    }
+  }
+}
+
+# ring the terminal's bell
+func bell() { printf "\a" }
+
+# get the user's attention when a command finishes, but only where the bell is
+# an attention signal rather than a noise: shrc:1635 gates on xterm and its
+# variants, since that is what forwards it to the window manager as an urgency
+# hint. Anything else -- a linux console, a dumb TERM under a pipe -- would
+# just beep.
+func flash-terminal() {
+  term = $env:get(TERM, "")
+  return unless $term == xterm or starts-with($term, "xterm-")
+  bell
+}
+
+# print the first line(s) of input as-is and run a command on the rest,
+# e.g. `ps | body grep ps`. --lines makes the header more than one line.
+#
+# Same shape as retry and recent: the count is read off the front rather than
+# declared, so a flag belonging to the delegated command
+# (`ps | body grep --color=never ps`) reaches it instead of being scanned here.
+wrapper func body(...args) {
+  # A string, not an integer: the parsed forms below arrive as strings and
+  # `:int` refuses an integer, so the default has to be the same shape.
+  lines = "1"
+  rest = $args
+  # Text, for the same reason recent does it: `body -2 grep` hands this an
+  # integer rather than a string.
+  raw = $rest:get(0, "")
+  head = "$raw"
+  stripped = $head:stripstart("--lines=")
+  numeric = $head:stripstart("-")
+  if $stripped != $head {
+    lines = $stripped
+    rest = $rest:rest
+  } else if $rest:len > 1 and $head == "--lines" {
+    lines = $rest[1]
+    rest = $rest[2..]
+  } else if $numeric != $head and $numeric ~ re("^[0-9]+$") {
+    # shrc:662's `-<number>`, the form `netstat … | body -2 grep …` uses.
+    # Narrowed to digits: shrc matches any `-*` and would read `-x` as a count.
+    lines = $numeric
+    rest = $rest:rest
+  }
+  left = $lines:int
+  while $left > 0 {
+    # `gets` is a command, and a postfix guard takes a value expression, so
+    # the end-of-input break is spelled as the `else` branch rather than
+    # `break unless gets header`.
+    if gets header {
+      puts $header
+    } else {
+      break
+    }
+    left = $left - 1
+  }
+  return if $rest:len == 0
+  # Bound out of the list rather than spread: a bare `...$list` in command
+  # position runs nothing.
+  cmd = $rest[0]
+  $cmd ...$rest:rest
+}
+
+# make a directory and cd to it
+func mcd(dir) {
+  if $dir:d {
+    puts "$dir already exists"
+    return
+  }
+  # `&&`, matching shrc:818 and config.fish:530: a failed mkdir (read-only
+  # parent, full filesystem) must not be followed by a cd that reports a
+  # second, more confusing error for the same cause.
+  mkdir -p $dir && cd $dir
+}
+
+# make a temporary directory and cd to it
+func mtd() { cd $(mktemp -d) }
+
+# cd to the real directory the given file is in, resolving symlinks
+func realdir(file) { dirname $(readlink -f $file) }
+func cdfile(file) { cd $(realdir $file) }
+
+# search for a file in parent directories, returning the first one found.
+#
+# The miss is an empty string rather than shrc's exit status 1: this returns a
+# value rather than printing one, and a value function in command position
+# prints nothing and captures nothing, so `find_up x && …` has no mesh
+# spelling to carry that status to. An empty string is falsy, so the same
+# question -- `if find-up("marker") { … }` -- answers correctly. Same shape as
+# config.nu:613, and as rootdir/projectname/builddir here.
+func find-up(name) {
+  dir = $(pwd)
+  loop {
+    return "$dir/$name" if "$dir/$name":f
+    return "" if $dir == "/"
+    dir = $dir:dir
+  }
+}
+
+# print the name of a source file's corresponding test file
+func find-test-file(file) {
+  base = $file:base
+  dir = $file:dir
+  stem = $base:stem
+  ext = $base:replacestart($stem, "")
+  candidate = "$dir/${stem}_test$ext"
+  return $candidate if $candidate:exists
+  return ""
+}
+
+# join the arguments, placing the first between each of the rest
+wrapper func join(sep, ...words) { puts $words:join($sep) }
+
+# replace a file with a sorted version of itself. Staged beside the file and
+# moved into place only once `sort` succeeded -- the same reason applydiff
+# stages: a sort that dies partway (read error, no space) would otherwise have
+# its truncated output moved over the original.
+func isort(file) {
+  staged = "${file}.bak"
+  sort $file > $staged
+  produced = $sh.status
+  if $produced != 0 {
+    rm -f $staged
+    error "isort: sort failed; $file is unchanged"
+    return $produced
+  }
+  mv $staged $file
+}
+
+# delete the given line number from a file
+func delline(line, file) { sed -i -e "${line}d" $file }
+
+# remove the ssh known host on the given line
+func rmkey(line) { delline $line "$env.HOME/.ssh/known_hosts" }
+
+# print the block device the given mount point (or file) lives on
+func dev(file) {
+  # `df` pads its columns too, so the same whitespace tokenizing applies.
+  for line in $(df -P -k $file):split("\n") {
+    parts = fields($line)
+    continue if $parts:len == 0
+    if $parts:last ~ /^\// { puts $parts[0] }
+  }
+}
+
+# run a command on each line of stdin, e.g. `ls | each wc -l`
+wrapper func each(cmd, ...args) {
+  while gets line {
+    $cmd ...$args $line
+  }
+}
+
+# run a command on each null-delimited item from stdin, e.g.
+# `find . -print0 | each0 wc -l`
+#
+# Delegated to xargs rather than written as the loop `each` is: mesh's `gets`
+# reads a line and nothing else, and `"\0"` is not a valid escape, so there is
+# no way to read or split on the delimiter from here. The cost is that this one
+# runs programs only -- xargs cannot call a mesh function, where `each` can.
+#
+# `-r` matters: GNU xargs runs the command once even on empty input, where the
+# shrc and fish loops run it zero times. BSD and macOS xargs already behave
+# that way and accept -r as a no-op for GNU compatibility, so it is portable.
+wrapper func each0(cmd, ...args) { xargs -0 -r -n 1 $cmd ...$args }
+
+# see what changes a command would make to a file, e.g. `trydiff mdformat f`
+# A failing command leaves partial output behind, and showing that as a
+# proposed change is worse than showing nothing: the diff looks like a real
+# suggestion. So the preview is gated on the command succeeding, and the
+# command's own status is what the caller sees rather than the `rm`'s.
+#
+# The command runs as a plain statement rather than an `if` condition because
+# mesh clears $sh.status while evaluating a condition -- it reads 0 in both
+# branches -- so a status worth reporting (130 from a Ctrl-C, say) has to be
+# captured before any branch is taken.
+func trydiff(cmd, file) {
+  temp = "${file}.trydiff.$sh.pid"
+  $cmd $file > $temp
+  produced = $sh.status
+  if $produced != 0 {
+    rm -f $temp
+    error "trydiff: $cmd failed; nothing to compare"
+    return $produced
+  }
+  diff $file $temp
+  # `diff` exits 1 when the files differ, which is the whole point of a
+  # preview -- returning that would break `trydiff x f && applydiff x f` and
+  # make every useful run look failed. Only 2-and-up is a real failure
+  # (unreadable file, and so on) and is passed through. shrc masks this with
+  # `rm`'s status and config.nu with a `try`; both end up at 0 the same way.
+  status = $sh.status
+  rm -f $temp
+  return 0 if $status < 2
+  return $status
+}
+
+# apply the changes trydiff would have made. The output is staged beside the
+# file and only moved into place once the command succeeded -- a formatter that
+# rejects its input exits nonzero after writing nothing, and moving that over
+# the original would lose the file.
+func applydiff(cmd, file) {
+  staged = "${file}.new"
+  $cmd $file > $staged
+  produced = $sh.status
+  if $produced != 0 {
+    rm -f $staged
+    error "applydiff: $cmd failed; $file is unchanged"
+    return $produced
+  }
+  mv $staged $file
+}
+
+# show the most recently changed files; the count defaults to 10. shrc:950
+# spells it as a leading -<number> and forwards the rest to ls; the count is
+# read off the front here for the same reason retry reads --sleep that way --
+# a declared flag is scanned against the whole argument list, so
+# `recent --color=never` would be rejected for a flag that belongs to ls.
+wrapper func recent(...args) {
+  count = 10
+  rest = $args
+  # Interpolated to text before anything looks at it: a bare `-5` argument
+  # arrives as the *integer* -5, not the string the user typed, and the string
+  # modifiers below refuse an integer.
+  raw = $rest:get(0, "")
+  head = "$raw"
+  stripped = $head:stripstart("--count=")
+  numeric = $head:stripstart("-")
+  if $stripped != $head {
+    count = $stripped
+    rest = $rest:rest
+  } else if $rest:len > 1 and $head == "--count" {
+    count = $rest[1]
+    rest = $rest[2..]
+  } else if $numeric != $head and $numeric ~ re("^[0-9]+$") {
+    # shrc:954's `-<number>`, the form this is documented with. Kept alongside
+    # the long spellings: without it `-5` reaches ls, which rejects it.
+    count = $numeric
+    rest = $rest:rest
+  }
+  ls -t -1 ...$rest | head -n $count
+}
+alias latest = recent --count=1
+
+# list non-empty files, prefixed by timestamp in case sorting is needed
+wrapper func nonempty(...args) { find . -size +0 ...$args -printf '%T@ %f\n' }
+
+# keep trying a command until it works, e.g. `retry --sleep=1 ping -c 1 host`
+#
+# `--sleep` is read off the front by hand rather than declared, because a
+# declared flag is scanned against the *whole* argument list -- so
+# `retry curl --fail URL` would be rejected for curl's `--fail`. shrc:965 reads
+# it as a leading option only and forwards the rest verbatim; this is that same
+# rule, and being a wrapper is what lets the forwarded flags through.
+wrapper func retry(...args) {
+  seconds = 10
+  rest = $args
+  if $rest:len > 1 and $rest[0] == "--sleep" {
+    seconds = $rest[1]
+    rest = $rest[2..]
+  } else if $rest:len > 0 and starts-with($rest:get(0, ""), "--sleep=") {
+    seconds = $rest[0]:stripstart("--sleep=")
+    rest = $rest:rest
+  }
+  return if $rest:len == 0
+  # The command word is bound out of the list rather than spread with it: a
+  # bare `...$list` in command position runs nothing and evaluates truthy, so
+  # `if ...$rest` would loop forever without ever calling anything.
+  head = $rest[0]
+  tail = $rest:rest
+  loop {
+    if $head ...$tail {
+      bell
+      break
+    }
+    sleep $seconds
+  }
+}
+
+# run a command with the first argument moved to the end, e.g.
+# `first-arg-last grep ~/.history -a foo` runs `grep -a foo ~/.history`
+wrapper func first-arg-last(cmd, arg, ...rest) { $cmd ...$rest $arg }
+
+# convert `command target [options] arg...` to `command [options] target arg...`,
+# so a function can imply the command and take the subcommand or object first.
+# Options must start with `-` and carry their value attached (-ffile,
+# --file=file); `--file file` is not supported, matching shrc.
+wrapper func shift-options(cmd, target, ...args) {
+  options = []
+  rest = []
+  scanning = true
+  for arg in $args {
+    # A bare `-5` arrives as the integer -5, and `~` refuses a non-string left
+    # operand, so classify a copy as text and forward the argument itself.
+    text = "$arg"
+    if $scanning and $text != "-" and $text != "--" and $text ~ -* {
+      options += [$arg]
+    } else {
+      scanning = false
+      rest += [$arg]
+    }
+  }
+  $cmd ...$options $target ...$rest
+}
+
+# convert a time from one timezone to another. mesh has no `VAR=value cmd`
+# per-command environment prefix, so each leg runs in a `fork` whose $env.TZ
+# is its own.
+wrapper func tz2tz(from, to, ...spec) {
+  when = $spec:join(" ")
+  epoch = $(fork { $env.TZ = $from
+    date -d $when +%s })
+  # An unparsable spec or timezone has already been reported by `date`; running
+  # the second leg on an empty epoch would bury that under a second diagnostic
+  # for the same cause. shrc:1039 and config.fish:684 both `|| return 1` here.
+  # The guard also has to come before `$epoch` is read at all: a capture whose
+  # command failed leaves the name unbound, not empty.
+  return 1 if $sh.status != 0
+  fork { $env.TZ = $to
+    date -d "@$epoch" }
+}
+
+# convert a Unix timestamp in microseconds to a human-readable datetime
+wrapper func udate(ts, ...args) { date -d "@$(($ts:int / 1000000))" ...$args }
+
+# convert from UTC to local time
+func utc2(spec) { date -d "TZ=\"UTC\" $spec" }
+
+# list processes in the given process group
+alias pgroup = pgrep -g
+
+# ps with useful default options
+wrapper func psc(...args) {
+  ps -w -o user,pid,ppid,pgid,start_time,pcpu,rss,comm=EXE ...$args -o args=ARGS
+}
+
+# pgrep with default ps options: psgrep [<ps options>] <pattern>
+wrapper func psgrep(...args) {
+  return if $args:len == 0
+  pattern = $args:last
+  ps-args = $args:init
+  # `pgrep` exits 1 when nothing matched, which is exactly the case the branch
+  # below is written for -- a plain capture would leave `pids` unbound and that
+  # test would fail with `unbound variable` instead of reporting the miss.
+  pids = capture-or-empty(pgrep, -d, ",", -f, $pattern)
+  if $pids == "" {
+    error "No processes matching $pattern"
+    return 1
+  }
+  psc -p $pids ...$ps-args
+}
+
+# grep for a pattern in the environment of the processes with the given pids
+wrapper func envgrep(pattern, ...pids) {
+  for pid in $pids { grep -z $pattern "/proc/$pid/environ" }
+}
+
+# grep for a pattern in the environments of processes matching a pattern,
+# e.g. `pegrep SSH_AUTH_SOCK xfce4`
+func pegrep(env-pattern, proc-pattern) {
+  for pid in $(pgrep -f "^$proc-pattern"):split("\n") {
+    continue if $pid == ""
+    puts "$(ps -o pid= -o args= -p $pid) $(envgrep $env-pattern $pid)"
+  }
+}
+func peg(env-pattern, proc-pattern) { pegrep $env-pattern $proc-pattern }
+
+###############
+# SSH
+# Connect to a host telling it who is connecting, and give every ~/.ssh/config
+# Host entry a command of its own. Ported from shrc:2459 and config.fish:900.
+
+# ssh to a host, smuggling this machine's name across as LC_CLIENT_HOST --
+# servers commonly AcceptEnv LC_*, which is why it rides in that namespace, and
+# ssh-client-host reads it at the far end. SendEnv is additive, so the usual
+# LANG/LC_* forwarding is left intact.
+#
+# The variable is set inside a `fork` rather than exported here: mesh has no
+# `VAR=value cmd` prefix, and an export in this shell would outlive the call.
+wrapper func ssh-to(host, ...args) {
+  client = short-hostname()
+  if have-command(rw) and $args:len == 0 {
+    fork { $env.LC_CLIENT_HOST = $client
+      rw -r $host }
+    return
+  }
+  # ssh flags typed *after* the host alias have to be moved in front of it, or
+  # ssh runs them as the remote command -- `host1 -v uptime` remotely ran
+  # `-v uptime`. Unlike shift-options, a flag whose value is a separate word
+  # (-p 2222, -i file, -o opt) must keep its value with it rather than having
+  # the scan stop there. The letter list is OpenSSH's value-taking options.
+  nopts = 0
+  expect-value = false
+  for arg in $args {
+    if $expect-value {
+      expect-value = false
+      nopts = $nopts + 1
+      continue
+    }
+    # Interpolated to text first: a bare `-2` style argument arrives as an
+    # integer, which the pattern tests below refuse.
+    word = "$arg"
+    if $word == "--" {
+      # End of options: rotated along with them so it lands before the host,
+      # which ssh accepts; everything after it is the remote command even if
+      # it starts with a dash.
+      nopts = $nopts + 1
+      break
+    }
+    break if $word == "-"
+    # A value-taking option at the *end* of a short-option cluster still takes
+    # its value as the next word: `-vp 2222` is `-v -p 2222`. Anything after
+    # the letter in the same word is an attached value instead (`-p2222`,
+    # `-lBob`), so the letters before it must all be *flags*: the first
+    # value-taking letter ends the cluster and everything after it belongs to
+    # that option. The two sets are ssh(1)'s own -- the prefix is the boolean
+    # cluster from its SYNOPSIS, the last letter one of the options the
+    # SYNOPSIS gives an argument.
+    #
+    # shrc:2502 and config.fish:936 match a single letter here, so both build
+    # `ssh -vp host1 2222 …` and ssh reads the *host* as the port. Fixed here;
+    # listed with the other shared bugs in the PR description.
+    if $word ~ re("^-[46AaCfGgKkMNnqsTtVvXxYy]*[BbcDEeFIiJLlmOoPpQRSWw]$") {
+      expect-value = true
+      nopts = $nopts + 1
+      continue
+    }
+    if $word ~ -* {
+      nopts = $nopts + 1
+      continue
+    }
+    break
+  }
+  opts = $args[0..$nopts]
+  cmd = $args[$nopts..]
+  fork { $env.LC_CLIENT_HOST = $client
+    ssh -t -oSendEnv=LC_CLIENT_HOST ...$opts $host ...$cmd }
+}
+
+# Give each `Host` alias in ~/.ssh/config a command of its own, so a bare
+# hostname connects to it.
+#
+# shrc:2526 and config.fish:962 `eval` one function definition per name. mesh
+# has neither `eval` nor a dynamically-named `func`, so the definitions are
+# written to a cache file and sourced -- the only route mesh offers. The file
+# is rewritten on each interactive start, as the other two shells rebuild
+# their functions.
+func ssh-alias-file() {
+  cache = $env:get(XDG_CACHE_HOME, "$env.HOME/.cache")
+  return "$cache/mesh/ssh-hosts.mesh"
+}
+
+func set-up-ssh-aliases() {
+  config = "$env.HOME/.ssh/config"
+  return unless $config:f
+  generated = ssh-alias-file()
+  # Built under a per-process name and renamed into place at the end. Two
+  # shells starting at once share this path, so writing it directly lets the
+  # second `source` it between the first's truncate and its last append --
+  # every write succeeding and the result still a short alias list or a parse
+  # error. rename(2) is atomic, so a reader sees either the old file or the
+  # complete new one, never a half-built one.
+  staged = "$generated.$sh.pid"
+  # An unwritable cache -- read-only XDG_CACHE_HOME, a full filesystem -- must
+  # not fall through to the `source` below: every later append would fail too,
+  # and a *stale* file from an earlier session would be sourced as if fresh,
+  # silently reinstating hosts the config no longer names. Report once and
+  # leave the aliases undefined, which is the honest outcome.
+  quiet mkdir -p $generated:dir
+  if $sh.status != 0 {
+    warn "ssh aliases: cannot create the cache directory; host aliases are not defined"
+    return 1
+  }
+  # A directory where the cache file should be is checked explicitly, because
+  # the rename below would *succeed* against one -- `mv file dir` moves the
+  # file inside it -- and the failure would surface as a confusing
+  # `source: Is a directory` after everything else went right.
+  if $generated:d {
+    warn "ssh aliases: the cache path is a directory; host aliases are not defined"
+    return 1
+  }
+  # Created 0600 *before* anything is written to it. The definitions name every
+  # Host entry in ~/.ssh/config, which is a 0600 file, and ~/.cache is usually
+  # world-traversable -- so a default-umask 0644 here would publish the host
+  # list to any other local user. shrc and fish have nothing to protect,
+  # since their `eval` never touches disk.
+  #
+  # `install` rather than touch-then-chmod: it sets the mode as it creates the
+  # file, leaving no window where the name exists at 0644. A `>` below truncates
+  # without changing the mode, and `mv` preserves it.
+  #
+  # `command` because this file defines its own `install` shortcut for
+  # `package install` further down -- without it the alias wins.
+  command install -m 600 /dev/null $staged
+  if $sh.status != 0 {
+    warn "ssh aliases: cannot create the cache file; host aliases are not defined"
+    return 1
+  }
+  # Truncated first, so a config with no usable Host entries leaves an empty
+  # file rather than last session's definitions -- and so this doubles as the
+  # writability check for the appends that follow.
+  puts "# Generated from ~/.ssh/config by rc.mesh. Do not edit." > $staged
+  if $sh.status != 0 {
+    warn "ssh aliases: cannot write the cache file; host aliases are not defined"
+    return 1
+  }
+  # Bound and checked rather than iterated inline. `~/.ssh/config` passed the
+  # `:f` test above, but it can still fail to read -- permissions changed since,
+  # an I/O error -- and a failing capture in a `for` head simply iterates
+  # nothing and carries on. That would rename an alias file containing only the
+  # header into place and source it: every host alias silently gone, looking
+  # exactly like a config with no Host entries.
+  contents = $(cat $config)
+  if $sh.status != 0 {
+    rm -f $staged
+    warn "ssh aliases: cannot read the ssh config; host aliases are not defined"
+    return 1
+  }
+  for line in $contents:split("\n") {
+    parts = fields($line)
+    continue if $parts:len < 2
+    keyword = $parts[0]
+    continue unless $keyword == Host or $keyword == host
+    for name in $parts[1..] {
+      # Patterns and negations aren't hosts to connect to. Spelled as a regex
+      # rather than a glob because the characters being looked for are `*` and
+      # `?` themselves, which a glob would read as wildcards. `-` is excluded
+      # by the same rule in shrc and fish.
+      continue if $name ~ re("[*?-]")
+      # Stricter than shrc and fish, which eval whatever they find, and
+      # deliberately so on both counts: an FQDN alias isn't wanted here, and a
+      # dotted name is a *syntax* error in mesh rather than an odd function
+      # name (mikelward/mesh#293), so one would cost every alias in this shared
+      # file rather than just itself.
+      continue unless $name ~ re("^[A-Za-z_][A-Za-z0-9_]*$")
+      # A `Host status` must not take over the `status` shortcut. shrc:2563 and
+      # config.fish:998 get this from ordering -- they generate ssh aliases
+      # before their shortcut blocks, so the shortcut is defined last and wins.
+      # That ordering isn't available here: the shortcuts are file-scope
+      # definitions above the interactive section (which is what keeps this
+      # file sourceable from a test), so they are always in place first.
+      # Skipping a name that is already a function is the same rule stated
+      # directly. `is-function` rather than `is-runnable`, so a host may still
+      # be named after a *program* -- shadowing `git` with a host alias is the
+      # user's call, exactly as in the other shells.
+      continue if is-function($name)
+      # A name mesh owns can't be defined at all. `Host files` is the sharp
+      # case: `files` is a built-in value call, so `wrapper func files(…)` is a
+      # *syntax* error and mesh refuses the whole generated file -- one such
+      # entry would take every unrelated host alias down with it.
+      continue if is-shell-name($name)
+      # `wrapper func`, by the rule at the top of this file: everything the
+      # user types after the host belongs to ssh or to the remote command, so
+      # nothing here may be scanned as a flag of this function's own.
+      puts "wrapper func $name(...args) { ssh-to $name ...\$args }" >> $staged
+      # A full filesystem partway through leaves a truncated staged file, whose
+      # last line is usually half a definition. Drop it and stop: the previous
+      # generation stays in place untouched, which is the better of the two
+      # states available here, and nothing half-built is ever renamed over it.
+      if $sh.status != 0 {
+        rm -f $staged
+        warn "ssh aliases: cannot write the cache file; host aliases are not defined"
+        return 1
+      }
+    }
+  }
+  mv $staged $generated
+  if $sh.status != 0 {
+    rm -f $staged
+    warn "ssh aliases: cannot replace the cache file; host aliases are not defined"
+    return 1
+  }
+  # Checked like every other step, and phrased without the path for the same
+  # reason the others are. The name filters above cover what is known to be
+  # unbindable, but mesh owns that namespace and can grow it, so a `Host` entry
+  # a later mesh refuses would otherwise take every alias in the file down with
+  # nothing said. mesh's own diagnostic has already gone to stderr.
+  source $generated
+  status = $sh.status
+  if $status != 0 {
+    warn "ssh aliases: the generated file could not be sourced; host aliases are not defined"
+    return $status
+  }
+}
+
+#####################
+# PROJECT AND VCS
+# The per-VCS work lives in the `vcs` binary; these are the thin wrappers the
+# prompt and the everyday shortcuts need. shrc.vcs generates a function per
+# `vcs` subcommand with `eval`, which mesh has no equivalent for, so the
+# shortcuts below are written out instead.
+
+# print the root directory of the current project, or nothing
+func rootdir() {
+  return "" unless have-command(vcs)
+  return $(command vcs rootdir 2> /dev/null || true)
+}
+func projectroot() { return rootdir() }
+func pr() { puts projectroot() }
+
+# print the name of the current project
+func projectname() {
+  root = projectroot()
+  return "" if $root == ""
+  return $root:base
+}
+func project() { puts projectname() }
+
+# return true if we are inside a VCS workspace
+func inside-project() {
+  if projectroot() != "" { return true }
+  return false
+}
+
+# print the directory that builds are relative to
+func buildroot() { return projectroot() }
+
+# print the path from buildroot to the working directory
+func builddir() {
+  root = buildroot()
+  here = $(pwd)
+  return "." if $here == $root or $root == ""
+  return $here:replacestart("$root/", "")
+}
+
+# cd to the root of the current project
+func rd() {
+  root = rootdir()
+  return if $root == ""
+  cd $root
+}
+
+func vcs-backend() { command vcs backend }
+func vcs-hosting() { command vcs hosting }
+alias prompt-info = command vcs prompt-info
+func unmerged() { command vcs unmerged }
+func cv() { command vcs clearcache }
+
+# The `vcs` subcommands that earn a name of their own, kept in step with
+# config/nushell/config.nu:1522 -- the closest analogue, since neither shell can
+# do what shrc.vcs:135 does and generate one function per name from
+# `vcs --list-commands`.
+#
+# TODO, carried over from config.nu: this list is hand-maintained and drifts
+# from the binary, which currently ships 74 subcommands (vcs/commands.go). The
+# canonical list should be the binary itself -- generated into a sourced file
+# at install time rather than restated in each shell's config.
+#
+# Note `diffs`, not `diff`: the binary's command is the plural one, alongside
+# `diffedit` and `diffstat`. There is no `diff`.
+alias add = command vcs add
+alias amend = command vcs amend
+alias annotate = command vcs annotate
+alias base = command vcs base
+alias branch = command vcs branch
+alias branches = command vcs branches
+alias changed = command vcs changed
+alias changelog = command vcs changelog
+alias changes = command vcs changes
+alias checkout = command vcs checkout
+alias commit = command vcs commit
+alias commitforce = command vcs commitforce
+alias diffs = command vcs diffs
+alias fix = command vcs fix
+alias graph = command vcs graph
+alias incoming = command vcs incoming
+alias lint = command vcs lint
+alias map = command vcs map
+alias outgoing = command vcs outgoing
+alias pending = command vcs pending
+alias precommit = command vcs precommit
+alias presubmit = command vcs presubmit
+alias pull = command vcs pull
+alias push = command vcs push
+alias recommit = command vcs recommit
+alias revert = command vcs revert
+alias review = command vcs review
+alias reword = command vcs reword
+alias status = command vcs status
+alias submit = command vcs submit
+alias submitforce = command vcs submitforce
+alias unknown = command vcs unknown
+alias upload = command vcs upload
+alias uploadchain = command vcs uploadchain
+
+# short aliases -- hand-picked, not generated, matching config.nu:1566
+alias am = command vcs amend
+alias ci = command vcs commit
+alias di = command vcs diffs
+alias gr = command vcs graph
+alias lg = command vcs graph
+alias ma = command vcs review
+alias st = command vcs status
+
+# clone a repo with whichever VCS its URL implies: jj for a git URL (falling
+# back to git itself, but only if the user says so), hg for an hg one. Not an
+# alias, because the choice is the whole point. Matches shrc.vcs:141,
+# config.fish:1793 and config.nu:1566.
+#
+# The URL comes first: `clone URL --depth 1`, not `clone --depth 1 URL`. The
+# URL is what picks the VCS, so a leading flag would bind to `url` and match
+# neither pattern -- shrc.vcs:142's `case "$1"` and config.nu's `url: string`
+# have the same shape and the same requirement.
+#
+# A wrapper all the same, so the flags that follow the URL reach the clone
+# command rather than being scanned against this signature.
+wrapper func clone(url, ...args) {
+  if $url ~ *.git {
+    if have-command(jj) {
+      jj git clone $url ...$args
+    } else if confirm("jj is not installed. Clone using git") {
+      git clone $url ...$args
+    }
+  } else if $url ~ */hg* {
+    hg clone $url ...$args
+  }
+}
+
+#####################
+# SESSION MANAGEMENT
+# shpool is the default; tmux is the fallback when shpool is missing or
+# WANT_SHPOOL=0. SESSION_BACKEND=tmux flips the preference. Kept in parity
+# with shrc, config.fish, and config.nu.
+
+# return true if we should auto-start shpool in this session. The autoshpool
+# helper is required as well as shpool: a machine with shpool that hasn't
+# picked up the scripts repo must fall through to tmux rather than failing on
+# a missing autoshpool at every shell start.
+func want-shpool() {
+  return false if $env:get(WANT_SHPOOL, "1") == "0"
+  return false unless stdin-is-tty()
+  return false if in-shpool()
+  return false if inside-tmux()
+  return false unless have-command(shpool)
+  return false unless have-command(autoshpool)
+  return true if connected-remotely()
+  return inside-project()
+}
+
+# return true if we should auto-start tmux in this session
+func want-tmux() {
+  return false if $env:get(WANT_TMUX, "1") == "0"
+  return false unless stdin-is-tty()
+  return false if inside-tmux()
+  return false if in-shpool()
+  return false unless have-command(tmux)
+  return false unless have-command(autotmux)
+  return true if connected-remotely()
+  return inside-project()
+}
+
+# name of the preferred session manager: "shpool" (the default when both are
+# available), "tmux" (the fallback), or empty when neither is enabled.
+func shpool-available() {
+  return false if $env:get(WANT_SHPOOL, "1") == "0"
+  return false unless have-command(shpool)
+  return have-command(autoshpool)
+}
+
+func tmux-available() {
+  return false if $env:get(WANT_TMUX, "1") == "0"
+  return false unless have-command(tmux)
+  return have-command(autotmux)
+}
+
+func session-backend() {
+  if $env:get(SESSION_BACKEND, "shpool") == "tmux" {
+    return tmux if tmux-available()
+    return shpool if shpool-available()
+    return ""
+  }
+  return shpool if shpool-available()
+  return tmux if tmux-available()
+  return ""
+}
+
+# attach to (or create) this project's session using the preferred backend
+wrapper func autosession(...args) {
+  match session-backend() {
+    tmux   => { autotmux ...$args }
+    shpool => { autoshpool ...$args }
+  }
+}
+
+# switch to a session. tmux switches in place; shpool requests a switch and
+# the now-parked shell exits, which is what hands control to autoshpool's
+# outer loop.
+func switchshpool(name) { autoshpool switch $name && exit }
+
+func switchsession(name) {
+  match session-backend() {
+    tmux   => { autotmux switch $name }
+    shpool => { switchshpool $name }
+  }
+}
+
+# attach to a (named) session using the preferred backend
+wrapper func sessionattach(...args) {
+  match session-backend() {
+    tmux   => { tmux attach ...$args }
+    shpool => { shpool attach ...$args }
+  }
+}
+
+# list sessions using the preferred backend
+wrapper func sessionlist(...args) {
+  match session-backend() {
+    tmux   => { tmuxlist ...$args }
+    shpool => { shpoollist ...$args }
+  }
+}
+
+# The launcher only replaces this shell when it actually started a session:
+# `autoshpool && exit` rather than a bare `exit`, so a launcher that fails --
+# no daemon, bad config -- leaves a working shell behind instead of closing a
+# remote login. Same guard shrc, config.fish and config.nu use.
+# Transitional fallback: the updated scripts-repo helpers open the session in
+# the right directory via `shpool attach -d`, leaving SHPOOL_INITIAL_PWD unset
+# and this a no-op. Until that ships everywhere (mikelward/scripts#107), the
+# older helpers still stamp SHPOOL_INITIAL_PWD (forwarded via the shpool
+# config's forward_env), so cd there on entry. Remove this and the forward_env
+# entry once the scripts update is deployed.
+# The variable is cleared only once the cd worked: it is the only record of
+# where the handoff meant to land, so a directory that has been deleted since
+# the launcher stamped it should leave the value in place to diagnose with
+# rather than land in the launcher's directory with nothing to show for it.
+# `cd` reports its own failure, so there is nothing to add to it.
+func apply-shpool-initial-pwd() {
+  return unless in-shpool()
+  initial = $env:get(SHPOOL_INITIAL_PWD, "")
+  return if $initial == ""
+  # A postfix guard takes a value, not a command, so the success arm comes
+  # first -- the same shape trydiff uses.
+  if cd $initial {
+    $env.SHPOOL_INITIAL_PWD = ""
+    return
+  }
+  return 1
+}
+
+func maybe-start-session-and-exit() {
+  match session-backend() {
+    shpool => {
+      return unless want-shpool()
+      autoshpool && exit
+    }
+    tmux => {
+      return unless want-tmux()
+      autotmux && exit
+    }
+  }
+}
+
+##############################
+# PROMPT
+# mesh renders color itself through `style`, so the tput probing shrc needs is
+# gone. The layout is shrc's: a rule, then a context line of host, directory,
+# and anything needing authentication, then a bare `$` to type at.
+
+func blue(text) { return style($text, fg: blue) }
+func green(text) { return style($text, fg: green) }
+func red(text) { return style($text, fg: red) }
+func yellow(text) { return style($text, fg: yellow) }
+
+# replace a leading $HOME in the working directory with "~"
+func tilde-pwd() {
+  here = $(pwd)
+  home = $env.HOME
+  return "~" if $here == $home
+  rest = $here:replacestart("$home/", "")
+  return "~/$rest" if $rest != $here
+  return $here
+}
+
+# a short version of the hostname for the prompt and the window title
+func short-hostname() {
+  host = $env:get(HOSTNAME, "")
+  return "" if $host == ""
+  host = $host:split(".")[0]
+  user = $env:get(USERNAME, "")
+  return $host if $user == ""
+  return $host:replacestart("$user-", "")
+}
+
+# print the current session name (shpool or tmux), or nothing
+func session-name() {
+  return $env.SHPOOL_SESSION_NAME if in-shpool()
+  return $(tmux display-message -p '#S') if inside-tmux()
+  return ""
+}
+
+# the hostname and session tag for the context line. The hostname is red on a
+# production host; the session tag is a green session name when attached, or a
+# yellow warning naming the backend that would start when not.
+func host-info() {
+  host = short-hostname()
+  if on-production-host() { host = red($host) }
+  # A value call cannot be interpolated into a string -- "$(f)" would run `f`
+  # as a command and capture its stdout, and these return a value rather than
+  # printing one -- so each piece is bound and appended.
+  out = ""
+  if i-am-root() {
+    out += "["
+    out += red(root)
+    out += "] "
+  }
+  out += $host
+  out += " "
+  session = session-name()
+  if $session != "" {
+    out += green($session)
+    return $out
+  }
+  backend = $env:get(SESSION_BACKEND, "")
+  if $backend == "" { backend = session-backend() }
+  if $backend == "" { backend = shpool }
+  out += yellow($backend)
+  return $out
+}
+
+# the directory part of the context line: `vcs prompt-info` renders it (one
+# fork), and outside a repo the binary prints nothing, so we fall back to a
+# tilde-shortened $PWD. Deliberately *not* gated on inside-project(), which
+# would spend a whole `vcs rootdir` fork per prompt to learn what the empty
+# output already says -- the same reason config.fish and config.nu call
+# prompt-info unconditionally. have-command is a PATH lookup, not a fork.
+func dir-info() {
+  info = ""
+  if have-command(vcs) {
+    info = $(command vcs prompt-info --color=always 2> /dev/null || true)
+  }
+  if $info == "" { info = tilde-pwd() }
+  return blue($info)
+}
+
+# the context line: host, directory, and anything needing authentication.
+# `auth` is a parameter so preprompt can compute auth-info once and hand the
+# same answer to maybe-background-fetch: `ssh-add -L` (via is-ssh-valid) is a
+# fork, and asking twice per prompt would double it. Defaulted for direct
+# callers, matching the "captured once per prompt" note at shrc:1563.
+func prompt-line(auth = auth-info()) {
+  out = host-info()
+  out += " "
+  out += dir-info()
+  if $auth != "" {
+    out += " "
+    out += $auth
+  }
+  return $out
+}
+
+# a rule the width of the terminal. mesh publishes no terminal width, so the
+# width comes from `tput cols` -- one fork per prompt.
+func terminal-width() {
+  return 80 unless have-command(tput)
+  cols = $(tput cols 2> /dev/null || true)
+  return 80 if $cols == ""
+  return $cols:int
+}
+
+func bar(width) {
+  rule = ""
+  left = $width
+  while $left > 0 {
+    rule += "―"
+    left = $left - 1
+  }
+  puts $rule
+}
+
+# a single line naming every live job, for the context block
+func job-info() {
+  return "" if $sh.jobs:len == 0
+  out = ""
+  for id, job in $sh.jobs {
+    # The prompt's own `vcs` plumbing shows up as a job under some shells;
+    # a deliberate `vcs foo &` reads as `vcs foo`, so only the wrapped form
+    # is dropped.
+    continue if starts-with($job.cmd, "command vcs")
+    if $out != "" { out += " " }
+    out += "%$id $job.cmd"
+  }
+  return $out
+}
+
+# Resolve the per-shell file publish-jobs writes to, so a status-bar consumer
+# (tmux, screen) can show this shell's jobs without querying a foreign shell's
+# job table. Keyed by $TTY -- the pty path -- rather than a multiplexer's pane
+# id, so the same scheme works in any multiplexer and outside one.
+#
+# Empty, and publishing silently off, unless $TTY is a /dev/... path and
+# $XDG_RUNTIME_DIR is set. There is deliberately no /tmp fallback: a
+# predictable per-uid path there lets a local user pre-create the leaf as a
+# symlink and have this shell truncate the target on every prompt.
+# $XDG_RUNTIME_DIR is per-user mode 0700 on modern Linux.
+func publish-jobs-file() {
+  tty = $env:get(TTY, "")
+  return "" unless starts-with($tty, "/dev/")
+  xdg = $env:get(XDG_RUNTIME_DIR, "")
+  return "" if $xdg == ""
+  return "$xdg/shell-jobs$tty"
+}
+
+# Write a "%N command %M command " summary (trailing space, no newline, empty
+# for no jobs) so the consumer can just `cat` it. Only the command word is
+# published, not its arguments -- shrc:1825 and config.fish:1691 reduce their
+# job lines with the same awk. Called from preprompt, so it refreshes on every
+# redraw.
+func publish-jobs() {
+  file = publish-jobs-file()
+  return if $file == ""
+  # One failed write turns publishing off for the rest of this shell. This runs
+  # on every prompt, so a warning per prompt would be worse than the problem it
+  # reports; said once, then stopped. Kept in the environment because a
+  # function-local flag wouldn't survive to the next prompt.
+  return if $env:get(SHELL_JOBS_DISABLED, "") != ""
+  # A stale-but-set $XDG_RUNTIME_DIR -- a long-lived multiplexer session whose
+  # /run/user/$UID was cleaned up -- disables publishing for this prompt rather
+  # than breaking the render, as config.nu:867's `try` does.
+  quiet mkdir -p $file:dir
+  return unless $sh.status == 0
+  summary = []
+  for id, job in $sh.jobs {
+    # Same filter as job-info: the prompt's own `vcs` plumbing isn't a job the
+    # user started.
+    continue if starts-with($job.cmd, "command vcs")
+    # Bound first: `$(f(…))` would run a command substitution that captures
+    # nothing, since a value call prints nothing.
+    word = fields($job.cmd):get(0, "")
+    summary += ["%$id $word"]
+  }
+  text = ""
+  if $summary:len > 0 {
+    joined = $summary:join(" ")
+    text = "$joined "
+  }
+  # `print` rather than `puts`: the format has no trailing newline.
+  print $text > $file
+  if $sh.status != 0 {
+    # A partial write leaves a truncated line, which a status bar would read as
+    # a real job list -- worse than no file. Drop it and stop trying.
+    rm -f $file
+    export SHELL_JOBS_DISABLED = 1
+    warn "shell jobs: cannot write the status file; publishing is off for this shell"
+  }
+}
+
+# Remove this shell's file on the way out, so it doesn't linger and mislead the
+# next shell on the same pty. mesh has an `exit` hook, so this matches shrc's
+# EXIT trap and fish's fish_exit handler; config.nu:841 has to do without one.
+func unpublish-jobs(status = 0) {
+  file = publish-jobs-file()
+  return if $file == ""
+  rm -f $file
+}
+
+# print the window title: "<hostname> <session> <project-or-pwd>", each
+# leading part omitted when empty. mesh writes its own title (user@host: dir)
+# and offers no way to replace it, so this is a command to run by hand rather
+# than something the prompt installs.
+func title() {
+  parts = []
+  if show-hostname-in-title() { parts += [short-hostname()] }
+  session = session-name()
+  if $session != "" { parts += [$session] }
+  name = projectname()
+  if $name == "" { name = $(pwd):base }
+  parts += [$name]
+  return $parts:join(" ")
+}
+
+# spawn a detached background fetch through the `vcs` binary, which knows the
+# right fetch command per VCS, the marker file to mtime-gate against, and how
+# to detach. The shell owns only two gates: skip unless the directory changed
+# (most prompts don't follow a cd), and skip while something needs
+# authenticating so the prompt's {behind} indicator still nags.
+#
+# The directory is recorded only once a fetch is actually spawned. Recording it
+# before the auth gate -- what shrc:1498 and config.fish:1360 do -- means a
+# directory first seen without an ssh identity never fetches, however long the
+# session stays there after the user authenticates. `auth` comes from preprompt
+# so the retry costs no extra `ssh-add -L`.
+last-fetch-dir = ""
+func maybe-background-fetch(auth = auth-info()) {
+  here = $(pwd)
+  return if $here == $last-fetch-dir
+  return unless have-command(vcs)
+  return if $auth != ""
+  # Recorded only once the spawn succeeded. `vcs auto-fetch` is mtime-gated
+  # inside the binary, so a successful call is cheap to repeat; a failed one
+  # (couldn't fork, couldn't reach the marker file) is worth retrying on the
+  # next prompt rather than disabling the fetch for this directory until the
+  # next cd.
+  quiet command vcs auto-fetch
+  return unless $sh.status == 0
+  global last-fetch-dir = $here
+}
+
+# what the prompt draws before each command line
+func preprompt() {
+  # Asked once and handed to both callers below: is-ssh-valid forks `ssh-add -L`,
+  # and this is the prompt's hot path.
+  auth = auth-info()
+  maybe-background-fetch $auth
+  puts ""
+  bar terminal-width()
+  puts prompt-line($auth)
+  # `unmerged` prints the warning, so only its diagnostics are silenced -- and
+  # it is not gated on inside-project() for the same reason dir-info isn't:
+  # the binary answers empty outside a repo, and the gate would cost a second
+  # `vcs rootdir` fork on every prompt. shrc, config.fish and config.nu all
+  # call it unconditionally too.
+  if have-command(vcs) { unmerged 2> /dev/null }
+  publish-jobs
+  jobs-line = job-info()
+  puts $jobs-line if $jobs-line != ""
+  # Last, as in shrc:1483 and config.fish:1384: the bell announces a prompt
+  # that is already drawn.
+  flash-terminal
+}
+
+# report a command that failed or took a noticeable while, the way shrc's
+# last_job_info does -- but from mesh's postexec hook, which is handed the
+# status and the elapsed milliseconds rather than having to recover them.
+func format-duration(ms) {
+  seconds = $ms / 1000
+  return "" if $seconds < 2
+  hours = $seconds / 3600
+  seconds = $seconds - $hours * 3600
+  minutes = $seconds / 60
+  seconds = $seconds - $minutes * 60
+  return "$hours hours $minutes minutes $seconds seconds" if $hours > 0
+  return "$minutes minutes $seconds seconds" if $minutes > 0
+  return "$seconds seconds"
+}
+
+func command-finished(cmd, status, elapsed) {
+  reported = ""
+  match $status {
+    0        => { }
+    130      => { reported = red("interrupted") }
+    148      => { }
+    _        => { reported = red("status $status") }
+  }
+  duration = format-duration($elapsed)
+  if $duration != "" {
+    if $reported != "" { reported = "$reported " }
+    reported += yellow("took $duration")
+  }
+  puts $reported if $reported != ""
+}
+
+# log every interactive command, the way shrc's precommand does
+func command-started(cmd) { log-history $cmd }
+
+##########################
+# COMMAND SHORTCUTS
+# shrc spells most of these as aliases, and so does this file: mesh's `alias
+# NAME = COMMAND` is sugar for a `wrapper func`, so each one forwards every
+# argument -- an undeclared long flag included -- to what it wraps. A plain
+# `func` would reject `l --color=never` and answer `l --help` itself.
+#
+# `command` reaches past the function of the same name, which is what makes the
+# shortcuts that share a name with what they wrap safe. It is written out even
+# where `alias` would insert it, so the guard stays visible.
+#
+# Anything that does more than forward -- a pipe, an `and`, a flag after the
+# arguments, or a body with logic -- stays a `wrapper func`, since an alias
+# body is a single plain command.
+
+alias c = command less --quit-if-one-screen --no-init
+func cdf(file) { cdfile $file }
+alias cg = command rg --glob="{*.c,*.h,*.cc,*.cpp,*.hh,*.coffee,*.go,*.hs,*.java,*.js,*.pl,*.py,*.sh,*.rb,*.swig,*.ts}"
+alias ct = command ctags -R
+alias cx = command chmod +x
+# restart a background daemon. `fork` so the `&` job belongs to the subshell
+# and doesn't linger in `$sh.jobs`, where it would make `safe-exit` refuse to
+# leave -- shrc's `( setsid "$1" & )` detaches for the same reason, and setsid
+# puts it in a session of its own so it outlives this shell.
+wrapper func daemon(name, ...args) {
+  # pkill exits 1 when nothing was running, which is the normal first start
+  pkill $name
+  fork { setsid $name ...$args & }
+}
+# shrc:2640 and config.fish:1134 pass their arguments to `daemon`, which then
+# only ever looks at the name -- so `bindkeys --poll-rc` silently drops the
+# flag there. Here they reach xbindkeys.
+alias bindkeys = daemon xbindkeys
+alias diga = command dig +noall +answer +search
+alias digs = command dig +short +search
+# `&&` rather than two statements: a failed `cd` would otherwise leave wget
+# saving into whatever directory the caller happened to be in. `cd` prints its
+# own diagnostic, so there is nothing to add to it.
+wrapper func download(...args) {
+  cd "$env.HOME/Downloads" && command wget ...$args
+}
+# a value call cannot stand in command position, so the program is bound first
+wrapper func e(...args) {
+  editor = $env:get(EDITOR, vim)
+  $editor ...$args
+}
+# terminal mode, so `emacs file` stays in the shell it was typed in rather than
+# opening a window when a display happens to be available. shrc:2682 spells it
+# `--no-window-system`, config.fish:1176 uses the `-nw` short form.
+alias emacs = command emacs --no-window-system
+alias eg = g -E
+alias g = command grep --binary-files=without-match --line-number
+alias gdb = command gdb -q
+# note that grep options must go after ~/.history
+alias gh = first-arg-last grep "$env.HOME/.history" -a
+alias github = command gh
+alias gitdir = command git rev-parse --git-dir
+func gl() { cd /var/log }
+alias h = command head
+alias headers = command curl --location --include --silent --show-error --output /dev/null --dump-header -
+alias hms = command date +"%H:%M:%S"
+alias hmsns = command date +"%H:%M:%S.%N"
+alias hosts = command getent hosts
+alias ipy = command ipython
+alias ipy3 = command ipython3
+func j() { jobs }
+# No `command` prefix, unlike shrc:2683 and config.fish:1177: those reach past
+# their own `fg` *function*, while here `fg` is mesh's builtin and `command`
+# would look past it to a program that doesn't exist.
+alias f = fg
+alias killcode = command pkill -f /usr/share/code/code
+alias kssh = command ssh -o PreferredAuthentications=publickey
+# Three listers, picked the way shrc:2696 picks them: the separate `l` program
+# when this host has one, else GNU-style `ls` if it takes those flags, else a
+# plain `ls`. The middle arm has to be probed rather than assumed -- BSD and
+# macOS `ls` reject `--color=auto` outright, which would break `l` and every
+# shortcut built on it. One fork at startup, as in shrc.
+if have-command(l) {
+  alias l = command l -K -v -e -x
+  alias ll = l -p -T -B -V -h --time-style=relative
+  alias lt = l -T -t
+} else if command ls --color=auto -v -d / > /dev/null 2> /dev/null {
+  alias l = command ls --color=auto -v -b -x
+  alias ll = l -l
+  alias lt = ll -t
+} else {
+  alias l = command ls -v -b -x
+  alias ll = l -l
+  alias lt = ll -t
+}
+alias l1 = l -1
+alias la = l -a
+alias lc = l -C
+alias lssock = command lsof -a -n -P -i
+alias lss = lssock
+alias m = command make -f .Makefile
+func ml() { m lint }
+func mt() { m test }
+alias n = command date +"%Y%m%d%H%M%S"
+alias now = command date +"%Y-%m-%dT%H:%M:%S"
+alias nowns = command date +"%Y-%m-%dT%H:%M:%S.%N"
+alias nv = command nvim
+wrapper func p(...args) {
+  pager = $env:get(PAGER, more)
+  $pager ...$args
+}
+alias phup = command pkill -HUP
+alias psg = psgrep
+alias psu = command ps -o user,pid,start,time,pcpu,stat,cmd
+alias pssh = command ssh -o PreferredAuthentications=keyboard-interactive,password
+alias py = command python
+alias py2 = command python2
+alias py3 = command python3
+alias rg = command rg --follow --line-number
+wrapper func rh(...args) { gh ...$args | tail -n 20 }
+alias s = command subl
+alias spell = command aspell -a
+alias sr = command ssh -l root
+alias symlink = command ln --symbolic --relative
+alias t = command tail
+alias tf = t -f
+alias tl = t -f /var/log/syslog
+alias today = command date +"%Y-%m-%d"
+alias userctl = command systemctl --user
+alias userjournal = command journalctl --user
+alias userjnl = userjournal
+alias view = command vim -R -c ":set mouse="
+alias v = view
+alias vl = view /var/log/syslog
+alias wcp = with-agent scp
+alias wsh = with-agent ssh
+# Refuse to leave while jobs are still running, listing them instead --
+# shrc:1421's `_exit`, whose leading underscore mesh won't take as a name.
+# There is no non-job-control arm: mesh publishes $sh.jobs unconditionally,
+# where shrc has to check for `-m` first.
+wrapper func safe-exit(...args) {
+  if $sh.jobs:len == 0 {
+    exit ...$args
+  }
+  jobs
+}
+
+# resume each suspended job in turn, then leave. `fg` reports "no current job"
+# on stderr when the last one is done, which is the loop's exit condition, so
+# only that stream is silenced -- as config.fish:1277 silences it.
+wrapper func xa(...args) {
+  loop {
+    if fg 2> /dev/null { continue }
+    break
+  }
+  safe-exit ...$args
+}
+wrapper func x(...args) { xa ...$args }
+alias q = xa
+
+alias xevkey = command xev -event keyboard
+# The display is set inside a `fork` -- mesh has no `VAR=value cmd` prefix, and
+# an assignment here would outlive the call. Same shape config.nu:1418 uses.
+wrapper func xr(...args) {
+  fork { $env.DISPLAY = ":0.0"
+    xrandr ...$args }
+}
+alias jc = command journalctl --no-hostname
+alias sc = command systemctl
+alias uc = command systemctl --user
+
+# package management, delegated to the `package` script, which dispatches to
+# dnf, yum, or apt-get depending on what's available
+alias update = package update
+alias search = package search
+alias install = package install
+alias installed = package installed
+alias uninstall = package uninstall
+alias reinstall = package reinstall
+alias autoremove = package autoremove
+alias upgrade = package upgrade
+alias versions = package versions
+# `info` shadows the GNU program of that name, deliberately and in step with
+# the other three shells; `command info` still reaches the reader.
+alias info = package info
+# No `files` shortcut, unlike shrc:2803, config.fish:1311 and config.nu:1487:
+# `files` is one of mesh's six reserved value-call names (re, style, link,
+# glob, files, dirs) and cannot be bound. `package files` is the spelling here.
+alias listfiles = package listfiles
+alias depends = package depends
+alias rdepends = package rdepends
+
+# session-manager verbs, named {verb}{backend}: verb is a(uto), c(hange),
+# d(etach), or m(ake); backend is s (follow the active backend), sp (shpool),
+# or tm (tmux). The change*/detach*/make* scripts live in the scripts repo and
+# dispatch on $TMUX/$SHPOOL_SESSION_NAME/$SESSION_BACKEND, so the backend
+# session-backend picked (which honors the WANT_* opt-outs the scripts can't
+# see) is handed to them explicitly.
+alias as = autosession
+alias asp = autoshpool
+alias atm = autotmux
+alias ctm = changetmux
+alias dsp = detachshpool
+alias dtm = detachtmux
+alias mtm = maketmux
+
+# shpool cannot switch a live client itself: changeshpool hands the switch to
+# autoshpool's outer loop by detaching us, so the parked shell has to exit.
+# Only on the no-arg picker path -- --list/--help also succeed but only print
+# -- and only when shpool is the backend that ran, since a tmux session nested
+# in shpool switches in place and must stay.
+# The backend session-backend picked is handed to the script through a `fork`
+# rather than a `VAR=value cmd` prefix, which mesh does not have: setting
+# $env.SESSION_BACKEND in this shell would outlive the call.
+func session-script-wanted() {
+  return true if inside-tmux()
+  return true if in-shpool()
+  return session-backend() != ""
+}
+
+wrapper func cs(...args) {
+  return unless session-script-wanted()
+  backend = session-backend()
+  fork { $env.SESSION_BACKEND = $backend
+    changesession ...$args }
+  return unless $sh.status == 0
+  return unless $args:len == 0
+  return if inside-tmux()
+  exit if in-shpool()
+}
+wrapper func csp(...args) {
+  changeshpool ...$args
+  return unless $sh.status == 0
+  return unless $args:len == 0
+  exit if in-shpool()
+}
+wrapper func ds(...args) {
+  return unless session-script-wanted()
+  backend = session-backend()
+  fork { $env.SESSION_BACKEND = $backend
+    detachsession ...$args }
+}
+wrapper func ms(...args) {
+  return unless session-script-wanted()
+  backend = session-backend()
+  fork { $env.SESSION_BACKEND = $backend
+    makesession ...$args }
+  return unless $sh.status == 0
+  return if inside-tmux()
+  exit if in-shpool()
+}
+wrapper func msp(...args) {
+  makeshpool ...$args
+  return unless $sh.status == 0
+  exit if in-shpool()
+}
+
+# clone or cd into a repo, then start a session matching the new root.
+# autosession only runs when the underlying command succeeds, so a failed
+# clone doesn't spawn a stray session.
+wrapper func jd(...args) { jjd ...$args and autosession }
+wrapper func hd(...args) { hgd ...$args and autosession }
+wrapper func gd(...args) { gitd ...$args and autosession }
+wrapper func mjd(...args) { jjd -f ...$args and autosession }
+wrapper func mhd(...args) { hgd -f ...$args and autosession }
+wrapper func mgd(...args) { gitd -f ...$args and autosession }
+
+# re-read this configuration. Both halves, in the order mesh reads them: PATH,
+# GOPATH, brew/fnm and env.local.mesh all live in env.mesh, so sourcing only
+# rc.mesh would leave every one of them stale. shrc's `rerc` re-reads a single
+# file because shrc *is* a single file.
+#
+# The second source is gated on the first: a `source` that fails sets the
+# status and keeps going, so an env.mesh that no longer parses would be
+# followed by an rc.mesh that does, and `rerc` would report success over a
+# half-reloaded shell. shrc has no such pair to sequence.
+func rerc() {
+  source "$env.HOME/.config/mesh/env.mesh"
+  status = $sh.status
+  if $status != 0 {
+    error "rerc: env.mesh failed; the environment is unchanged and rc.mesh was not read"
+    return $status
+  }
+  source "$env.HOME/.config/mesh/rc.mesh"
+}
+
+# Read the interactive local overrides, if any. A named function rather than
+# an inline `source` in the section below, by the same rule as
+# apply-shpool-initial-pwd: nothing past the interactive gate is reachable from
+# a test, so anything with behavior worth asserting has to be defined up here.
+func read-local-rc() {
+  file = "$env.HOME/.config/mesh/rc.local.mesh"
+  return unless $file:read
+  source $file
+  # Reported here for the same reason env.mesh reports its own local file: a
+  # file's status is that of its last statement, so the auth gate that follows
+  # would overwrite this one and `rerc` would see success. Not fatal either,
+  # and for the same reason -- a broken per-machine override shouldn't cost the
+  # shell everything already set up before it.
+  status = $sh.status
+  if $status != 0 {
+    warn "rc.local.mesh failed; the rest of the interactive setup still ran"
+  }
+  return $status
+}
+
+#########################
+# INTERACTIVE SETUP
+# Everything above is definitions, so sourcing this file from a test or a
+# script is side-effect free. Everything below acts, and only in a real
+# interactive session.
+
+return unless $sh.interactive
+
+apply-shpool-initial-pwd
+
+# Hand off to shpool or tmux before anything else interactive is set up: a
+# shell that is about to be replaced should not pay for a prompt it will throw
+# away.
+maybe-start-session-and-exit
+
+# Past this point we're the shell we're keeping -- the handoff above exits if
+# it started a session -- so build the ssh-config host aliases here, as shrc
+# and config.fish do at the same point.
+set-up-ssh-aliases
+
+log-history "New session as" $env:get(USERNAME, "") "in mesh"
+
+prompt-hook preprompt context preprompt
+prompt-hook preexec history command-started
+prompt-hook postexec report command-finished
+# Clear the published job file on the way out. shrc traps EXIT and fish uses a
+# fish_exit handler for the same reason; config.nu has no exit hook and has to
+# leave a stale file behind.
+prompt-hook exit jobs unpublish-jobs
+prompt "$ "
+
+# Interactive local overrides (work vs home, etc.), matching shrc's
+# ~/.shrc.local and config.fish's local.fish. Anything the session handoff
+# above reads -- WANT_SHPOOL, WANT_TMUX, SESSION_BACKEND -- is too late here
+# and belongs in env.local.mesh, which env.mesh reads before any of this runs.
+read-local-rc
+
+# Gated on a real terminal as well as interactivity: `ssh-add` prompts, and a
+# forced-interactive session with stdin redirected (`mesh -i` under nohup, the
+# case shrc documents) cannot answer it. config.fish:2044 combines the same two
+# predicates.
+if stdin-is-tty() and not in-shpool() and need-auth() { auth }

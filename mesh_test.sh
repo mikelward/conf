@@ -1,0 +1,3013 @@
+#!/bin/bash
+#
+# Tests for config/mesh/env.mesh and config/mesh/rc.mesh.
+# Mirrors fish_test.sh but exercises the mesh implementation via `mesh -c`.
+# Skips gracefully when mesh is not installed.
+#
+# Both files are sourced for every snippet: mesh reads env.mesh on every
+# invocation and rc.mesh only for interactive shells, and rc.mesh is written
+# so that everything above its interactive section is definitions only. That
+# is what lets a non-interactive `mesh -c` source it and call into it.
+#
+
+. "$(dirname "$0")/shrc_test_lib.sh"
+
+if ! command -v mesh >/dev/null 2>&1; then
+    skip_all "mesh not installed"
+    test_summary "mesh_test"
+    exit 0
+fi
+
+_env_mesh="$_srcdir/config/mesh/env.mesh"
+_rc_mesh="$_srcdir/config/mesh/rc.mesh"
+_fakehome="$_testdir/fakehome"
+mkdir -p "$_fakehome"
+
+# Run a mesh snippet with both config files sourced. A fake HOME keeps the
+# real one out of reach (the ~/.failsafe probe, ~/.workstation, the history
+# file, the local overrides). NO_COLOR would not actually strip anything here
+# -- mesh writes no escapes when stdout is not a terminal -- but it is set for
+# the same reason the fish harness sets it: so a future assertion doesn't
+# depend on that.
+#
+# $1 is a preamble evaluated after the source (so it can replace a function
+# the config defines), $2 the snippet under test. Either may be empty.
+_mesh_run_config() {
+    local _post="$1"
+    local _snippet="$2"
+    HOME="$_fakehome" \
+        TERM=dumb \
+        NO_COLOR=1 \
+        SHPOOL_SESSION_NAME= \
+        TMUX= \
+        SSH_CONNECTION= \
+        run_with_timeout 15 mesh -c "
+            source $_env_mesh
+            source $_rc_mesh
+            $_post
+            $_snippet
+        " </dev/null
+}
+
+# Same, but leaving stdin connected to the caller's. The default closes it, so
+# the helpers that read stdin -- each, each0, with-address-records -- need this
+# one to be given anything to read.
+_mesh_run_stdin() {
+    local _post="$1"
+    local _snippet="$2"
+    HOME="$_fakehome" \
+        TERM=dumb \
+        NO_COLOR=1 \
+        SHPOOL_SESSION_NAME= \
+        TMUX= \
+        SSH_CONNECTION= \
+        run_with_timeout 15 mesh -c "
+            source $_env_mesh
+            source $_rc_mesh
+            $_post
+            $_snippet
+        "
+}
+
+# The common case: stub the commands a test host may or may not have, so
+# session-backend and the want-* gates are deterministic. have-command is
+# replaced rather than PATH-stubbed because it is the single choke point the
+# config asks through.
+_mesh_run() {
+    _mesh_run_config '
+        func have-command(name) {
+            match $name {
+                shpool | autoshpool | tmux | autotmux | brew | fnm => { return false }
+                _ => {
+                    if type -P --quiet $name { return true }
+                    return false
+                }
+            }
+        }
+    ' "$1"
+}
+
+###############
+# TEST: failsafe short-circuits rc.mesh
+
+start_test "mesh FAILSAFE=1 bails out of rc.mesh"
+result="$(HOME="$_fakehome" FAILSAFE=1 run_with_timeout 15 mesh -c "
+    source $_rc_mesh
+    if type --quiet tilde-pwd { puts defined } else { puts undefined }
+" 2>&1 </dev/null)"
+assert_contains "failsafe mode" "$result"
+assert_contains "undefined" "$result"
+
+start_test "mesh LC_FAILSAFE=1 bails out of rc.mesh"
+result="$(HOME="$_fakehome" LC_FAILSAFE=1 run_with_timeout 15 mesh -c "
+    source $_rc_mesh
+    puts done
+" 2>&1 </dev/null)"
+assert_contains "failsafe mode" "$result"
+
+start_test "mesh ~/.failsafe bails out of rc.mesh"
+touch "$_fakehome/.failsafe"
+result="$(HOME="$_fakehome" run_with_timeout 15 mesh -c "
+    source $_rc_mesh
+    puts done
+" 2>&1 </dev/null)"
+rm -f "$_fakehome/.failsafe"
+assert_contains "failsafe mode" "$result"
+
+start_test "mesh no failsafe flag defines the config"
+result="$(_mesh_run 'if type --quiet tilde-pwd { puts defined }')"
+assert_equal "defined" "$result"
+
+###############
+# TEST: local environment overrides
+
+# env.local.mesh is read by env.mesh before rc.mesh's session handoff, so
+# WANT_SHPOOL and friends set there take effect. rc.local.mesh runs after the
+# handoff and is too late for those.
+###############
+# TEST: CDPATH
+
+# Set in env.mesh, not rc.mesh: a non-interactive `mesh script.mesh` resolves
+# `cd` the same way, and a login-shell mesh has no POSIX parent to inherit it
+# from. mesh reads it as a list, like PATH.
+start_test "mesh sets CDPATH to . and \$HOME"
+result="$(_mesh_run 'puts $env.CDPATH:join(",")')"
+assert_equal ".,$_fakehome" "$result"
+
+# `cd` echoes the directory it resolved through CDPATH. bash does the same, so
+# this is the behavior a user switching over already sees -- asserted rather
+# than left to surprise whoever next reads an mcd test.
+start_test "mesh cd echoes a directory resolved through CDPATH"
+mkdir -p "$_testdir/cdpath-target"
+result="$(_mesh_run "
+    cd $_testdir
+    cd cdpath-target
+")"
+assert_equal "$_testdir/cdpath-target" "$result"
+
+start_test "mesh CDPATH reaches a non-interactive script"
+printf 'puts $env.CDPATH:join(",")\n' > "$_testdir/cdpath.mesh"
+result="$(HOME="$_fakehome" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    puts \$env.CDPATH:join(\",\")
+" </dev/null 2>&1)"
+assert_equal ".,$_fakehome" "$result"
+
+###############
+# TEST: the completion bell
+
+# Gated on xterm and its variants, as shrc:1635 gates it: that is what turns a
+# bell into a window-manager urgency hint rather than a beep.
+# Run mesh directly rather than through _mesh_run_config: that helper pins
+# TERM=dumb, which is exactly the variable under test here.
+_flash_run() {
+    HOME="$_fakehome" TERM="$1" run_with_timeout 15 mesh -c "
+        source $_env_mesh
+        source $_rc_mesh
+        flash-terminal
+    " </dev/null 2>&1 | od -c | head -1
+}
+
+start_test "mesh flash-terminal rings the bell on an xterm"
+assert_contains '\a' "$(_flash_run xterm)"
+
+start_test "mesh flash-terminal rings the bell on an xterm variant"
+assert_contains '\a' "$(_flash_run xterm-256color)"
+
+start_test "mesh flash-terminal stays quiet on other terminals"
+assert_not_contains '\a' "$(_flash_run dumb)"
+
+start_test "mesh flash-terminal stays quiet with no TERM"
+assert_not_contains '\a' "$(_flash_run "")"
+
+# `xtermfoo` is not an xterm variant -- the gate is an exact name or an
+# `xterm-` prefix, as shrc's `xterm|xterm-*` case is.
+start_test "mesh flash-terminal is not fooled by a name starting with xterm"
+assert_not_contains '\a' "$(_flash_run xtermfoo)"
+
+# The prompt is what rings it, so the call has to be in preprompt rather than
+# left for the user.
+start_test "mesh preprompt rings the bell last"
+result="$(HOME="$_fakehome" TERM=xterm run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    func terminal-width() { return 1 }
+    func auth-info() { return \"\" }
+    func maybe-background-fetch(auth = \"\") { return }
+    func publish-jobs() { return }
+    func dir-info() { return \"dir\" }
+    func unmerged() { return }
+    preprompt
+" </dev/null 2>/dev/null | od -c | tail -3)"
+assert_contains '\a' "$result"
+
+###############
+# TEST: local environment overrides
+
+start_test "mesh env.local.mesh is read and can set the session gating"
+mkdir -p "$_fakehome/.config/mesh"
+printf 'export WANT_SHPOOL = "0"\nexport MESH_ENV_LOCAL_RAN = "yes"\n' \
+    > "$_fakehome/.config/mesh/env.local.mesh"
+result="$(_mesh_run 'puts $env:get(MESH_ENV_LOCAL_RAN, "no") $env:get(WANT_SHPOOL, "unset")')"
+assert_equal "yes 0" "$result"
+
+start_test "mesh env.local.mesh can add to PATH"
+printf 'add-path /etc start\n' > "$_fakehome/.config/mesh/env.local.mesh"
+result="$(_mesh_run 'puts inpath("/etc")')"
+assert_equal "true" "$result"
+
+# The point of a machine-local override: what it prepends has to beat the
+# standard list, which means it is read *after* that list is built. shrc gets
+# the same precedence by sourcing ~/.env.local right after ~/.env.
+start_test "mesh env.local.mesh PATH additions land in front of the standard ones"
+mkdir -p "$_fakehome/usr-local-bin-stand-in" "$_fakehome/bin"
+printf 'add-path %s start\n' "$_fakehome/usr-local-bin-stand-in" \
+    > "$_fakehome/.config/mesh/env.local.mesh"
+result="$(_mesh_run 'puts $env.PATH[0]')"
+assert_equal "$_fakehome/usr-local-bin-stand-in" "$result"
+
+# ...but the globs still go in front of the local file, as in shrc: they are
+# the most specific thing on the list.
+start_test "mesh scripts.* still leads the local PATH additions"
+mkdir -p "$_fakehome/scripts.test"
+result="$(_mesh_run 'puts $env.PATH[0]')"
+assert_equal "$_fakehome/scripts.test" "$result"
+rmdir "$_fakehome/scripts.test"
+
+# $GOPATH/bin is ~/bin already when GOPATH is the default; prepending it
+# unconditionally would put ~/bin in front of ~/scripts. shrc:1193 guards it.
+start_test "mesh adds \$GOPATH/bin only when GOPATH is not \$HOME"
+printf 'export GOPATH = "%s/elsewhere"\n' "$_fakehome" \
+    > "$_fakehome/.config/mesh/env.local.mesh"
+mkdir -p "$_fakehome/elsewhere/bin"
+result="$(_mesh_run 'puts $env.PATH[0]')"
+assert_equal "$_fakehome/elsewhere/bin" "$result"
+
+start_test "mesh leaves ~/scripts ahead of ~/bin with the default GOPATH"
+printf '' > "$_fakehome/.config/mesh/env.local.mesh"
+mkdir -p "$_fakehome/scripts"
+result="$(_mesh_run 'puts $env.PATH[0]')"
+assert_equal "$_fakehome/scripts" "$result"
+
+# A file's status is that of its last statement, so a failure here would be
+# overwritten by every assignment below it and rerc's guard would see success
+# over a half-applied local config. Reported at the point of failure instead.
+start_test "mesh reports a failing env.local.mesh"
+printf 'this is not( valid mesh\n' > "$_fakehome/.config/mesh/env.local.mesh"
+result="$(_mesh_run 'puts reached-the-end' 2>&1)"
+assert_contains "env.local.mesh failed" "$result"
+
+# Reported, not fatal: a login shell whose PATH was never set up is worse than
+# one whose local overrides half-applied, and shrc's `.` of ~/.env.local
+# carries on the same way.
+start_test "mesh sets up the rest of the environment after a failing env.local.mesh"
+assert_contains "reached-the-end" "$result"
+
+start_test "mesh still builds PATH after a failing env.local.mesh"
+result="$(_mesh_run 'puts $env.PATH[0]' 2>/dev/null)"
+assert_equal "$_fakehome/scripts" "$result"
+
+start_test "mesh is fine with no env.local.mesh"
+rm -f "$_fakehome/.config/mesh/env.local.mesh"
+result="$(_mesh_run 'puts ok')"
+assert_equal "ok" "$result"
+
+# Same rule for the interactive half's local file. Pulled out as a named
+# function precisely so it is reachable from here: nothing past rc.mesh's
+# `return unless $sh.interactive` can be driven without a pty.
+start_test "mesh read-local-rc reports a failing rc.local.mesh"
+printf 'this is not( valid mesh\n' > "$_fakehome/.config/mesh/rc.local.mesh"
+result="$(_mesh_run 'read-local-rc
+puts after' 2>&1)"
+assert_contains "rc.local.mesh failed" "$result"
+assert_contains "after" "$result"
+
+start_test "mesh read-local-rc is quiet when rc.local.mesh is fine"
+printf 'export RC_LOCAL_MARKER = "seen"\n' > "$_fakehome/.config/mesh/rc.local.mesh"
+result="$(_mesh_run 'read-local-rc
+puts $env.RC_LOCAL_MARKER' 2>&1)"
+assert_equal "seen" "$result"
+
+start_test "mesh read-local-rc is fine with no rc.local.mesh"
+rm -f "$_fakehome/.config/mesh/rc.local.mesh"
+result="$(_mesh_run 'read-local-rc
+puts ok' 2>&1)"
+assert_equal "ok" "$result"
+
+###############
+# TEST: the command shortcuts forward flags
+
+# The whole point of the alias/wrapper conversion: a plain `func l(...args)`
+# rejected an undeclared long flag before ...args could collect it, so
+# `l --color=never` was `unknown flag --color` and `l --help` printed mesh's
+# generated help instead of reaching ls.
+_fake_l_bin="$_testdir/fakelbin"
+mkdir -p "$_fake_l_bin"
+printf '#!/bin/sh\necho "ls got: $@"\n' > "$_fake_l_bin/ls"
+chmod +x "$_fake_l_bin/ls"
+
+start_test "mesh an alias shortcut forwards an undeclared long flag"
+result="$(PATH="$_fake_l_bin:$PATH" _mesh_run_config '' 'l --color=never somefile')"
+assert_contains "color=never" "$result"
+assert_contains "somefile" "$result"
+
+start_test "mesh an alias shortcut forwards --help rather than answering it"
+result="$(PATH="$_fake_l_bin:$PATH" _mesh_run_config '' 'l --help')"
+assert_contains "ls got: " "$result"
+assert_contains "help" "$result"
+assert_not_contains "Usage:" "$result"
+
+start_test "mesh the shortcuts are wrapper funcs"
+result="$(_mesh_run 'type g')"
+assert_contains "wrapper func g(...args)" "$result"
+
+###############
+# TEST: the delegating helpers forward flags to their command
+
+# retry/recent/body each read one leading option of their own and forward the
+# rest. Declaring it as a mesh flag would scan the *whole* argument list, so a
+# flag belonging to the delegated command was rejected -- `retry curl --fail`
+# was `unknown flag --fail`. shrc reads them as leading options too.
+_fake_delegate_bin="$_testdir/fakedelegatebin"
+mkdir -p "$_fake_delegate_bin"
+printf '#!/bin/sh\necho "curl got: $@"\n' > "$_fake_delegate_bin/curl"
+chmod +x "$_fake_delegate_bin/curl"
+
+start_test "mesh retry forwards a long flag to the retried command"
+result="$(PATH="$_fake_delegate_bin:$PATH" _mesh_run_config 'func bell() { }' 'retry curl --fail URL')"
+assert_equal "curl got: --fail URL" "$result"
+
+start_test "mesh retry still reads its own --sleep in both forms"
+result="$(PATH="$_fake_delegate_bin:$PATH" _mesh_run_config 'func bell() { }' 'retry --sleep=0 curl --fail A
+retry --sleep 0 curl --fail B')"
+assert_equal "curl got: --fail A
+curl got: --fail B" "$result"
+
+start_test "mesh setx forwards a long flag to the traced command"
+result="$(PATH="$_fake_delegate_bin:$PATH" _mesh_run_config '' 'setx curl --location URL' 2>/dev/null)"
+assert_equal "curl got: --location URL" "$result"
+
+start_test "mesh with-agent forwards a long flag"
+result="$(PATH="$_fake_delegate_bin:$PATH" _mesh_run_config '' 'with-agent curl --fail X')"
+assert_equal "curl got: --fail X" "$result"
+
+start_test "mesh first-arg-last forwards a long flag"
+result="$(PATH="$_fake_delegate_bin:$PATH" _mesh_run_config '' 'first-arg-last curl LAST --ignore-case')"
+assert_equal "curl got: --ignore-case LAST" "$result"
+
+start_test "mesh shift-options collects the documented --file=value form"
+result="$(PATH="$_fake_delegate_bin:$PATH" _mesh_run_config '' 'shift-options curl target --file=value')"
+assert_equal "curl got: --file=value target" "$result"
+
+# Not a delegated command's flag -- data that merely looks like one. A plain
+# func scans it just the same, so the message helpers are wrappers too.
+start_test "mesh warn and error accept text that starts with a dash"
+result="$(_mesh_run '
+    warn "--x is unset"
+    error "--y is unset"
+' 2>&1)"
+assert_equal "--x is unset
+--y is unset" "$result"
+
+start_test "mesh run forwards a long flag to the delegated command"
+result="$(PATH="$_fake_delegate_bin:$PATH" _mesh_run_config 'func logger(...a) { }' 'run curl --location URL')"
+assert_equal "curl got: --location URL" "$result"
+
+start_test "mesh body forwards a long flag and prints the header"
+result="$(printf 'HEADER\naaa\nbbb\n' | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    body grep --invert-match aaa
+")"
+assert_equal "HEADER
+bbb" "$result"
+
+# shrc:662 and shrc:954 spell the count as a leading -<number>, which is the
+# form both are documented with. A bare `-2` reaches a wrapper as the *integer*
+# -2, not a string, so the head is interpolated to text before parsing.
+start_test "mesh body accepts the -N shorthand"
+result="$(printf 'H1\nH2\nxxx\n' | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    body -2 cat
+")"
+assert_equal "H1
+H2
+xxx" "$result"
+
+start_test "mesh recent accepts the -N shorthand"
+# Counts lines rather than inspecting a value: `recent` prints, and `-2` would
+# otherwise reach `ls`, which rejects it with `invalid option -- '2'`.
+result="$(_mesh_run '
+    cd /etc
+    recent -2 | wc -l
+' 2>/dev/null | tail -1 | tr -d " ")"
+assert_equal "2" "$result"
+
+start_test "mesh body reads its own --lines"
+result="$(printf 'H1\nH2\nxxx\n' | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    body --lines=2 cat
+")"
+assert_equal "H1
+H2
+xxx" "$result"
+
+# starts-with takes data, and a value call scans an argument whose runtime
+# value begins with `--` as a flag unless the callee is a wrapper.
+start_test "mesh starts-with accepts an argument that looks like a flag"
+result="$(_mesh_run 'puts starts-with("--sleep=5", "--sleep=")')"
+assert_equal "true" "$result"
+
+###############
+# TEST: rerc reloads both halves
+
+start_test "mesh rerc re-reads env.mesh as well as rc.mesh"
+mkdir -p "$_fakehome/.config/mesh"
+ln -sf "$_env_mesh" "$_fakehome/.config/mesh/env.mesh"
+ln -sf "$_rc_mesh" "$_fakehome/.config/mesh/rc.mesh"
+printf 'export MESH_RELOAD_MARKER = "seen"\n' > "$_fakehome/.config/mesh/env.local.mesh"
+result="$(_mesh_run '
+    $env.MESH_RELOAD_MARKER = ""
+    rerc
+    puts $env:get(MESH_RELOAD_MARKER, "unset")
+' 2>/dev/null | tail -1)"
+assert_equal "seen" "$result"
+rm -f "$_fakehome/.config/mesh/env.local.mesh" "$_fakehome/.config/mesh/env.mesh" "$_fakehome/.config/mesh/rc.mesh"
+
+###############
+# TEST: the vcs shortcuts
+
+# Kept in step with config.nu's list rather than trimmed to a handful: `pull`,
+# `push`, `review` and the short `ci`/`st` are everyday commands that stopped
+# resolving when the port defined only eight.
+start_test "mesh defines the vcs shortcuts the other shells define"
+result="$(_mesh_run '
+    missing = []
+    for name in [add amend annotate base branch branches changed changelog changes checkout commit commitforce diffs fix graph incoming lint map outgoing pending precommit presubmit pull push recommit revert review reword status submit submitforce unknown upload uploadchain am ci di gr lg ma st] {
+        if not is-runnable($name) { missing += [$name] }
+    }
+    puts $missing:repr
+')"
+assert_equal "[]" "$result"
+
+###############
+# TEST: startup auth is gated on a terminal
+
+# `ssh-add` prompts, so a forced-interactive session with stdin redirected
+# cannot answer it. config.fish:2044 gates on stdin_is_tty for the same reason.
+start_test "mesh startup auth is gated on stdin being a tty"
+result="$(_mesh_run_config '
+    func stdin-is-tty() { return false }
+    func in-shpool() { return false }
+    func need-auth() { return true }
+    func auth() { puts "PROMPTED" }
+' '
+    if stdin-is-tty() and not in-shpool() and need-auth() { auth }
+    puts done
+')"
+assert_equal "done" "$result"
+
+start_test "mesh startup auth runs with a tty"
+result="$(_mesh_run_config '
+    func stdin-is-tty() { return true }
+    func in-shpool() { return false }
+    func need-auth() { return true }
+    func auth() { puts "PROMPTED" }
+' '
+    if stdin-is-tty() and not in-shpool() and need-auth() { auth }
+')"
+assert_equal "PROMPTED" "$result"
+
+###############
+# TEST: confirm
+
+# An argument-taking modifier cannot be written inside a string, so the join
+# has to be bound first -- without that, confirm failed before reaching `gets`
+# and the prompt could not be answered at all.
+# `confirm` reads a reply, so these bypass _mesh_run's `</dev/null`.
+_confirm_with() {
+    printf '%s' "$1" | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout 15 mesh -c "
+        source $_env_mesh
+        source $_rc_mesh
+        puts confirm(\"are\", \"you\", \"sure\"):repr
+    " 2>&1
+}
+
+# Asserted through a command-position call: mesh swallows a function's earlier
+# stdout when its last statement is a `match` and it is called for its value,
+# which is a mesh bug rather than anything this config controls.
+start_test "mesh confirm prompts with the joined question"
+result="$(printf 'y\n' | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    confirm are you sure
+" 2>&1)"
+assert_contains "are you sure? [Y/n]" "$result"
+
+start_test "mesh confirm takes yes"
+assert_equal "true" "$(_confirm_with 'y
+' | tail -1)"
+
+start_test "mesh confirm takes a bare Enter as yes"
+assert_equal "true" "$(_confirm_with '
+' | tail -1)"
+
+start_test "mesh confirm takes no"
+assert_equal "false" "$(_confirm_with 'n
+' | tail -1)"
+
+###############
+# TEST: PATH helpers
+
+start_test "mesh prepend-path puts an existing dir first"
+result="$(_mesh_run '
+    prepend-path /etc
+    puts $env.PATH[0]
+')"
+assert_equal "/etc" "$result"
+
+start_test "mesh prepend-path ignores a dir that does not exist"
+result="$(_mesh_run '
+    before = $env.PATH[0]
+    prepend-path /no-such-dir-here
+    if $env.PATH[0] == $before { puts unchanged }
+')"
+assert_equal "unchanged" "$result"
+
+start_test "mesh append-path puts an existing dir last"
+result="$(_mesh_run '
+    append-path /etc
+    puts $env.PATH:last
+')"
+assert_equal "/etc" "$result"
+
+start_test "mesh prepend-path does not duplicate an entry"
+result="$(_mesh_run '
+    prepend-path /etc
+    prepend-path /etc
+    count = 0
+    for d in $env.PATH {
+        if $d == "/etc" { count = $count + 1 }
+    }
+    puts $count
+')"
+assert_equal "1" "$result"
+
+start_test "mesh delete-path removes an entry"
+result="$(_mesh_run '
+    prepend-path /etc
+    delete-path /etc
+    if ("/etc" in $env.PATH) { puts present } else { puts absent }
+')"
+assert_equal "absent" "$result"
+
+start_test "mesh inpath reports membership"
+result="$(_mesh_run '
+    prepend-path /etc
+    puts inpath("/etc") inpath("/no-such-dir-here")
+')"
+assert_equal "true false" "$result"
+
+start_test "mesh add-path with no position appends only when missing"
+result="$(_mesh_run '
+    add-path /etc
+    first = $env.PATH:last
+    add-path /etc
+    puts $first $env.PATH:last
+')"
+assert_equal "/etc /etc" "$result"
+
+###############
+# TEST: command-lookup helpers
+
+start_test "mesh have-command finds a real command and misses a fake one"
+result="$(_mesh_run_config '' '
+    puts have-command("sh") have-command("no-such-command-xyz")
+')"
+assert_equal "true false" "$result"
+
+start_test "mesh have-command ignores functions, unlike is-runnable"
+result="$(_mesh_run_config '
+    func only-a-function() { puts hi }
+' '
+    puts have-command("only-a-function") is-runnable("only-a-function")
+')"
+assert_equal "false true" "$result"
+
+start_test "mesh path prints the full path to a command"
+result="$(_mesh_run_config '' 'puts path("sh")')"
+assert_contains "/sh" "$result"
+
+###############
+# TEST: shellenv-entry, the KEY=VALUE reader brew/fnm output goes through
+
+start_test "mesh shellenv-entry splits an export line"
+result="$(_mesh_run '
+    e = shellenv-entry("export FNM_DIR=\"/home/user/.fnm\";")
+    puts ...$e
+')"
+assert_equal "FNM_DIR /home/user/.fnm" "$result"
+
+start_test "mesh shellenv-entry ignores comments and blank lines"
+result="$(_mesh_run '
+    puts shellenv-entry(""):len shellenv-entry("# a comment"):len shellenv-entry("not an assignment"):len
+')"
+assert_equal "0 0 0" "$result"
+
+start_test "mesh shellenv-entry takes the quoted run, not everything up to the last quote"
+# `fnm env --shell bash` writes PATH as `"<shim>":$PATH` -- the closing quote
+# is in the middle -- so trimming quotes off both ends left a stray one behind.
+result="$(_mesh_run '
+    e = shellenv-entry("export PATH=\"/opt/fnm/bin\":\$PATH")
+    puts ...$e
+')"
+assert_equal "PATH /opt/fnm/bin" "$result"
+
+start_test "mesh shellenv-entry handles a single-quoted value"
+result="$(_mesh_run "
+    e = shellenv-entry(\"export FNM_ARCH='x64'\")
+    puts ...\$e
+")"
+assert_equal "FNM_ARCH x64" "$result"
+
+start_test "mesh shellenv-entry leaves an unquoted value alone"
+result="$(_mesh_run '
+    e = shellenv-entry("export FNM_LOGLEVEL=info")
+    puts ...$e
+')"
+assert_equal "FNM_LOGLEVEL info" "$result"
+
+start_test "mesh unquoted-head passes through an unquoted word"
+result="$(_mesh_run 'puts unquoted-head("plain") unquoted-head("\"quoted\":tail")')"
+assert_equal "plain quoted" "$result"
+
+###############
+# TEST: setup-fnm does not accumulate shim directories across reloads
+
+# A fake `fnm` that mints a new multishell directory on every call, the way the
+# real one does -- the shim path is per-invocation, so the value setup-fnm is
+# about to overwrite is the only handle on the entry already sitting in PATH.
+_fake_fnm_bin="$_testdir/fakefnmbin"
+mkdir -p "$_fake_fnm_bin"
+cat > "$_fake_fnm_bin/fnm" <<EOF
+#!/bin/sh
+n=\$(cat "$_testdir/fnm-calls" 2>/dev/null || echo 0)
+n=\$((n + 1))
+echo "\$n" > "$_testdir/fnm-calls"
+echo "export FNM_MULTISHELL_PATH=\"$_testdir/fnm-shell-\$n\";"
+echo "export FNM_DIR=\"$_testdir/fnm\";"
+echo "export PATH=\"$_testdir/fnm-shell-\$n/bin\":\\\$PATH"
+EOF
+chmod +x "$_fake_fnm_bin/fnm"
+
+# `rerc` re-reads env.mesh, so setup-fnm runs again in a live session. The
+# cleanup below the loop deletes the shim named by FNM_MULTISHELL_PATH, so
+# overwriting that variable first left every earlier shim on PATH.
+# A failing `fnm env` yields no assignments, and the cleanup below would then
+# re-prepend the *previous* shim -- deliberately putting a stale node back at
+# the front of PATH on every reload. Report and leave PATH alone instead.
+start_test "mesh setup-fnm reports a failing fnm env and leaves PATH alone"
+_failing_fnm_bin="$_testdir/failingfnmbin"
+mkdir -p "$_failing_fnm_bin"
+printf '#!/bin/sh\nexit 3\n' > "$_failing_fnm_bin/fnm"
+chmod +x "$_failing_fnm_bin/fnm"
+mkdir -p "$_testdir/stale-shim/bin"
+result="$(PATH="$_failing_fnm_bin:$PATH" FNM_MULTISHELL_PATH="$_testdir/stale-shim" \
+    HOME="$_fakehome" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    puts \"first=\$env.PATH[0]\"
+" </dev/null 2>&1)"
+assert_contains "could not read the node environment" "$result"
+assert_not_contains "first=$_testdir/stale-shim/bin" "$result"
+
+start_test "mesh setup-fnm leaves one shim on PATH across reloads"
+rm -f "$_testdir/fnm-calls"
+result="$(PATH="$_fake_fnm_bin:$PATH" _mesh_run_config '' '
+    setup-fnm
+    setup-fnm
+    setup-fnm
+    puts $env.PATH:join(",")
+')"
+# env.mesh runs setup-fnm once as it is sourced, so the three above are calls
+# two through four and only the fourth shim should have survived.
+assert_equal "1" "$(printf '%s\n' "$result" | tr ',' '\n' | grep -c 'fnm-shell-')"
+assert_contains "$_testdir/fnm-shell-4/bin" "$result"
+
+###############
+# TEST: setup-brew derives what `brew shellenv` would export
+
+# A fake brew tree: $prefix/bin/brew, plus $prefix/Homebrew when the layout
+# under test is the Linuxbrew / Intel-macOS one.
+_make_fake_brew() {
+    local _prefix="$1"
+    local _with_repo="$2"
+    rm -rf "$_prefix"
+    mkdir -p "$_prefix/bin" "$_prefix/sbin" "$_prefix/share/man" "$_prefix/share/info"
+    # Cellar is what tells a real prefix from a shim's grandparent, and Homebrew
+    # creates it at install time, so a realistic tree has one. The stub answers
+    # `--prefix` with a wrong path on purpose: any test that still reads the
+    # derived prefix proves brew was never asked.
+    mkdir -p "$_prefix/Cellar"
+    printf '#!/bin/sh\ntest "$1" = --prefix && echo /wrong/prefix\nexit 0\n' > "$_prefix/bin/brew"
+    chmod +x "$_prefix/bin/brew"
+    test "$_with_repo" = "repo" && mkdir -p "$_prefix/Homebrew"
+    return 0
+}
+
+# `rerc` re-reads env.mesh, so setup-brew runs more than once per session: a
+# plain prepend would put the same brew dir on the front again each time and
+# grow MANPATH/INFOPATH without bound, along with an extra trailing empty.
+start_test "mesh setup-brew is idempotent across reloads"
+_make_fake_brew "$_testdir/brew-idem" norepo
+result="$(_mesh_run "
+    \$env.BREW = \"$_testdir/brew-idem/bin/brew\"
+    setup-brew
+    setup-brew
+    setup-brew
+    puts \$env.MANPATH:join(\",\")
+    puts \$env.INFOPATH:join(\",\")
+")"
+assert_equal "$_testdir/brew-idem/share/man,
+$_testdir/brew-idem/share/info," "$result"
+
+start_test "mesh setup-brew reload keeps an inherited MANPATH entry once"
+result="$(HOME="$_fakehome" MANPATH=/usr/share/man run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    \$env.BREW = \"$_testdir/brew-idem/bin/brew\"
+    setup-brew
+    setup-brew
+    puts \$env.MANPATH:join(\",\")
+" </dev/null)"
+assert_equal "$_testdir/brew-idem/share/man,/usr/share/man," "$result"
+
+# An empty component in a man/info path means "and the system defaults here",
+# so deduplicating must not take it with the Homebrew entry.
+start_test "mesh setup-brew keeps an inherited INFOPATH sentinel"
+result="$(HOME="$_fakehome" INFOPATH="/custom:" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    \$env.BREW = \"$_testdir/brew-idem/bin/brew\"
+    setup-brew
+    setup-brew
+    puts \$env.INFOPATH:join(\",\")
+" </dev/null)"
+assert_equal "$_testdir/brew-idem/share/info,/custom," "$result"
+
+start_test "mesh setup-brew keeps an interior MANPATH empty"
+result="$(HOME="$_fakehome" MANPATH="/a::/b" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    \$env.BREW = \"$_testdir/brew-idem/bin/brew\"
+    setup-brew
+    setup-brew
+    puts \$env.MANPATH:join(\",\")
+" </dev/null)"
+assert_equal "$_testdir/brew-idem/share/man,/a,,/b," "$result"
+
+start_test "mesh setup-brew exports the prefix and cellar"
+_make_fake_brew "$_testdir/brew-arm" norepo
+result="$(_mesh_run "
+    \$env.BREW = \"$_testdir/brew-arm/bin/brew\"
+    setup-brew
+    puts \$env.HOMEBREW_PREFIX \$env.HOMEBREW_CELLAR
+")"
+assert_equal "$_testdir/brew-arm $_testdir/brew-arm/Cellar" "$result"
+
+# The grandparent of `bin/brew` is the prefix for every real layout, and the
+# stub would answer a wrong one, so reading the derived value proves brew was
+# not forked on the ordinary path -- where shrc pays a `brew shellenv` every
+# time.
+start_test "mesh setup-brew does not ask brew when the tree looks real"
+result="$(_mesh_run "
+    \$env.BREW = \"$_testdir/brew-arm/bin/brew\"
+    setup-brew
+    puts \$env.HOMEBREW_PREFIX
+")"
+assert_equal "$_testdir/brew-arm" "$result"
+
+# Reached through a shim outside its own tree, the grandparent is whatever
+# holds the shim -- \$HOME, typically -- so brew is asked for the real answer.
+start_test "mesh setup-brew asks brew when reached through a shim"
+mkdir -p "$_testdir/shimbin"
+printf '#!/bin/sh\ntest "$1" = --prefix && echo %s\nexit 0\n' "$_testdir/brew-arm" \
+    > "$_testdir/shimbin/brew"
+chmod +x "$_testdir/shimbin/brew"
+result="$(_mesh_run "
+    \$env.BREW = \"$_testdir/shimbin/brew\"
+    setup-brew
+    puts \$env.HOMEBREW_PREFIX \$env.HOMEBREW_CELLAR
+")"
+assert_equal "$_testdir/brew-arm $_testdir/brew-arm/Cellar" "$result"
+
+# The derived prefix is already known wrong by the time brew is asked, so a
+# failed query leaves nothing usable to fall back to -- exporting the shim's
+# grandparent would put an unrelated tree's bin/sbin on PATH.
+start_test "mesh setup-brew gives up when brew cannot name its prefix"
+mkdir -p "$_testdir/badshimbin"
+printf '#!/bin/sh\nexit 1\n' > "$_testdir/badshimbin/brew"
+chmod +x "$_testdir/badshimbin/brew"
+result="$(_mesh_run "
+    \$env.BREW = \"$_testdir/badshimbin/brew\"
+    setup-brew
+    p = \$env:get(HOMEBREW_PREFIX, \"unset\")
+    puts \"prefix=\$p\"
+" 2>&1)"
+assert_contains "cannot determine the install prefix" "$result"
+assert_contains "prefix=unset" "$result"
+
+start_test "mesh setup-brew leaves PATH alone when brew cannot name its prefix"
+result="$(_mesh_run "
+    before = \$env.PATH:join(\",\")
+    \$env.BREW = \"$_testdir/badshimbin/brew\"
+    setup-brew
+    if \$env.PATH:join(\",\") == \$before { puts unchanged } else { puts changed }
+" 2>/dev/null)"
+assert_equal "unchanged" "$result"
+
+# `bin/brew` points into $prefix/Homebrew on Linuxbrew and Intel macOS, so
+# resolving the symlink would name the *repo* as the prefix. It is deliberately
+# not resolved.
+start_test "mesh setup-brew does not follow bin/brew into the Homebrew repo"
+_make_fake_brew "$_testdir/brew-symlink" repo
+mkdir -p "$_testdir/brew-symlink/Homebrew/bin"
+mv "$_testdir/brew-symlink/bin/brew" "$_testdir/brew-symlink/Homebrew/bin/brew"
+ln -s "$_testdir/brew-symlink/Homebrew/bin/brew" "$_testdir/brew-symlink/bin/brew"
+result="$(_mesh_run "
+    \$env.BREW = \"$_testdir/brew-symlink/bin/brew\"
+    setup-brew
+    puts \$env.HOMEBREW_PREFIX
+")"
+assert_equal "$_testdir/brew-symlink" "$result"
+
+start_test "mesh setup-brew points HOMEBREW_REPOSITORY at the prefix on Apple silicon"
+result="$(_mesh_run "
+    \$env.BREW = \"$_testdir/brew-arm/bin/brew\"
+    setup-brew
+    puts \$env.HOMEBREW_REPOSITORY
+")"
+assert_equal "$_testdir/brew-arm" "$result"
+
+start_test "mesh setup-brew points HOMEBREW_REPOSITORY at \$prefix/Homebrew when it exists"
+_make_fake_brew "$_testdir/brew-linux" repo
+result="$(_mesh_run "
+    \$env.BREW = \"$_testdir/brew-linux/bin/brew\"
+    setup-brew
+    puts \$env.HOMEBREW_REPOSITORY
+")"
+assert_equal "$_testdir/brew-linux/Homebrew" "$result"
+
+start_test "mesh setup-brew puts brew's bin ahead of its sbin on PATH"
+result="$(_mesh_run "
+    \$env.BREW = \"$_testdir/brew-arm/bin/brew\"
+    setup-brew
+    puts \$env.PATH[0] \$env.PATH[1]
+")"
+assert_equal "$_testdir/brew-arm/bin $_testdir/brew-arm/sbin" "$result"
+
+start_test "mesh setup-brew sets MANPATH with an unset MANPATH"
+result="$(HOME="$_fakehome" run_with_timeout 15 env -u MANPATH mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    \$env.BREW = \"$_testdir/brew-arm/bin/brew\"
+    setup-brew
+    puts \$env.MANPATH:join(\",\")
+" </dev/null)"
+assert_equal "$_testdir/brew-arm/share/man," "$result"
+
+start_test "mesh setup-brew keeps an existing MANPATH and its trailing component"
+result="$(HOME="$_fakehome" MANPATH=/usr/share/man run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    \$env.BREW = \"$_testdir/brew-arm/bin/brew\"
+    setup-brew
+    puts \$env.MANPATH:join(\",\")
+" </dev/null)"
+assert_equal "$_testdir/brew-arm/share/man,/usr/share/man," "$result"
+
+start_test "mesh setup-brew sets INFOPATH with an unset INFOPATH"
+result="$(HOME="$_fakehome" run_with_timeout 15 env -u INFOPATH mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    \$env.BREW = \"$_testdir/brew-arm/bin/brew\"
+    setup-brew
+    puts \$env.INFOPATH:join(\",\")
+" </dev/null)"
+assert_equal "$_testdir/brew-arm/share/info," "$result"
+
+start_test "mesh setup-brew keeps an existing INFOPATH"
+result="$(HOME="$_fakehome" INFOPATH=/usr/share/info run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    \$env.BREW = \"$_testdir/brew-arm/bin/brew\"
+    setup-brew
+    puts \$env.INFOPATH:join(\",\")
+" </dev/null)"
+assert_equal "$_testdir/brew-arm/share/info,/usr/share/info" "$result"
+
+start_test "mesh env.mesh completes its setup with brew installed and no MANPATH"
+result="$(HOME="$_fakehome" run_with_timeout 15 env -u MANPATH -u INFOPATH \
+    BREW="$_testdir/brew-arm/bin/brew" mesh -c "
+    source $_env_mesh
+    puts \$env.GREP_COLORS
+" 2>&1 </dev/null)"
+assert_equal "mt=4" "$result"
+
+###############
+# TEST: string and path helpers
+
+start_test "mesh starts-with tests a computed prefix"
+result="$(_mesh_run 'puts starts-with("abcdef", "abc") starts-with("abcdef", "xyz") starts-with("abc", "")')"
+assert_equal "true false false" "$result"
+
+start_test "mesh tilde-pwd shortens \$HOME"
+result="$(_mesh_run '
+    cd $env.HOME
+    puts tilde-pwd()
+')"
+assert_equal "~" "$result"
+
+start_test "mesh tilde-pwd shortens a directory under \$HOME"
+mkdir -p "$_fakehome/sub"
+result="$(_mesh_run '
+    cd "$env.HOME/sub"
+    puts tilde-pwd()
+')"
+assert_equal "~/sub" "$result"
+
+start_test "mesh tilde-pwd leaves a directory outside \$HOME alone"
+result="$(_mesh_run '
+    cd /etc
+    puts tilde-pwd()
+')"
+assert_equal "/etc" "$result"
+
+start_test "mesh short-hostname drops the domain and the user prefix"
+result="$(_mesh_run '
+    $env.HOSTNAME = "someuser-host1.example.com"
+    $env.USERNAME = "someuser"
+    puts short-hostname()
+')"
+assert_equal "host1" "$result"
+
+start_test "mesh short-hostname is empty with no hostname"
+result="$(_mesh_run '
+    $env.HOSTNAME = ""
+    puts "[$(puts short-hostname())]"
+')"
+assert_equal "[]" "$result"
+
+###############
+# TEST: mcd does not cd after a failed mkdir
+
+# assert_contains, not assert_equal: `cd` echoes the resolved directory when it
+# came from CDPATH, which bash does too (POSIX requires it for a non-`.` entry,
+# and bash prints for `.` as well). So the output is the echo *and* the pwd.
+start_test "mesh mcd makes the directory and moves into it"
+result="$(_mesh_run "
+    cd $_testdir
+    mcd made-by-mcd
+    puts \$(pwd)
+")"
+assert_contains "$_testdir/made-by-mcd" "$result"
+
+start_test "mesh mcd says so when the directory already exists"
+result="$(_mesh_run "
+    cd $_testdir
+    mcd made-by-mcd
+")"
+assert_equal "made-by-mcd already exists" "$result"
+
+# A plain file standing where a parent directory should be, rather than a
+# read-only directory: permission bits don't stop root, and these tests run as
+# root in CI. mkdir fails either way, and the cd must not run after it --
+# otherwise mkdir's real diagnostic is followed by a second one for the same
+# cause, which is what the `&&` is there to prevent.
+start_test "mesh mcd does not cd when mkdir fails"
+touch "$_testdir/not-a-dir"
+result="$(_mesh_run "mcd $_testdir/not-a-dir/nope" 2>&1)"
+assert_contains "mkdir: cannot create directory" "$result"
+assert_not_contains "mesh: cd:" "$result"
+
+start_test "mesh find-up finds a file in a parent directory"
+mkdir -p "$_testdir/up/a/b"
+touch "$_testdir/up/marker"
+result="$(_mesh_run "
+    cd $_testdir/up/a/b
+    puts find-up(\"marker\")
+")"
+assert_equal "$_testdir/up/marker" "$result"
+
+start_test "mesh find-up is empty when nothing matches"
+result="$(_mesh_run '
+    cd /
+    puts "[$(puts find-up("no-such-marker-xyz"))]"
+')"
+assert_equal "[]" "$result"
+
+# shrc and fish signal the miss with exit status 1. A mesh value function has
+# no status to carry that in -- in command position it prints nothing and
+# captures nothing -- so the miss is signalled by the empty string being
+# falsy. That's the contract callers rely on, so it is asserted rather than
+# left to happen to work.
+start_test "mesh find-up answers falsy on a miss and truthy on a hit"
+result="$(_mesh_run "
+    cd $_testdir/up/a/b
+    if find-up(\"no-such-marker-xyz\") { puts miss-truthy } else { puts miss-falsy }
+    if find-up(\"marker\") { puts hit-truthy } else { puts hit-falsy }
+")"
+assert_equal "miss-falsy
+hit-truthy" "$result"
+
+start_test "mesh find-test-file names the sibling test file"
+touch "$_testdir/thing.sh" "$_testdir/thing_test.sh"
+result="$(_mesh_run "puts find-test-file(\"$_testdir/thing.sh\")")"
+assert_equal "$_testdir/thing_test.sh" "$result"
+
+start_test "mesh find-test-file is empty when there is no test file"
+touch "$_testdir/lonely.sh"
+result="$(_mesh_run "puts \"[\$(puts find-test-file(\\\"$_testdir/lonely.sh\\\"))]\"")"
+assert_equal "[]" "$result"
+
+###############
+# TEST: shift-options moves leading options past the target argument
+
+start_test "mesh shift-options moves leading options past target"
+result="$(_mesh_run '
+    func fake-ssh(...args) { puts ...$args }
+    shift-options fake-ssh target -t -v hostname
+')"
+assert_equal "-t -v target hostname" "$result"
+
+start_test "mesh shift-options stops scanning at the first operand"
+result="$(_mesh_run '
+    func fake-ssh(...args) { puts ...$args }
+    shift-options fake-ssh target uptime -l
+')"
+assert_equal "target uptime -l" "$result"
+
+# `-5` arrives as the integer -5, which `~` refuses as a left operand -- the
+# whole call failed rather than the option being collected.
+start_test "mesh shift-options classifies a bare numeric short option"
+result="$(_mesh_run '
+    func fake-head(...args) { puts ...$args }
+    shift-options fake-head file -5
+' 2>&1)"
+assert_equal "-5 file" "$result"
+
+###############
+# TEST: tz2tz stops when the source conversion fails
+
+_fake_date_bin="$_testdir/fakedatebin"
+mkdir -p "$_fake_date_bin"
+cat > "$_fake_date_bin/date" <<'EOF'
+#!/bin/sh
+# Stand in for GNU date, which macOS doesn't have. Reject the one spec the
+# tests pass as unparsable; otherwise answer a fixed epoch for the `+%s` leg
+# and echo the timezone for the other, so both legs are visible.
+case "$2" in
+    unparsable) echo "date: invalid date 'unparsable'" >&2; exit 1 ;;
+esac
+case "$3" in
+    +%s) echo 1577836800 ;;
+    *)   echo "converted $2 in $TZ" ;;
+esac
+EOF
+chmod +x "$_fake_date_bin/date"
+
+start_test "mesh tz2tz does not run the target leg after a failed source leg"
+result="$(PATH="$_fake_date_bin:$PATH" _mesh_run 'tz2tz UTC UTC unparsable' 2>&1)"
+assert_equal "date: invalid date 'unparsable'" "$result"
+
+start_test "mesh tz2tz reports the failed source leg to the caller"
+PATH="$_fake_date_bin:$PATH" _mesh_run 'tz2tz UTC UTC unparsable
+exit $sh.status' > /dev/null 2>&1
+assert_equal "1" "$?"
+
+start_test "mesh tz2tz converts through both timezones when the spec parses"
+result="$(PATH="$_fake_date_bin:$PATH" _mesh_run 'tz2tz UTC EST 2020-01-01 00:00' 2>&1)"
+assert_equal "converted @1577836800 in EST" "$result"
+
+###############
+# TEST: daemon restarts a background program detached
+
+_fake_daemon_bin="$_testdir/fakedaemonbin"
+mkdir -p "$_fake_daemon_bin"
+printf '#!/bin/sh\necho "pkill: $*"\n' > "$_fake_daemon_bin/pkill"
+printf '#!/bin/sh\necho "setsid: $*"\n' > "$_fake_daemon_bin/setsid"
+chmod +x "$_fake_daemon_bin/pkill" "$_fake_daemon_bin/setsid"
+
+start_test "mesh daemon kills the old copy and starts a detached one"
+result="$(PATH="$_fake_daemon_bin:$PATH" _mesh_run 'daemon xbindkeys')"
+assert_equal "pkill: xbindkeys
+setsid: xbindkeys" "$result"
+
+# The `&` runs inside a `fork`, so the parent keeps no job -- otherwise
+# safe-exit would refuse to leave a shell that had ever started a daemon.
+start_test "mesh daemon leaves no job behind in the parent"
+result="$(PATH="$_fake_daemon_bin:$PATH" _mesh_run 'daemon xbindkeys > /dev/null
+puts "jobs=$sh.jobs:len"')"
+assert_equal "jobs=0" "$result"
+
+start_test "mesh bindkeys passes its arguments through to xbindkeys"
+result="$(PATH="$_fake_daemon_bin:$PATH" _mesh_run 'bindkeys --poll-rc')"
+assert_equal "pkill: xbindkeys
+setsid: xbindkeys --poll-rc" "$result"
+
+###############
+# TEST: session backend preference
+
+start_test "mesh session-backend prefers shpool when both are available"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+' 'puts session-backend()')"
+assert_equal "shpool" "$result"
+
+start_test "mesh SESSION_BACKEND=tmux flips the preference"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+' '
+    $env.SESSION_BACKEND = "tmux"
+    puts session-backend()
+')"
+assert_equal "tmux" "$result"
+
+start_test "mesh WANT_SHPOOL=0 falls back to tmux"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+' '
+    $env.WANT_SHPOOL = "0"
+    puts session-backend()
+')"
+assert_equal "tmux" "$result"
+
+start_test "mesh SESSION_BACKEND=tmux with WANT_TMUX=0 falls back to shpool"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+' '
+    $env.SESSION_BACKEND = "tmux"
+    $env.WANT_TMUX = "0"
+    puts session-backend()
+')"
+assert_equal "shpool" "$result"
+
+start_test "mesh session-backend is empty when neither backend is installed"
+result="$(_mesh_run 'puts "[$(puts session-backend())]"')"
+assert_equal "[]" "$result"
+
+start_test "mesh session-backend needs the autoshpool helper, not just shpool"
+result="$(_mesh_run_config '
+    func have-command(name) {
+        match $name {
+            shpool => { return true }
+            _ => { return false }
+        }
+    }
+' 'puts "[$(puts session-backend())]"')"
+assert_equal "[]" "$result"
+
+###############
+# TEST: the session launchers only replace this shell when they succeed
+
+start_test "mesh maybe-start-session-and-exit keeps the shell when autoshpool fails"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+    func stdin-is-tty() { return true }
+    func inside-project() { return true }
+    func autoshpool(...args) {
+        puts "autoshpool ran"
+        return 1
+    }
+' '
+    maybe-start-session-and-exit
+    puts "still here"
+')"
+assert_contains "autoshpool ran" "$result"
+assert_contains "still here" "$result"
+
+start_test "mesh maybe-start-session-and-exit keeps the shell when autotmux fails"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+    func stdin-is-tty() { return true }
+    func inside-project() { return true }
+    func autotmux(...args) { return 1 }
+' '
+    $env.SESSION_BACKEND = "tmux"
+    maybe-start-session-and-exit
+    puts "still here"
+')"
+assert_equal "still here" "$result"
+
+start_test "mesh maybe-start-session-and-exit exits when autoshpool succeeds"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+    func stdin-is-tty() { return true }
+    func inside-project() { return true }
+    func autoshpool(...args) { return 0 }
+' '
+    maybe-start-session-and-exit
+    puts "should not print"
+')"
+assert_equal "" "$result"
+
+start_test "mesh switchshpool keeps the shell when the switch fails"
+result="$(_mesh_run_config '
+    func autoshpool(...args) { return 1 }
+' '
+    switchshpool other
+    puts "still here"
+')"
+assert_equal "still here" "$result"
+
+start_test "mesh switchshpool exits when the switch succeeds"
+result="$(_mesh_run_config '
+    func autoshpool(...args) { return 0 }
+' '
+    switchshpool other
+    puts "should not print"
+')"
+assert_equal "" "$result"
+
+###############
+# TEST: want-shpool / want-tmux gating
+
+start_test "mesh want-shpool is false without a tty"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+    func stdin-is-tty() { return false }
+    func inside-project() { return true }
+' 'puts want-shpool()')"
+assert_equal "false" "$result"
+
+start_test "mesh want-shpool is true on a tty inside a project"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+    func stdin-is-tty() { return true }
+    func inside-project() { return true }
+' 'puts want-shpool()')"
+assert_equal "true" "$result"
+
+start_test "mesh want-shpool is false when already in shpool"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+    func stdin-is-tty() { return true }
+    func inside-project() { return true }
+' '
+    $env.SHPOOL_SESSION_NAME = "already"
+    puts want-shpool()
+')"
+assert_equal "false" "$result"
+
+start_test "mesh want-shpool is true when connected remotely, outside a project"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+    func stdin-is-tty() { return true }
+    func inside-project() { return false }
+' '
+    $env.SSH_CONNECTION = "10.0.0.1 1 10.0.0.2 22"
+    puts want-shpool()
+')"
+assert_equal "true" "$result"
+
+start_test "mesh WANT_SHPOOL=0 turns want-shpool off"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+    func stdin-is-tty() { return true }
+    func inside-project() { return true }
+' '
+    $env.WANT_SHPOOL = "0"
+    puts want-shpool()
+')"
+assert_equal "false" "$result"
+
+start_test "mesh want-tmux is false inside tmux"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+    func stdin-is-tty() { return true }
+    func inside-project() { return true }
+' '
+    $env.TMUX = "/tmp/tmux-0/default,1,0"
+    puts want-tmux()
+')"
+assert_equal "false" "$result"
+
+###############
+# TEST: applydiff only replaces the file when the command succeeded
+
+start_test "mesh applydiff replaces the file when the command succeeds"
+printf 'original\n' > "$_testdir/apply-ok.txt"
+result="$(_mesh_run "
+    func formatter(f) { puts formatted }
+    applydiff formatter $_testdir/apply-ok.txt
+    cat $_testdir/apply-ok.txt
+")"
+assert_equal "formatted" "$result"
+
+start_test "mesh applydiff leaves the file alone when the command fails"
+printf 'original\n' > "$_testdir/apply-fail.txt"
+result="$(_mesh_run "
+    func formatter(f) { return 1 }
+    applydiff formatter $_testdir/apply-fail.txt
+    cat $_testdir/apply-fail.txt
+" 2>/dev/null)"
+assert_equal "original" "$result"
+
+start_test "mesh applydiff removes the staged file when the command fails"
+printf 'original\n' > "$_testdir/apply-staged.txt"
+_mesh_run "
+    func formatter(f) { return 1 }
+    applydiff formatter $_testdir/apply-staged.txt
+" >/dev/null 2>&1
+assert_false test -e "$_testdir/apply-staged.txt.new"
+
+start_test "mesh applydiff reports the failure and returns nonzero"
+printf 'original\n' > "$_testdir/apply-report.txt"
+result="$(_mesh_run "
+    func formatter(f) { return 1 }
+    applydiff formatter $_testdir/apply-report.txt
+    puts \"status=\$sh.status\"
+" 2>&1)"
+assert_contains "is unchanged" "$result"
+assert_contains "status=1" "$result"
+
+###############
+# TEST: the ls lister is probed, not assumed
+#
+# The arm is chosen while rc.mesh is sourced, so the fake `ls` has to be on PATH
+# for the whole run -- and it has to be a real executable, since both the probe
+# and the wrapper go through `command ls`, which steps past a mesh function.
+
+_gnu_ls_bin="$_testdir/gnulsbin"
+mkdir -p "$_gnu_ls_bin"
+printf '#!/bin/sh\necho "ls: $*"\n' > "$_gnu_ls_bin/ls"
+chmod +x "$_gnu_ls_bin/ls"
+
+# A BSD/macOS-style ls: rejects --color=auto outright.
+_bsd_ls_bin="$_testdir/bsdlsbin"
+mkdir -p "$_bsd_ls_bin"
+{
+    printf '#!/bin/sh\n'
+    printf 'for a in "$@"; do\n'
+    printf '  case "$a" in --color=*) echo "ls: illegal option" >&2; exit 1 ;; esac\n'
+    printf 'done\n'
+    printf 'echo "ls: $*"\n'
+} > "$_bsd_ls_bin/ls"
+chmod +x "$_bsd_ls_bin/ls"
+
+_no_l_stub='
+    func have-command(name) {
+        match $name {
+            l => { return false }
+            _ => {
+                if type -P --quiet $name { return true }
+                return false
+            }
+        }
+    }
+'
+
+start_test "mesh l uses the GNU flags when this ls takes them"
+result="$(PATH="$_gnu_ls_bin:$PATH" _mesh_run_config "$_no_l_stub" 'l somefile')"
+assert_equal "ls: --color=auto -v -b -x somefile" "$result"
+
+start_test "mesh l falls back to plain ls when --color=auto is rejected"
+result="$(PATH="$_bsd_ls_bin:$PATH" _mesh_run_config "$_no_l_stub" 'l somefile' 2>/dev/null)"
+assert_equal "ls: -v -b -x somefile" "$result"
+
+start_test "mesh ll builds on whichever lister was picked"
+result="$(PATH="$_bsd_ls_bin:$PATH" _mesh_run_config "$_no_l_stub" 'll somefile' 2>/dev/null)"
+assert_equal "ls: -v -b -x -l somefile" "$result"
+
+start_test "mesh l prefers the separate l program when the host has one"
+_l_bin="$_testdir/lbin"
+mkdir -p "$_l_bin"
+printf '#!/bin/sh\necho "l: $*"\n' > "$_l_bin/l"
+chmod +x "$_l_bin/l"
+result="$(PATH="$_l_bin:$PATH" _mesh_run_config '' 'l somefile')"
+assert_equal "l: -K -v -e -x somefile" "$result"
+
+###############
+# TEST: the package shortcuts delegate to the `package` script
+
+# A fake `package` on PATH rather than a mesh function: the aliases name the
+# script directly, and `info`/`files` shadow real programs, so only a PATH
+# stub proves which one the shortcut reached.
+_fake_package_bin="$_testdir/fakepackagebin"
+mkdir -p "$_fake_package_bin"
+printf '#!/bin/sh\necho "package: $@"\n' > "$_fake_package_bin/package"
+chmod +x "$_fake_package_bin/package"
+
+# shrc:2802, config.fish:1310 and config.nu:1486 all define `info`; the port
+# had every other verb in the list but not it, so `info` reached the GNU reader
+# instead of the package manager.
+start_test "mesh info reaches the package script"
+result="$(PATH="$_fake_package_bin:$PATH" _mesh_run_config '' 'info somepkg')"
+assert_equal "package: info somepkg" "$result"
+
+# The sibling `files` shortcut has no mesh spelling: `files` is a reserved
+# value-call name, so binding it is a syntax error rather than a shadowing.
+# This asserts the reason, so the shortcut isn't "restored" into a broken file.
+start_test "mesh reserves files, so the shortcut cannot be defined"
+result="$(_mesh_run_config '' 'wrapper func files(...args) { puts $args:len }' 2>&1)"
+assert_contains "files" "$result"
+assert_contains "cannot be a function name" "$result"
+
+start_test "mesh listfiles reaches the package script"
+result="$(PATH="$_fake_package_bin:$PATH" _mesh_run_config '' 'listfiles somepkg')"
+assert_equal "package: listfiles somepkg" "$result"
+
+###############
+# TEST: download does not fetch into the wrong directory
+
+# A fake `wget` on PATH, not a mesh function: `download` calls `command wget`,
+# which deliberately steps past any function of that name -- so a function stub
+# is bypassed and the real wget would go to the network.
+_fake_wget_bin="$_testdir/fakewgetbin"
+mkdir -p "$_fake_wget_bin"
+printf '#!/bin/sh\necho "wget in $PWD"\n' > "$_fake_wget_bin/wget"
+chmod +x "$_fake_wget_bin/wget"
+
+start_test "mesh download fetches after a successful cd"
+mkdir -p "$_fakehome/Downloads"
+result="$(PATH="$_fake_wget_bin:$PATH" _mesh_run 'download http://example.invalid/f')"
+assert_equal "wget in $_fakehome/Downloads" "$result"
+
+start_test "mesh download does not fetch when the cd fails"
+rm -rf "$_fakehome/Downloads"
+result="$(PATH="$_fake_wget_bin:$PATH" _mesh_run '
+    cd /etc
+    download http://example.invalid/f
+    puts "status=$sh.status"
+' 2>/dev/null)"
+assert_not_contains "wget in" "$result"
+assert_contains "status=1" "$result"
+mkdir -p "$_fakehome/Downloads"
+
+###############
+# TEST: fields tokenizes on whitespace runs, not literal spaces
+
+start_test "mesh fields collapses runs of spaces and tabs"
+result="$(_mesh_run '
+    f = fields("  a   b\tc  ")
+    puts $f:len
+    puts ...$f
+')"
+assert_equal "3
+a b c" "$result"
+
+start_test "mesh fields is empty for a blank line"
+result="$(_mesh_run '
+    f = fields("")
+    puts $f:len
+')"
+assert_equal "0" "$result"
+
+start_test "mesh fields picks the hostname out of column-padded getent output"
+# `getent hosts` pads the address column, so a literal-space split puts empty
+# strings in the middle and the hostname is not element 1.
+result="$(_mesh_run '
+    f = fields("127.0.0.1       localhost localhost.localdomain")
+    puts $f:get(1, "(none)")
+')"
+assert_equal "localhost" "$result"
+
+start_test "mesh fields picks the family and address out of column-padded ip output"
+result="$(_mesh_run '
+    f = fields("2: eth0    inet 10.0.0.5/24 brd 10.0.0.255 scope global eth0")
+    puts $f[1] $f[2] $f[3]
+')"
+assert_equal "eth0 inet 10.0.0.5/24" "$result"
+
+start_test "mesh ssh-client-host reads the padded getent hostname"
+result="$(_mesh_run_config '
+    func have-command(name) {
+        match $name {
+            getent => { return true }
+            _ => { return false }
+        }
+    }
+    func getent(...args) { puts "10.0.0.1       host1.example.com host1" }
+' '
+    $env.SSH_CONNECTION = "10.0.0.1 4321 10.0.0.2 22"
+    puts ssh-client-host()
+')"
+assert_equal "host1" "$result"
+
+start_test "mesh ssh-client-host falls back to the raw IP with no lookup"
+result="$(_mesh_run_config '
+    func have-command(name) { return false }
+' '
+    $env.SSH_CONNECTION = "10.0.0.1 4321 10.0.0.2 22"
+    puts ssh-client-host()
+')"
+assert_equal "10.0.0.1" "$result"
+
+# A miss is the ordinary outcome of both lookups -- getent exits 2 for an
+# address with no entry -- and a plain capture leaves the name unbound, so the
+# `dig` fallback below it was never reached.
+start_test "mesh ssh-client-host falls back to dig when getent has no entry"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+    func getent(...args) { return 2 }
+    func dig(...args) { puts "host2.example.com." }
+' '
+    $env.SSH_CONNECTION = "10.0.0.1 4321 10.0.0.2 22"
+    puts ssh-client-host()
+' 2>&1)"
+assert_equal "host2" "$result"
+
+start_test "mesh ssh-client-host answers the raw IP when both lookups miss"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+    func getent(...args) { return 2 }
+    func dig(...args) { return 9 }
+' '
+    $env.SSH_CONNECTION = "10.0.0.1 4321 10.0.0.2 22"
+    puts ssh-client-host()
+' 2>&1)"
+assert_equal "10.0.0.1" "$result"
+
+start_test "mesh ssh-client-host prefers LC_CLIENT_HOST"
+result="$(_mesh_run '
+    $env.LC_CLIENT_HOST = "laptop1"
+    $env.SSH_CONNECTION = "10.0.0.1 4321 10.0.0.2 22"
+    puts ssh-client-host()
+')"
+assert_equal "laptop1" "$result"
+
+start_test "mesh ssh-client-host is empty outside an ssh session"
+result="$(_mesh_run 'puts "[$(puts ssh-client-host())]"')"
+assert_equal "[]" "$result"
+
+###############
+# TEST: psgrep reports a pattern that matches nothing
+
+# `pgrep` exits 1 on no match, which is what the empty-result branch is for. A
+# plain capture left `pids` unbound, so that test failed with `unbound variable`
+# and the miss was never reported.
+start_test "mesh psgrep reports a pattern matching no processes"
+result="$(_mesh_run_config '
+    func pgrep(...args) { return 1 }
+' 'psgrep no-such-process
+puts "status=$sh.status"' 2>&1)"
+assert_equal "No processes matching no-such-process
+status=1" "$result"
+
+start_test "mesh psgrep passes the matched pids to ps"
+result="$(_mesh_run_config '
+    func pgrep(...args) { puts "11,22" }
+    wrapper func psc(...args) { puts psc: ...$args }
+' 'psgrep -w pattern' 2>&1)"
+assert_equal "psc: -p 11,22 -w" "$result"
+
+###############
+# TEST: age answers nothing for a file it cannot read
+
+# `stat` has already reported why. Without the guard its diagnostic was
+# followed by an unbound-variable error for the capture and another for the
+# subtraction -- three messages for one cause.
+start_test "mesh age is empty for a missing file"
+result="$(_mesh_run "puts \"[\$(puts age(\\\"$_testdir/no-such-file-xyz\\\"))]\"" 2>/dev/null)"
+assert_equal "[]" "$result"
+
+start_test "mesh age reports the seconds since a file changed"
+touch "$_testdir/aged"
+result="$(_mesh_run "
+    n = age(\"$_testdir/aged\")
+    if \$n < 60 { puts recent } else { puts \"stale: \$n\" }
+" 2>&1)"
+assert_equal "recent" "$result"
+
+start_test "mesh ips reads column-padded ip output"
+result="$(_mesh_run_config '
+    func ip(...args) {
+        puts "2: eth0    inet 10.0.0.5/24 brd 10.0.0.255 scope global eth0"
+        puts "3: wlan0   inet6 fe80::1/64 scope global wlan0"
+    }
+' 'ips')"
+assert_equal "eth0 10.0.0.5/24
+wlan0 fe80::1/64" "$result"
+
+###############
+# TEST: the network and stream helpers the port had dropped
+
+# The sed program pairs each `N: iface` line with the `link/ether` line that
+# follows it, so a stub has to emit the real two-line shape.
+start_test "mesh macs pairs each interface with its MAC"
+result="$(_mesh_run_config '
+    func ip(...args) {
+        puts "1: lo: <LOOPBACK,UP> mtu 65536 qdisc noqueue state UNKNOWN"
+        puts "    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00"
+        puts "2: eth0: <BROADCAST,UP> mtu 1500 qdisc fq state UP"
+        puts "    link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff"
+    }
+' 'macs')"
+assert_equal "eth0 02:42:ac:11:00:02" "$result"
+
+start_test "mesh with-address-records puts a hostname's addresses on one line"
+result="$(printf 'host1\n' | _mesh_run_stdin '
+    func addr(host) {
+        puts "10.0.0.1"
+        puts "fe80::1"
+    }
+' 'with-address-records')"
+assert_equal "host1 10.0.0.1 fe80::1" "$result"
+
+start_test "mesh with-hostnames puts an address's names on one line"
+result="$(printf '10.0.0.1\n' | _mesh_run_stdin '
+    func ptr(ip) { puts "host1.example.com." }
+' 'with-hostnames')"
+assert_equal "10.0.0.1 host1.example.com." "$result"
+
+start_test "mesh each runs the command once per line of stdin"
+result="$(printf 'one\ntwo\n' | _mesh_run_stdin '' 'each echo X')"
+assert_equal "X one
+X two" "$result"
+
+# Null-delimited so an item may contain a space -- or a newline, which is the
+# whole reason the form exists and what `tr` to newlines would destroy.
+start_test "mesh each0 runs the command once per null-delimited item"
+result="$(printf 'a b\0c\0' | _mesh_run_stdin '' 'each0 echo X')"
+assert_equal "X a b
+X c" "$result"
+
+# GNU xargs runs the command once even with nothing to feed it, where the shrc
+# and fish loops run it zero times; `-r` is what makes them agree. BSD and
+# macOS xargs already skip it and accept -r as a no-op, so the flag is portable.
+start_test "mesh each0 runs nothing at all on empty input"
+result="$(printf '' | _mesh_run_stdin '' 'each0 echo X')"
+assert_equal "" "$result"
+
+start_test "mesh dev reads the filesystem out of column-padded df output"
+result="$(_mesh_run_config '
+    func df(...args) {
+        puts "Filesystem     1024-blocks    Used Available Capacity Mounted on"
+        puts "/dev/vda         264212084 8358000  30490524      22% /"
+    }
+' 'dev /etc')"
+assert_equal "/dev/vda" "$result"
+
+###############
+# TEST: trydiff previews only when the command succeeded
+
+start_test "mesh trydiff shows the proposed change"
+printf 'one\n' > "$_testdir/try-ok.txt"
+result="$(_mesh_run "
+    func formatter(f) { puts two }
+    trydiff formatter $_testdir/try-ok.txt
+")"
+assert_contains "two" "$result"
+
+# The command's own status reaches the caller: 130 from a Ctrl-C has to stay
+# distinguishable from an ordinary failure. mesh clears $sh.status while
+# evaluating an `if` condition, so the status is captured before branching.
+start_test "mesh trydiff returns the command's own status"
+printf 'one\n' > "$_testdir/try-status130.txt"
+result="$(_mesh_run "
+    func boom(f) { return 130 }
+    trydiff boom $_testdir/try-status130.txt
+    puts \"status=\$sh.status\"
+" 2>/dev/null)"
+assert_equal "status=130" "$result"
+
+start_test "mesh applydiff returns the command's own status"
+result="$(_mesh_run "
+    func boom(f) { return 130 }
+    applydiff boom $_testdir/try-status130.txt
+    puts \"status=\$sh.status\"
+" 2>/dev/null)"
+assert_equal "status=130" "$result"
+
+start_test "mesh isort returns sort's own status"
+result="$(_mesh_run "
+    trap-nothing = 0
+    isort /no-such-file-here
+    puts \"failed=\$sh.status\"
+" 2>/dev/null)"
+assert_not_contains "failed=0" "$result"
+
+start_test "mesh trydiff shows nothing and reports when the command fails"
+printf 'one\n' > "$_testdir/try-fail.txt"
+result="$(_mesh_run "
+    func formatter(f) { return 1 }
+    trydiff formatter $_testdir/try-fail.txt
+    puts \"status=\$sh.status\"
+" 2>&1)"
+assert_contains "nothing to compare" "$result"
+assert_contains "status=1" "$result"
+assert_not_contains "one" "$result"
+
+start_test "mesh trydiff removes its temporary file either way"
+printf 'one\n' > "$_testdir/try-temp.txt"
+_mesh_run "
+    func formatter(f) { return 1 }
+    trydiff formatter $_testdir/try-temp.txt
+" >/dev/null 2>&1
+result="$(ls "$_testdir"/try-temp.txt.trydiff.* 2>/dev/null | wc -l | tr -d ' ')"
+assert_equal "0" "$result"
+
+start_test "mesh trydiff leaves the original file alone"
+printf 'one\n' > "$_testdir/try-orig.txt"
+_mesh_run "
+    func formatter(f) { puts two }
+    trydiff formatter $_testdir/try-orig.txt
+" >/dev/null 2>&1
+assert_equal "one" "$(cat "$_testdir/try-orig.txt")"
+
+# `diff` exits 1 when the files differ -- the whole point of a preview -- so
+# passing that through would break `trydiff x f && applydiff x f` and make
+# every useful run look failed.
+start_test "mesh trydiff succeeds when the preview finds differences"
+printf 'one\n' > "$_testdir/try-status.txt"
+result="$(_mesh_run "
+    func formatter(f) { puts two }
+    trydiff formatter $_testdir/try-status.txt > /dev/null
+    puts \"status=\$sh.status\"
+")"
+assert_equal "status=0" "$result"
+
+start_test "mesh trydiff succeeds when the preview finds nothing to change"
+result="$(_mesh_run "
+    func formatter(f) { puts one }
+    trydiff formatter $_testdir/try-status.txt > /dev/null
+    puts \"status=\$sh.status\"
+")"
+assert_equal "status=0" "$result"
+
+# 2-and-up is diff's "trouble" range -- a genuine failure, unlike 1 -- and is
+# passed through. `diff` is looked up on PATH, so the stub is a real program.
+start_test "mesh trydiff passes through a real diff failure"
+_fake_diff_bin="$_testdir/fakediffbin"
+mkdir -p "$_fake_diff_bin"
+printf '#!/bin/sh\nexit 2\n' > "$_fake_diff_bin/diff"
+chmod +x "$_fake_diff_bin/diff"
+result="$(PATH="$_fake_diff_bin:$PATH" _mesh_run_config '' "
+    func formatter(f) { puts two }
+    trydiff formatter $_testdir/try-status.txt > /dev/null
+    puts \"status=\$sh.status\"
+")"
+assert_equal "status=2" "$result"
+
+###############
+# TEST: isort only replaces the file when sort succeeded
+
+start_test "mesh isort sorts the file in place"
+printf 'c\na\nb\n' > "$_testdir/isort-ok.txt"
+result="$(_mesh_run "
+    isort $_testdir/isort-ok.txt
+    cat $_testdir/isort-ok.txt
+")"
+assert_equal "a
+b
+c" "$result"
+
+start_test "mesh isort leaves the file alone when sort fails"
+printf 'c\na\n' > "$_testdir/isort-fail.txt"
+result="$(_mesh_run "
+    func sort(...args) { return 1 }
+    isort $_testdir/isort-fail.txt
+    cat $_testdir/isort-fail.txt
+" 2>/dev/null)"
+assert_equal "c
+a" "$result"
+
+start_test "mesh isort removes the staged file and reports when sort fails"
+printf 'c\na\n' > "$_testdir/isort-staged.txt"
+result="$(_mesh_run "
+    func sort(...args) { return 1 }
+    isort $_testdir/isort-staged.txt
+    puts \"status=\$sh.status\"
+" 2>&1)"
+assert_false test -e "$_testdir/isort-staged.txt.bak"
+assert_contains "is unchanged" "$result"
+assert_contains "status=1" "$result"
+
+###############
+# TEST: the legacy shpool working directory is applied before handoff
+
+start_test "mesh apply-shpool-initial-pwd cds to the launcher's directory"
+mkdir -p "$_testdir/initial-pwd"
+result="$(_mesh_run "
+    \$env.SHPOOL_SESSION_NAME = \"sess\"
+    \$env.SHPOOL_INITIAL_PWD = \"$_testdir/initial-pwd\"
+    apply-shpool-initial-pwd
+    pwd
+")"
+assert_equal "$_testdir/initial-pwd" "$result"
+
+start_test "mesh apply-shpool-initial-pwd clears the variable so it applies once"
+result="$(_mesh_run "
+    \$env.SHPOOL_SESSION_NAME = \"sess\"
+    \$env.SHPOOL_INITIAL_PWD = \"$_testdir/initial-pwd\"
+    apply-shpool-initial-pwd
+    puts \"[\$env.SHPOOL_INITIAL_PWD]\"
+")"
+assert_equal "[]" "$result"
+
+start_test "mesh apply-shpool-initial-pwd is a no-op outside shpool"
+result="$(_mesh_run "
+    \$env.SHPOOL_INITIAL_PWD = \"$_testdir/initial-pwd\"
+    cd /etc
+    apply-shpool-initial-pwd
+    pwd
+")"
+assert_equal "/etc" "$result"
+
+start_test "mesh apply-shpool-initial-pwd is a no-op with no initial directory"
+result="$(_mesh_run '
+    $env.SHPOOL_SESSION_NAME = "sess"
+    cd /etc
+    apply-shpool-initial-pwd
+    pwd
+')"
+assert_equal "/etc" "$result"
+
+# The variable is the only record of where the handoff meant to land, so a cd
+# that fails must leave it alone rather than clear it and land silently in the
+# launcher's directory.
+start_test "mesh apply-shpool-initial-pwd keeps the variable when the cd fails"
+result="$(_mesh_run '
+    $env.SHPOOL_SESSION_NAME = "sess"
+    $env.SHPOOL_INITIAL_PWD = "/no-such-dir-here"
+    apply-shpool-initial-pwd
+    puts "status=$sh.status kept=[$env.SHPOOL_INITIAL_PWD]"
+' 2>/dev/null)"
+assert_equal "status=1 kept=[/no-such-dir-here]" "$result"
+
+###############
+# TEST: TTY is the terminal name or nothing, never tty's diagnostic
+
+# `tty` prints "not a tty" on stdout and exits 1 with no terminal, so a naive
+# capture exports the diagnostic to every child and into every history line.
+start_test "mesh TTY is empty when stdin is not a terminal"
+result="$(HOME="$_fakehome" run_with_timeout 15 env -u TTY mesh -c "
+    source $_env_mesh
+    puts \"[\$env.TTY]\"
+" </dev/null)"
+assert_equal "[]" "$result"
+
+start_test "mesh TTY keeps an inherited value"
+result="$(HOME="$_fakehome" run_with_timeout 15 env TTY=/dev/pts/7 mesh -c "
+    source $_env_mesh
+    puts \$env.TTY
+" </dev/null)"
+assert_equal "/dev/pts/7" "$result"
+
+###############
+# TEST: the session-script wrappers report the script's own status
+#
+# Subtle, and worth pinning: mesh's bare `return` carries "the result so far --
+# the status of a command that produced none", so `return unless $sh.status ==
+# 0` propagates the picker's status rather than the guard's. shrc has to say
+# `rc=$?; ... return $rc` by hand because its guards are one `&&` chain whose
+# failure would otherwise mask a successful picker with 1.
+
+_session_wrapper_status() {
+    local _fn="$1"
+    local _rc="$2"
+    shift 2
+    _mesh_run_config "
+        func have-command(name) { return true }
+        # Wrappers, because the real ones are external scripts that take
+        # whatever they are given -- a plain func would reject --list.
+        # (No backticks here: this string is double-quoted in bash.)
+        wrapper func changesession(...args) { return $_rc }
+        wrapper func changeshpool(...args) { return $_rc }
+        wrapper func makesession(...args) { return $_rc }
+        wrapper func makeshpool(...args) { return $_rc }
+    " "
+        $_fn $*
+        puts \$sh.status
+    "
+}
+
+start_test "mesh cs propagates a cancelled picker's status"
+assert_equal "130" "$(_session_wrapper_status cs 130)"
+
+start_test "mesh cs reports success when the switch worked"
+assert_equal "0" "$(_session_wrapper_status cs 0)"
+
+# The guard under test is `$args:len == 0`, which any argument exercises.
+start_test "mesh cs reports success on the non-picker path with arguments"
+assert_equal "0" "$(_session_wrapper_status cs 0 somesession)"
+
+# `cs --list` is the documented path that a plain `...rest` function used to
+# reject as `unknown flag --list`; `wrapper func` is what makes it typeable,
+# so it is asserted rather than worked around.
+start_test "mesh cs forwards a long flag to the session script"
+assert_equal "0" "$(_session_wrapper_status cs 0 --list)"
+
+start_test "mesh cs propagates a failure even with arguments"
+assert_equal "130" "$(_session_wrapper_status cs 130 somesession)"
+
+start_test "mesh csp propagates the script's status"
+assert_equal "130" "$(_session_wrapper_status csp 130)"
+assert_equal "0" "$(_session_wrapper_status csp 0)"
+
+start_test "mesh ms propagates the script's status"
+assert_equal "130" "$(_session_wrapper_status ms 130)"
+assert_equal "0" "$(_session_wrapper_status ms 0)"
+
+start_test "mesh msp propagates the script's status"
+assert_equal "130" "$(_session_wrapper_status msp 130)"
+assert_equal "0" "$(_session_wrapper_status msp 0)"
+
+start_test "mesh cs does nothing and succeeds with no backend at all"
+# Matches config.nu, whose `if (skip-session-script $backend) { return }` also
+# reports success on the nothing-to-do path.
+result="$(_mesh_run_config '
+    func changesession(...args) { puts "changesession ran" }
+' '
+    cs
+    puts $sh.status
+')"
+assert_equal "0" "$result"
+
+###############
+# TEST: host classification
+
+start_test "mesh on-my-laptop reads ~/.laptop"
+touch "$_fakehome/.laptop"
+result="$(_mesh_run 'puts on-my-laptop()')"
+rm -f "$_fakehome/.laptop"
+assert_equal "true" "$result"
+
+start_test "mesh on-my-laptop matches a laptop hostname"
+result="$(_mesh_run '
+    $env.HOSTNAME = "my-laptop-1"
+    puts on-my-laptop()
+')"
+assert_equal "true" "$result"
+
+start_test "mesh on-test-host and on-dev-host match by hostname"
+result="$(_mesh_run '
+    $env.HOSTNAME = "web-test-3"
+    puts on-test-host() on-dev-host()
+')"
+assert_equal "true false" "$result"
+
+start_test "mesh on-production-host is false on a test host"
+result="$(_mesh_run '
+    $env.HOSTNAME = "web-test-3"
+    puts on-production-host()
+')"
+assert_equal "false" "$result"
+
+start_test "mesh on-production-host is true on an unrecognized host"
+result="$(_mesh_run '
+    $env.HOSTNAME = "web1"
+    $env.USERNAME = "someuser"
+    puts on-production-host()
+')"
+assert_equal "true" "$result"
+
+start_test "mesh on-my-workstation matches ~/.workstation"
+printf 'ws1\n' > "$_fakehome/.workstation"
+result="$(_mesh_run '
+    $env.HOSTNAME = "ws1"
+    puts on-my-workstation()
+')"
+rm -f "$_fakehome/.workstation"
+assert_equal "true" "$result"
+
+start_test "mesh on-my-workstation matches a \$USERNAME-prefixed hostname"
+result="$(_mesh_run '
+    $env.HOSTNAME = "someuser-desktop"
+    $env.USERNAME = "someuser"
+    puts on-my-workstation()
+')"
+assert_equal "true" "$result"
+
+###############
+# TEST: prompt pieces
+
+start_test "mesh format-duration ignores anything under two seconds"
+result="$(_mesh_run 'puts "[$(puts format-duration(1500))]"')"
+assert_equal "[]" "$result"
+
+start_test "mesh format-duration spells out hours, minutes and seconds"
+result="$(_mesh_run 'puts format-duration(3661000)')"
+assert_equal "1 hours 1 minutes 1 seconds" "$result"
+
+start_test "mesh format-duration drops empty leading units"
+result="$(_mesh_run 'puts format-duration(125000)')"
+assert_equal "2 minutes 5 seconds" "$result"
+
+start_test "mesh host-info tags the session name when attached"
+result="$(_mesh_run '
+    $env.HOSTNAME = "host1"
+    $env.SHPOOL_SESSION_NAME = "myproject"
+    puts host-info()
+')"
+assert_contains "myproject" "$result"
+
+start_test "mesh host-info warns with the backend name when not in a session"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+' '
+    $env.HOSTNAME = "host1"
+    puts host-info()
+')"
+assert_contains "shpool" "$result"
+
+start_test "mesh host-info falls back to shpool with no backend at all"
+result="$(_mesh_run '
+    $env.HOSTNAME = "host1"
+    puts host-info()
+')"
+assert_contains "shpool" "$result"
+
+start_test "mesh prompt-line joins host and directory"
+result="$(_mesh_run '
+    $env.HOSTNAME = "host1"
+    func auth-info() { return "" }
+    cd /etc
+    puts prompt-line()
+')"
+assert_contains "host1" "$result"
+assert_contains "/etc" "$result"
+
+start_test "mesh prompt-line appends the auth warning"
+result="$(_mesh_run '
+    $env.HOSTNAME = "host1"
+    func auth-info() { return "SSH" }
+    puts prompt-line()
+')"
+assert_contains "SSH" "$result"
+
+start_test "mesh bar draws a rule of the requested width"
+result="$(_mesh_run 'bar 3')"
+assert_equal "―――" "$result"
+
+start_test "mesh title names host and project"
+result="$(_mesh_run '
+    $env.HOSTNAME = "host1"
+    func projectname() { return "myproject" }
+    puts title()
+')"
+assert_equal "host1 myproject" "$result"
+
+start_test "mesh title drops the hostname inside tmux"
+result="$(_mesh_run '
+    $env.HOSTNAME = "host1"
+    $env.TMUX = "/tmp/tmux-0/default,1,0"
+    func session-name() { return "sess" }
+    func projectname() { return "myproject" }
+    puts title()
+')"
+assert_equal "sess myproject" "$result"
+
+start_test "mesh job-info is empty with no jobs"
+result="$(_mesh_run 'puts "[$(puts job-info())]"')"
+assert_equal "[]" "$result"
+
+###############
+# TEST: the prompt spends no more VCS forks than fish and nushell do
+
+# A fake `vcs` on PATH that logs every invocation. `dir-info` and `unmerged`
+# reach the binary through `command vcs`, which steps past any mesh function of
+# that name, so the only way to count the forks is a real executable.
+_fake_vcs_bin="$_testdir/fakevcsbin"
+mkdir -p "$_fake_vcs_bin"
+cat > "$_fake_vcs_bin/vcs" <<EOF
+#!/bin/sh
+echo "\$@" >> "$_testdir/vcs-calls"
+case "\$1" in
+    rootdir) echo "$_testdir" ;;
+    prompt-info) echo "myproject (main)" ;;
+    unmerged) ;;
+esac
+exit 0
+EOF
+chmod +x "$_fake_vcs_bin/vcs"
+
+# Run preprompt with the fake vcs on PATH and report which subcommands it ran.
+_prompt_vcs_calls() {
+    rm -f "$_testdir/vcs-calls"
+    PATH="$_fake_vcs_bin:$PATH" _mesh_run_config '
+        func terminal-width() { return 1 }
+        func auth-info() { return "" }
+        func maybe-background-fetch(auth = "") { return }
+    ' 'preprompt' >/dev/null 2>&1
+    sort "$_testdir/vcs-calls" 2>/dev/null | tr '\n' ' ' | sed 's/ $//'
+}
+
+start_test "mesh preprompt runs vcs exactly twice, as prompt-info and unmerged"
+result="$(_prompt_vcs_calls)"
+assert_equal "prompt-info --color=always unmerged" "$result"
+
+# The binary's command is `diffs`, alongside `diffedit` and `diffstat`; there
+# is no `diff` in vcs/commands.go, so a `vcs diff` shortcut would just fail.
+start_test "mesh diffs runs the plural vcs subcommand"
+rm -f "$_testdir/vcs-calls"
+PATH="$_fake_vcs_bin:$PATH" _mesh_run_config '' 'diffs --stat' >/dev/null 2>&1
+assert_contains "diffs --stat" "$(cat "$_testdir/vcs-calls")"
+
+###############
+# TEST: publishing this shell's jobs for a status bar
+
+_jobs_runtime="$_testdir/runtime"
+
+# Only the command word is published, not its arguments -- the same reduction
+# shrc's and fish's awk does -- and the line ends in a space with no newline,
+# so a consumer can `cat` it straight into a status bar.
+start_test "mesh publish-jobs writes a command-word summary"
+rm -rf "$_jobs_runtime"
+_mesh_run_config "
+    \$env.TTY = \"/dev/pts/9\"
+    \$env.XDG_RUNTIME_DIR = \"$_jobs_runtime\"
+" 'sleep 30 &
+sleep 31 &
+publish-jobs' >/dev/null 2>&1
+result="$(cat "$_jobs_runtime/shell-jobs/dev/pts/9")"
+assert_equal "%1 sleep %2 sleep " "$result"
+
+start_test "mesh publish-jobs writes an empty file when nothing is running"
+_mesh_run_config "
+    \$env.TTY = \"/dev/pts/9\"
+    \$env.XDG_RUNTIME_DIR = \"$_jobs_runtime\"
+" 'publish-jobs' >/dev/null 2>&1
+result="$(cat "$_jobs_runtime/shell-jobs/dev/pts/9")"
+assert_equal "" "$result"
+
+start_test "mesh unpublish-jobs removes the file"
+_mesh_run_config "
+    \$env.TTY = \"/dev/pts/9\"
+    \$env.XDG_RUNTIME_DIR = \"$_jobs_runtime\"
+" 'unpublish-jobs' >/dev/null 2>&1
+test -e "$_jobs_runtime/shell-jobs/dev/pts/9"
+assert_equal "1" "$?"
+
+# A failed write leaves a truncated line, which a status bar reads as a real
+# job list -- worse than no file at all. Dropped, said once, and publishing
+# turned off for the shell: this runs on every prompt, so warning per prompt
+# would be worse than the problem. Simulated with a directory at the leaf,
+# since these run as root in CI where a permission bit wouldn't stop a write.
+start_test "mesh publish-jobs reports a failed write and stops publishing"
+rm -rf "$_jobs_runtime"
+mkdir -p "$_jobs_runtime/shell-jobs/dev/pts/9"
+result="$(_mesh_run_config "
+    \$env.TTY = \"/dev/pts/9\"
+    \$env.XDG_RUNTIME_DIR = \"$_jobs_runtime\"
+" 'publish-jobs
+publish-jobs
+off = $env:get(SHELL_JOBS_DISABLED, "no")
+puts "disabled=$off"' 2>&1)"
+# Said once, not twice, for two calls.
+assert_equal "1" "$(printf '%s\n' "$result" | grep -c 'publishing is off')"
+assert_contains "disabled=1" "$result"
+
+# No /tmp fallback on purpose: a predictable per-uid path there could be
+# pre-created as a symlink for the prompt to truncate on every render.
+start_test "mesh publishing is off without XDG_RUNTIME_DIR"
+result="$(_mesh_run_config '
+    $env.TTY = "/dev/pts/9"
+    $env.XDG_RUNTIME_DIR = ""
+' 'puts "[$(puts publish-jobs-file())]"')"
+assert_equal "[]" "$result"
+
+start_test "mesh publishing is off when TTY is not a device"
+result="$(_mesh_run_config "
+    \$env.TTY = \"not a tty\"
+    \$env.XDG_RUNTIME_DIR = \"$_jobs_runtime\"
+" 'puts "[$(puts publish-jobs-file())]"')"
+assert_equal "[]" "$result"
+
+start_test "mesh publish-jobs is a no-op with publishing off"
+result="$(_mesh_run_config '
+    $env.TTY = "not a tty"
+    $env.XDG_RUNTIME_DIR = ""
+' 'publish-jobs
+unpublish-jobs
+puts survived' 2>&1)"
+assert_equal "survived" "$result"
+
+# The prompt is what keeps the file fresh, so the call has to be in preprompt
+# rather than left to the user.
+start_test "mesh preprompt publishes the jobs"
+rm -rf "$_jobs_runtime"
+_mesh_run_config "
+    \$env.TTY = \"/dev/pts/9\"
+    \$env.XDG_RUNTIME_DIR = \"$_jobs_runtime\"
+    func terminal-width() { return 1 }
+    func auth-info() { return \"\" }
+    func maybe-background-fetch(auth = \"\") { return }
+" 'sleep 30 &
+preprompt' >/dev/null 2>&1
+result="$(cat "$_jobs_runtime/shell-jobs/dev/pts/9")"
+assert_equal "%1 sleep " "$result"
+
+###############
+# TEST: the exit shortcuts and xr
+
+# safe-exit refuses to leave while a job is live, listing the jobs instead --
+# shrc:1421's _exit, whose name mesh won't take (a leading underscore is a
+# syntax error there).
+start_test "mesh safe-exit leaves when nothing is running"
+result="$(_mesh_run_config '' 'safe-exit 3
+puts "not reached"')"
+assert_equal "" "$result"
+
+start_test "mesh safe-exit passes its status through"
+_mesh_run_config '' 'safe-exit 3' >/dev/null 2>&1
+assert_equal "3" "$?"
+
+# A real background job rather than a stubbed `jobs`: mesh reserves that name,
+# so it cannot be replaced from a test.
+start_test "mesh safe-exit lists jobs instead of leaving while one is live"
+result="$(_mesh_run_config '' 'sleep 30 &
+safe-exit
+puts "still here"' 2>&1)"
+assert_contains "sleep 30" "$result"
+assert_contains "still here" "$result"
+
+# `f` reaches mesh's `fg` builtin with no `command` in between -- shrc and fish
+# need one only because their own `fg` is a function.
+start_test "mesh f reaches the fg builtin"
+result="$(_mesh_run_config '' 'f' 2>&1)"
+assert_contains "no current job" "$result"
+
+# Being an alias makes it a wrapper, so `--help` reaches fg rather than being
+# answered here -- which is also how a job id gets through.
+start_test "mesh f forwards --help to fg"
+result="$(_mesh_run_config '' 'f --help' 2>&1)"
+assert_contains "Usage: fg [JOB]" "$result"
+
+# xa drains suspended jobs with fg first. With none, fg fails immediately and
+# the loop ends -- and its "no current job" diagnostic must not reach the user.
+start_test "mesh xa exits without complaining when there is nothing to resume"
+result="$(_mesh_run_config '' 'xa
+puts "not reached"' 2>&1)"
+assert_equal "" "$result"
+
+start_test "mesh q is xa"
+result="$(_mesh_run_config '
+    wrapper func xa(...args) { puts "xa: $args:len" }
+' 'q')"
+assert_equal "xa: 0" "$result"
+
+start_test "mesh x is xa"
+result="$(_mesh_run_config '
+    wrapper func safe-exit(...args) { puts "safe-exit: $args:len" }
+' 'x')"
+assert_equal "safe-exit: 0" "$result"
+
+# xrandr under DISPLAY=:0.0. mesh has no `VAR=value cmd` prefix, so the
+# variable is set inside a fork and must not leak into this shell.
+_fake_xrandr_bin="$_testdir/fakexrandrbin"
+mkdir -p "$_fake_xrandr_bin"
+printf '#!/bin/sh\necho "xrandr: $@ [$DISPLAY]"\n' > "$_fake_xrandr_bin/xrandr"
+chmod +x "$_fake_xrandr_bin/xrandr"
+
+start_test "mesh xr runs xrandr with DISPLAY set"
+result="$(PATH="$_fake_xrandr_bin:$PATH" _mesh_run_config '' 'xr --query')"
+assert_equal "xrandr: --query [:0.0]" "$result"
+
+start_test "mesh xr does not leak DISPLAY into the shell"
+result="$(PATH="$_fake_xrandr_bin:$PATH" DISPLAY= _mesh_run_config '' 'xr --query > /dev/null
+after = $env:get(DISPLAY, "unset")
+puts "[$after]"')"
+assert_equal "[]" "$result"
+
+###############
+# TEST: ssh-to and the ~/.ssh/config host aliases
+
+# A fake `ssh` that reports its arguments and the forwarded variable. Real
+# program, not a mesh function: ssh-to names ssh directly.
+_fake_ssh_bin="$_testdir/fakesshbin"
+mkdir -p "$_fake_ssh_bin"
+printf '#!/bin/sh\necho "ssh: $@ [$LC_CLIENT_HOST]"\n' > "$_fake_ssh_bin/ssh"
+chmod +x "$_fake_ssh_bin/ssh"
+
+# `rw` absent is the common case and the one the option handling matters for;
+# have-command is replaced so the branch is deterministic either way.
+_ssh_run() {
+    PATH="$_fake_ssh_bin:$PATH" HOSTNAME=mybox _mesh_run_config '
+        func have-command(name) { return false if $name == "rw"
+            return true }
+        func short-hostname() { return "mybox" }
+    ' "$1"
+}
+
+start_test "mesh ssh-to forwards this machine's name as LC_CLIENT_HOST"
+result="$(_ssh_run 'ssh-to host1')"
+assert_equal "ssh: -t -oSendEnv=LC_CLIENT_HOST host1 [mybox]" "$result"
+
+# The whole point of the option scan: ssh flags typed after the host have to
+# move in front of it, or ssh runs them as the remote command.
+start_test "mesh ssh-to moves trailing flags in front of the host"
+result="$(_ssh_run 'ssh-to host1 -v uptime')"
+assert_equal "ssh: -t -oSendEnv=LC_CLIENT_HOST -v host1 uptime [mybox]" "$result"
+
+# A flag whose value is a separate word must take the value with it, or the
+# host lands where the value belongs (`-p host1`).
+start_test "mesh ssh-to keeps a separate-word flag value with its flag"
+result="$(_ssh_run 'ssh-to host1 -p 2222 uptime')"
+assert_equal "ssh: -t -oSendEnv=LC_CLIENT_HOST -p 2222 host1 uptime [mybox]" "$result"
+
+# `-vp 2222` is `-v -p 2222`: the value-taking letter ends the cluster, so the
+# next word is its value. shrc:2502 and config.fish:936 match a single letter
+# and build `ssh -vp host1 2222 …`, where ssh reads the host as the port.
+start_test "mesh ssh-to keeps a value with a clustered option"
+result="$(_ssh_run 'ssh-to host1 -vp 2222 uptime')"
+assert_equal "ssh: -t -oSendEnv=LC_CLIENT_HOST -vp 2222 host1 uptime [mybox]" "$result"
+
+# An attached value is already complete, so the next word is the command.
+start_test "mesh ssh-to does not take a second value for an attached one"
+result="$(_ssh_run 'ssh-to host1 -p2222 uptime')"
+assert_equal "ssh: -t -oSendEnv=LC_CLIENT_HOST -p2222 host1 uptime [mybox]" "$result"
+
+# An attached value that happens to end in a value-taking letter is still an
+# attached value: `-lBob` ends in `b`, so a prefix of "any letter" read it as a
+# cluster and swallowed the command as -b's value.
+start_test "mesh ssh-to does not mistake an attached value for a cluster"
+result="$(_ssh_run 'ssh-to host1 -lBob uptime')"
+assert_equal "ssh: -t -oSendEnv=LC_CLIENT_HOST -lBob host1 uptime [mybox]" "$result"
+
+# The prefix letters must all be flags, so a value-taking letter mid-word ends
+# the cluster: `-po` is `-p` with the attached value `o`, not `-p -o`.
+start_test "mesh ssh-to ends a cluster at the first value-taking letter"
+result="$(_ssh_run 'ssh-to host1 -po uptime')"
+assert_equal "ssh: -t -oSendEnv=LC_CLIENT_HOST -po host1 uptime [mybox]" "$result"
+
+start_test "mesh ssh-to still takes a value after a multi-flag cluster"
+result="$(_ssh_run 'ssh-to host1 -4tvp 2222 uptime')"
+assert_equal "ssh: -t -oSendEnv=LC_CLIENT_HOST -4tvp 2222 host1 uptime [mybox]" "$result"
+
+start_test "mesh ssh-to leaves a valueless short option alone"
+result="$(_ssh_run 'ssh-to host1 -4 uptime')"
+assert_equal "ssh: -t -oSendEnv=LC_CLIENT_HOST -4 host1 uptime [mybox]" "$result"
+
+start_test "mesh ssh-to rotates -- in front of the host too"
+result="$(_ssh_run 'ssh-to host1 -- ls -l')"
+assert_equal "ssh: -t -oSendEnv=LC_CLIENT_HOST -- host1 ls -l [mybox]" "$result"
+
+start_test "mesh ssh-to stops scanning at the remote command"
+result="$(_ssh_run 'ssh-to host1 uptime -l')"
+assert_equal "ssh: -t -oSendEnv=LC_CLIENT_HOST host1 uptime -l [mybox]" "$result"
+
+start_test "mesh ssh-to uses rw for a bare host when it is installed"
+result="$(PATH="$_fake_ssh_bin:$PATH" _mesh_run_config '
+    func have-command(name) { return true }
+    func short-hostname() { return "mybox" }
+    wrapper func rw(...args) { puts rw: ...$args }
+' 'ssh-to host1')"
+assert_equal "rw: -r host1" "$result"
+
+# The generator writes definitions to a file and sources it, because mesh has
+# no eval and no dynamically-named func. Host names here are placeholders, not
+# anyone's real config.
+_ssh_config_home="$_testdir/sshhome"
+_write_ssh_config() {
+    rm -rf "$_ssh_config_home"
+    mkdir -p "$_ssh_config_home/.ssh"
+    cat > "$_ssh_config_home/.ssh/config" <<'EOF'
+Host host1 host2
+    User someone
+Host *.example
+Host neg-ated
+Host dotted.name
+host host3
+EOF
+}
+
+start_test "mesh set-up-ssh-aliases defines a wrapper per usable Host entry"
+_write_ssh_config
+HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+" </dev/null >/dev/null 2>&1
+result="$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
+assert_equal "# Generated from ~/.ssh/config by rc.mesh. Do not edit.
+wrapper func host1(...args) { ssh-to host1 ...\$args }
+wrapper func host2(...args) { ssh-to host2 ...\$args }
+wrapper func host3(...args) { ssh-to host3 ...\$args }" "$result"
+
+# A `Host status` must not take over the `status` shortcut. shrc and fish get
+# this from ordering -- ssh aliases first, shortcut block after -- which isn't
+# available here, since the shortcuts are file-scope definitions above the
+# interactive section. Skipping an existing function states the same rule.
+start_test "mesh ssh aliases do not shadow a config shortcut"
+rm -rf "$_ssh_config_home"
+mkdir -p "$_ssh_config_home/.ssh"
+printf 'Host status host1\n' > "$_ssh_config_home/.ssh/config"
+HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+" </dev/null >/dev/null 2>&1
+result="$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
+assert_equal "# Generated from ~/.ssh/config by rc.mesh. Do not edit.
+wrapper func host1(...args) { ssh-to host1 ...\$args }" "$result"
+
+start_test "mesh status still reaches vcs after the ssh aliases load"
+result="$(PATH="$_fake_vcs_bin:$PATH" HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+    status
+" </dev/null 2>&1)"
+assert_equal "" "$result"
+assert_contains "status" "$(cat "$_testdir/vcs-calls")"
+
+# A host named after a *program* is still allowed: shadowing `git` with a host
+# alias is the user's call, and the other shells allow it too.
+start_test "mesh ssh aliases may still shadow a program name"
+rm -rf "$_ssh_config_home/.cache"
+printf 'Host ls\n' > "$_ssh_config_home/.ssh/config"
+HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+" </dev/null >/dev/null 2>&1
+assert_contains "wrapper func ls(" "$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
+
+# The generated file names every Host entry in ~/.ssh/config, which is itself
+# 0600, and ~/.cache is usually world-traversable -- so a default-umask 0644
+# would publish the host list to any other local user. shrc and fish have
+# nothing to protect: their `eval` never touches disk.
+start_test "mesh ssh aliases are written to a private cache file"
+_write_ssh_config
+rm -rf "$_ssh_config_home/.cache"
+HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+" </dev/null >/dev/null 2>&1
+assert_equal "600" "$(stat -c '%a' "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
+
+# A name mesh owns is a different matter: `files` is a built-in value call, so
+# `wrapper func files(…)` is a *syntax* error and mesh refuses the whole file --
+# one such Host entry would take every unrelated alias down with it.
+start_test "mesh ssh aliases skip a name mesh cannot bind"
+rm -rf "$_ssh_config_home/.cache"
+printf 'Host files host1\n' > "$_ssh_config_home/.ssh/config"
+HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+" </dev/null >/dev/null 2>&1
+result="$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
+assert_equal "# Generated from ~/.ssh/config by rc.mesh. Do not edit.
+wrapper func host1(...args) { ssh-to host1 ...\$args }" "$result"
+
+start_test "mesh ssh aliases survive a Host mesh cannot bind"
+result="$(PATH="$_fake_ssh_bin:$PATH" HOME="$_ssh_config_home" HOSTNAME=mybox \
+    run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+    host1 uptime
+" </dev/null 2>&1)"
+assert_equal "ssh: -t -oSendEnv=LC_CLIENT_HOST host1 uptime [mybox]" "$result"
+
+# A reserved word is the milder flavor -- a runtime error rather than a syntax
+# one -- but it still cannot be defined, so it is skipped by the same rule.
+start_test "mesh ssh aliases skip a reserved word"
+rm -rf "$_ssh_config_home/.cache"
+printf 'Host source host1\n' > "$_ssh_config_home/.ssh/config"
+HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+" </dev/null >/dev/null 2>&1
+result="$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
+assert_equal "# Generated from ~/.ssh/config by rc.mesh. Do not edit.
+wrapper func host1(...args) { ssh-to host1 ...\$args }" "$result"
+
+# The filters cover what is known unbindable, but mesh owns that namespace and
+# can grow it, so a file that fails to source says so rather than losing every
+# alias silently. Simulated by planting an unparsable generated file and
+# blocking the rebuild that would replace it.
+start_test "mesh set-up-ssh-aliases reports a generated file it cannot source"
+rm -rf "$_ssh_config_home/.cache"
+mkdir -p "$_ssh_config_home/.cache/mesh"
+result="$(HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    # Land a file mesh will refuse, after the writes have all succeeded.
+    func mv(...args) { puts 'this is not( valid mesh' > $_ssh_config_home/.cache/mesh/ssh-hosts.mesh }
+    set-up-ssh-aliases
+    puts \"status=\$sh.status\"
+" </dev/null 2>&1)"
+assert_contains "could not be sourced" "$result"
+assert_not_contains "status=0" "$result"
+
+_write_ssh_config
+
+start_test "mesh ssh host aliases forward every argument to ssh-to"
+_write_ssh_config
+result="$(PATH="$_fake_ssh_bin:$PATH" HOME="$_ssh_config_home" HOSTNAME=mybox \
+    run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    func have-command(name) { return false if \$name == \"rw\"
+        return true }
+    func short-hostname() { return \"mybox\" }
+    set-up-ssh-aliases
+    host1 --unknown-flag
+" </dev/null 2>&1)"
+assert_equal "ssh: -t -oSendEnv=LC_CLIENT_HOST --unknown-flag host1 [mybox]" "$result"
+
+# A config with nothing usable must leave no stale definitions behind.
+start_test "mesh set-up-ssh-aliases truncates a previous generation"
+_write_ssh_config
+HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+" </dev/null >/dev/null 2>&1
+printf 'Host *.example\n' > "$_ssh_config_home/.ssh/config"
+HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+" </dev/null >/dev/null 2>&1
+result="$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
+assert_equal "# Generated from ~/.ssh/config by rc.mesh. Do not edit." "$result"
+
+# Two shells starting at once share the cache path, so the file is built under
+# a per-process name and renamed into place. A reader therefore sees either the
+# old generation or the complete new one -- never the window between a truncate
+# and the last append, where every write succeeds and the result is still wrong.
+start_test "mesh set-up-ssh-aliases leaves no staged file behind"
+_write_ssh_config
+rm -rf "$_ssh_config_home/.cache"
+HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+" </dev/null >/dev/null 2>&1
+result="$(ls "$_ssh_config_home/.cache/mesh")"
+assert_equal "ssh-hosts.mesh" "$result"
+
+# The reader never observes a partial file: whatever a concurrent shell sees is
+# a complete generation. Asserted by racing several shells and requiring every
+# resulting file to be whole.
+start_test "mesh set-up-ssh-aliases stays whole under concurrent shells"
+_write_ssh_config
+rm -rf "$_ssh_config_home/.cache"
+for _i in 1 2 3 4 5; do
+    HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+        source $_env_mesh
+        source $_rc_mesh
+        set-up-ssh-aliases
+        host1 --version > /dev/null 2>&1
+    " </dev/null >/dev/null 2>&1 &
+done
+wait
+result="$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
+assert_equal "# Generated from ~/.ssh/config by rc.mesh. Do not edit.
+wrapper func host1(...args) { ssh-to host1 ...\$args }
+wrapper func host2(...args) { ssh-to host2 ...\$args }
+wrapper func host3(...args) { ssh-to host3 ...\$args }" "$result"
+
+# An unwritable cache must not fall through to the source: a stale file from
+# an earlier session would otherwise be sourced as if fresh, reinstating hosts
+# the config no longer names. A path blocked by a *directory* rather than a
+# permission bit, since these tests run as root in CI.
+start_test "mesh set-up-ssh-aliases reports an uncreatable cache directory"
+_write_ssh_config
+touch "$_ssh_config_home/blocked"
+result="$(HOME="$_ssh_config_home" XDG_CACHE_HOME="$_ssh_config_home/blocked/cache" \
+    run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+    puts \"status=\$sh.status\"
+    host1
+" </dev/null 2>&1)"
+assert_contains "cannot create the cache directory" "$result"
+assert_contains "status=1" "$result"
+assert_contains "command not found: host1" "$result"
+
+# A directory at the cache path is caught before anything is written: `mv` would
+# move the staged file *inside* it and succeed, leaving `source` to fail on the
+# directory with a diagnostic that doesn't say what went wrong.
+start_test "mesh set-up-ssh-aliases reports a directory at the cache path"
+_write_ssh_config
+mkdir -p "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh"
+result="$(HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+    puts \"status=\$sh.status\"
+    host1
+" </dev/null 2>&1)"
+assert_contains "the cache path is a directory" "$result"
+assert_contains "status=1" "$result"
+assert_contains "command not found: host1" "$result"
+
+# A failure partway through the loop leaves a truncated file whose last line is
+# usually half a definition, so sourcing it is a parse error rather than a
+# short alias list. The append is checked and the artifact dropped. Simulated by
+# making the file unwritable *after* the header lands, which is what a full
+# filesystem looks like from here.
+# A failure partway through the loop leaves a truncated *staged* file, whose
+# last line is usually half a definition. It is dropped rather than renamed, so
+# the previous generation stays in place and nothing half-built is sourced.
+# Simulated by replacing the staged file with a directory after the header
+# lands, which is what a full filesystem looks like from here.
+start_test "mesh set-up-ssh-aliases drops a partly written staged file"
+_write_ssh_config
+rm -rf "$_ssh_config_home/.cache"
+result="$(HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    # Stand in for the append failing: the header write lands, the next cannot.
+    wrapper func fields(...args) {
+        staged = \"$_ssh_config_home/.cache/mesh/ssh-hosts.mesh.\$sh.pid\"
+        rm -f \$staged
+        mkdir -p \$staged
+        return [Host host1]
+    }
+    set-up-ssh-aliases
+    puts \"status=\$sh.status\"
+    host1
+" </dev/null 2>&1)"
+assert_contains "cannot write the cache file" "$result"
+assert_contains "status=1" "$result"
+assert_contains "command not found: host1" "$result"
+
+# The config passed the is-it-a-file test and then failed to read anyway --
+# permissions changed since, an I/O error. A failing capture in a `for` head
+# iterates nothing and carries on, so without the check the header-only file
+# would be renamed into place and sourced: every host alias gone, looking
+# exactly like a config with no Host entries.
+_fake_cat_bin="$_testdir/fakecatbin"
+mkdir -p "$_fake_cat_bin"
+printf '#!/bin/sh\necho "cat: cannot read" >&2\nexit 1\n' > "$_fake_cat_bin/cat"
+chmod +x "$_fake_cat_bin/cat"
+
+start_test "mesh set-up-ssh-aliases reports an unreadable ssh config"
+_write_ssh_config
+result="$(HOME="$_ssh_config_home" PATH="$_fake_cat_bin:$PATH" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+    puts \"status=\$sh.status\"
+    host1
+" </dev/null 2>&1)"
+assert_contains "cannot read the ssh config" "$result"
+assert_contains "status=1" "$result"
+assert_contains "command not found: host1" "$result"
+
+start_test "mesh set-up-ssh-aliases leaves no staged file after a failed read"
+assert_equal "" "$(ls "$_ssh_config_home/.cache/mesh/" 2>/dev/null | grep 'ssh-hosts.mesh\.' || true)"
+
+start_test "mesh set-up-ssh-aliases does nothing without an ssh config"
+rm -rf "$_ssh_config_home"
+mkdir -p "$_ssh_config_home"
+HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+    puts survived
+" </dev/null 2>&1 | grep -q survived
+assert_equal "0" "$?"
+
+###############
+# TEST: clone picks the VCS from the URL
+
+# Real programs on PATH rather than mesh functions: `clone` names jj/git/hg
+# directly, and the point of the test is which one it reached.
+_fake_clone_bin="$_testdir/fakeclonebin"
+mkdir -p "$_fake_clone_bin"
+for _prog in jj git hg; do
+    printf '#!/bin/sh\necho "%s: $@"\n' "$_prog" > "$_fake_clone_bin/$_prog"
+    chmod +x "$_fake_clone_bin/$_prog"
+done
+
+start_test "mesh clone prefers jj for a git URL"
+result="$(PATH="$_fake_clone_bin:$PATH" _mesh_run_config '' 'clone https://example.invalid/repo.git')"
+assert_equal "jj: git clone https://example.invalid/repo.git" "$result"
+
+start_test "mesh clone forwards flags that follow the URL"
+result="$(PATH="$_fake_clone_bin:$PATH" _mesh_run_config '' 'clone https://example.invalid/r.git --depth 1')"
+assert_equal "jj: git clone https://example.invalid/r.git --depth 1" "$result"
+
+# The URL has to come first, since it is what picks the VCS. shrc's `case "$1"`
+# and nushell's `url: string` require the same, so this asserts the shared
+# contract rather than a mesh limitation.
+start_test "mesh clone does nothing when a flag precedes the URL"
+result="$(PATH="$_fake_clone_bin:$PATH" _mesh_run_config '' 'clone --depth 1 https://example.invalid/r.git' 2>&1)"
+assert_equal "" "$result"
+
+start_test "mesh clone falls back to git when the user agrees"
+result="$(PATH="$_fake_clone_bin:$PATH" _mesh_run_config '
+    func have-command(name) { return false if $name == "jj"
+        return true }
+    wrapper func confirm(...q) { return true }
+' 'clone https://example.invalid/repo.git')"
+assert_equal "git: clone https://example.invalid/repo.git" "$result"
+
+start_test "mesh clone does nothing when the user declines the git fallback"
+result="$(PATH="$_fake_clone_bin:$PATH" _mesh_run_config '
+    func have-command(name) { return false if $name == "jj"
+        return true }
+    wrapper func confirm(...q) { return false }
+' 'clone https://example.invalid/repo.git')"
+assert_equal "" "$result"
+
+start_test "mesh clone uses hg for an hg URL"
+result="$(PATH="$_fake_clone_bin:$PATH" _mesh_run_config '' 'clone https://example.invalid/hg/repo')"
+assert_equal "hg: clone https://example.invalid/hg/repo" "$result"
+
+# Neither pattern matches, so nothing is cloned -- same as the other three,
+# which all fall off the end of their case/switch/if without a default.
+start_test "mesh clone runs nothing for a URL matching neither VCS"
+result="$(PATH="$_fake_clone_bin:$PATH" _mesh_run_config '' 'clone https://example.invalid/plain')"
+assert_equal "" "$result"
+
+start_test "mesh dir-info renders what vcs prompt-info prints"
+result="$(PATH="$_fake_vcs_bin:$PATH" _mesh_run_config '' 'puts dir-info()')"
+assert_equal "myproject (main)" "$result"
+
+start_test "mesh dir-info falls back to the working directory with no vcs"
+result="$(_mesh_run '
+    cd /etc
+    puts dir-info()
+')"
+assert_equal "/etc" "$result"
+
+start_test "mesh preprompt shows what unmerged prints"
+# shrc redirects only stderr; the warning itself belongs on the prompt block.
+result="$(PATH="$_fake_vcs_bin:$PATH" _mesh_run_config '
+    func terminal-width() { return 1 }
+    func auth-info() { return "" }
+    func maybe-background-fetch(auth = "") { return }
+    func unmerged() { puts "2 unmerged branches" }
+' 'preprompt' 2>/dev/null)"
+assert_contains "2 unmerged branches" "$result"
+
+###############
+# TEST: maybe-background-fetch gating
+
+# Report which vcs subcommands the given maybe-background-fetch calls spawn.
+_fetch_vcs_calls() {
+    : > "$_testdir/vcs-calls"
+    PATH="$_fake_vcs_bin:$PATH" _mesh_run_config '' "$1" >/dev/null 2>&1
+    tr '\n' ' ' < "$_testdir/vcs-calls" | sed 's/ $//'
+}
+
+# A failed spawn leaves the directory uncached, so the next prompt tries again
+# rather than silently giving up on it for the rest of the session.
+start_test "mesh maybe-background-fetch retries after a failed spawn"
+_fake_failing_vcs="$_testdir/failingvcsbin"
+mkdir -p "$_fake_failing_vcs"
+cat > "$_fake_failing_vcs/vcs" <<EOF
+#!/bin/sh
+echo "\$@" >> "$_testdir/vcs-calls"
+exit 1
+EOF
+chmod +x "$_fake_failing_vcs/vcs"
+: > "$_testdir/vcs-calls"
+PATH="$_fake_failing_vcs:$PATH" _mesh_run_config '' '
+    maybe-background-fetch ""
+    maybe-background-fetch ""
+' >/dev/null 2>&1
+assert_equal "2" "$(grep -c auto-fetch "$_testdir/vcs-calls")"
+
+start_test "mesh maybe-background-fetch fetches once per directory"
+result="$(_fetch_vcs_calls '
+    maybe-background-fetch ""
+    maybe-background-fetch ""
+')"
+assert_equal "auto-fetch" "$result"
+
+start_test "mesh maybe-background-fetch skips while something needs auth"
+result="$(_fetch_vcs_calls 'maybe-background-fetch "SSH"')"
+assert_equal "" "$result"
+
+# The directory must not be recorded by a call the auth gate turned away, or
+# the fetch would never happen in that directory once the user authenticates.
+start_test "mesh maybe-background-fetch retries after authenticating"
+result="$(_fetch_vcs_calls '
+    maybe-background-fetch "SSH"
+    maybe-background-fetch ""
+')"
+assert_equal "auto-fetch" "$result"
+
+# is-ssh-valid forks `ssh-add -L`, so preprompt asks auth-info once and hands
+# the answer to both maybe-background-fetch and prompt-line.
+start_test "mesh preprompt asks auth-info once per render"
+result="$(PATH="$_fake_vcs_bin:$PATH" _mesh_run_config '
+    func terminal-width() { return 1 }
+    auth-asks = 0
+    func auth-info() {
+        global auth-asks = $auth-asks + 1
+        return ""
+    }
+' 'preprompt
+puts "asks=$auth-asks"' 2>/dev/null | tail -1)"
+assert_equal "asks=1" "$result"
+
+###############
+# TEST: i-am-root reads $UID rather than forking
+
+# `UID` is readonly in bash, so it is handed to the child through `env` rather
+# than a variable assignment prefix.
+_run_with_uid() {
+    HOME="$_fakehome" run_with_timeout 15 env "UID=$1" mesh -c "
+        source $_env_mesh
+        source $_rc_mesh
+        puts i-am-root():repr
+    " </dev/null
+}
+
+start_test "mesh i-am-root answers from \$UID"
+assert_equal "true" "$(_run_with_uid 0)"
+assert_equal "false" "$(_run_with_uid 1000)"
+
+# `id` is a fork and i-am-root runs on every prompt, where bash, zsh and fish
+# read their own $UID for free. Count the calls rather than trust the code:
+# env.mesh only computes UID when it isn't already set, so a preset one means
+# no `id -u` anywhere in a session.
+_fake_id_bin="$_testdir/fakeidbin"
+mkdir -p "$_fake_id_bin"
+cat > "$_fake_id_bin/id" <<EOF
+#!/bin/sh
+echo "\$@" >> "$_testdir/id-calls"
+exec /usr/bin/id "\$@"
+EOF
+chmod +x "$_fake_id_bin/id"
+
+start_test "mesh i-am-root forks no id when \$UID is set"
+rm -f "$_testdir/id-calls"
+HOME="$_fakehome" run_with_timeout 15 \
+    env "PATH=$_fake_id_bin:$PATH" UID=1000 USERNAME=someone mesh -c "
+        source $_env_mesh
+        source $_rc_mesh
+        puts i-am-root():repr
+        puts i-am-root():repr
+        puts i-am-root():repr
+    " </dev/null >/dev/null 2>&1
+assert_equal "" "$(cat "$_testdir/id-calls" 2>/dev/null)"
+
+###############
+# TEST: log-history
+
+start_test "mesh log-history appends to HISTORY_FILE"
+result="$(_mesh_run '
+    $env.HISTORY_FILE = "$env.HOME/history-test"
+    log-history "hello world"
+    cat $env.HISTORY_FILE
+')"
+assert_contains "hello world" "$result"
+
+start_test "mesh log-history is a no-op with no HISTORY_FILE"
+result="$(_mesh_run '
+    $env.HISTORY_FILE = ""
+    log-history "ignored"
+    puts done
+')"
+assert_equal "done" "$result"
+
+###############
+# TEST: env.mesh environment
+
+start_test "mesh env.mesh exports an editor and a pager"
+result="$(_mesh_run '
+    if $env:get(EDITOR, "") != "" { puts editor }
+    if $env:get(PAGER, "") != "" { puts pager }
+')"
+assert_contains "editor" "$result"
+assert_contains "pager" "$result"
+
+start_test "mesh env.mesh sets the grep and block-size defaults"
+result="$(_mesh_run 'puts $env.GREP_COLORS $env.BLOCKSIZE')"
+assert_equal "mt=4 1024" "$result"
+
+start_test "mesh env.mesh picks light-background ls colors by default"
+result="$(HOME="$_fakehome" TERM=xterm-256color run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    puts \$env.LSCOLORS
+" </dev/null)"
+assert_equal "exfxxxxxcxxxxx" "$result"
+
+start_test "mesh env.mesh picks dark-background ls colors on a linux console"
+result="$(HOME="$_fakehome" TERM=linux run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    puts \$env.LSCOLORS
+" </dev/null)"
+assert_equal "ExFxxxxxCxxxxx" "$result"
+
+start_test "mesh env.mesh keeps an inherited GOPATH"
+result="$(HOME="$_fakehome" GOPATH=/somewhere/else run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    puts \$env.GOPATH
+" </dev/null)"
+assert_equal "/somewhere/else" "$result"
+
+start_test "mesh env.mesh defaults GOPATH to \$HOME"
+result="$(HOME="$_fakehome" GOPATH= run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    puts \$env.GOPATH
+" </dev/null)"
+assert_equal "$_fakehome" "$result"
+
+start_test "mesh env.mesh sets HISTORY_FILE under HOME"
+result="$(_mesh_run 'puts $env.HISTORY_FILE')"
+assert_equal "$_fakehome/.history" "$result"
+
+start_test "mesh env.mesh failsafe skips the environment setup"
+result="$(HOME="$_fakehome" FAILSAFE=1 run_with_timeout 15 env -u GREP_COLORS mesh -c "
+    source $_env_mesh
+    puts \$env:get(GREP_COLORS, \"(unset)\")
+" 2>/dev/null </dev/null)"
+assert_equal "(unset)" "$result"
+
+###############
+# TEST: rc.mesh is definitions only until its interactive section
+
+start_test "mesh rc.mesh starts no session when not interactive"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+    func stdin-is-tty() { return true }
+    func inside-project() { return true }
+    func autoshpool(...args) { puts "autoshpool ran" }
+' 'puts done')"
+assert_equal "done" "$result"
+
+###############
+# TEST: rerc stops when the environment half fails
+
+# `source` sets the status and keeps going, so an env.mesh that no longer parses
+# would be followed by an rc.mesh that does, and rerc would report success over
+# a half-reloaded shell.
+_rerc_home="$_testdir/rerchome"
+rm -rf "$_rerc_home"
+mkdir -p "$_rerc_home/.config/mesh"
+printf 'puts "rc.mesh was read"\n' > "$_rerc_home/.config/mesh/rc.mesh"
+
+start_test "mesh rerc does not read rc.mesh when env.mesh fails"
+printf 'this is not( valid mesh\n' > "$_rerc_home/.config/mesh/env.mesh"
+result="$(_mesh_run "\$env.HOME = \"$_rerc_home\"
+    rerc
+    puts \"status=\$sh.status\"" 2>&1)"
+assert_contains "env.mesh failed" "$result"
+# Not a literal status: mesh's own is passed through (2 for a syntax error, 127
+# for a missing file) rather than flattened, so only "not success" is asserted.
+assert_not_contains "status=0" "$result"
+assert_not_contains "rc.mesh was read" "$result"
+
+start_test "mesh rerc reads both halves when env.mesh is fine"
+printf 'puts "env.mesh was read"\n' > "$_rerc_home/.config/mesh/env.mesh"
+result="$(_mesh_run "\$env.HOME = \"$_rerc_home\"
+    rerc" 2>&1)"
+assert_equal "env.mesh was read
+rc.mesh was read" "$result"
+
+###############
+# TEST: emacs stays in the terminal
+
+_fake_emacs_bin="$_testdir/fakeemacsbin"
+mkdir -p "$_fake_emacs_bin"
+printf '#!/bin/sh\necho "emacs: $*"\n' > "$_fake_emacs_bin/emacs"
+chmod +x "$_fake_emacs_bin/emacs"
+
+start_test "mesh emacs runs in terminal mode"
+result="$(PATH="$_fake_emacs_bin:$PATH" _mesh_run_config '' 'emacs file.txt')"
+assert_equal "emacs: --no-window-system file.txt" "$result"
+
+###############
+# PERFORMANCE
+# prompt-line runs on every prompt, so its cost matters. The bash suite times
+# 50 calls with `vcs prompt-info` stubbed (shrc_prompt_test.sh:1052); this is
+# the mesh equivalent, and the same 1000ms budget. Timing the loop *inside*
+# mesh rather than around it keeps the ~100ms interpreter startup out of the
+# measurement -- otherwise the budget would mostly be measuring `mesh -c`.
+#
+# The stubs are what make this a composition measurement rather than a fork
+# measurement: auth-info and prompt-info are the two `vcs`/`ssh-add` forks a
+# real render pays, and they are replaced so what is left is host-info,
+# dir-info, the styling and the string building.
+
+start_test "mesh prompt-line within ${_mesh_prompt_budget_ms:=${PROMPT_PERF_BUDGET_MS:-1000}}ms budget"
+result="$(_mesh_run '
+    $env.HOSTNAME = "host1"
+    func auth-info() { return "" }
+    func prompt-info() { return "proj main" }
+    # Warmup, so first-call variance stays out of the timed loop.
+    prompt-line()
+    start = $(date +%s%N)
+    i = 0
+    while $i < 50 {
+      prompt-line()
+      i = $i + 1
+    }
+    end = $(date +%s%N)
+    puts (($end:int - $start:int) / 1000000)
+' 2>/dev/null)"
+case "$result" in
+    ''|*[!0-9]*) skip_block "mesh prompt-line perf check: date +%s%N unavailable" ;;
+    *)
+        echo "  50 x prompt-line (mesh compose): ${result}ms (budget ${_mesh_prompt_budget_ms}ms)"
+        if test "$_mesh_prompt_budget_ms" -gt 0; then
+            assert_true test "$result" -le "$_mesh_prompt_budget_ms"
+        fi
+        ;;
+esac
+
+test_summary "mesh_test"
