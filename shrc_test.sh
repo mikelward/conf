@@ -2184,6 +2184,50 @@ assert_equal "rc=1" "$result"
 rm -rf "$_download_dir"
 unset -f download
 
+_daemon_def=$(sed -n '/^[[:space:]]*daemon() {$/,/^[[:space:]]*}$/p' "$_srcdir/shrc" |
+    sed 's/^    //')
+start_test "shrc defines daemon as a multi-line function"
+assert_true test -n "$_daemon_def"
+eval "$_daemon_def"
+
+# The `&` job runs in a subshell that inherits the command substitution's
+# stdout, so `$(...)` reads until it exits -- no sleep needed, and pkill's
+# line is written before the fork, so the order is fixed.
+start_test "daemon kills the old copy and starts a detached one"
+result="$(
+    pkill() { puts "pkill $*"; }
+    setsid() { puts "setsid $*"; }
+    daemon xbindkeys
+)"
+assert_equal "pkill xbindkeys
+setsid xbindkeys" "$result"
+
+# Regression: daemon read only $1, so every argument after the program
+# name was dropped -- `bindkeys --poll-rc` silently started a plain
+# xbindkeys.
+start_test "daemon passes its extra arguments to the program"
+result="$(
+    pkill() { puts "pkill $*"; }
+    setsid() { puts "setsid $*"; }
+    daemon xbindkeys --poll-rc
+)"
+assert_equal "pkill xbindkeys
+setsid xbindkeys --poll-rc" "$result"
+
+_bindkeys_def=$(sed -n 's/^[[:space:]]*\(bindkeys() {.*}\)$/\1/p' "$_srcdir/shrc")
+start_test "shrc defines bindkeys as a one-liner function"
+assert_true test -n "$_bindkeys_def"
+eval "$_bindkeys_def"
+
+start_test "bindkeys reaches xbindkeys with its arguments"
+result="$(
+    pkill() { :; }
+    setsid() { puts "setsid $*"; }
+    bindkeys --poll-rc
+)"
+assert_equal "setsid xbindkeys --poll-rc" "$result"
+unset -f daemon bindkeys
+
 ###############
 # TTY
 # shrc fills TTY at the top of the file, outside the

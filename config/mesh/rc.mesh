@@ -1518,9 +1518,9 @@ wrapper func daemon(name, ...args) {
   pkill $name
   fork { setsid $name ...$args & }
 }
-# shrc:2640 and config.fish:1134 pass their arguments to `daemon`, which then
-# only ever looks at the name -- so `bindkeys --poll-rc` silently drops the
-# flag there. Here they reach xbindkeys.
+# shrc and config.fish used to pass their arguments to a `daemon` that only
+# ever looked at the name, so `bindkeys --poll-rc` silently dropped the flag;
+# all four shells forward them to xbindkeys now.
 alias bindkeys = daemon xbindkeys
 alias diga = command dig +noall +answer +search
 alias digs = command dig +short +search

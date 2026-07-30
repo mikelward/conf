@@ -1175,11 +1175,15 @@ if is_interactive
         code --new-window .
     end
     alias d='codeconfig; codelocal'
+    # Arguments after the program name are passed to it -- without the
+    # split, `bindkeys --poll-rc` silently dropped the flag.
     function daemon
-        pkill $argv[1]
+        set _name $argv[1]
+        set _daemon_args $argv[2..-1]
+        pkill $_name
         # background and disown so the daemon detaches from this shell
-        # (shrc runs it as `(setsid "$1"&)`)
-        setsid $argv[1] &
+        # (shrc runs it as `(setsid "$1" "$@" &)`)
+        setsid $_name $_daemon_args &
         disown
     end
     alias diga='dig +noall +answer +search'
