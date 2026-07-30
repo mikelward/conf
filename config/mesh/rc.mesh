@@ -1412,8 +1412,8 @@ func title() {
 # authenticating so the prompt's {behind} indicator still nags.
 #
 # The directory is recorded only once a fetch is actually spawned. Recording it
-# before the auth gate -- what shrc:1498 and config.fish:1360 do -- means a
-# directory first seen without an ssh identity never fetches, however long the
+# before the auth gate -- which is what shrc and config.fish used to do -- means
+# a directory first seen without an ssh identity never fetches, however long the
 # session stays there after the user authenticates. `auth` comes from preprompt
 # so the retry costs no extra `ssh-add -L`.
 last-fetch-dir = ""
