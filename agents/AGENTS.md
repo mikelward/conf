@@ -36,9 +36,11 @@
 
 # Branching and commits
 
-- **These rules assume an `origin` remote.** Without one you can't fetch,
-  branch from `origin/main`, push, or open a PR — say so and stop rather than
-  improvising a local substitute.
+- **These rules assume an `origin` remote.** If a sandbox intentionally
+  provides no remote Git support, such as Codex cloud, continue from the
+  provided checkout on its current branch without fetching, pushing, or
+  opening a PR. Otherwise, if `origin` is unexpectedly missing, say so and
+  stop rather than improvising a local substitute.
 - Develop on `<agent>/<short-topic>` branches off `origin/main`, where
   `<agent>` is your own short name (`claude/...` for Claude Code, `codex/...`
   for Codex, `cursor/...` for Cursor). Don't hard-code `claude/` unless you

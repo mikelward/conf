@@ -104,6 +104,7 @@ test-full:
 	@$(MAKE) test
 
 test-all: \
+	test-agents \
 	test-dash \
 	test-bash \
 	test-zsh \
@@ -122,6 +123,11 @@ test-all: \
 
 $(CACHE):
 	@mkdir -p $@
+
+$(CACHE)/test-agents.stamp: AGENTS.md agents/AGENTS.md agents_test.sh | $(CACHE)
+	@sh agents_test.sh
+	@touch $@
+test-agents: $(CACHE)/test-agents.stamp
 
 # Targets group by what's under test, not by which interpreter runs the
 # driver. shrc_test.sh runs under bash and zsh (the two shells whose
