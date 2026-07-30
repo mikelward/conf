@@ -218,7 +218,12 @@ setup_shell_compat_interactive() {
 : ${USERNAME:=$(id -un)}
 : ${HOSTNAME:=$(hostname -f)}
 : ${UID:=$(id -u)}
-: ${TTY:=$(tty)}
+# `tty` prints "not a tty" on *stdout* and exits nonzero when stdin isn't a
+# terminal, so the plain capture would put that diagnostic into TTY -- and
+# from there into every child and every log_history line. Fall back to empty.
+if test -z "${TTY:-}"; then
+    TTY="$(tty)" || TTY=
+fi
 
 #######
 # PATH FUNCTIONS

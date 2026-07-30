@@ -857,6 +857,17 @@ result="$(_fish_run '
 assert_equal "survived" "$result"
 
 ###############
+# TEST: TTY falls back to empty rather than storing `tty`'s diagnostic
+#
+# Regression: `tty` prints "not a tty" on *stdout* and exits nonzero when
+# stdin isn't a terminal, so the plain capture stored that diagnostic in
+# TTY -- and publish_jobs_file, log_history and every child saw it.
+
+start_test "fish TTY is empty when stdin is not a terminal"
+result="$(_fish_run 'echo "[$TTY]"')"
+assert_equal "[]" "$result"
+
+###############
 # TEST: CDPATH is set for all shells (not just interactive)
 
 start_test "fish CDPATH contains HOME"
