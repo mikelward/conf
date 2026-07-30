@@ -2697,9 +2697,18 @@ if is_interactive; then
     makelocal() {
         :
     }
+    # restart a background program, detached: setsid gives it a session of
+    # its own so it outlives this shell, and the subshell keeps the `&` job
+    # out of this shell's job table. Arguments after the program name are
+    # passed to it -- without the shift, `bindkeys --poll-rc` silently
+    # dropped the flag.
     daemon() {
-        pkill "$1"
-        (setsid "$1"&)
+        local _name="$1"
+        shift
+        # pkill exits 1 when nothing was running, which is the normal
+        # first start
+        pkill "$_name"
+        (setsid "$_name" "$@" &)
     }
     diga() { dig +noall +answer +search "$@"; }
     digs() { dig +short +search "$@"; }

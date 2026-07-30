@@ -1607,6 +1607,41 @@ result="$(_fish_run '
 assert_equal "rc=1" "$result"
 
 ###############
+# TEST: daemon forwards its extra arguments
+#
+# Regression: daemon read only $argv[1], so `bindkeys --poll-rc` silently
+# started a plain xbindkeys.
+
+start_test "fish daemon kills the old copy and starts a detached one"
+result="$(_fish_run '
+    function pkill; echo "pkill $argv"; end
+    function setsid; echo "setsid $argv"; end
+    daemon xbindkeys
+    wait
+')"
+assert_equal "pkill xbindkeys
+setsid xbindkeys" "$result"
+
+start_test "fish daemon passes its extra arguments to the program"
+result="$(_fish_run '
+    function pkill; echo "pkill $argv"; end
+    function setsid; echo "setsid $argv"; end
+    daemon xbindkeys --poll-rc
+    wait
+')"
+assert_equal "pkill xbindkeys
+setsid xbindkeys --poll-rc" "$result"
+
+start_test "fish bindkeys reaches xbindkeys with its arguments"
+result="$(_fish_run '
+    function pkill; end
+    function setsid; echo "setsid $argv"; end
+    bindkeys --poll-rc
+    wait
+')"
+assert_equal "setsid xbindkeys --poll-rc" "$result"
+
+###############
 # TEST: e falls back when EDITOR is unset
 
 start_test "fish e falls back to vim when EDITOR is unset"
