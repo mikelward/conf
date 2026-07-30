@@ -40,11 +40,17 @@ if $env:get(FAILSAFE, "0") == "1" or $env:get(LC_FAILSAFE, "0") == "1" or "$env.
 # front by hand, because a declared flag would be matched anywhere in the list.
 
 # ask the user whether to do something; true on yes or a bare Enter
+#
+# The prompt goes to stderr: it is UI rather than output, so `confirm x > log`
+# still asks, and a caller reading stdout gets only what it asked for. bash's
+# own `read -p` prompts on stderr for the same reason. shrc, config.fish and
+# config.nu still prompt on stdout -- worth bringing across, but that is a
+# user-visible change to three more shells and belongs in its own change.
 wrapper func confirm(...question) {
   # Bound first: an argument-taking modifier cannot be written inside a string,
   # so the join happens here and only the result is interpolated.
   text = $question:join(" ")
-  print "$text? [Y/n] "
+  print "$text? [Y/n] " >&2
   gets reply
   match $reply {
     Y | y | "" => { return true }

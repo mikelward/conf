@@ -487,40 +487,55 @@ assert_equal "PROMPTED" "$result"
 # has to be bound first -- without that, confirm failed before reaching `gets`
 # and the prompt could not be answered at all.
 # `confirm` reads a reply, so these bypass _mesh_run's `</dev/null`.
-_confirm_with() {
+#
+# The answer is read as an exit **status**, which is the contract callers use:
+# `clone` asks `if confirm(…)`, and a boolean's status view is 0 for true. That
+# keeps these three tests independent of how the prompt is worded, which stream
+# it goes to, and whether it ends in a newline -- the prompt has its own test
+# below, and it should be the only one that breaks when the wording changes.
+_confirm_status() {
     printf '%s' "$1" | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout 15 mesh -c "
         source $_env_mesh
         source $_rc_mesh
-        puts confirm(\"are\", \"you\", \"sure\"):repr
-    " 2>&1
+        confirm are you sure
+    " >/dev/null 2>&1
+    echo "$?"
 }
 
-# Asserted through a command-position call as well as the value calls below.
-# mesh used to swallow a function's earlier stdout when its last statement was
-# a `match` and it was called for its value, so the prompt never appeared;
-# mikelward/mesh 77dca06 fixed that, and the value-call assertions below now
-# see the prompt on the same line as the answer.
-start_test "mesh confirm prompts with the joined question"
-result="$(printf 'y\n' | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    confirm are you sure
-" 2>&1)"
-assert_contains "are you sure? [Y/n]" "$result"
-
-# `print` leaves no newline, so the prompt and the answer share a line -- which
-# is what a user sees at the terminal, and so what is asserted.
 start_test "mesh confirm takes yes"
-assert_equal "are you sure? [Y/n] true" "$(_confirm_with 'y
-' | tail -1)"
+assert_equal "0" "$(_confirm_status 'y
+')"
 
 start_test "mesh confirm takes a bare Enter as yes"
-assert_equal "are you sure? [Y/n] true" "$(_confirm_with '
-' | tail -1)"
+assert_equal "0" "$(_confirm_status '
+')"
 
 start_test "mesh confirm takes no"
-assert_equal "are you sure? [Y/n] false" "$(_confirm_with 'n
-' | tail -1)"
+assert_equal "1" "$(_confirm_status 'n
+')"
+
+# The prompt itself, asserted once, on stderr. mesh used to swallow a
+# function's earlier stdout when its last statement was a `match` and it was
+# called for its value, so the prompt never appeared at all; mikelward/mesh
+# 77dca06 fixed that, which is what made the stream worth choosing.
+_confirm_streams() {
+    printf 'y\n' | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout 15 mesh -c "
+        source $_env_mesh
+        source $_rc_mesh
+        confirm are you sure
+    " 2>"$_testdir/confirm.err" >"$_testdir/confirm.out"
+}
+
+start_test "mesh confirm prompts with the joined question"
+_confirm_streams
+assert_contains "are you sure? [Y/n]" "$(cat "$_testdir/confirm.err")"
+
+# The point of the split: a caller reading stdout gets nothing but what it
+# asked for, so `confirm x > file` still asks rather than writing the question
+# into the file.
+start_test "mesh confirm keeps the prompt off stdout"
+_confirm_streams
+assert_equal "" "$(cat "$_testdir/confirm.out")"
 
 ###############
 # TEST: PATH helpers
