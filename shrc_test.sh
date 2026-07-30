@@ -1363,6 +1363,52 @@ rm -f "$_autoshpool_calls" "$_returned"
 assert_true test -f "$_returned"
 assert_false test -f "$_autoshpool_calls"
 
+###############
+# apply_shpool_initial_pwd: the transitional cd into the directory the
+# older scripts-repo helpers stamp on the session.
+
+_initial_pwd_dir="$_testdir/shpool-initial"
+mkdir -p "$_initial_pwd_dir"
+
+start_test "apply_shpool_initial_pwd cds and clears the variable"
+result="$(
+    in_shpool() { true; }
+    SHPOOL_INITIAL_PWD="$_initial_pwd_dir"
+    apply_shpool_initial_pwd
+    puts "rc=$? pwd=$PWD initial=[$SHPOOL_INITIAL_PWD]"
+)"
+assert_equal "rc=0 pwd=$_initial_pwd_dir initial=[]" "$result"
+
+# Regression: the variable was cleared whatever the cd did, throwing away
+# the one record of where the session was meant to open.
+start_test "apply_shpool_initial_pwd keeps the variable when the cd fails"
+result="$(
+    in_shpool() { true; }
+    SHPOOL_INITIAL_PWD="$_testdir/no-such-initial-pwd"
+    apply_shpool_initial_pwd 2>/dev/null
+    puts "rc=$? initial=[$SHPOOL_INITIAL_PWD]"
+)"
+assert_equal "rc=1 initial=[$_testdir/no-such-initial-pwd]" "$result"
+
+start_test "apply_shpool_initial_pwd is a no-op outside a shpool session"
+result="$(
+    in_shpool() { false; }
+    SHPOOL_INITIAL_PWD="$_initial_pwd_dir"
+    apply_shpool_initial_pwd
+    puts "rc=$? initial=[$SHPOOL_INITIAL_PWD]"
+)"
+assert_equal "rc=0 initial=[$_initial_pwd_dir]" "$result"
+
+start_test "apply_shpool_initial_pwd is a no-op when the variable is unset"
+result="$(
+    in_shpool() { true; }
+    unset SHPOOL_INITIAL_PWD
+    _before="$PWD"
+    apply_shpool_initial_pwd
+    puts "rc=$? moved=$(test "$PWD" = "$_before" && puts no || puts yes)"
+)"
+assert_equal "rc=0 moved=no" "$result"
+
 ######################################
 # Shell re-exec: switching $SHELL via ~/.env without chsh. sshd always
 # launches the /etc/passwd login shell and ignores $SHELL, so the login shell

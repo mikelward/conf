@@ -899,6 +899,24 @@ function sessionlist
     end
 end
 
+# Transitional fallback: the updated scripts-repo helpers open the session in
+# the right directory via `shpool attach -d`, leaving SHPOOL_INITIAL_PWD unset
+# (this a no-op). Until that ships everywhere (mikelward/scripts#107), the
+# older helpers still stamp SHPOOL_INITIAL_PWD (forwarded via the shpool
+# config's forward_env), so cd there on entry. Remove this function, its call
+# site and the forward_env entry once the scripts update is deployed.
+#
+# The variable is erased only once the cd succeeded: erasing it regardless
+# threw away the one record of where the session was meant to open, so a cd
+# that failed (the directory was removed between detach and attach, say) left
+# nothing to recover from. cd prints its own diagnostic.
+function apply_shpool_initial_pwd
+    in_shpool; or return 0
+    test -n "$SHPOOL_INITIAL_PWD"; or return 0
+    cd $SHPOOL_INITIAL_PWD; or return 1
+    set --erase SHPOOL_INITIAL_PWD
+end
+
 function maybe_start_session_and_exit
     switch (session_backend)
     case shpool
@@ -1013,17 +1031,7 @@ end
 # Set up the prompt, title, key bindings, etc.
 
 if is_interactive
-    # Transitional fallback: the updated scripts-repo helpers open the session in
-    # the right directory via `shpool attach -d`, leaving SHPOOL_INITIAL_PWD
-    # unset (this block a no-op). Until that ships everywhere
-    # (mikelward/scripts#107), the older helpers still stamp SHPOOL_INITIAL_PWD
-    # (forwarded via the shpool config's forward_env), so cd there on entry.
-    # Remove this block and the forward_env entry once the scripts update is
-    # deployed.
-    if in_shpool; and test -n "$SHPOOL_INITIAL_PWD"
-        cd $SHPOOL_INITIAL_PWD
-        set --erase SHPOOL_INITIAL_PWD
-    end
+    apply_shpool_initial_pwd
     maybe_start_session_and_exit
 
     # Past this point we're the shell we're keeping (the handoff exits if it
