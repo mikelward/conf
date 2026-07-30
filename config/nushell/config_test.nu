@@ -2181,6 +2181,15 @@ except OSError: pass
         isort sortme2.txt
         assert (open --raw sortme2.txt | str ends-with (char newline))
     })
+    # Coverage rather than a regression test: shrc and config.fish moved the
+    # staged file over the original whatever sort did, so a sort that died
+    # partway destroyed the input. nu raises before the save, so nothing is
+    # staged and nothing is moved; pin that so the shape can't drift.
+    (run-test "nu isort stages nothing when the read fails" {
+        cd $env.HOME
+        try { isort no-such-file-to-sort.txt } catch { null }
+        assert equal ("no-such-file-to-sort.txt.bak" | path exists) false
+    })
 
     ###############
     # projectroot: with working vcs binary

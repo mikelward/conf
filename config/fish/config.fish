@@ -519,9 +519,20 @@ function find_up
 end
 
 # replace a file with a sorted version of itself
+# The sorted output is staged beside the original and moved over it only
+# once `sort` succeeded: a sort that fails partway (unreadable file, no
+# space) still leaves a truncated file behind, and moving that over the
+# input destroys it.
 function isort
-    sort $argv[1] >$argv[1].bak
-    mv $argv[1].bak $argv[1]
+    set _staged $argv[1].bak
+    sort $argv[1] >$_staged
+    set _rc $status
+    if test $_rc -ne 0
+        rm -f $_staged
+        error "isort: sort failed; $argv[1] is unchanged"
+        return $_rc
+    end
+    mv $_staged $argv[1]
 end
 
 # join the arguments list by inserting a character between each element

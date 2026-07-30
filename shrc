@@ -761,9 +761,21 @@ trydiff() {
 
 # apply the changes that trydiff would have made
 # e.g. applydiff mdformat <file>
+# The output is staged beside the original and moved over it only once the
+# command succeeded: a formatter that dies partway through still writes
+# something, and moving that over the input destroys the file it was asked
+# to format.
 applydiff() {
-    "$1" "$2" >"$2".new
-    mv "$2".new "$2"
+    local _staged _rc
+    _staged="$2".new
+    "$1" "$2" >"$_staged"
+    _rc=$?
+    if test "$_rc" -ne 0; then
+        rm -f "$_staged"
+        error "applydiff: $1 failed; $2 is unchanged"
+        return "$_rc"
+    fi
+    mv "$_staged" "$2"
 }
 
 # print the name of a source file's corresponding test file
@@ -800,9 +812,20 @@ find_up() {
 }
 
 # replace a file with a sorted version of itself
+# Staged and moved into place only once `sort` succeeded, for the same reason
+# applydiff stages its output: a sort that fails partway (unreadable file, no
+# space) still leaves a truncated .bak behind.
 isort() {
-    sort "$1" >"$1".bak
-    mv "$1".bak "$1"
+    local _staged _rc
+    _staged="$1".bak
+    sort "$1" >"$_staged"
+    _rc=$?
+    if test "$_rc" -ne 0; then
+        rm -f "$_staged"
+        error "isort: sort failed; $1 is unchanged"
+        return "$_rc"
+    fi
+    mv "$_staged" "$1"
 }
 
 # join the arguments list by inserting a character between each element
