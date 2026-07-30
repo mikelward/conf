@@ -114,7 +114,7 @@ func a() { auth }
 func ssh-client-host() {
   return $env.LC_CLIENT_HOST if $env:get(LC_CLIENT_HOST, "") != ""
   return "" unless connected-via-ssh()
-  ip = fields($env.SSH_CONNECTION):get(0, "")
+  ip = $env.SSH_CONNECTION:words:get(0, "")
   return "" if $ip == ""
   name = ""
   # Each lookup goes through capture-or-empty because a *miss* is the ordinary
@@ -125,7 +125,7 @@ func ssh-client-host() {
     # `getent hosts` pads its columns, so the hostname is the second
     # whitespace-separated field rather than the second literal-space one.
     hosts = capture-or-empty(getent, hosts, $ip)
-    if $hosts != "" { name = fields($hosts):get(1, "") }
+    if $hosts != "" { name = $hosts:words:get(1, "") }
   }
   if $name == "" and have-command(dig) {
     answer = capture-or-empty(dig, +short, -x, $ip)
@@ -289,10 +289,10 @@ func get-ptr-records() { awk '$3 == "IN" && $4 == "PTR" { print $5 }' }
 
 # list this machine's IP addresses, as "<iface> <address>" lines
 func ips() {
-  # `ip -o` aligns its columns, so the line is tokenized on whitespace runs:
-  # a literal-space split leaves empties and the family never lands in [2].
+  # `ip -o` aligns its columns, so `:words` rather than `:split(" ")`: a literal
+  # split leaves empties between the columns and the family never lands in [2].
   for line in $(ip -o a sh up primary scope global):split("\n") {
-    parts = fields($line)
+    parts = $line:words
     continue if $parts:len < 4
     if $parts[2] ~ inet* { puts "$parts[1] $parts[3]" }
   }
@@ -474,9 +474,9 @@ func rmkey(line) { delline $line "$env.HOME/.ssh/known_hosts" }
 
 # print the block device the given mount point (or file) lives on
 func dev(file) {
-  # `df` pads its columns too, so the same whitespace tokenizing applies.
+  # `df` pads its columns too, so `:words` applies here for the same reason.
   for line in $(df -P -k $file):split("\n") {
-    parts = fields($line)
+    parts = $line:words
     continue if $parts:len == 0
     if $parts:last ~ /^\// { puts $parts[0] }
   }
@@ -855,7 +855,7 @@ func set-up-ssh-aliases() {
     fail
   }
   for line in $contents:split("\n") {
-    parts = fields($line)
+    parts = $line:words
     continue if $parts:len < 2
     keyword = $parts[0]
     continue unless $keyword == Host or $keyword == host
@@ -1362,9 +1362,7 @@ func publish-jobs() {
     # Same filter as job-info: the prompt's own `vcs` plumbing isn't a job the
     # user started.
     continue if starts-with($job.cmd, "command vcs")
-    # Bound first: `$(f(…))` would run a command substitution that captures
-    # nothing, since a value call prints nothing.
-    word = fields($job.cmd):get(0, "")
+    word = $job.cmd:words:get(0, "")
     summary += ["%$id $word"]
   }
   text = ""

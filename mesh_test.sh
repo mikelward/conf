@@ -1448,36 +1448,40 @@ assert_contains "status=1" "$result"
 mkdir -p "$_fakehome/Downloads"
 
 ###############
-# TEST: fields tokenizes on whitespace runs, not literal spaces
+# TEST: :words tokenizes on whitespace runs, not literal spaces
+#
+# A mesh modifier now; this config carried a `fields()` helper for it before
+# mesh grew one. The cases below are the ones the config actually meets, so they
+# stay here rather than relying on mesh's own tests alone.
 
-start_test "mesh fields collapses runs of spaces and tabs"
+start_test "mesh :words collapses runs of spaces and tabs"
 result="$(_mesh_run '
-    f = fields("  a   b\tc  ")
+    f = "  a   b\tc  ":words
     puts $f:len
     puts ...$f
 ')"
 assert_equal "3
 a b c" "$result"
 
-start_test "mesh fields is empty for a blank line"
+start_test "mesh :words is empty for a blank line"
 result="$(_mesh_run '
-    f = fields("")
+    f = "":words
     puts $f:len
 ')"
 assert_equal "0" "$result"
 
-start_test "mesh fields picks the hostname out of column-padded getent output"
+start_test "mesh :words picks the hostname out of column-padded getent output"
 # `getent hosts` pads the address column, so a literal-space split puts empty
 # strings in the middle and the hostname is not element 1.
 result="$(_mesh_run '
-    f = fields("127.0.0.1       localhost localhost.localdomain")
+    f = "127.0.0.1       localhost localhost.localdomain":words
     puts $f:get(1, "(none)")
 ')"
 assert_equal "localhost" "$result"
 
-start_test "mesh fields picks the family and address out of column-padded ip output"
+start_test "mesh :words picks the family and address out of column-padded ip output"
 result="$(_mesh_run '
-    f = fields("2: eth0    inet 10.0.0.5/24 brd 10.0.0.255 scope global eth0")
+    f = "2: eth0    inet 10.0.0.5/24 brd 10.0.0.255 scope global eth0":words
     puts $f[1] $f[2] $f[3]
 ')"
 assert_equal "eth0 inet 10.0.0.5/24" "$result"
@@ -2625,11 +2629,14 @@ result="$(HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
     source $_env_mesh
     source $_rc_mesh
     # Stand in for the append failing: the header write lands, the next cannot.
-    wrapper func fields(...args) {
+    # Hooked on the per-name check the loop makes just before each append, so
+    # the staged file is replaced by a directory once the header is already in
+    # place. Answers false so the append it guards is still reached.
+    func is-function(name) {
         staged = \"$_ssh_config_home/.cache/mesh/ssh-hosts.mesh.\$sh.pid\"
         rm -f \$staged
         mkdir -p \$staged
-        return [Host host1]
+        return false
     }
     set-up-ssh-aliases
     puts \"status=\$sh.status\"
