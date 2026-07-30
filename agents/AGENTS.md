@@ -41,11 +41,11 @@
   provided checkout on its current branch without fetching, pushing, or
   opening a PR. Otherwise, if `origin` is unexpectedly missing, say so and
   stop rather than improvising a local substitute.
-- Develop on `<agent>/<short-topic>` branches off `origin/main`, where
-  `<agent>` is your own short name (`claude/...` for Claude Code, `codex/...`
-  for Codex, `cursor/...` for Cursor). Don't hard-code `claude/` unless you
-  *are* Claude Code. Never commit directly to `main` / `master`. One topic per
-  branch.
+- Outside an intentionally remote-free sandbox, develop on
+  `<agent>/<short-topic>` branches off `origin/main`, where `<agent>` is your
+  own short name (`claude/...` for Claude Code, `codex/...` for Codex,
+  `cursor/...` for Cursor). Don't hard-code `claude/` unless you *are* Claude
+  Code. Never commit directly to `main` / `master`. One topic per branch.
 - Use standard commit message formatting. Imperative/present mood. "Fix", not
   "Fixed". First line is <66 chars and has no trailing dot. Remainder of the
   commit message should cover both the what and they why.
@@ -56,16 +56,19 @@
   rebase is routine hygiene — don't ask. Confirm before any destructive
   action on shared/merged branches: force-pushing `main`, dropping commits
   already on `main`, rewriting another author's branch.
-- Merge cue (`merged` / `I merged` / `landed` / merge webhook) runs hygiene
-  *before* engaging with the rest of the message: `git fetch origin`, cut a
-  fresh `<agent>/<short-topic>` branch off `origin/main`, announce the switch.
-- Unshallow before answering anything that depends on git history depth. The
-  sandbox clones shallow, so `git rev-list --count`, `git log` past the
-  shallow boundary, and blame return wrong answers without warning. If
-  `git rev-parse --is-shallow-repository` says `true`, run
-  `git fetch --unshallow` first, then re-check — it exits 0 even when
-  it deepened nothing, so if `--is-shallow-repository` is still `true`, say the
-  history is truncated instead of quoting a count.
+- Outside an intentionally remote-free sandbox, a merge cue (`merged` /
+  `I merged` / `landed` / merge webhook) runs hygiene *before* engaging with
+  the rest of the message: `git fetch origin`, cut a fresh
+  `<agent>/<short-topic>` branch off `origin/main`, announce the switch. In a
+  remote-free sandbox, keep using the provided checkout instead.
+- Unshallow before answering anything that depends on git history depth, but
+  only when remote Git support is available. The sandbox clones shallow, so
+  `git rev-list --count`, `git log` past the shallow boundary, and blame return
+  wrong answers without warning. If `git rev-parse --is-shallow-repository`
+  says `true`, run `git fetch --unshallow` first, then re-check — it exits 0
+  even when it deepened nothing, so if `--is-shallow-repository` is still
+  `true` or the sandbox is intentionally remote-free, say the history is
+  truncated instead of quoting a count.
 
 # Language and spelling
 
