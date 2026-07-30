@@ -1543,6 +1543,47 @@ assert_contains "> A" "$result"
 assert_contains "clean" "$result"
 
 ###############
+# TEST: isort stages its output and keeps the original when sort fails
+#
+# Regression: the sorted output was moved over the original whatever sort
+# did, so a sort that died partway replaced the file with what had been
+# written before it stopped.
+
+start_test "fish isort sorts the file in place"
+result="$(_fish_run '
+    cd $HOME
+    printf "cherry\napple\n" > is.txt
+    isort is.txt
+    cat is.txt
+')"
+assert_equal "apple
+cherry" "$result"
+
+start_test "fish isort keeps the original when sort fails"
+result="$(_fish_run '
+    cd $HOME
+    printf "cherry\napple\n" > isfail.txt
+    function sort; printf "truncated\n"; return 3; end
+    isort isfail.txt 2>/dev/null
+    echo "rc=$status"
+    cat isfail.txt
+    ls isfail.txt.bak 2>/dev/null; or echo clean
+')"
+assert_equal "rc=3
+cherry
+apple
+clean" "$result"
+
+start_test "fish isort reports the failure"
+result="$(_fish_run '
+    cd $HOME
+    printf "cherry\n" > isreport.txt
+    function sort; return 3; end
+    isort isreport.txt 2>&1 >/dev/null
+' 2>&1)"
+assert_contains "isort: sort failed" "$result"
+
+###############
 # TEST: e falls back when EDITOR is unset
 
 start_test "fish e falls back to vim when EDITOR is unset"

@@ -693,6 +693,34 @@ cherry"
 assert_equal "$expected" "$result"
 rm -f "$_tmpfile"
 
+# Regression: the sorted output was moved over the original unconditionally,
+# so a sort that died partway (unreadable file, no space) replaced the file
+# with whatever had been written before it stopped.
+_tmpfile=$(mktemp)
+printf 'cherry\napple\n' > "$_tmpfile"
+start_test "isort returns sort's status when sort fails"
+result="$(
+    sort() { puts "truncated"; return 3; }
+    isort "$_tmpfile" 2>/dev/null
+    puts "rc=$?"
+)"
+assert_equal "rc=3" "$result"
+
+start_test "isort leaves the original alone when sort fails"
+assert_equal "cherry
+apple" "$(cat "$_tmpfile")"
+
+start_test "isort removes the staged file when sort fails"
+assert_true test ! -e "$_tmpfile.bak"
+
+start_test "isort reports the failure"
+result="$(
+    sort() { return 3; }
+    isort "$_tmpfile" 2>&1 >/dev/null
+)"
+assert_contains "isort: sort failed" "$result"
+rm -f "$_tmpfile"
+
 start_test "realdir returns absolute directory"
 _tmpdir=$(mktemp -d)
 mkdir -p "$_tmpdir/subdir"
@@ -769,6 +797,32 @@ start_test "applydiff modifies file"
 result=$(cat "$_tmpdir/input")
 assert_equal "HELLO
 WORLD" "$result"
+
+# Regression: the staged output was moved over the original whatever the
+# command did, so a formatter that failed partway destroyed the file it was
+# asked to format.
+cat > "$_tmpdir/breaks" <<'SCRIPT'
+#!/bin/sh
+printf 'PARTIAL\n'
+exit 4
+SCRIPT
+chmod +x "$_tmpdir/breaks"
+printf 'keep\nme\n' > "$_tmpdir/input"
+
+start_test "applydiff returns the command's status when it fails"
+result="$(cd "$_tmpdir" && { applydiff ./breaks input 2>/dev/null; puts "rc=$?"; })"
+assert_equal "rc=4" "$result"
+
+start_test "applydiff leaves the file alone when the command fails"
+assert_equal "keep
+me" "$(cat "$_tmpdir/input")"
+
+start_test "applydiff removes the staged file when the command fails"
+assert_true test ! -e "$_tmpdir/input.new"
+
+start_test "applydiff reports the failure"
+result="$(cd "$_tmpdir" && applydiff ./breaks input 2>&1 >/dev/null)"
+assert_contains "applydiff: ./breaks failed" "$result"
 rm -rf "$_tmpdir"
 
 ###############
