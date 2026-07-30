@@ -47,7 +47,7 @@
 
 ## Error handling
 
-- Don't silently swallow errors. A bare `2>/dev/null`, an unchecked exit status, or a `|| true` hides real failures and burns hours when something eventually breaks. Report the failure through the existing `error` / `warn` helpers with enough context to identify what failed and why — sanitized context only, since a message can easily carry a hostname, a token, or a path with the user's real name, and the Privacy rule applies to warnings and logs too — clean up anything the failed step created (temp files, half-written config, a partial symlink), and decide explicitly what the caller sees — a non-zero exit, a fallback value, or a skipped step. If you genuinely want to ignore a specific failure, name the reason in a one-line comment (`# not every host has shpool`) rather than leaving a bare redirect. Keep behavior identical across `shrc`, fish, and nushell, same as any other change.
+- Don't silently swallow errors. A bare `2>/dev/null`, an unchecked exit status, or a `|| true` hides real failures and burns hours when something eventually breaks. Report the failure through the existing `error` / `warn` helpers with enough context to identify what failed and why, clean up anything the failed step created (temp files, half-written config, a partial symlink), and decide explicitly what the caller sees — a non-zero exit, a fallback value, or a skipped step. If you genuinely want to ignore a specific failure, name the reason in a one-line comment (`# not every host has shpool`) rather than leaving a bare redirect. Keep behavior identical across `shrc`, fish, and nushell, same as any other change.
 
 ## CI
 
@@ -64,6 +64,7 @@
 ## Privacy
 
 - Never put user data in any artifact that leaves this machine — commit subjects and bodies, PR titles / descriptions / comments, review replies, branch names, code comments, or test fixtures. For a dotfiles repo that means: hostnames and internal domain names, absolute paths containing the user's real name, work machine names, SSH host aliases and keys, tokens or API keys pasted into shell config, private remote URLs, and shell history excerpts. Use generic placeholders (`/home/user`, `host1`, `git@example.com:org/repo.git`) in examples and fixtures. If a bug report contains any of it, paraphrase in the commit / PR — don't quote verbatim. When in doubt, ask before pushing.
+- Shell output is not one of those artifacts. Prompts, warnings, and help text print on the user's own terminal, and naming hosts, paths and remotes is usually the point of the message. Redact only secrets: tokens, keys, and passwords embedded in URLs. Two limits: quoting that output into a commit, PR, or fixture republishes it, and the bullet above governs again; and where the full value adds nothing to the message, shortening it stays a judgment call — the fzf loader names the basename rather than the `$HOME` path it found it under, and that's still right.
 
 ## Pull requests
 
