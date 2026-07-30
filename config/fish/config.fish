@@ -373,7 +373,7 @@ end
 # ask the user whether to do something, return true if they say yes or Enter
 function confirm
     printf '%s? [Y/n] ' "$argv" >&2
-    read REPLY
+    read --prompt-str "" REPLY
     switch "$REPLY"
     case Y y ''
         true
