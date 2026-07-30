@@ -121,18 +121,18 @@ func ssh-client-host() {
   ip = $env.SSH_CONNECTION:words:get(0, "")
   return "" if $ip == ""
   name = ""
-  # Each lookup goes through capture-or-empty because a *miss* is the ordinary
-  # outcome of both -- getent exits 2 for an address with no entry, dig exits 9
-  # when the resolver doesn't answer -- and a plain capture would leave the name
-  # unbound rather than empty, so the fallback below it would never be reached.
+  # A *miss* is the ordinary outcome of both -- getent exits 2 for an address
+  # with no entry, dig exits 9 when the resolver doesn't answer -- and neither
+  # prints anything on stdout when it misses, so the empty capture drives the
+  # fallback below. stderr is silenced because a miss is not worth reporting.
   if have-command(getent) {
     # `getent hosts` pads its columns, so the hostname is the second
     # whitespace-separated field rather than the second literal-space one.
-    hosts = capture-or-empty(getent, hosts, $ip)
+    hosts = $(getent hosts $ip 2> /dev/null)
     if $hosts != "" { name = $hosts:words:get(1, "") }
   }
   if $name == "" and have-command(dig) {
-    answer = capture-or-empty(dig, +short, -x, $ip)
+    answer = $(dig +short -x $ip 2> /dev/null)
     if $answer != "" { name = $answer:split("\n")[0]:replaceend(".", "") }
   }
   return $ip if $name == ""
@@ -681,10 +681,9 @@ wrapper func psgrep(...args) {
   return if $args:len == 0
   pattern = $args:last
   ps-args = $args:init
-  # `pgrep` exits 1 when nothing matched, which is exactly the case the branch
-  # below is written for -- a plain capture would leave `pids` unbound and that
-  # test would fail with `unbound variable` instead of reporting the miss.
-  pids = capture-or-empty(pgrep, -d, ",", -f, $pattern)
+  # `pgrep` exits 1 and prints nothing when nothing matched, which is exactly
+  # the case the branch below is written for.
+  pids = $(pgrep -d "," -f $pattern 2> /dev/null)
   if $pids == "" {
     error "No processes matching $pattern"
     fail
