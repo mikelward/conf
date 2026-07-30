@@ -57,6 +57,15 @@
 - Merge cue (`merged` / `I merged` / `landed` / merge webhook) runs hygiene
   *before* engaging with the rest of the message: `git fetch origin`, cut a
   fresh `<agent>/<short-topic>` branch off `origin/main`, announce the switch.
+- After a merge, take a fresh `<agent>/<short-topic>` — don't reset the merged
+  name onto the new base. Its remote ref still points at the pre-merge tip, so
+  `origin/<branch>..HEAD` keeps spanning the merged commits and unpushed-work
+  checks report my own merged history back at me. When a sandbox pins the branch
+  name, reset it and `--force-with-lease` in the same turn — that's routine on
+  merged history, not something to ask about.
+- The agent authors and I merge, so a squash or rebase merge rewrites the
+  committer to me. That's expected — never re-author or amend already-merged
+  commits to "fix" authorship or signing.
 - Unshallow before answering anything that depends on git history depth. The
   sandbox clones shallow, so `git rev-list --count`, `git log` past the
   shallow boundary, and blame return wrong answers without warning. If
