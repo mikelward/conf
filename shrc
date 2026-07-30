@@ -323,7 +323,7 @@ auth_info() {
 
 # ask the user whether to do something, return true if they say yes or Enter
 confirm() {
-    printf '%s? [Y/n] ' "$*"
+    printf '%s? [Y/n] ' "$*" >&2
     gets REPLY
     case "$REPLY" in
         [Yy]|'')

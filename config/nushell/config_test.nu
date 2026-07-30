@@ -643,6 +643,11 @@ let results = [
         let out = ("maybe" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
         assert str contains $out "false"
     })
+    (run-test "nu confirm prints its prompt to stderr" {
+        let out = ("y" | nu --no-config-file -c $"source ($CONFIG); confirm 'are you sure'" | complete)
+        assert equal $out.stdout ""
+        assert str contains $out.stderr "are you sure? [Y/n] "
+    })
 
     ###############
     # CDPATH is set and does not include conf/ subdirectories

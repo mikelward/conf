@@ -591,6 +591,14 @@ assert_false is_alias nonexistent_xyz
 unalias _test_alias_xyz
 
 ###############
+# CONFIRM
+
+start_test "confirm prints its prompt to stderr"
+printf 'y\n' | confirm "are you sure" >"$_testdir/confirm.out" 2>"$_testdir/confirm.err"
+assert_equal "" "$(cat "$_testdir/confirm.out")"
+assert_equal "are you sure? [Y/n] " "$(cat "$_testdir/confirm.err")"
+
+###############
 # ERROR AND WARN
 
 start_test "error prints to stderr"
