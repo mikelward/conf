@@ -755,9 +755,9 @@ wrapper func ssh-to(host, ...args) {
     # cluster from its SYNOPSIS, the last letter one of the options the
     # SYNOPSIS gives an argument.
     #
-    # shrc:2502 and config.fish:936 match a single letter here, so both build
-    # `ssh -vp host1 2222 …` and ssh reads the *host* as the port. Fixed here;
-    # listed with the other shared bugs in the PR description.
+    # shrc and config.fish matched a single letter here, so both built
+    # `ssh -vp host1 2222 …` and ssh read the *host* as the port; they now
+    # ask an ssh_option_takes_value helper the same question.
     if $word ~ re("^-[46AaCfGgKkMNnqsTtVvXxYy]*[BbcDEeFIiJLlmOoPpQRSWw]$") {
       expect-value = true
       nopts = $nopts + 1

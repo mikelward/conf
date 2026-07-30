@@ -936,6 +936,67 @@ result="$(
 )"
 assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -p 2222 -v myhost uptime now" "$result"
 
+# Regression: the scan matched a dash plus exactly one letter, so a cluster
+# ending in a value-taking option fell through as a value-less flag and the
+# rotation put the host where the value belonged -- ssh then read `myhost`
+# as -p's port.
+start_test "ssh_to keeps a clustered flag's separate value with the flag"
+result="$(
+    short_hostname() { puts "clienthost"; }
+    have_command() { return 1; }
+    ssh() { puts "args=$*"; }
+    ssh_to myhost -vp 2222 uptime
+)"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -vp 2222 myhost uptime" "$result"
+
+# The mirror image: a value attached to the option in the same word means
+# the next word is the remote command, not the value.
+start_test "ssh_to treats an attached port value as one word"
+result="$(
+    short_hostname() { puts "clienthost"; }
+    have_command() { return 1; }
+    ssh() { puts "args=$*"; }
+    ssh_to myhost -p2222 uptime
+)"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -p2222 myhost uptime" "$result"
+
+start_test "ssh_to treats an attached login name as one word"
+result="$(
+    short_hostname() { puts "clienthost"; }
+    have_command() { return 1; }
+    ssh() { puts "args=$*"; }
+    ssh_to myhost -lBob uptime
+)"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -lBob myhost uptime" "$result"
+
+start_test "ssh_to keeps a boolean cluster's next word as the command"
+result="$(
+    short_hostname() { puts "clienthost"; }
+    have_command() { return 1; }
+    ssh() { puts "args=$*"; }
+    ssh_to myhost -vvA uptime
+)"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -vvA myhost uptime" "$result"
+
+# The classifier behind those cases, exercised directly.
+start_test "ssh_option_takes_value: a lone value-taking option"
+assert_true ssh_option_takes_value -p
+
+start_test "ssh_option_takes_value: a lone boolean option"
+assert_false ssh_option_takes_value -v
+
+start_test "ssh_option_takes_value: value-taking at the end of a cluster"
+assert_true ssh_option_takes_value -vp
+
+start_test "ssh_option_takes_value: an attached value"
+assert_false ssh_option_takes_value -p2222
+
+start_test "ssh_option_takes_value: an attached login name"
+assert_false ssh_option_takes_value -lBob
+
+start_test "ssh_option_takes_value: a boolean-only cluster"
+assert_false ssh_option_takes_value -vvA
+
 start_test "ssh_to keeps -P's tag value with the flag (uppercase P)"
 result="$(
     short_hostname() { puts "clienthost"; }

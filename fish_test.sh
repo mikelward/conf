@@ -225,6 +225,62 @@ result="$(_fish_run '
 ')"
 assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -p 2222 -v myhost uptime now" "$result"
 
+# Regression: the scan matched a dash plus exactly one letter, so a cluster
+# ending in a value-taking option fell through as a value-less flag and the
+# rotation put the host where the value belonged -- ssh then read `myhost`
+# as -p's port.
+start_test "fish ssh_to keeps a clustered flag's separate value with the flag"
+result="$(_fish_run '
+    function short_hostname; echo clienthost; end
+    function have_command; return 1; end
+    function ssh; echo "args=$argv"; end
+    ssh_to myhost -vp 2222 uptime
+')"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -vp 2222 myhost uptime" "$result"
+
+# The mirror image: a value attached in the same word means the next word is
+# the remote command, not the value.
+start_test "fish ssh_to treats an attached port value as one word"
+result="$(_fish_run '
+    function short_hostname; echo clienthost; end
+    function have_command; return 1; end
+    function ssh; echo "args=$argv"; end
+    ssh_to myhost -p2222 uptime
+')"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -p2222 myhost uptime" "$result"
+
+start_test "fish ssh_to treats an attached login name as one word"
+result="$(_fish_run '
+    function short_hostname; echo clienthost; end
+    function have_command; return 1; end
+    function ssh; echo "args=$argv"; end
+    ssh_to myhost -lBob uptime
+')"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -lBob myhost uptime" "$result"
+
+start_test "fish ssh_to keeps a boolean cluster's next word as the command"
+result="$(_fish_run '
+    function short_hostname; echo clienthost; end
+    function have_command; return 1; end
+    function ssh; echo "args=$argv"; end
+    ssh_to myhost -vvA uptime
+')"
+assert_equal "args=-t -oSendEnv=LC_CLIENT_HOST -vvA myhost uptime" "$result"
+
+# The classifier behind those cases, exercised directly.
+start_test "fish ssh_option_takes_value classifies option words"
+result="$(_fish_run '
+    for opt in -p -v -vp -p2222 -lBob -vvA
+        ssh_option_takes_value $opt; and echo "$opt yes"; or echo "$opt no"
+    end
+')"
+assert_equal "-p yes
+-v no
+-vp yes
+-p2222 no
+-lBob no
+-vvA no" "$result"
+
 start_test "fish ssh_to keeps -P's tag value with the flag (uppercase P)"
 result="$(_fish_run '
     function short_hostname; echo clienthost; end
