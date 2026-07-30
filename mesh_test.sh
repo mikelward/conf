@@ -1463,6 +1463,31 @@ assert_contains "status=1" "$result"
 mkdir -p "$_fakehome/Downloads"
 
 ###############
+# TEST: a failing capture still yields its output
+#
+# This config's lookups whose *miss* is routine -- getent exiting 2, dig 9,
+# pgrep 1 -- read a plain `$(...)` and test the result for emptiness. That only
+# works on a mesh where a capture yields its bytes whatever the command exited
+# with; an older one left the name unbound and the next line died with
+# `unbound variable`. Asserted directly so an old mesh fails here, by name,
+# rather than somewhere downstream.
+
+start_test "mesh a failing capture is empty rather than unbound"
+result="$(_mesh_run '
+    out = $(sh -c "exit 2")
+    puts "[$out]"
+')"
+assert_equal "[]" "$result"
+
+start_test "mesh a failing capture keeps output the command did produce"
+result="$(_mesh_run '
+    out = $(sh -c "echo kept; exit 3")
+    st = $sh.status
+    puts "[$out] $st"
+')"
+assert_equal "[kept] 3" "$result"
+
+###############
 # TEST: :words tokenizes on whitespace runs, not literal spaces
 #
 # A mesh modifier now; this config carried a `fields()` helper for it before
