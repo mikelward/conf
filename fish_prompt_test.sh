@@ -804,4 +804,55 @@ _fish_run '
 ' >/dev/null
 assert_equal "" "$(cat "$_fish_bg_fetch_log" 2>/dev/null)"
 
+# Regression: the PWD was recorded before the gates, so a directory first
+# seen without an SSH identity was marked as already fetched and never
+# fetched again until the next cd back into it -- exactly the case the
+# prompt's {behind} indicator is nagging about.
+start_test "fish maybe_background_fetch retries after the auth gate blocked it"
+: >"$_fish_bg_fetch_log"
+_fish_run '
+    cd '$_testdir'
+    function is_ssh_valid; return 1; end
+    set -e _LAST_BG_FETCH_PWD
+    maybe_background_fetch
+    function is_ssh_valid; return 0; end
+    maybe_background_fetch
+' >/dev/null
+assert_equal "auto-fetch" "$(cat "$_fish_bg_fetch_log" 2>/dev/null)"
+
+# Same for the vcs gate: a shell that started before vcs was installed
+# would never fetch this directory afterwards.
+start_test "fish maybe_background_fetch retries after the vcs gate blocked it"
+: >"$_fish_bg_fetch_log"
+_fish_run '
+    cd '$_testdir'
+    function is_ssh_valid; return 0; end
+    function have_command
+        switch $argv[1]
+            case vcs; return 1
+            case "*"; command -v $argv[1] >/dev/null 2>&1
+        end
+    end
+    set -e _LAST_BG_FETCH_PWD
+    maybe_background_fetch
+    # Redefined rather than erased: erasing would take the harness stub
+    # away and leave no have_command at all.
+    function have_command
+        command -v $argv[1] >/dev/null 2>&1
+    end
+    maybe_background_fetch
+' >/dev/null
+assert_equal "auto-fetch" "$(cat "$_fish_bg_fetch_log" 2>/dev/null)"
+
+start_test "fish maybe_background_fetch stops repeating once it succeeded"
+: >"$_fish_bg_fetch_log"
+_fish_run '
+    cd '$_testdir'
+    function is_ssh_valid; return 0; end
+    set -e _LAST_BG_FETCH_PWD
+    maybe_background_fetch
+    maybe_background_fetch
+' >/dev/null
+assert_equal "auto-fetch" "$(cat "$_fish_bg_fetch_log" 2>/dev/null)"
+
 test_summary "fish_prompt_test"

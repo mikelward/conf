@@ -1398,13 +1398,18 @@ if is_interactive
         if set -q _LAST_BG_FETCH_PWD; and test "$PWD" = "$_LAST_BG_FETCH_PWD"
             return
         end
-        set --global _LAST_BG_FETCH_PWD $PWD
         have_command vcs; or return
         set _auth (auth_info | string collect)
         test -z "$_auth"; or return
         # `command` skips any `vcs` function wrapper so the call goes
         # straight to the binary on PATH.
-        command vcs auto-fetch >/dev/null 2>&1
+        command vcs auto-fetch >/dev/null 2>&1; or return
+        # Recorded only once the spawn succeeded, and so after the gates
+        # above: recording it first meant a directory first seen without an
+        # SSH identity (or before vcs was installed) never fetched again
+        # until the next cd back into it. `vcs auto-fetch` is mtime-gated
+        # inside the binary, so repeating a successful call is cheap.
+        set --global _LAST_BG_FETCH_PWD $PWD
     end
 
     function fish_prompt

@@ -805,6 +805,53 @@ PWD="$_dummy_pwd"
 maybe_background_fetch
 assert_equal "auto-fetch" "$(cat "$_bg_fetch_log")"
 
+# Regression: the PWD was recorded before the gates, so a directory first
+# seen without an SSH identity was marked as already fetched and never
+# fetched again until the next cd back into it -- exactly the case the
+# prompt's {behind} indicator is nagging about.
+start_test "maybe_background_fetch retries after the auth gate blocked it"
+_reset_bg_fetch_state
+PWD="$_dummy_pwd"
+is_ssh_valid() { false; }   # makes auth_info emit "SSH"
+maybe_background_fetch
+is_ssh_valid() { true; }
+maybe_background_fetch
+assert_equal "auto-fetch" "$(cat "$_bg_fetch_log")"
+
+# Same for the vcs gate: a shell that started before vcs was installed
+# would never fetch this directory afterwards.
+start_test "maybe_background_fetch retries after the vcs gate blocked it"
+_reset_bg_fetch_state
+PWD="$_dummy_pwd"
+_real_have_command() { command -v "$1" >/dev/null 2>&1; }
+have_command() { test "$1" = vcs && return 1; _real_have_command "$1"; }
+maybe_background_fetch
+have_command() { _real_have_command "$1"; }
+maybe_background_fetch
+assert_equal "auto-fetch" "$(cat "$_bg_fetch_log")"
+
+# A failed spawn is retried too: the record is written only once
+# `vcs auto-fetch` returned 0. Swap the recorder script for one that
+# fails without logging, then put it back -- `command vcs` reaches the
+# script on PATH, not a shell function.
+start_test "maybe_background_fetch retries after a failed auto-fetch"
+_reset_bg_fetch_state
+PWD="$_dummy_pwd"
+mv "$_testdir/bin/vcs" "$_testdir/bin/vcs.recorder"
+printf '#!/bin/sh\nexit 1\n' >"$_testdir/bin/vcs"
+chmod +x "$_testdir/bin/vcs"
+maybe_background_fetch
+mv "$_testdir/bin/vcs.recorder" "$_testdir/bin/vcs"
+maybe_background_fetch
+assert_equal "auto-fetch" "$(cat "$_bg_fetch_log")"
+
+start_test "maybe_background_fetch stops repeating once it succeeded"
+_reset_bg_fetch_state
+PWD="$_dummy_pwd"
+maybe_background_fetch
+maybe_background_fetch
+assert_equal "auto-fetch" "$(cat "$_bg_fetch_log")"
+
 # Reset for later tests.
 unset _LAST_BG_FETCH_PWD
 
