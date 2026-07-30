@@ -4,13 +4,13 @@ set -eu
 
 for instructions in AGENTS.md agents/AGENTS.md; do
 	tr '\n' ' ' <"$instructions" | tr -s '[:space:]' ' ' |
-		grep -F "sandbox intentionally provides no remote Git support" >/dev/null
+		grep -F "Choose the Git workflow based on remote support" >/dev/null
 	tr '\n' ' ' <"$instructions" | tr -s '[:space:]' ' ' |
-		grep -F "continue from the provided checkout on its current branch without fetching, pushing, or opening a PR" >/dev/null
-	remote_exceptions=$(grep -cF "Outside an intentionally remote-free sandbox" "$instructions")
-	test "$remote_exceptions" -eq 2
+		grep -F "If the sandbox intentionally has no remote Git support" >/dev/null
 	tr '\n' ' ' <"$instructions" | tr -s '[:space:]' ' ' |
-		grep -F "remote-free sandbox, keep using the provided checkout instead" >/dev/null
+		grep -F "continue on the provided checkout and current branch without fetching, pushing, or opening a PR" >/dev/null
 	tr '\n' ' ' <"$instructions" | tr -s '[:space:]' ' ' |
-		grep -F "only when remote Git support is available" >/dev/null
+		grep -F 'Otherwise: - Require an `origin` remote' >/dev/null
+	grep -F "    - On a merge cue" "$instructions" >/dev/null
+	grep -F "    - Before relying on Git history" "$instructions" >/dev/null
 done

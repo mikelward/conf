@@ -40,10 +40,13 @@
 
 - Use `git worktree` when it is available. Give each branch its own worktree instead of switching branches in place, so work in progress on one branch is not disturbed by work on another.
 - One commit per logical change. Rewrite unmerged commits freely — amend, `git commit --fixup` + autosquash, squash, reorder, split — so each commit that lands is one coherent change. Fold fix-ups and review responses into the commit they belong to; `wip` / `fix typo` / `address review` churn doesn't survive into `main`.
-- These rules assume an `origin` remote. If a sandbox intentionally provides no remote Git support, such as Codex cloud, continue from the provided checkout on its current branch without fetching, pushing, or opening a PR. Otherwise, if `origin` is unexpectedly missing, say so and stop rather than improvising a local substitute.
-- Outside an intentionally remote-free sandbox, feature branches are prefixed with the agent's own short name, `<agent>/<short-topic>` (`claude/...` for Claude Code, `codex/...` for Codex). Branch off `origin/main`, one topic per branch; never commit to `main`. The placeholder `<agent>` stands in for whichever prefix you use — don't hard-code `claude/` unless you *are* Claude Code.
-- Outside an intentionally remote-free sandbox, a merge cue (`merged` / `I merged` / `landed` / merge webhook) runs hygiene *before* engaging with the rest of the message: `git fetch origin`, cut a fresh `<agent>/<short-topic>` branch off `origin/main`, announce the switch. In a remote-free sandbox, keep using the provided checkout instead.
-- Unshallow before answering anything that depends on git history depth, but only when remote Git support is available. The sandbox clones shallow, so `git rev-list --count`, `git log` past the shallow boundary, and blame return wrong answers without warning. If `git rev-parse --is-shallow-repository` says `true`, run `git fetch --unshallow` first, then re-check: it exits 0 even when it deepened nothing, so if `--is-shallow-repository` is still `true` or the sandbox is intentionally remote-free, say the history is truncated instead of quoting a count.
+- Choose the Git workflow based on remote support:
+  - If the sandbox intentionally has no remote Git support, such as Codex cloud, continue on the provided checkout and current branch without fetching, pushing, or opening a PR. If its history is shallow, say it is truncated rather than quoting history-dependent results.
+  - Otherwise:
+    - Require an `origin` remote; if it is missing, say so and stop.
+    - Create `<agent>/<short-topic>` branches from `origin/main`; never commit to `main`. Use your own agent name (`claude` for Claude Code, `codex` for Codex), not a hard-coded placeholder.
+    - On a merge cue (`merged`, `I merged`, `landed`, or merge webhook), fetch `origin`, create a fresh feature branch from `origin/main`, and announce the switch before responding.
+    - Before relying on Git history, run `git fetch --unshallow` and re-check `git rev-parse --is-shallow-repository`. If it is still shallow, report truncated history.
 
 ## Error handling
 
