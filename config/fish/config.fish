@@ -22,7 +22,15 @@ end
 set USERNAME (id -un)
 set HOSTNAME (hostname --fqdn)
 set UID (id -u)
-set TTY (tty)
+# `tty` prints "not a tty" on *stdout* and exits nonzero when stdin isn't a
+# terminal, so the plain capture would put that diagnostic into TTY -- and
+# from there into every log_history line and every child. Fall back to empty,
+# as config.nu's `try { tty } catch { "" }` does.
+if isatty stdin
+    set TTY (tty)
+else
+    set TTY ""
+end
 
 #######
 # PATH FUNCTIONS

@@ -2095,6 +2095,27 @@ unset -f rg
 rm -rf "$_rg_dir"
 
 ###############
+# TTY
+# shrc fills TTY at the top of the file, outside the
+# SHRC_LOAD_FUNCTIONS_ONLY guard, so exercise it by sourcing shrc in a
+# fresh shell rather than by calling a function.
+#
+# Regression: `tty` prints "not a tty" on *stdout* and exits 1 when stdin
+# isn't a terminal, so the plain capture stored that diagnostic in TTY --
+# and publish_jobs_file, log_history and every child saw it.
+# $0 has to be something other than sh/dash: shrc's failsafe guard keys off
+# it and would bail out before the assignment under test.
+start_test "TTY is empty when stdin is not a terminal"
+result="$(TTY= SHRC_LOAD_FUNCTIONS_ONLY=1 "$_real_shell" -c \
+    '. "$1"; printf "[%s]" "$TTY"' shrctest "$_srcdir/shrc" </dev/null 2>/dev/null)"
+assert_equal "[]" "$result"
+
+start_test "TTY keeps an inherited value"
+result="$(TTY=/dev/pts/98 SHRC_LOAD_FUNCTIONS_ONLY=1 "$_real_shell" -c \
+    '. "$1"; printf "[%s]" "$TTY"' shrctest "$_srcdir/shrc" </dev/null 2>/dev/null)"
+assert_equal "[/dev/pts/98]" "$result"
+
+###############
 # CDPATH
 # Verify CDPATH contains HOME but not the conf/config subdirectories, which
 # would surprisingly shadow directory names when `cd`ing from anywhere.
