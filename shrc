@@ -2484,6 +2484,37 @@ esac
 # point. Functions defined *inside* the `if is_interactive` block (zsh
 # ZLE widgets, key bindings, etc.) aren't covered by tests, so it's
 # fine that they don't get loaded for the test shell.
+# does this ssh short-option word take the *next* word as its value?
+#
+# A value-taking option at the end of a short-option cluster still does:
+# `-vp 2222` is `-v -p 2222`. Anything after that letter in the same word is
+# an attached value instead (`-p2222`, `-lBob`), so the letters before it
+# must all be flags -- the first value-taking letter ends the cluster and
+# everything after it belongs to that option. Both letter sets are ssh(1)'s
+# own: the boolean cluster from its SYNOPSIS, then the options the SYNOPSIS
+# gives an argument. Matching a single letter here read `host1 -vp 2222` as
+# `ssh -vp host1 2222`, where ssh takes the host as -p's port.
+#
+# A case pattern can't repeat a bracket expression, so the leading flags are
+# stripped a letter at a time; `?*` keeps the last letter, which is the one
+# being classified.
+ssh_option_takes_value() {
+    local _letters="${1#-}"
+    while :; do
+        case "$_letters" in
+            [46AaCfGgKkMNnqsTtVvXxYy]?*)
+                _letters="${_letters#?}";;
+            *)
+                break;;
+        esac
+    done
+    case "$_letters" in
+        [BbcDEeFIiJLlmOoPpQRSWw])
+            return 0;;
+    esac
+    return 1
+}
+
 ssh_to() {
     # tell the remote host who is connecting via LC_CLIENT_HOST; set it
     # before the branch so both the rw and ssh paths carry it. The export
@@ -2503,8 +2534,8 @@ ssh_to() {
         # shift_options, honor ssh flags whose value is a separate word
         # (-p 2222, -i file, -o opt, ...): the value must travel with
         # its flag, not stop the scan (`somehost -p 2222 uptime` must
-        # not pass `-p somehost`). The flag list is OpenSSH's usage
-        # line's value-taking options.
+        # not pass `-p somehost`). ssh_option_takes_value classifies
+        # each option word.
         local _host="$1"
         shift
         # Count the leading option words (flags plus their values);
@@ -2527,10 +2558,10 @@ ssh_to() {
                     break;;
                 -)
                     break;;
-                -[BbcDEeFIiJLlmOoPpQRSWw])
-                    _expect_value=1
-                    _nopts=$((_nopts + 1));;
                 -*)
+                    if ssh_option_takes_value "$_arg"; then
+                        _expect_value=1
+                    fi
                     _nopts=$((_nopts + 1));;
                 *)
                     break;;

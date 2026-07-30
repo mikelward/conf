@@ -916,6 +916,21 @@ end
 # the interactive shell -- matching the subshell-confined bash/zsh path.
 # Set before the branch so both paths carry it; SendEnv is additive, so
 # the usual LANG/LC_* forwarding is left intact.
+# does this ssh short-option word take the *next* word as its value?
+#
+# A value-taking option at the end of a short-option cluster still does:
+# `-vp 2222` is `-v -p 2222`. Anything after that letter in the same word is
+# an attached value instead (`-p2222`, `-lBob`), so the letters before it must
+# all be flags -- the first value-taking letter ends the cluster and
+# everything after it belongs to that option. Both letter sets are ssh(1)'s
+# own: the boolean cluster from its SYNOPSIS, then the options the SYNOPSIS
+# gives an argument. Matching a single letter here read `host1 -vp 2222` as
+# `ssh -vp host1 2222`, where ssh takes the host as -p's port.
+function ssh_option_takes_value
+    string match --quiet --regex -- \
+        '^-[46AaCfGgKkMNnqsTtVvXxYy]*[BbcDEeFIiJLlmOoPpQRSWw]$' $argv[1]
+end
+
 function ssh_to
     set -lx LC_CLIENT_HOST (short_hostname | string collect)
     if have_command rw; and test (count $argv) -eq 1
@@ -952,10 +967,10 @@ function ssh_to
                 break
             case '-'
                 break
-            case '-B' '-b' '-c' '-D' '-E' '-e' '-F' '-I' '-i' '-J' '-L' '-l' '-m' '-O' '-o' '-P' '-p' '-Q' '-R' '-S' '-W' '-w'
-                set _expect_value 1
-                set _nopts (math $_nopts + 1)
             case '-*'
+                if ssh_option_takes_value $_arg
+                    set _expect_value 1
+                end
                 set _nopts (math $_nopts + 1)
             case '*'
                 break
