@@ -116,7 +116,7 @@ def is-env-set [name: string] {
 
 # prompt the user for a yes/no answer; default yes on empty reply
 def confirm [prompt: string] {
-    print -n $"($prompt)? [Y/n] "
+    print --stderr -n $"($prompt)? [Y/n] "
     let reply = (^head -n 1 | str downcase | str trim)
     ($reply == "") or ($reply | str starts-with "y")
 }

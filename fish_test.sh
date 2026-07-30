@@ -50,6 +50,14 @@ result="$(_fish_run '
 assert_equal "done" "$result"
 
 ###############
+# TEST: confirm
+
+start_test "fish confirm prints its prompt to stderr"
+printf 'y\n' | _fish_run 'confirm "are you sure"' >"$_testdir/confirm.out" 2>"$_testdir/confirm.err"
+assert_equal "" "$(cat "$_testdir/confirm.out")"
+assert_equal "are you sure? [Y/n] " "$(cat "$_testdir/confirm.err")"
+
+###############
 # TEST: shift_options moves leading -x options past the target argument
 
 start_test "fish shift_options moves leading options past target"

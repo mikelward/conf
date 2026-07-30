@@ -43,9 +43,7 @@ if $env:get(FAILSAFE, "0") == "1" or $env:get(LC_FAILSAFE, "0") == "1" or "$env.
 #
 # The prompt goes to stderr: it is UI rather than output, so `confirm x > log`
 # still asks, and a caller reading stdout gets only what it asked for. bash's
-# own `read -p` prompts on stderr for the same reason. shrc, config.fish and
-# config.nu still prompt on stdout -- worth bringing across, but that is a
-# user-visible change to three more shells and belongs in its own change.
+# own `read -p` prompts on stderr for the same reason.
 wrapper func confirm(...question) {
   # Bound first: an argument-taking modifier cannot be written inside a string,
   # so the join happens here and only the result is interpolated.
