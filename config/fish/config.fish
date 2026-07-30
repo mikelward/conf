@@ -1184,7 +1184,10 @@ if is_interactive
     end
     alias diga='dig +noall +answer +search'
     alias digs='dig +short +search'
-    function download; cd $HOME/Downloads; wget $argv; end
+    # `and` rather than two statements: a failed cd would otherwise leave
+    # wget saving into whatever directory the caller happened to be in.
+    # cd prints its own diagnostic.
+    function download; cd $HOME/Downloads; and wget $argv; end
     # not an alias: '$EDITOR' unset would execute the file argument itself
     function e
         set -l editor $EDITOR

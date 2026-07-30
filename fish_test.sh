@@ -1584,6 +1584,29 @@ result="$(_fish_run '
 assert_contains "isort: sort failed" "$result"
 
 ###############
+# TEST: download only fetches once the cd into ~/Downloads worked
+#
+# Regression: the cd and the fetch were separate statements, so a missing
+# ~/Downloads left wget saving into whatever directory the caller was in.
+
+start_test "fish download fetches after a successful cd"
+result="$(_fish_run '
+    mkdir -p $HOME/Downloads
+    function wget; echo "wget $argv in "(basename $PWD); end
+    download http://example.invalid/f
+')"
+assert_equal "wget http://example.invalid/f in Downloads" "$result"
+
+start_test "fish download does not fetch when the cd fails"
+result="$(_fish_run '
+    set -g HOME $HOME/no-such-home
+    function wget; echo "wget ran"; end
+    download http://example.invalid/f 2>/dev/null
+    echo "rc=$status"
+')"
+assert_equal "rc=1" "$result"
+
+###############
 # TEST: e falls back when EDITOR is unset
 
 start_test "fish e falls back to vim when EDITOR is unset"

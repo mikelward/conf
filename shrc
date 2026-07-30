@@ -2703,7 +2703,10 @@ if is_interactive; then
     }
     diga() { dig +noall +answer +search "$@"; }
     digs() { dig +short +search "$@"; }
-    download() { cd "$HOME/Downloads"; wget "$@"; }
+    # `&&` rather than `;`: a failed cd would otherwise leave wget saving
+    # into whatever directory the caller happened to be in. cd prints its
+    # own diagnostic, so there is nothing to add to it.
+    download() { cd "$HOME/Downloads" && wget "$@"; }
     # function rather than an alias so it looks better in the xterm title.
     e() { "${EDITOR:-vim}" "$@"; }
     eg() { g -E "$@"; }

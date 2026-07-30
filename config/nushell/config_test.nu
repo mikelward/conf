@@ -3252,6 +3252,22 @@ except OSError: pass
         assert equal $downloads $env.PWD
     })
 
+    # Coverage rather than a regression test: shrc and config.fish ran the
+    # fetch as a separate statement, so a missing ~/Downloads left wget
+    # saving into whatever directory the caller was in. nu raises on the
+    # failed cd and never reaches wget; pin that so the shape can't drift
+    # into the version the other two shells had.
+    (run-test "nu download does not fetch when the cd fails" {
+        let bin = (mktemp -d)
+        let log = ($bin | path join "log")
+        ("#!/bin/sh\necho ran >> \"" + $log + "\"\n") | save -f ($bin | path join "wget")
+        ^chmod +x ($bin | path join "wget")
+        $env.PATH = ([$bin] ++ $env.PATH)
+        $env.HOME = ([$env.HOME "no-such-home"] | path join)
+        try { download "http://example.com/x" } catch { null }
+        assert equal ($log | path exists) false
+    })
+
     # cg wraps rg, so its filter must be an rg-style --glob (rg rejects
     # grep's --include), with the search pattern passed through last.
     (run-test "nu cg passes rg-style glob filters" {

@@ -2149,6 +2149,42 @@ unset -f rg
 rm -rf "$_rg_dir"
 
 ###############
+# DOWNLOAD / DAEMON
+# Both live in shrc's interactive block (skipped under
+# SHRC_LOAD_FUNCTIONS_ONLY), so pull the definitions out and dedent them.
+# download is a one-liner; daemon spans several lines, so take the range
+# from its opening line to the matching indented brace.
+
+_download_def=$(sed -n 's/^[[:space:]]*\(download() {.*}\)$/\1/p' "$_srcdir/shrc")
+start_test "shrc defines download as a one-liner function"
+assert_true test -n "$_download_def"
+eval "$_download_def"
+
+_download_dir=$(mktemp -d)
+mkdir -p "$_download_dir/Downloads"
+
+start_test "download fetches after a successful cd"
+result="$(
+    HOME="$_download_dir"
+    wget() { puts "wget $* in ${PWD##*/}"; }
+    download http://example.invalid/f
+)"
+assert_equal "wget http://example.invalid/f in Downloads" "$result"
+
+# Regression: the cd and the fetch were separate statements, so a missing
+# ~/Downloads left wget saving into whatever directory the caller was in.
+start_test "download does not fetch when the cd fails"
+result="$(
+    HOME="$_download_dir/no-such-home"
+    wget() { puts "wget ran"; }
+    download http://example.invalid/f 2>/dev/null
+    puts "rc=$?"
+)"
+assert_equal "rc=1" "$result"
+rm -rf "$_download_dir"
+unset -f download
+
+###############
 # TTY
 # shrc fills TTY at the top of the file, outside the
 # SHRC_LOAD_FUNCTIONS_ONLY guard, so exercise it by sourcing shrc in a
