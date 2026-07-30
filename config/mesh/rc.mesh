@@ -423,9 +423,10 @@ func cdfile(file) { cd $(realdir $file) }
 # The miss is an empty string rather than shrc's exit status 1: this returns a
 # value rather than printing one, and a value function in command position
 # prints nothing and captures nothing, so `find_up x && …` has no mesh
-# spelling to carry that status to. An empty string is falsy, so the same
-# question -- `if find-up("marker") { … }` -- answers correctly. Same shape as
-# config.nu:613, and as rootdir/projectname/builddir here.
+# spelling to carry that status to. Ask with an explicit comparison --
+# `if find-up("marker") != "" { … }` -- since mesh has no truthy values; a
+# string is not a condition. Same shape as config.nu:613, and as
+# rootdir/projectname/builddir here.
 func find-up(name) {
   dir = $(pwd)
   loop {
@@ -460,7 +461,7 @@ func isort(file) {
   if $produced != 0 {
     rm -f $staged
     error "isort: sort failed; $file is unchanged"
-    return $produced
+    fail $produced
   }
   mv $staged $file
 }
@@ -518,7 +519,7 @@ func trydiff(cmd, file) {
   if $produced != 0 {
     rm -f $temp
     error "trydiff: $cmd failed; nothing to compare"
-    return $produced
+    fail $produced
   }
   diff $file $temp
   # `diff` exits 1 when the files differ, which is the whole point of a
@@ -528,8 +529,8 @@ func trydiff(cmd, file) {
   # `rm`'s status and config.nu with a `try`; both end up at 0 the same way.
   status = $sh.status
   rm -f $temp
-  return 0 if $status < 2
-  return $status
+  return true if $status < 2
+  fail $status
 }
 
 # apply the changes trydiff would have made. The output is staged beside the
@@ -543,7 +544,7 @@ func applydiff(cmd, file) {
   if $produced != 0 {
     rm -f $staged
     error "applydiff: $cmd failed; $file is unchanged"
-    return $produced
+    fail $produced
   }
   mv $staged $file
 }
@@ -652,7 +653,7 @@ wrapper func tz2tz(from, to, ...spec) {
   # for the same cause. shrc:1039 and config.fish:684 both `|| return 1` here.
   # The guard also has to come before `$epoch` is read at all: a capture whose
   # command failed leaves the name unbound, not empty.
-  return 1 if $sh.status != 0
+  fail if $sh.status != 0
   fork { $env.TZ = $to
     date -d "@$epoch" }
 }
@@ -682,7 +683,7 @@ wrapper func psgrep(...args) {
   pids = capture-or-empty(pgrep, -d, ",", -f, $pattern)
   if $pids == "" {
     error "No processes matching $pattern"
-    return 1
+    fail
   }
   psc -p $pids ...$ps-args
 }
@@ -806,7 +807,7 @@ func set-up-ssh-aliases() {
   quiet mkdir -p $generated:dir
   if $sh.status != 0 {
     warn "ssh aliases: cannot create the cache directory; host aliases are not defined"
-    return 1
+    fail
   }
   # A directory where the cache file should be is checked explicitly, because
   # the rename below would *succeed* against one -- `mv file dir` moves the
@@ -814,7 +815,7 @@ func set-up-ssh-aliases() {
   # `source: Is a directory` after everything else went right.
   if $generated:d {
     warn "ssh aliases: the cache path is a directory; host aliases are not defined"
-    return 1
+    fail
   }
   # Created 0600 *before* anything is written to it. The definitions name every
   # Host entry in ~/.ssh/config, which is a 0600 file, and ~/.cache is usually
@@ -831,7 +832,7 @@ func set-up-ssh-aliases() {
   command install -m 600 /dev/null $staged
   if $sh.status != 0 {
     warn "ssh aliases: cannot create the cache file; host aliases are not defined"
-    return 1
+    fail
   }
   # Truncated first, so a config with no usable Host entries leaves an empty
   # file rather than last session's definitions -- and so this doubles as the
@@ -839,7 +840,7 @@ func set-up-ssh-aliases() {
   puts "# Generated from ~/.ssh/config by rc.mesh. Do not edit." > $staged
   if $sh.status != 0 {
     warn "ssh aliases: cannot write the cache file; host aliases are not defined"
-    return 1
+    fail
   }
   # Bound and checked rather than iterated inline. `~/.ssh/config` passed the
   # `:f` test above, but it can still fail to read -- permissions changed since,
@@ -851,7 +852,7 @@ func set-up-ssh-aliases() {
   if $sh.status != 0 {
     rm -f $staged
     warn "ssh aliases: cannot read the ssh config; host aliases are not defined"
-    return 1
+    fail
   }
   for line in $contents:split("\n") {
     parts = fields($line)
@@ -897,7 +898,7 @@ func set-up-ssh-aliases() {
       if $sh.status != 0 {
         rm -f $staged
         warn "ssh aliases: cannot write the cache file; host aliases are not defined"
-        return 1
+        fail
       }
     }
   }
@@ -905,7 +906,7 @@ func set-up-ssh-aliases() {
   if $sh.status != 0 {
     rm -f $staged
     warn "ssh aliases: cannot replace the cache file; host aliases are not defined"
-    return 1
+    fail
   }
   # Checked like every other step, and phrased without the path for the same
   # reason the others are. The name filters above cover what is known to be
@@ -916,7 +917,7 @@ func set-up-ssh-aliases() {
   status = $sh.status
   if $status != 0 {
     warn "ssh aliases: the generated file could not be sourced; host aliases are not defined"
-    return $status
+    fail $status
   }
 }
 
@@ -1172,7 +1173,7 @@ func apply-shpool-initial-pwd() {
     $env.SHPOOL_INITIAL_PWD = ""
     return
   }
-  return 1
+  fail
 }
 
 func maybe-start-session-and-exit() {
@@ -1766,7 +1767,7 @@ func rerc() {
   status = $sh.status
   if $status != 0 {
     error "rerc: env.mesh failed; the environment is unchanged and rc.mesh was not read"
-    return $status
+    fail $status
   }
   source "$env.HOME/.config/mesh/rc.mesh"
 }
@@ -1784,11 +1785,13 @@ func read-local-rc() {
   # would overwrite this one and `rerc` would see success. Not fatal either,
   # and for the same reason -- a broken per-machine override shouldn't cost the
   # shell everything already set up before it.
+  # Split rather than one `fail $status`, because the success case has to stay
+  # on the `return` side: `fail 0` is refused, status being a channel that only
+  # carries failure.
   status = $sh.status
-  if $status != 0 {
-    warn "rc.local.mesh failed; the rest of the interactive setup still ran"
-  }
-  return $status
+  return true if $status == 0
+  warn "rc.local.mesh failed; the rest of the interactive setup still ran"
+  fail $status
 }
 
 #########################
@@ -1813,13 +1816,13 @@ set-up-ssh-aliases
 
 log-history "New session as" $env:get(USERNAME, "") "in mesh"
 
-prompt-hook preprompt context preprompt
-prompt-hook preexec history command-started
-prompt-hook postexec report command-finished
+on preprompt context preprompt
+on preexec history command-started
+on postexec report command-finished
 # Clear the published job file on the way out. shrc traps EXIT and fish uses a
 # fish_exit handler for the same reason; config.nu has no exit hook and has to
 # leave a stale file behind.
-prompt-hook exit jobs unpublish-jobs
+on exit jobs unpublish-jobs
 prompt "$ "
 
 # Interactive local overrides (work vs home, etc.), matching shrc's

@@ -495,9 +495,11 @@ _confirm_with() {
     " 2>&1
 }
 
-# Asserted through a command-position call: mesh swallows a function's earlier
-# stdout when its last statement is a `match` and it is called for its value,
-# which is a mesh bug rather than anything this config controls.
+# Asserted through a command-position call as well as the value calls below.
+# mesh used to swallow a function's earlier stdout when its last statement was
+# a `match` and it was called for its value, so the prompt never appeared;
+# mikelward/mesh 77dca06 fixed that, and the value-call assertions below now
+# see the prompt on the same line as the answer.
 start_test "mesh confirm prompts with the joined question"
 result="$(printf 'y\n' | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout 15 mesh -c "
     source $_env_mesh
@@ -506,16 +508,18 @@ result="$(printf 'y\n' | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout
 " 2>&1)"
 assert_contains "are you sure? [Y/n]" "$result"
 
+# `print` leaves no newline, so the prompt and the answer share a line -- which
+# is what a user sees at the terminal, and so what is asserted.
 start_test "mesh confirm takes yes"
-assert_equal "true" "$(_confirm_with 'y
+assert_equal "are you sure? [Y/n] true" "$(_confirm_with 'y
 ' | tail -1)"
 
 start_test "mesh confirm takes a bare Enter as yes"
-assert_equal "true" "$(_confirm_with '
+assert_equal "are you sure? [Y/n] true" "$(_confirm_with '
 ' | tail -1)"
 
 start_test "mesh confirm takes no"
-assert_equal "false" "$(_confirm_with 'n
+assert_equal "are you sure? [Y/n] false" "$(_confirm_with 'n
 ' | tail -1)"
 
 ###############
@@ -1007,17 +1011,17 @@ assert_equal "[]" "$result"
 
 # shrc and fish signal the miss with exit status 1. A mesh value function has
 # no status to carry that in -- in command position it prints nothing and
-# captures nothing -- so the miss is signalled by the empty string being
-# falsy. That's the contract callers rely on, so it is asserted rather than
-# left to happen to work.
-start_test "mesh find-up answers falsy on a miss and truthy on a hit"
+# captures nothing -- so the miss is signalled by an empty return. mesh has no
+# truthy values, so the caller asks with an explicit `!= ""`; that is the
+# contract, so it is asserted rather than left to happen to work.
+start_test "mesh find-up answers empty on a miss and a path on a hit"
 result="$(_mesh_run "
     cd $_testdir/up/a/b
-    if find-up(\"no-such-marker-xyz\") { puts miss-truthy } else { puts miss-falsy }
-    if find-up(\"marker\") { puts hit-truthy } else { puts hit-falsy }
+    if find-up(\"no-such-marker-xyz\") != \"\" { puts miss-found } else { puts miss-empty }
+    if find-up(\"marker\") != \"\" { puts hit-found } else { puts hit-empty }
 ")"
-assert_equal "miss-falsy
-hit-truthy" "$result"
+assert_equal "miss-empty
+hit-found" "$result"
 
 start_test "mesh find-test-file names the sibling test file"
 touch "$_testdir/thing.sh" "$_testdir/thing_test.sh"
@@ -1176,7 +1180,7 @@ result="$(_mesh_run_config '
     func inside-project() { return true }
     func autoshpool(...args) {
         puts "autoshpool ran"
-        return 1
+        fail
     }
 ' '
     maybe-start-session-and-exit
@@ -1190,7 +1194,7 @@ result="$(_mesh_run_config '
     func have-command(name) { return true }
     func stdin-is-tty() { return true }
     func inside-project() { return true }
-    func autotmux(...args) { return 1 }
+    func autotmux(...args) { fail }
 ' '
     $env.SESSION_BACKEND = "tmux"
     maybe-start-session-and-exit
@@ -1203,7 +1207,7 @@ result="$(_mesh_run_config '
     func have-command(name) { return true }
     func stdin-is-tty() { return true }
     func inside-project() { return true }
-    func autoshpool(...args) { return 0 }
+    func autoshpool(...args) { return true }
 ' '
     maybe-start-session-and-exit
     puts "should not print"
@@ -1212,7 +1216,7 @@ assert_equal "" "$result"
 
 start_test "mesh switchshpool keeps the shell when the switch fails"
 result="$(_mesh_run_config '
-    func autoshpool(...args) { return 1 }
+    func autoshpool(...args) { fail }
 ' '
     switchshpool other
     puts "still here"
@@ -1221,7 +1225,7 @@ assert_equal "still here" "$result"
 
 start_test "mesh switchshpool exits when the switch succeeds"
 result="$(_mesh_run_config '
-    func autoshpool(...args) { return 0 }
+    func autoshpool(...args) { return true }
 ' '
     switchshpool other
     puts "should not print"
@@ -1306,7 +1310,7 @@ assert_equal "formatted" "$result"
 start_test "mesh applydiff leaves the file alone when the command fails"
 printf 'original\n' > "$_testdir/apply-fail.txt"
 result="$(_mesh_run "
-    func formatter(f) { return 1 }
+    func formatter(f) { fail }
     applydiff formatter $_testdir/apply-fail.txt
     cat $_testdir/apply-fail.txt
 " 2>/dev/null)"
@@ -1315,7 +1319,7 @@ assert_equal "original" "$result"
 start_test "mesh applydiff removes the staged file when the command fails"
 printf 'original\n' > "$_testdir/apply-staged.txt"
 _mesh_run "
-    func formatter(f) { return 1 }
+    func formatter(f) { fail }
     applydiff formatter $_testdir/apply-staged.txt
 " >/dev/null 2>&1
 assert_false test -e "$_testdir/apply-staged.txt.new"
@@ -1323,7 +1327,7 @@ assert_false test -e "$_testdir/apply-staged.txt.new"
 start_test "mesh applydiff reports the failure and returns nonzero"
 printf 'original\n' > "$_testdir/apply-report.txt"
 result="$(_mesh_run "
-    func formatter(f) { return 1 }
+    func formatter(f) { fail }
     applydiff formatter $_testdir/apply-report.txt
     puts \"status=\$sh.status\"
 " 2>&1)"
@@ -1508,7 +1512,7 @@ assert_equal "10.0.0.1" "$result"
 start_test "mesh ssh-client-host falls back to dig when getent has no entry"
 result="$(_mesh_run_config '
     func have-command(name) { return true }
-    func getent(...args) { return 2 }
+    func getent(...args) { fail 2 }
     func dig(...args) { puts "host2.example.com." }
 ' '
     $env.SSH_CONNECTION = "10.0.0.1 4321 10.0.0.2 22"
@@ -1519,8 +1523,8 @@ assert_equal "host2" "$result"
 start_test "mesh ssh-client-host answers the raw IP when both lookups miss"
 result="$(_mesh_run_config '
     func have-command(name) { return true }
-    func getent(...args) { return 2 }
-    func dig(...args) { return 9 }
+    func getent(...args) { fail 2 }
+    func dig(...args) { fail 9 }
 ' '
     $env.SSH_CONNECTION = "10.0.0.1 4321 10.0.0.2 22"
     puts ssh-client-host()
@@ -1547,7 +1551,7 @@ assert_equal "[]" "$result"
 # and the miss was never reported.
 start_test "mesh psgrep reports a pattern matching no processes"
 result="$(_mesh_run_config '
-    func pgrep(...args) { return 1 }
+    func pgrep(...args) { fail }
 ' 'psgrep no-such-process
 puts "status=$sh.status"' 2>&1)"
 assert_equal "No processes matching no-such-process
@@ -1664,7 +1668,7 @@ assert_contains "two" "$result"
 start_test "mesh trydiff returns the command's own status"
 printf 'one\n' > "$_testdir/try-status130.txt"
 result="$(_mesh_run "
-    func boom(f) { return 130 }
+    func boom(f) { fail 130 }
     trydiff boom $_testdir/try-status130.txt
     puts \"status=\$sh.status\"
 " 2>/dev/null)"
@@ -1672,7 +1676,7 @@ assert_equal "status=130" "$result"
 
 start_test "mesh applydiff returns the command's own status"
 result="$(_mesh_run "
-    func boom(f) { return 130 }
+    func boom(f) { fail 130 }
     applydiff boom $_testdir/try-status130.txt
     puts \"status=\$sh.status\"
 " 2>/dev/null)"
@@ -1689,7 +1693,7 @@ assert_not_contains "failed=0" "$result"
 start_test "mesh trydiff shows nothing and reports when the command fails"
 printf 'one\n' > "$_testdir/try-fail.txt"
 result="$(_mesh_run "
-    func formatter(f) { return 1 }
+    func formatter(f) { fail }
     trydiff formatter $_testdir/try-fail.txt
     puts \"status=\$sh.status\"
 " 2>&1)"
@@ -1700,7 +1704,7 @@ assert_not_contains "one" "$result"
 start_test "mesh trydiff removes its temporary file either way"
 printf 'one\n' > "$_testdir/try-temp.txt"
 _mesh_run "
-    func formatter(f) { return 1 }
+    func formatter(f) { fail }
     trydiff formatter $_testdir/try-temp.txt
 " >/dev/null 2>&1
 result="$(ls "$_testdir"/try-temp.txt.trydiff.* 2>/dev/null | wc -l | tr -d ' ')"
@@ -1764,7 +1768,7 @@ c" "$result"
 start_test "mesh isort leaves the file alone when sort fails"
 printf 'c\na\n' > "$_testdir/isort-fail.txt"
 result="$(_mesh_run "
-    func sort(...args) { return 1 }
+    func sort(...args) { fail }
     isort $_testdir/isort-fail.txt
     cat $_testdir/isort-fail.txt
 " 2>/dev/null)"
@@ -1774,7 +1778,7 @@ a" "$result"
 start_test "mesh isort removes the staged file and reports when sort fails"
 printf 'c\na\n' > "$_testdir/isort-staged.txt"
 result="$(_mesh_run "
-    func sort(...args) { return 1 }
+    func sort(...args) { fail }
     isort $_testdir/isort-staged.txt
     puts \"status=\$sh.status\"
 " 2>&1)"
@@ -1866,15 +1870,20 @@ _session_wrapper_status() {
     local _fn="$1"
     local _rc="$2"
     shift 2
+    # These stand in for external scripts, so what they carry is a *status*.
+    # `fail` is the verb for that channel; `fail 0` is refused, since the
+    # channel only carries failure, so success is spelled `return true`.
+    local _leave="fail $_rc"
+    test "$_rc" = 0 && _leave="return true"
     _mesh_run_config "
         func have-command(name) { return true }
         # Wrappers, because the real ones are external scripts that take
         # whatever they are given -- a plain func would reject --list.
         # (No backticks here: this string is double-quoted in bash.)
-        wrapper func changesession(...args) { return $_rc }
-        wrapper func changeshpool(...args) { return $_rc }
-        wrapper func makesession(...args) { return $_rc }
-        wrapper func makeshpool(...args) { return $_rc }
+        wrapper func changesession(...args) { $_leave }
+        wrapper func changeshpool(...args) { $_leave }
+        wrapper func makesession(...args) { $_leave }
+        wrapper func makeshpool(...args) { $_leave }
     " "
         $_fn $*
         puts \$sh.status
