@@ -913,6 +913,43 @@ result="$(_fish_run '
 assert_equal "survived" "$result"
 
 ###############
+# TEST: apply_shpool_initial_pwd cds into the directory the older
+# scripts-repo helpers stamp on the session, and clears the stamp only
+# once the cd worked.
+
+start_test "fish apply_shpool_initial_pwd cds and erases the variable"
+result="$(_fish_run '
+    function in_shpool; return 0; end
+    mkdir -p $HOME/initial
+    set -gx SHPOOL_INITIAL_PWD $HOME/initial
+    apply_shpool_initial_pwd
+    echo "rc=$status dir="(basename $PWD)" initial=[$SHPOOL_INITIAL_PWD]"
+')"
+assert_equal "rc=0 dir=initial initial=[]" "$result"
+
+# Regression: the variable was erased whatever the cd did, throwing away
+# the one record of where the session was meant to open.
+start_test "fish apply_shpool_initial_pwd keeps the variable when the cd fails"
+result="$(_fish_run '
+    function in_shpool; return 0; end
+    set -gx SHPOOL_INITIAL_PWD $HOME/no-such-initial-pwd
+    apply_shpool_initial_pwd 2>/dev/null
+    echo "rc=$status initial=[$SHPOOL_INITIAL_PWD]"
+')"
+assert_contains "rc=1 initial=[" "$result"
+assert_contains "no-such-initial-pwd]" "$result"
+
+start_test "fish apply_shpool_initial_pwd is a no-op outside a shpool session"
+result="$(_fish_run '
+    function in_shpool; return 1; end
+    mkdir -p $HOME/initial
+    set -gx SHPOOL_INITIAL_PWD $HOME/initial
+    apply_shpool_initial_pwd
+    echo "rc=$status initial=["(basename $SHPOOL_INITIAL_PWD)"]"
+')"
+assert_equal "rc=0 initial=[initial]" "$result"
+
+###############
 # TEST: TTY falls back to empty rather than storing `tty`'s diagnostic
 #
 # Regression: `tty` prints "not a tty" on *stdout* and exits nonzero when

@@ -184,6 +184,39 @@ let results = [
         autoshpool switch mysession
         assert equal (open $calls | str trim) "args=switch mysession"
     })
+    ###############
+    # apply-shpool-initial-pwd: the transitional cd into the directory the
+    # older scripts-repo helpers stamp on the session.
+    (run-test "nu apply-shpool-initial-pwd cds and drops the stamp" {
+        let dir = (mktemp -d)
+        $env.SHPOOL_SESSION_NAME = "s1"
+        $env.SHPOOL_INITIAL_PWD = $dir
+        apply-shpool-initial-pwd
+        assert equal ($env.PWD | path expand) ($dir | path expand)
+        assert equal ($env.SHPOOL_INITIAL_PWD? | default "unset") "unset"
+    })
+    # A missing directory must not take the rest of config.nu down with it:
+    # `cd` raises, and an uncaught raise at the call site would leave the
+    # shell with no prompt, no hooks and no aliases. The stamp survives too,
+    # since it is the only record of where the session meant to open.
+    (run-test "nu apply-shpool-initial-pwd survives a missing directory" {
+        let here = $env.PWD
+        $env.SHPOOL_SESSION_NAME = "s1"
+        $env.SHPOOL_INITIAL_PWD = "/no-such-shpool-initial-pwd"
+        apply-shpool-initial-pwd
+        assert equal $env.PWD $here
+        assert equal $env.SHPOOL_INITIAL_PWD "/no-such-shpool-initial-pwd"
+    })
+    (run-test "nu apply-shpool-initial-pwd is a no-op outside a shpool session" {
+        let dir = (mktemp -d)
+        let here = $env.PWD
+        hide-env --ignore-errors SHPOOL_SESSION_NAME
+        $env.SHPOOL_INITIAL_PWD = $dir
+        apply-shpool-initial-pwd
+        assert equal $env.PWD $here
+        assert equal $env.SHPOOL_INITIAL_PWD $dir
+    })
+
     (run-test "nu autoshpool does not stamp SHPOOL_INITIAL_PWD" {
         let bin = (mktemp -d)
         ("#!/bin/sh\necho \"SHPOOL_INITIAL_PWD=${SHPOOL_INITIAL_PWD-unset}\" >> \"" + $bin + "/log\"\n") | save -f ($bin | path join "autoshpool")

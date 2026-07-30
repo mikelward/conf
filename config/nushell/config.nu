@@ -266,6 +266,33 @@ def --wrapped autoshpool [...args] {
 # the current shell. shpool is the default; tmux is the fallback when
 # want-shpool is false (or $SESSION_BACKEND=tmux flips the preference).
 # Mirrors shrc's maybe_start_session_and_exit.
+# Transitional fallback: the updated scripts-repo helpers open the session in
+# the right directory via `shpool attach -d`, leaving SHPOOL_INITIAL_PWD unset
+# (this a no-op). Until that ships everywhere (mikelward/scripts#107), the
+# older helpers still stamp SHPOOL_INITIAL_PWD (forwarded via the shpool
+# config's forward_env), so cd there on entry. Remove this command, its call
+# site and the forward_env entry once the scripts update is deployed.
+# Mirrors shrc/fish/mesh.
+#
+# The cd is guarded and the stamp dropped only once it worked. `cd` raises on
+# a missing directory, and an uncaught raise at the call site is worse here
+# than in the other shells: it would abandon the rest of config.nu, so a
+# session stamped with a directory that has since been removed would come up
+# with no prompt, no hooks and no aliases. Dropping the stamp regardless would
+# also throw away the one record of where the session was meant to open.
+# `try` still lets the cd's own env change through, so a successful cd sticks.
+def --env apply-shpool-initial-pwd [] {
+    if not (in-shpool) { return }
+    let initial = ($env.SHPOOL_INITIAL_PWD? | default "")
+    if ($initial | is-empty) { return }
+    try {
+        cd $initial
+        hide-env SHPOOL_INITIAL_PWD
+    } catch {|e|
+        warn $"couldn't enter the session's initial directory: ($e.msg)"
+    }
+}
+
 def maybe-start-session-and-exit [] {
     match (session-backend) {
         "shpool" => {
@@ -1913,17 +1940,10 @@ $env.config = ($env.config | upsert hooks.env_change.PWD (
 # re-run fully (it's how you reload after editing), so there's no once-guard to
 # mirror here.
 #
-# Transitional fallback: the updated scripts-repo helpers open the session in
-# the right directory via `shpool attach -d`, leaving SHPOOL_INITIAL_PWD unset
-# (this block a no-op). Until that ships everywhere (mikelward/scripts#107), the
-# older helpers still stamp SHPOOL_INITIAL_PWD (forwarded via the shpool config's
-# forward_env), so cd there on entry. Remove this block and the forward_env entry
-# once the scripts update is deployed. Mirrors shrc/fish.
+# The transitional cd into SHPOOL_INITIAL_PWD lives in
+# apply-shpool-initial-pwd, defined with the other session commands above.
 if (is-interactive) {
-    if (in-shpool) and (($env.SHPOOL_INITIAL_PWD? | default "") | is-not-empty) {
-        cd $env.SHPOOL_INITIAL_PWD
-        hide-env SHPOOL_INITIAL_PWD
-    }
+    apply-shpool-initial-pwd
     maybe-start-session-and-exit
 }
 
