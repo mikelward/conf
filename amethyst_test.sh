@@ -27,9 +27,19 @@ assert_contains "control" "$_mod2"
 
 # Required top-level scalars. If any of these go missing, Amethyst falls
 # back to defaults that don't match the rest of the keybindings.
-start_test "mouse-follows-focus is true"
+# Both pointer/focus links are off. focus-follows-mouse dismisses popovers --
+# Amethyst hit-tests only the windows it tracks, so it focuses whatever sits
+# under an untracked overlay (ianyh/Amethyst#277) -- and mouse-follows-focus
+# warps the pointer on every focus change, which isn't wanted either.
+#
+# Asserted with the trailing "false" rather than just the key name, so
+# flipping either one back to true fails here.
+start_test "focus-follows-mouse is false"
 assert_contains \
-    "mouse-follows-focus: true" "$(cat "$_amethyst")"
+    "focus-follows-mouse: false" "$(cat "$_amethyst")"
+start_test "mouse-follows-focus is false"
+assert_contains \
+    "mouse-follows-focus: false" "$(cat "$_amethyst")"
 start_test "follow-space-thrown-windows is true"
 assert_contains \
     "follow-space-thrown-windows: true" "$(cat "$_amethyst")"

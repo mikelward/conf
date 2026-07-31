@@ -19,7 +19,19 @@ layouts:
   - wide
   - fullscreen
 
-mouse-follows-focus: true
+# Both pointer/focus links stay off.
+#
+# focus-follows-mouse dismisses popovers: Amethyst hit-tests only the windows
+# it tracks, so an untracked overlay is invisible to it and it focuses whatever
+# sits underneath, deactivating the overlay's app (ianyh/Amethyst#277).
+# setup-macos writes the same value to the preference domain, for machines
+# without this file; setting it here too means a fresh launch can't pick up a
+# stale true from the Preferences checkbox.
+#
+# mouse-follows-focus warps the pointer to each newly focused window, which is
+# unwanted on its own terms.
+focus-follows-mouse: false
+mouse-follows-focus: false
 follow-space-thrown-windows: true
 new-windows-to-main: false
 window-margins: true
