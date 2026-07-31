@@ -117,6 +117,7 @@ test-all: \
 	test-gitconfig \
 	test-makefile \
 	test-amethyst \
+	test-karabiner \
 	test-hypr \
 	test-sway
 
@@ -270,6 +271,13 @@ $(CACHE)/test-amethyst.stamp: amethyst.yml amethyst_test.sh shrc_test_lib.sh | $
 	@touch $@
 test-amethyst: $(CACHE)/test-amethyst.stamp
 
+$(CACHE)/test-karabiner.stamp: \
+                          config/karabiner/assets/complex_modifications/pc-alt-tab.json \
+                          karabiner_test.sh shrc_test_lib.sh | $(CACHE)
+	@bash karabiner_test.sh
+	@touch $@
+test-karabiner: $(CACHE)/test-karabiner.stamp
+
 # Static presence/parse checks for the Hyprland Wayland desktop configs.
 # Depends on every config file it validates so editing any of them re-runs.
 $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
@@ -329,4 +337,5 @@ test-sway: $(CACHE)/test-sway.stamp
 	test test-verbose test-full test-all \
 	test-dash test-bash test-zsh test-prompt test-vcs \
 	test-fish test-nu test-mesh test-lint \
-	test-env test-gitconfig test-makefile test-amethyst test-hypr test-sway
+	test-env test-gitconfig test-makefile test-amethyst test-karabiner \
+	test-hypr test-sway
