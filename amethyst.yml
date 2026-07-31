@@ -1,5 +1,9 @@
 # Amethyst tiling window manager configuration
 # Keybindings match KDE/Krohnkite setup with alt (option) as modifier
+#
+# The scripts repo's MACOS.md has the full key mapping against the
+# KDE/Krohnkite side, the manual steps setup-macos can't do, and why Amethyst
+# rather than yabai or AeroSpace.
 
 mod1:
   - option
