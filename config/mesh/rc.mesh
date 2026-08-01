@@ -45,8 +45,6 @@ if $env:get(FAILSAFE, "0") == "1" or $env:get(LC_FAILSAFE, "0") == "1" or "$env.
 # still asks, and a caller reading stdout gets only what it asked for. bash's
 # own `read -p` prompts on stderr for the same reason.
 wrapper func confirm(...question) {
-  # Bound first: an argument-taking modifier cannot be written inside a string,
-  # so the join happens here and only the result is interpolated.
   text = $question:join(" ")
   print "$text? [Y/n] " >&2
   gets reply
@@ -903,16 +901,40 @@ func set-up-ssh-aliases() {
       }
     }
   }
+  # Syntax-checked before it is installed, not after. The name filters above
+  # cover what is known to be unbindable, but mesh owns that namespace and can
+  # grow it, so a `Host` entry a later mesh refuses is always possible. Checked
+  # here, the *previous* generation survives it; checked only by sourcing --
+  # which is all that was available before `mesh -n` -- the bad file has already
+  # been renamed over the good one, so every alias stays gone until the entry is
+  # removed from ~/.ssh/config. mesh's own located diagnostic has gone to stderr.
+  #
+  # `-n` skips the startup files, so this costs a parse rather than another
+  # shell's worth of config: about 3ms once per interactive start.
+  #
+  # Skipped when mesh is not on PATH -- a shell started as /opt/mesh/bin/mesh,
+  # say. There is no reaching this shell's own binary from here, and failing
+  # the check because it could not be run would drop every alias to protect
+  # against a file that is probably fine. The `source` below still backstops it.
+  #
+  # Nested rather than `and`-ed: `not cmd` is a command reading, which does not
+  # combine with a value expression in one condition.
+  if have-command(mesh) {
+    if not mesh -n $staged {
+      rm -f $staged
+      warn "ssh aliases: the generated file is not valid mesh; host aliases are not defined"
+      fail
+    }
+  }
   if not mv $staged $generated {
     rm -f $staged
     warn "ssh aliases: cannot replace the cache file; host aliases are not defined"
     fail
   }
-  # Checked like every other step, and phrased without the path for the same
-  # reason the others are. The name filters above cover what is known to be
-  # unbindable, but mesh owns that namespace and can grow it, so a `Host` entry
-  # a later mesh refuses would otherwise take every alias in the file down with
-  # nothing said. mesh's own diagnostic has already gone to stderr.
+  # Backstop to the `-n` check above, which the syntax errors do not get past.
+  # This one is what catches a file that parses and then fails to *run*, and
+  # it is the only check at all when mesh is off PATH. Checked like every other
+  # step, and phrased without the path for the same reason the others are.
   source $generated
   status = $sh.status
   if $status != 0 {
