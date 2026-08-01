@@ -3055,6 +3055,27 @@ HOME="$_fakehome" run_with_timeout 15 \
     " </dev/null >/dev/null 2>&1
 assert_equal "" "$(cat "$_testdir/id-calls" 2>/dev/null)"
 
+# With UID *unset* -- a login mesh with no POSIX parent to inherit one from --
+# env.mesh has to compute it, and `$sh.uid` is what it asks instead of forking.
+# USERNAME is preset so the `id -un` beside it does not muddy the count; the
+# assertion is about `id -u` specifically.
+start_test "mesh env.mesh forks no id for an unset \$UID"
+rm -f "$_testdir/id-calls"
+HOME="$_fakehome" run_with_timeout 15 \
+    env -u UID "PATH=$_fake_id_bin:$PATH" USERNAME=someone HOSTNAME=host1 mesh -c "
+        source $_env_mesh
+        puts \$env.UID
+    " </dev/null >/dev/null 2>&1
+assert_equal "" "$(cat "$_testdir/id-calls" 2>/dev/null)"
+
+start_test "mesh env.mesh sets \$UID from \$sh.uid when it is unset"
+result="$(HOME="$_fakehome" run_with_timeout 15 \
+    env -u UID USERNAME=someone HOSTNAME=host1 mesh -c "
+        source $_env_mesh
+        puts \$env.UID
+    " </dev/null)"
+assert_equal "$(id -u)" "$result"
+
 ###############
 # TEST: log-history
 
