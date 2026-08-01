@@ -2136,6 +2136,16 @@ start_test "mesh bar draws a rule of the requested width"
 result="$(_mesh_run 'bar 3')"
 assert_equal "―――" "$result"
 
+# terminal-width reads $sh.width, which asks stdout, then stderr, then stdin,
+# and answers 0 when none of them is a terminal. All three have to be off a
+# terminal for the fallback to be the branch under test -- the harness already
+# gives stdout a pipe and stdin /dev/null, but stderr is inherited, and a
+# developer running the suite from a terminal would otherwise measure their
+# own window.
+start_test "mesh terminal-width falls back to 80 with no terminal"
+result="$(_mesh_run 'puts terminal-width()' 2>/dev/null)"
+assert_equal "80" "$result"
+
 start_test "mesh title names host and project"
 result="$(_mesh_run '
     $env.HOSTNAME = "host1"

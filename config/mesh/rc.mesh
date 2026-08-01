@@ -1284,13 +1284,14 @@ func prompt-line(auth = auth-info()) {
   return $out
 }
 
-# a rule the width of the terminal. mesh publishes no terminal width, so the
-# width comes from `tput cols` -- one fork per prompt.
+# a rule the width of the terminal. `$sh.width` is read from the terminal at
+# each access, so it cannot go stale across a resize, and it costs an ioctl
+# rather than the `tput cols` fork this used to pay on every prompt. It is 0
+# when there is no terminal at all -- a redirected prompt, a test harness --
+# which is not a width, so 80 is this file's choice for that case.
 func terminal-width() {
-  return 80 unless have-command(tput)
-  cols = $(tput cols 2> /dev/null || true)
-  return 80 if $cols == ""
-  return $cols:int
+  return 80 if $sh.width == 0
+  return $sh.width
 }
 
 func bar(width) {
