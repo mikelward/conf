@@ -512,15 +512,13 @@ wrapper func each0(cmd, ...args) { xargs -0 -r -n 1 $cmd ...$args }
 # suggestion. So the preview is gated on the command succeeding, and the
 # command's own status is what the caller sees rather than the `rm`'s.
 #
-# The command runs as a plain statement rather than an `if` condition because
-# mesh clears $sh.status while evaluating a condition -- it reads 0 in both
-# branches -- so a status worth reporting (130 from a Ctrl-C, say) has to be
-# captured before any branch is taken.
+# A command condition publishes its own status to the branch it picks, so the
+# 130 from a Ctrl-C survives into the report; it is read first thing in the
+# branch, before the `rm` below replaces it.
 func trydiff(cmd, file) {
   temp = "${file}.trydiff.$sh.pid"
-  $cmd $file > $temp
-  produced = $sh.status
-  if $produced != 0 {
+  if not $cmd $file > $temp {
+    produced = $sh.status
     rm -f $temp
     error "trydiff: $cmd failed; nothing to compare"
     fail $produced
@@ -543,9 +541,8 @@ func trydiff(cmd, file) {
 # the original would lose the file.
 func applydiff(cmd, file) {
   staged = "${file}.new"
-  $cmd $file > $staged
-  produced = $sh.status
-  if $produced != 0 {
+  if not $cmd $file > $staged {
+    produced = $sh.status
     rm -f $staged
     error "applydiff: $cmd failed; $file is unchanged"
     fail $produced
@@ -801,8 +798,7 @@ func set-up-ssh-aliases() {
   # and a *stale* file from an earlier session would be sourced as if fresh,
   # silently reinstating hosts the config no longer names. Report once and
   # leave the aliases undefined, which is the honest outcome.
-  quiet mkdir -p $generated:dir
-  if $sh.status != 0 {
+  if not quiet mkdir -p $generated:dir {
     warn "ssh aliases: cannot create the cache directory; host aliases are not defined"
     fail
   }
@@ -826,14 +822,20 @@ func set-up-ssh-aliases() {
   #
   # `command` because this file defines its own `install` shortcut for
   # `package install` further down -- without it the alias wins.
-  command install -m 600 /dev/null $staged
-  if $sh.status != 0 {
+  if not command install -m 600 /dev/null $staged {
     warn "ssh aliases: cannot create the cache file; host aliases are not defined"
     fail
   }
   # Truncated first, so a config with no usable Host entries leaves an empty
   # file rather than last session's definitions -- and so this doubles as the
   # writability check for the appends that follow.
+  #
+  # Statement-then-status rather than the `if not` the steps above use: a
+  # *builtin* whose redirection fails reports it through $sh.status but not to
+  # a condition, so `if not puts … > $staged` reads as success and the loop
+  # carries on writing to a file it cannot open. An external command in the
+  # same shape does report it, which is what makes this a divergence in mesh
+  # rather than a rule about redirections.
   puts "# Generated from ~/.ssh/config by rc.mesh. Do not edit." > $staged
   if $sh.status != 0 {
     warn "ssh aliases: cannot write the cache file; host aliases are not defined"
@@ -887,11 +889,13 @@ func set-up-ssh-aliases() {
       # `wrapper func`, by the rule at the top of this file: everything the
       # user types after the host belongs to ssh or to the remote command, so
       # nothing here may be scanned as a flag of this function's own.
-      puts "wrapper func $name(...args) { ssh-to $name ...\$args }" >> $staged
       # A full filesystem partway through leaves a truncated staged file, whose
       # last line is usually half a definition. Drop it and stop: the previous
       # generation stays in place untouched, which is the better of the two
       # states available here, and nothing half-built is ever renamed over it.
+      # Statement-then-status rather than `if not`, for the builtin-redirect
+      # reason given above the header write.
+      puts "wrapper func $name(...args) { ssh-to $name ...\$args }" >> $staged
       if $sh.status != 0 {
         rm -f $staged
         warn "ssh aliases: cannot write the cache file; host aliases are not defined"
@@ -899,8 +903,7 @@ func set-up-ssh-aliases() {
       }
     }
   }
-  mv $staged $generated
-  if $sh.status != 0 {
+  if not mv $staged $generated {
     rm -f $staged
     warn "ssh aliases: cannot replace the cache file; host aliases are not defined"
     fail
