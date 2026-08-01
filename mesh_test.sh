@@ -2782,6 +2782,53 @@ assert_contains "command not found: host1" "$result"
 start_test "mesh set-up-ssh-aliases leaves no staged file after a failed read"
 assert_equal "" "$(ls "$_ssh_config_home/.cache/mesh/" 2>/dev/null | grep 'ssh-hosts.mesh\.' || true)"
 
+# The create and the rename are the two checked steps with no coverage of
+# their own. Both are reached through `command`, which bypasses this file's
+# own shortcuts but not PATH, so a fake binary is what stands in for the
+# failure -- the staged path carries the pid and cannot be blocked ahead of
+# time the way the others are.
+_fake_fail_bin="$_testdir/fakefailbin"
+mkdir -p "$_fake_fail_bin"
+
+start_test "mesh set-up-ssh-aliases reports an uncreatable cache file"
+_write_ssh_config
+rm -rf "$_ssh_config_home/.cache"
+printf '#!/bin/sh\necho "install: cannot create" >&2\nexit 1\n' > "$_fake_fail_bin/install"
+chmod +x "$_fake_fail_bin/install"
+result="$(HOME="$_ssh_config_home" PATH="$_fake_fail_bin:$PATH" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+    puts \"status=\$sh.status\"
+    host1
+" </dev/null 2>&1)"
+rm -f "$_fake_fail_bin/install"
+assert_contains "cannot create the cache file" "$result"
+assert_contains "status=1" "$result"
+assert_contains "command not found: host1" "$result"
+
+# A failed rename must drop the staged file too: leaving it behind accumulates
+# one per shell start, and the previous generation is the one that stays.
+start_test "mesh set-up-ssh-aliases reports a failed rename"
+_write_ssh_config
+rm -rf "$_ssh_config_home/.cache"
+printf '#!/bin/sh\necho "mv: cannot rename" >&2\nexit 1\n' > "$_fake_fail_bin/mv"
+chmod +x "$_fake_fail_bin/mv"
+result="$(HOME="$_ssh_config_home" PATH="$_fake_fail_bin:$PATH" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+    puts \"status=\$sh.status\"
+    host1
+" </dev/null 2>&1)"
+rm -f "$_fake_fail_bin/mv"
+assert_contains "cannot replace the cache file" "$result"
+assert_contains "status=1" "$result"
+assert_contains "command not found: host1" "$result"
+
+start_test "mesh set-up-ssh-aliases leaves no staged file after a failed rename"
+assert_equal "" "$(ls "$_ssh_config_home/.cache/mesh/" 2>/dev/null | grep 'ssh-hosts.mesh\.' || true)"
+
 start_test "mesh set-up-ssh-aliases does nothing without an ssh config"
 rm -rf "$_ssh_config_home"
 mkdir -p "$_ssh_config_home"
