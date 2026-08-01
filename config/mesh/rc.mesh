@@ -645,21 +645,17 @@ wrapper func shift-options(cmd, target, ...args) {
   $cmd ...$options $target ...$rest
 }
 
-# convert a time from one timezone to another. mesh has no `VAR=value cmd`
-# per-command environment prefix, so each leg runs in a `fork` whose $env.TZ
-# is its own.
+# convert a time from one timezone to another, each leg under its own $TZ
 wrapper func tz2tz(from, to, ...spec) {
   when = $spec:join(" ")
-  epoch = $(fork { $env.TZ = $from
-    date -d $when +%s })
+  epoch = $(TZ=$from date -d $when +%s)
   # An unparsable spec or timezone has already been reported by `date`; running
   # the second leg on an empty epoch would bury that under a second diagnostic
   # for the same cause. shrc:1039 and config.fish:684 both `|| return 1` here.
   # The guard also has to come before `$epoch` is read at all: a capture whose
   # command failed leaves the name unbound, not empty.
   fail if $sh.status != 0
-  fork { $env.TZ = $to
-    date -d "@$epoch" }
+  TZ=$to date -d "@$epoch"
 }
 
 # convert a Unix timestamp in microseconds to a human-readable datetime
@@ -716,13 +712,12 @@ func peg(env-pattern, proc-pattern) { pegrep $env-pattern $proc-pattern }
 # ssh-client-host reads it at the far end. SendEnv is additive, so the usual
 # LANG/LC_* forwarding is left intact.
 #
-# The variable is set inside a `fork` rather than exported here: mesh has no
-# `VAR=value cmd` prefix, and an export in this shell would outlive the call.
+# Carried on a `VAR=value cmd` prefix rather than exported here, so it reaches
+# the child without outliving the call.
 wrapper func ssh-to(host, ...args) {
   client = short-hostname()
   if have-command(rw) and $args:len == 0 {
-    fork { $env.LC_CLIENT_HOST = $client
-      rw -r $host }
+    LC_CLIENT_HOST=$client rw -r $host
     return
   }
   # ssh flags typed *after* the host alias have to be moved in front of it, or
@@ -774,8 +769,7 @@ wrapper func ssh-to(host, ...args) {
   }
   opts = $args[0..$nopts]
   cmd = $args[$nopts..]
-  fork { $env.LC_CLIENT_HOST = $client
-    ssh -t -oSendEnv=LC_CLIENT_HOST ...$opts $host ...$cmd }
+  LC_CLIENT_HOST=$client ssh -t -oSendEnv=LC_CLIENT_HOST ...$opts $host ...$cmd
 }
 
 # Give each `Host` alias in ~/.ssh/config a command of its own, so a bare
@@ -1648,12 +1642,9 @@ wrapper func x(...args) { xa ...$args }
 alias q = xa
 
 alias xevkey = command xev -event keyboard
-# The display is set inside a `fork` -- mesh has no `VAR=value cmd` prefix, and
-# an assignment here would outlive the call. Same shape config.nu:1418 uses.
-wrapper func xr(...args) {
-  fork { $env.DISPLAY = ":0.0"
-    xrandr ...$args }
-}
+# The display rides a `VAR=value cmd` prefix, so it reaches xrandr without an
+# assignment here outliving the call. Same shape config.nu:1418 uses.
+wrapper func xr(...args) { DISPLAY=":0.0" xrandr ...$args }
 alias jc = command journalctl --no-hostname
 alias sc = command systemctl
 alias uc = command systemctl --user
@@ -1698,9 +1689,8 @@ alias mtm = maketmux
 # Only on the no-arg picker path -- --list/--help also succeed but only print
 # -- and only when shpool is the backend that ran, since a tmux session nested
 # in shpool switches in place and must stay.
-# The backend session-backend picked is handed to the script through a `fork`
-# rather than a `VAR=value cmd` prefix, which mesh does not have: setting
-# $env.SESSION_BACKEND in this shell would outlive the call.
+# The backend session-backend picked rides a `VAR=value cmd` prefix, so the
+# script sees it without an assignment in this shell outliving the call.
 func session-script-wanted() {
   return true if inside-tmux()
   return true if in-shpool()
@@ -1710,8 +1700,7 @@ func session-script-wanted() {
 wrapper func cs(...args) {
   return unless session-script-wanted()
   backend = session-backend()
-  fork { $env.SESSION_BACKEND = $backend
-    changesession ...$args }
+  SESSION_BACKEND=$backend changesession ...$args
   return unless $sh.status == 0
   return unless $args:len == 0
   return if inside-tmux()
@@ -1726,14 +1715,12 @@ wrapper func csp(...args) {
 wrapper func ds(...args) {
   return unless session-script-wanted()
   backend = session-backend()
-  fork { $env.SESSION_BACKEND = $backend
-    detachsession ...$args }
+  SESSION_BACKEND=$backend detachsession ...$args
 }
 wrapper func ms(...args) {
   return unless session-script-wanted()
   backend = session-backend()
-  fork { $env.SESSION_BACKEND = $backend
-    makesession ...$args }
+  SESSION_BACKEND=$backend makesession ...$args
   return unless $sh.status == 0
   return if inside-tmux()
   exit if in-shpool()

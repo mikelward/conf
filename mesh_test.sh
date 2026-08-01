@@ -1976,6 +1976,50 @@ result="$(_mesh_run_config '
 ')"
 assert_equal "0" "$result"
 
+# The backend the wrappers picked reaches the script on a `VAR=value cmd`
+# prefix. Real programs rather than mesh function stubs, because the whole
+# point of the prefix is what a *child* inherits -- a function stub would
+# read the same name off this shell and pass whether or not it crossed.
+_fake_session_bin="$_testdir/fakesessionbin"
+mkdir -p "$_fake_session_bin"
+for _script in changesession detachsession makesession; do
+    printf '#!/bin/sh\necho "%s: $@ [$SESSION_BACKEND]"\n' "$_script" \
+        > "$_fake_session_bin/$_script"
+    chmod +x "$_fake_session_bin/$_script"
+done
+
+# shpool is the default preference, and shpool-available() asks after
+# `autoshpool` too, so both have to answer true for session-backend() to
+# settle on `shpool` deterministically.
+_session_backend_run() {
+    PATH="$_fake_session_bin:$PATH" _mesh_run_config '
+        func have-command(name) {
+            match $name {
+                shpool | autoshpool => { return true }
+                _                   => { return false }
+            }
+        }
+    ' "$1"
+}
+
+start_test "mesh cs hands the backend to the session script"
+assert_equal "changesession: --list [shpool]" "$(_session_backend_run 'cs --list')"
+
+start_test "mesh ds hands the backend to the session script"
+assert_equal "detachsession:  [shpool]" "$(_session_backend_run 'ds')"
+
+start_test "mesh ms hands the backend to the session script"
+assert_equal "makesession: work [shpool]" "$(_session_backend_run 'ms work')"
+
+# The prefix restores what it found, so an unset SESSION_BACKEND has to come
+# back unset -- leaving `shpool` behind would pin the preference for the rest
+# of the session, which is exactly what session-backend() reads.
+start_test "mesh cs does not leak SESSION_BACKEND into the shell"
+result="$(unset SESSION_BACKEND; _session_backend_run 'cs --list > /dev/null
+after = $env:get(SESSION_BACKEND, "unset")
+puts "[$after]"')"
+assert_equal "[unset]" "$result"
+
 ###############
 # TEST: host classification
 
@@ -2305,8 +2349,10 @@ result="$(_mesh_run_config '
 ' 'x')"
 assert_equal "safe-exit: 0" "$result"
 
-# xrandr under DISPLAY=:0.0. mesh has no `VAR=value cmd` prefix, so the
-# variable is set inside a fork and must not leak into this shell.
+# xrandr under DISPLAY=:0.0, carried on a `VAR=value cmd` prefix. The prefix
+# restores what it found, so the variable must not leak into this shell --
+# and an unset one has to go back to *unset*, not to empty, which a child can
+# tell apart.
 _fake_xrandr_bin="$_testdir/fakexrandrbin"
 mkdir -p "$_fake_xrandr_bin"
 printf '#!/bin/sh\necho "xrandr: $@ [$DISPLAY]"\n' > "$_fake_xrandr_bin/xrandr"
@@ -2321,6 +2367,20 @@ result="$(PATH="$_fake_xrandr_bin:$PATH" DISPLAY= _mesh_run_config '' 'xr --quer
 after = $env:get(DISPLAY, "unset")
 puts "[$after]"')"
 assert_equal "[]" "$result"
+
+# The inherited-empty case above cannot tell "restored to empty" from
+# "restored to unset". With DISPLAY unset on the way in, only the second is
+# correct -- an empty one would have xrandr fail against the wrong display
+# rather than fall back.
+#
+# Unset in a subshell rather than trusting the caller's environment: a
+# developer running the suite from an X11 session has DISPLAY set, and the
+# assertion is about the unset case.
+start_test "mesh xr leaves an unset DISPLAY unset"
+result="$(unset DISPLAY; PATH="$_fake_xrandr_bin:$PATH" _mesh_run_config '' 'xr --query > /dev/null
+after = $env:get(DISPLAY, "unset")
+puts "[$after]"')"
+assert_equal "[unset]" "$result"
 
 ###############
 # TEST: ssh-to and the ~/.ssh/config host aliases
