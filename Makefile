@@ -116,6 +116,7 @@ test-all: \
 	test-env \
 	test-gitconfig \
 	test-makefile \
+	test-claude-settings \
 	test-amethyst \
 	test-karabiner \
 	test-hypr \
@@ -266,6 +267,15 @@ $(CACHE)/test-makefile.stamp: Makefile makefile_test.sh shrc_test_lib.sh \
 	@touch $@
 test-makefile: $(CACHE)/test-makefile.stamp
 
+$(CACHE)/test-claude-settings.stamp: .claude/settings.json \
+                          claude_settings_test.sh shrc_test_lib.sh | $(CACHE)
+	@if command -v python3 >/dev/null 2>&1; then \
+		sh claude_settings_test.sh && touch $@; \
+	else \
+		echo "SKIP: test-claude-settings (python3 not installed)"; \
+	fi
+test-claude-settings: $(CACHE)/test-claude-settings.stamp
+
 $(CACHE)/test-amethyst.stamp: amethyst.yml amethyst_test.sh shrc_test_lib.sh | $(CACHE)
 	@bash amethyst_test.sh
 	@touch $@
@@ -334,7 +344,7 @@ test-sway: $(CACHE)/test-sway.stamp
 
 .PHONY: all install install-dotfiles install-vcs bootstrap \
 	vcs-build vcs-sync vcs-fetch \
-	test test-verbose test-full test-all \
+	test test-verbose test-full test-all test-claude-settings \
 	test-dash test-bash test-zsh test-prompt test-vcs \
 	test-fish test-nu test-mesh test-lint \
 	test-env test-gitconfig test-makefile test-amethyst test-karabiner \
