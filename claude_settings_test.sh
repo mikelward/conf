@@ -48,4 +48,45 @@ for _tool in send_later create_trigger list_triggers delete_trigger; do
     assert_false test -z "$_hit"
 done
 
+# The approved set, verbatim. Rejecting `Bash(` only catches the shell hole;
+# a new MCP tool slips past it. Pinning the whole list means widening the
+# grant has to be a deliberate edit here too, where someone reads it.
+_expected=$(cat <<'EOF'
+ScheduleWakeup
+mcp__Claude_Code_Remote__create_trigger
+mcp__Claude_Code_Remote__delete_trigger
+mcp__Claude_Code_Remote__fire_trigger
+mcp__Claude_Code_Remote__list_triggers
+mcp__Claude_Code_Remote__send_later
+mcp__Claude_Code_Remote__subscribe_pr_activity
+mcp__Claude_Code_Remote__unsubscribe_pr_activity
+mcp__Claude_Code_Remote__update_trigger
+mcp__claude-code-remote__create_trigger
+mcp__claude-code-remote__delete_trigger
+mcp__claude-code-remote__fire_trigger
+mcp__claude-code-remote__list_triggers
+mcp__claude-code-remote__send_later
+mcp__claude-code-remote__subscribe_pr_activity
+mcp__claude-code-remote__unsubscribe_pr_activity
+mcp__claude-code-remote__update_trigger
+mcp__github__actions_get
+mcp__github__actions_list
+mcp__github__add_reply_to_pull_request_comment
+mcp__github__create_pull_request
+mcp__github__get_check_run
+mcp__github__get_job_logs
+mcp__github__list_pull_requests
+mcp__github__merge_pull_request
+mcp__github__pull_request_read
+mcp__github__resolve_review_thread
+mcp__github__search_pull_requests
+mcp__github__subscribe_pr_activity
+mcp__github__unsubscribe_pr_activity
+mcp__github__update_pull_request
+EOF
+)
+
+start_test "the allowlist matches the approved set exactly"
+assert_equal "$_expected" "$(puts "$_allow" | LC_ALL=C sort)"
+
 test_summary "claude settings"
