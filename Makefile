@@ -117,6 +117,7 @@ test-all: \
 	test-gitconfig \
 	test-makefile \
 	test-claude-settings \
+	test-session-start-hook \
 	test-amethyst \
 	test-karabiner \
 	test-hypr \
@@ -231,7 +232,10 @@ test-mesh: $(CACHE)/test-mesh.stamp
 # at the end and caches normally. Fish syntax check lives in test-fish.
 $(CACHE)/test-lint.stamp: shrc shrc.vcs bashrc.fuzzycomplete profile exitrc \
                           gittemplates/hooks/post-merge \
-                          gittemplates/hooks/post-rewrite | $(CACHE)
+                          gittemplates/hooks/post-rewrite \
+                          .claude/hooks/session-start.sh | $(CACHE)
+	@shellcheck -s bash -S error .claude/hooks/session-start.sh
+	@bash -n .claude/hooks/session-start.sh
 	@shellcheck -s bash -S error shrc
 	@shellcheck -s bash -S error shrc.vcs
 	@shellcheck -s bash -S error bashrc.fuzzycomplete
@@ -266,6 +270,12 @@ $(CACHE)/test-makefile.stamp: Makefile makefile_test.sh shrc_test_lib.sh \
 	@bash makefile_test.sh
 	@touch $@
 test-makefile: $(CACHE)/test-makefile.stamp
+
+$(CACHE)/test-session-start-hook.stamp: .claude/hooks/session-start.sh \
+                          session_start_hook_test.sh shrc_test_lib.sh | $(CACHE)
+	@sh session_start_hook_test.sh
+	@touch $@
+test-session-start-hook: $(CACHE)/test-session-start-hook.stamp
 
 $(CACHE)/test-claude-settings.stamp: .claude/settings.json \
                           claude_settings_test.sh shrc_test_lib.sh | $(CACHE)
@@ -344,7 +354,7 @@ test-sway: $(CACHE)/test-sway.stamp
 
 .PHONY: all install install-dotfiles install-vcs bootstrap \
 	vcs-build vcs-sync vcs-fetch \
-	test test-verbose test-full test-all test-claude-settings \
+	test test-verbose test-full test-all test-claude-settings test-session-start-hook \
 	test-dash test-bash test-zsh test-prompt test-vcs \
 	test-fish test-nu test-mesh test-lint \
 	test-env test-gitconfig test-makefile test-amethyst test-karabiner \
