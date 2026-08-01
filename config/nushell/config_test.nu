@@ -643,9 +643,13 @@ let results = [
         let out = ("maybe" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
         assert str contains $out "false"
     })
+    # stdout carries confirm's return value — nu prints the final value of a
+    # -c script — so the assertion is that the *prompt* is not there, not that
+    # stdout is empty. A prompt on stdout would corrupt any caller piping the
+    # answer onward.
     (run-test "nu confirm prints its prompt to stderr" {
         let out = ("y" | nu --no-config-file -c $"source ($CONFIG); confirm 'are you sure'" | complete)
-        assert equal $out.stdout ""
+        assert not ($out.stdout | str contains "are you sure")
         assert str contains $out.stderr "are you sure? [Y/n] "
     })
 
