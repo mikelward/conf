@@ -236,7 +236,8 @@ start_test "test-all target exists"
 assert_contains "test-all" "$_targets"
 for _sub in test-dash test-bash test-zsh test-prompt test-vcs \
             test-fish test-nu test-lint \
-            test-gitconfig test-makefile test-amethyst; do
+            test-gitconfig test-makefile test-amethyst \
+            test-claude-settings; do
     start_test "$_sub target exists"
     assert_contains "$_sub" "$_targets"
 done
@@ -247,7 +248,8 @@ unset _sub
 _test_all_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^test-all:')
 for _sub in test-dash test-bash test-zsh test-prompt test-vcs \
             test-fish test-nu test-lint \
-            test-gitconfig test-makefile test-amethyst; do
+            test-gitconfig test-makefile test-amethyst \
+            test-claude-settings; do
     start_test "test-all depends on $_sub"
     assert_contains "$_sub" "$_test_all_deps"
 done
@@ -290,5 +292,33 @@ assert_equal "0" "$_fish_rc"
 start_test "test-fish prints SKIP when fish is missing"
 assert_contains "SKIP: test-fish" "$_fish_out"
 rm -rf "$_bare_path"
+
+# test-claude-settings skips when python3 is missing, and must not stamp
+# itself on the way past — a stamp written by the skip branch would mark the
+# suite green on a machine that never ran it.
+start_test "test-claude-settings succeeds when python3 is missing"
+_nopy_path="$_testdir/nopy_bin"
+mkdir -p "$_nopy_path"
+for _tool in sh make awk sed grep env cat command test mkdir touch echo; do
+    if _real=$(command -v "$_tool" 2>/dev/null); then
+        ln -sf "$_real" "$_nopy_path/$_tool"
+    fi
+done
+# Point the nested make at its own CACHE. The real one is shared with the
+# test-claude-settings target that `make -j` may be running right now, so
+# deleting its stamp here would either race the assertion below or throw away
+# a valid cache entry.
+_nopy_cache="$_testdir/nopy_cache"
+rm -rf "$_nopy_cache"
+_settings_stamp="$_nopy_cache/test-claude-settings.stamp"
+_nopy_out=$(PATH="$_nopy_path" make -B -C "$_srcdir" CACHE="$_nopy_cache" test-claude-settings 2>&1)
+_nopy_rc=$?
+assert_equal "0" "$_nopy_rc"
+start_test "test-claude-settings prints SKIP when python3 is missing"
+assert_contains "SKIP: test-claude-settings" "$_nopy_out"
+start_test "the skip branch leaves no stamp behind"
+assert_false test -e "$_settings_stamp"
+rm -rf "$_nopy_path" "$_nopy_cache"
+unset _tool _real
 
 test_summary "makefile"
