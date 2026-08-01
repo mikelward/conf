@@ -378,7 +378,7 @@ wrapper func body(...args) {
   } else if $rest:len > 1 and $head == "--lines" {
     lines = $rest[1]
     rest = $rest[2..]
-  } else if $numeric != $head and $numeric ~ re("^[0-9]+$") {
+  } else if $numeric != $head and $numeric ~ /^[0-9]+$/ {
     # shrc:662's `-<number>`, the form `netstat … | body -2 grep …` uses.
     # Narrowed to digits: shrc matches any `-*` and would read `-x` as a count.
     lines = $numeric
@@ -574,7 +574,7 @@ wrapper func recent(...args) {
   } else if $rest:len > 1 and $head == "--count" {
     count = $rest[1]
     rest = $rest[2..]
-  } else if $numeric != $head and $numeric ~ re("^[0-9]+$") {
+  } else if $numeric != $head and $numeric ~ /^[0-9]+$/ {
     # shrc:954's `-<number>`, the form this is documented with. Kept alongside
     # the long spellings: without it `-5` reaches ls, which rejects it.
     count = $numeric
@@ -761,7 +761,7 @@ wrapper func ssh-to(host, ...args) {
     # shrc and config.fish matched a single letter here, so both built
     # `ssh -vp host1 2222 …` and ssh read the *host* as the port; they now
     # ask an ssh_option_takes_value helper the same question.
-    if $word ~ re("^-[46AaCfGgKkMNnqsTtVvXxYy]*[BbcDEeFIiJLlmOoPpQRSWw]$") {
+    if $word ~ /^-[46AaCfGgKkMNnqsTtVvXxYy]*[BbcDEeFIiJLlmOoPpQRSWw]$/ {
       expect-value = true
       nopts = $nopts + 1
       continue
@@ -867,13 +867,13 @@ func set-up-ssh-aliases() {
       # rather than a glob because the characters being looked for are `*` and
       # `?` themselves, which a glob would read as wildcards. `-` is excluded
       # by the same rule in shrc and fish.
-      continue if $name ~ re("[*?-]")
+      continue if $name ~ /[*?-]/
       # Stricter than shrc and fish, which eval whatever they find, and
       # deliberately so on both counts: an FQDN alias isn't wanted here, and a
       # dotted name is a *syntax* error in mesh rather than an odd function
       # name (mikelward/mesh#293), so one would cost every alias in this shared
       # file rather than just itself.
-      continue unless $name ~ re("^[A-Za-z_][A-Za-z0-9_]*$")
+      continue unless $name ~ /^[A-Za-z_][A-Za-z0-9_]*$/
       # A `Host status` must not take over the `status` shortcut. shrc:2563 and
       # config.fish:998 get this from ordering -- they generate ssh aliases
       # before their shortcut blocks, so the shortcut is defined last and wins.
