@@ -2829,6 +2829,43 @@ assert_contains "command not found: host1" "$result"
 start_test "mesh set-up-ssh-aliases leaves no staged file after a failed rename"
 assert_equal "" "$(ls "$_ssh_config_home/.cache/mesh/" 2>/dev/null | grep 'ssh-hosts.mesh\.' || true)"
 
+# The generated file is syntax-checked with `mesh -n` before it is installed,
+# so a name that gets past the filters above and is still unbindable costs
+# only itself -- the previous generation stays in place. Before `-n` the only
+# check was sourcing, by which point the bad file had already been renamed
+# over the good one and every alias was gone until ~/.ssh/config was edited.
+#
+# Forced rather than found: the filters cover every name mesh currently
+# refuses, so the case is reached by making the writer emit a name that is a
+# syntax error. That is precisely the "a later mesh grows a keyword" scenario
+# the check exists for.
+start_test "mesh set-up-ssh-aliases keeps the last good file when the new one will not parse"
+rm -rf "$_ssh_config_home"
+mkdir -p "$_ssh_config_home/.ssh" "$_ssh_config_home/.cache/mesh"
+# `files` is a built-in value call, so `wrapper func files(…)` is a syntax
+# error that costs the whole file. is-shell-name catches it today; blinding
+# that one filter is what a mesh which grew the keyword *after* this config
+# was written looks like from here, which is the case `-n` guards.
+printf 'Host host1\nHost files\n' > "$_ssh_config_home/.ssh/config"
+printf 'wrapper func previous(...args) { puts "previous generation" }\n' \
+    > "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh"
+result="$(HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    func is-shell-name(name) { return false }
+    set-up-ssh-aliases
+    puts \"status=\$sh.status\"
+" </dev/null 2>&1)"
+assert_contains "not valid mesh" "$result"
+assert_contains "status=1" "$result"
+
+start_test "mesh set-up-ssh-aliases leaves the previous generation in place"
+assert_equal 'wrapper func previous(...args) { puts "previous generation" }' \
+    "$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
+
+start_test "mesh set-up-ssh-aliases leaves no staged file after a failed check"
+assert_equal "" "$(ls "$_ssh_config_home/.cache/mesh/" 2>/dev/null | grep 'ssh-hosts.mesh\.' || true)"
+
 start_test "mesh set-up-ssh-aliases does nothing without an ssh config"
 rm -rf "$_ssh_config_home"
 mkdir -p "$_ssh_config_home"
