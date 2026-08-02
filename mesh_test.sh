@@ -2866,6 +2866,27 @@ assert_equal 'wrapper func previous(...args) { puts "previous generation" }' \
 start_test "mesh set-up-ssh-aliases leaves no staged file after a failed check"
 assert_equal "" "$(ls "$_ssh_config_home/.cache/mesh/" 2>/dev/null | grep 'ssh-hosts.mesh\.' || true)"
 
+# The staged path is built from XDG_CACHE_HOME (or HOME), so it is the user's
+# to shape. The syntax check hands it to a child mesh, and interpolating it into
+# that child's program made `source a b` two arguments for a home directory with
+# a space in it -- failing the check and deleting a staged file that was fine.
+start_test "mesh set-up-ssh-aliases installs aliases under a path with a space"
+_ssh_spaced_home="$_testdir/ssh home"
+rm -rf "$_ssh_spaced_home"
+mkdir -p "$_ssh_spaced_home/.ssh"
+printf 'Host host1\n' > "$_ssh_spaced_home/.ssh/config"
+result="$(HOME="$_ssh_spaced_home" run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    set-up-ssh-aliases
+    puts \"status=\$sh.status\"
+" </dev/null 2>&1)"
+assert_equal "status=0" "$result"
+
+start_test "mesh set-up-ssh-aliases writes the alias file under a path with a space"
+assert_equal 'wrapper func host1(...args) { ssh-to host1 ...$args }' \
+    "$(tail -n 1 "$_ssh_spaced_home/.cache/mesh/ssh-hosts.mesh")"
+
 start_test "mesh set-up-ssh-aliases does nothing without an ssh config"
 rm -rf "$_ssh_config_home"
 mkdir -p "$_ssh_config_home"
