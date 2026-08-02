@@ -88,9 +88,14 @@ func i-am-root() {
   return false
 }
 
-# return true if an ssh key is loaded
+# return true if an ssh key is loaded.
+#
+# `quiet` is called as a *command* rather than as `quiet(ssh-add, -L)`: a value
+# call yields the wrapped command's exit status, which is an int, and mesh no
+# longer reads an int as a condition. In command position `if` branches on the
+# status, which is what this is asking for.
 func is-ssh-valid() {
-  if quiet(ssh-add, -L) { return true }
+  if quiet ssh-add -L { return true }
   return false
 }
 

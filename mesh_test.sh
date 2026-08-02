@@ -3020,6 +3020,49 @@ result="$(_fetch_vcs_calls '
 ')"
 assert_equal "auto-fetch" "$result"
 
+###############
+# TEST: is-ssh-valid reads ssh-add's exit status
+#
+# Every other auth test stubs auth-info, so the real is-ssh-valid was never
+# run and a `quiet(ssh-add, -L)` that stopped working went unnoticed: a value
+# call yields the wrapped command's exit status, which is an int, and mesh no
+# longer reads an int as a condition. A fake ssh-add whose status the test
+# picks is what exercises the branch for real.
+
+_fake_ssh_add_bin="$_testdir/fakesshaddbin"
+mkdir -p "$_fake_ssh_add_bin"
+printf '#!/bin/sh\nexit "${FAKE_SSH_ADD_STATUS:-0}"\n' > "$_fake_ssh_add_bin/ssh-add"
+chmod +x "$_fake_ssh_add_bin/ssh-add"
+
+start_test "mesh is-ssh-valid is true when ssh-add lists a key"
+result="$(PATH="$_fake_ssh_add_bin:$PATH" FAKE_SSH_ADD_STATUS=0 _mesh_run_config '' \
+    'if is-ssh-valid() { puts valid } else { puts invalid }' 2>&1)"
+assert_equal "valid" "$result"
+
+start_test "mesh is-ssh-valid is false when ssh-add has no key"
+result="$(PATH="$_fake_ssh_add_bin:$PATH" FAKE_SSH_ADD_STATUS=1 _mesh_run_config '' \
+    'if is-ssh-valid() { puts valid } else { puts invalid }' 2>&1)"
+assert_equal "invalid" "$result"
+
+# The regression itself: the int-as-condition refusal went to stderr while the
+# prompt still drew, so asserting on the return value alone would not have
+# caught it.
+start_test "mesh is-ssh-valid does not report an int as a condition"
+result="$(PATH="$_fake_ssh_add_bin:$PATH" FAKE_SSH_ADD_STATUS=1 _mesh_run_config '' \
+    'auth-info' 2>&1 | grep -c 'not a condition' || true)"
+assert_equal "0" "$result"
+
+start_test "mesh auth-info names SSH when no key is loaded"
+result="$(PATH="$_fake_ssh_add_bin:$PATH" FAKE_SSH_ADD_STATUS=1 _mesh_run_config '' \
+    'puts auth-info()' 2>&1)"
+assert_equal "SSH" "$result"
+
+start_test "mesh auth-info is empty when a key is loaded"
+result="$(PATH="$_fake_ssh_add_bin:$PATH" FAKE_SSH_ADD_STATUS=0 _mesh_run_config '' \
+    'puts auth-info()' 2>&1)"
+assert_equal "" "$result"
+
+###############
 # is-ssh-valid forks `ssh-add -L`, so preprompt asks auth-info once and hands
 # the answer to both maybe-background-fetch and prompt-line.
 start_test "mesh preprompt asks auth-info once per render"
