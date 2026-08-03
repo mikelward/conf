@@ -2622,6 +2622,17 @@ HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
 " </dev/null >/dev/null 2>&1
 assert_equal "600" "$(stat -c '%a' "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
 
+# is-shell-name must catch every class of name mesh owns: keywords and
+# builtins via `type -t`, and built-in value calls (invisible to -t, whose
+# findings are not usable as commands) via the descriptive form.
+start_test "mesh is-shell-name catches a built-in value call"
+result="$(_mesh_run_config '' 'puts is-shell-name(files)')"
+assert_equal "true" "$result"
+
+start_test "mesh is-shell-name passes an ordinary host name"
+result="$(_mesh_run_config '' 'puts is-shell-name(host1)')"
+assert_equal "false" "$result"
+
 # A name mesh owns is a different matter: `files` is a built-in value call, so
 # `wrapper func files(…)` is a *syntax* error and mesh refuses the whole file --
 # one such Host entry would take every unrelated alias down with it.
