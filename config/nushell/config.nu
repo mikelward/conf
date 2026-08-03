@@ -293,17 +293,38 @@ def --env apply-shpool-initial-pwd [] {
     }
 }
 
+# Print the shell the user explicitly started, for autoshpool to run in the
+# sessions it creates (shpool attach --cmd). An inherited value wins (so
+# SESSION_SHELL=... overrides); otherwise empty -- and the daemon's default
+# shell applies -- unless SHLVL shows a parent shell: nu increments SHLVL
+# before running config, so 1 is the terminal's or login's own first shell,
+# the default rather than an explicit choice. $nu.current-exe is the running
+# binary's full path, which matters because the shpool daemon's PATH may not
+# include where nu is installed. -l so the session's shell starts as a login
+# shell, matching the shpool daemon's default spawn. Returned rather than
+# exported so a shell that never hands off (or whose handoff fails) leaves
+# nothing for later nested shells to inherit -- the value is scoped to the
+# launcher invocation via with-env. Mirrors shrc's session_shell; kept in
+# parity across bash/zsh/fish/nushell/mesh.
+def session-shell [] {
+    if (is-env-set "SESSION_SHELL") { return $env.SESSION_SHELL }
+    let level = ($env.SHLVL? | default "0" | into string)
+    if not ($level =~ '^[0-9]+$') { return "" }
+    if (($level | into int) < 2) { return "" }
+    $"($nu.current-exe) -l"
+}
+
 def maybe-start-session-and-exit [] {
     match (session-backend) {
         "shpool" => {
             if (want-shpool) {
-                let ok = (try { autoshpool; true } catch { false })
+                let ok = (try { with-env {SESSION_SHELL: (session-shell)} { autoshpool }; true } catch { false })
                 if $ok { exit }
             }
         }
         "tmux" => {
             if (want-tmux) {
-                let ok = (try { autotmux; true } catch { false })
+                let ok = (try { with-env {SESSION_SHELL: (session-shell)} { autotmux }; true } catch { false })
                 if $ok { exit }
             }
         }

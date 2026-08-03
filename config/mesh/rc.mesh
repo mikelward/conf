@@ -1220,15 +1220,49 @@ func apply-shpool-initial-pwd() {
   fail
 }
 
+# The shell the user explicitly started, for autoshpool to run in the
+# sessions it creates (shpool attach --cmd). An inherited value wins (so
+# SESSION_SHELL=... overrides); otherwise empty -- and the daemon's default
+# shell applies -- unless SHLVL shows a parent shell: mesh increments SHLVL
+# before its startup files run, so 1 is the terminal's or login's own first
+# shell, the default rather than an explicit choice. The full path from
+# `type -P`, because the shpool daemon's PATH may not include where mesh is
+# installed; -l so the session's shell starts as a login shell, matching the
+# shpool daemon's default spawn. Returned rather than exported so a shell
+# that never hands off leaves nothing for later nested shells to inherit;
+# the handoff below restores the environment when the launcher fails. Kept
+# in parity with shrc, config.fish, and config.nu.
+func session-shell() {
+  existing = $env:get(SESSION_SHELL, "")
+  return $existing if $existing != ""
+  level = $env:get(SHLVL, "0")
+  return "" unless $level ~ /^[0-9]+$/
+  return "" if $level:int < 2
+  return "" unless have-command(mesh)
+  exe = $(type -P mesh)
+  return "" if $exe == ""
+  return "$exe -l"
+}
+
 func maybe-start-session-and-exit() {
   match session-backend() {
     shpool => {
       return unless want-shpool()
+      # Scoped by hand: set for the launcher, restored when it fails (an
+      # empty SESSION_SHELL reads as unset everywhere it is consulted), so a
+      # failed handoff does not leave this shell's identity for later nested
+      # shells to inherit.
+      prev = $env:get(SESSION_SHELL, "")
+      $env.SESSION_SHELL = session-shell()
       autoshpool && exit
+      $env.SESSION_SHELL = $prev
     }
     tmux => {
       return unless want-tmux()
+      prev = $env:get(SESSION_SHELL, "")
+      $env.SESSION_SHELL = session-shell()
       autotmux && exit
+      $env.SESSION_SHELL = $prev
     }
   }
 }

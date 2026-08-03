@@ -1260,6 +1260,67 @@ assert_contains "failsafe mode" "$_failsafe_out"
 assert_contains "AFTER" "$_failsafe_out"
 
 ###############
+# TEST: session_shell prints the explicitly started shell for autoshpool's
+# session creation, gated on SHLVL showing a parent shell; the handoff scopes
+# it to the launcher invocation. SHLVL is fish's own read-only variable, so it
+# can only be steered from outside: export a value from this harness and the
+# spawned `fish -i` increments it once. (That is also why there is no
+# non-numeric case here, unlike shrc/nu/mesh: fish sanitizes SHLVL before
+# config can see it.)
+
+_saved_shlvl="$SHLVL"
+
+start_test "fish session_shell prints a nested shell's own binary"
+SHLVL=1 # the spawned fish is level 2
+export SHLVL
+result="$(_fish_run '
+    set -e SESSION_SHELL
+    if test "$(session_shell)" = "$(status fish-path) -l"; echo yes; else; echo no; end
+')"
+assert_equal "yes" "$result"
+
+start_test "fish session_shell empty for the first (login) shell"
+SHLVL=0 # the spawned fish is level 1
+export SHLVL
+result="$(_fish_run '
+    set -e SESSION_SHELL
+    echo "[$(session_shell)]"
+')"
+assert_equal "[]" "$result"
+
+start_test "fish session_shell prefers an inherited value"
+SHLVL=1
+export SHLVL
+result="$(_fish_run '
+    set -gx SESSION_SHELL "/opt/other-shell -l"
+    echo "[$(session_shell)]"
+')"
+assert_equal "[/opt/other-shell -l]" "$result"
+
+start_test "fish handoff passes SESSION_SHELL to the launcher without keeping it"
+SHLVL=1 # the spawned fish is level 2
+export SHLVL
+result="$(_fish_run '
+    set -e SESSION_SHELL
+    function session_backend; echo shpool; end
+    function want_shpool; return 0; end
+    function autoshpool
+        if test "$SESSION_SHELL" = "$(status fish-path) -l"
+            echo "launcher saw own shell"
+        else
+            echo "launcher saw [$SESSION_SHELL]"
+        end
+        return 1
+    end
+    maybe_start_session_and_exit
+    echo "after [$SESSION_SHELL]"
+')"
+assert_contains "launcher saw own shell" "$result"
+assert_contains "after []" "$result"
+
+SHLVL="$_saved_shlvl"
+
+###############
 # TEST: set_up_ssh_aliases is deferred into the interactive block (after the
 # handoff), so a launcher that hands off never builds the aliases. WANT_TMUX/
 # WANT_SHPOOL=0 keep maybe_start_session_and_exit from firing here.

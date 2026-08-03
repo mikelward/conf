@@ -1311,6 +1311,68 @@ result="$(_mesh_run_config '
 assert_equal "false" "$result"
 
 ###############
+# TEST: session-shell prints the explicitly started shell for autoshpool's
+# session creation, gated on SHLVL showing a parent shell; the handoff sets
+# it for the launcher and restores it when the launcher fails.
+
+start_test "mesh session-shell prints a nested shell's own binary"
+result="$(_mesh_run_config '' '
+    $env.SESSION_SHELL = ""
+    $env.SHLVL = "2"
+    exe = $(type -P mesh)
+    got = session-shell()
+    if $got == "$exe -l" { puts yes } else { puts "no: $got" }
+')"
+assert_equal "yes" "$result"
+
+start_test "mesh session-shell empty for the first (login) shell"
+result="$(_mesh_run_config '' '
+    $env.SESSION_SHELL = ""
+    $env.SHLVL = "1"
+    got = session-shell()
+    puts "[$got]"
+')"
+assert_equal "[]" "$result"
+
+start_test "mesh session-shell prefers an inherited value"
+result="$(_mesh_run_config '' '
+    $env.SESSION_SHELL = "/opt/other-shell -l"
+    $env.SHLVL = "2"
+    puts session-shell()
+')"
+assert_equal "/opt/other-shell -l" "$result"
+
+start_test "mesh session-shell empty for a non-numeric SHLVL"
+result="$(_mesh_run_config '' '
+    $env.SESSION_SHELL = ""
+    $env.SHLVL = "banana"
+    got = session-shell()
+    puts "[$got]"
+')"
+assert_equal "[]" "$result"
+
+start_test "mesh failed handoff passes SESSION_SHELL then restores it"
+result="$(_mesh_run_config '
+    func have-command(name) { return true }
+    func stdin-is-tty() { return true }
+    func inside-project() { return true }
+    func autoshpool(...args) {
+        v = $env:get(SESSION_SHELL, "")
+        puts "launcher saw [$v]"
+        fail
+    }
+' '
+    $env.SESSION_SHELL = ""
+    $env.SHLVL = "2"
+    maybe-start-session-and-exit
+    after = $env:get(SESSION_SHELL, "")
+    puts "after [$after]"
+')"
+assert_contains "launcher saw [" "$result"
+assert_contains " -l]" "$result"
+assert_contains "after []" "$result"
+
+###############
 # TEST: applydiff only replaces the file when the command succeeded
 
 start_test "mesh applydiff replaces the file when the command succeeds"
