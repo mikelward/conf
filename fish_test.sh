@@ -1030,8 +1030,13 @@ start_test "fish runs fnm env when fnm present even if FNM_PATH dir missing"
 result="$(HOME=$_testdir/fakehome FNM_PATH=/nonexistent-fnm-xyz PATH="$_fnm_bin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config; echo done:\$FNM_MARKER" 2>/dev/null)"
 assert_equal "done:loaded" "$result"
 
+# The marker is quoted: fish drops an unquoted word containing an unset
+# variable entirely, so a bare done:$FNM_MARKER would echo nothing. PATH is
+# trimmed to the system dirs so a real fnm on the runner can't satisfy
+# have_command, and fish is invoked by absolute path since the trimmed PATH
+# may not contain it (see the brew off-PATH note).
 start_test "fish skips fnm env when fnm not installed"
-result="$(HOME=$_testdir/fakehome FNM_PATH=/nonexistent-fnm-xyz run_with_timeout 15 fish --no-config -c "source $_config; echo done:\$FNM_MARKER" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome FNM_PATH=/nonexistent-fnm-xyz PATH="/usr/bin:/bin" run_with_timeout 15 "$(command -v fish)" --no-config -c "source $_config; echo \"done:\$FNM_MARKER\"" 2>/dev/null)"
 assert_equal "done:" "$result"
 
 # With FNM_PATH unset, the default install dir honours $XDG_DATA_HOME,
@@ -1096,8 +1101,11 @@ _brew_off=$(mktemp -d)
 printf '#!/bin/sh\necho %s\n' "'set -gx BREW_MARKER discovered'" > "$_brew_off/brew"
 chmod +x "$_brew_off/brew"
 
+# fish by absolute path: the trimmed PATH is the point of the test, but it
+# must not also hide fish itself (it does whenever fish isn't in /usr/bin,
+# e.g. a Homebrew or ~/.local install).
 start_test "fish discovers brew off-PATH via a known location"
-result="$(HOME=$_testdir/fakehome BREW="$_brew_off/brew" PATH="/usr/bin:/bin" run_with_timeout 15 fish --no-config -c "source $_config; echo \$BREW_MARKER" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome BREW="$_brew_off/brew" PATH="/usr/bin:/bin" run_with_timeout 15 "$(command -v fish)" --no-config -c "source $_config; echo \$BREW_MARKER" 2>/dev/null)"
 assert_equal "discovered" "$result"
 
 rm -rf "$_brew_bin" "$_brew_off"
@@ -1513,8 +1521,10 @@ assert_equal "PATTERN" "$result"
 
 start_test "fish envgrep drops the pattern from the pid list"
 result="$(_fish_run '
+    # echo, not printf: printf cycles its format per argument, which would
+    # print each grep argument on its own line.
     function grep
-        printf "grep %s\n" $argv
+        echo grep $argv
     end
     envgrep PAT 1 2
 ')"
@@ -1858,8 +1868,11 @@ assert_equal "2" "$result"
 ###############
 # TEST: psgrep signals no-match failure
 
+# The pattern is assembled at runtime: written literally it would appear in
+# this fish's own `-c` command line, and psgrep's `pgrep -f` would match the
+# test runner itself instead of finding nothing.
 start_test "fish psgrep returns 1 on no match"
-result="$(_fish_run 'psgrep no_such_process_xyz 2>/dev/null; echo $status')"
+result="$(_fish_run 'psgrep (string join "" no_such_ process_xyz) 2>/dev/null; echo $status')"
 assert_equal "1" "$result"
 
 ###############
