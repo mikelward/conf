@@ -1370,10 +1370,36 @@ apply_shpool_initial_pwd() {
     SHPOOL_INITIAL_PWD=
 }
 
+# Print the shell the user explicitly started, for autoshpool to run in the
+# sessions it creates (shpool attach --cmd). Empty -- and the daemon's default
+# shell applies -- unless SHLVL shows a parent shell: every shell here
+# increments SHLVL before its rc runs, so 1 is the terminal's or login's own
+# first shell, which is the default rather than an explicit choice. -l so the
+# session's shell starts as a login shell, matching how the shpool daemon
+# spawns its default shell. Printed rather than exported so a shell that never
+# hands off (or whose handoff fails) leaves nothing for later nested shells to
+# inherit -- the value is scoped to the launcher invocation below. Kept in
+# parity across bash/zsh (here), fish, nushell, and mesh.
+session_shell() {
+    case "$SHLVL" in ''|*[!0-9]*) return 0 ;; esac
+    test "$SHLVL" -ge 2 || return 0
+    local _shell=
+    if test -n "$ZSH_VERSION"; then
+        _shell="$(command -v zsh)"
+    elif test -n "$BASH_VERSION"; then
+        _shell="$BASH"
+    fi
+    test -n "$_shell" || return 0
+    puts "$_shell -l"
+}
+
+# SESSION_SHELL is set for the launcher alone: an inherited value wins (so
+# SESSION_SHELL=... overrides), and the launchers are external commands, so
+# the assignment never outlives the call.
 maybe_start_session_and_exit() {
     case "$(session_backend)" in
-        shpool) want_shpool && autoshpool && exit ;;
-        tmux)   want_tmux   && autotmux   && exit ;;
+        shpool) want_shpool && SESSION_SHELL="${SESSION_SHELL:-$(session_shell)}" autoshpool && exit ;;
+        tmux)   want_tmux   && SESSION_SHELL="${SESSION_SHELL:-$(session_shell)}" autotmux   && exit ;;
     esac
 }
 

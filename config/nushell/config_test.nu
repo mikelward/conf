@@ -1186,6 +1186,31 @@ except OSError: pass
     })
 
     ###############
+    # session-shell prints the explicitly started shell for autoshpool's
+    # session creation, gated on SHLVL showing a parent shell; the handoff
+    # scopes it to the launcher via with-env, so nothing persists here.
+    (run-test "nu session-shell prints a nested shell's own binary" {
+        hide-env --ignore-errors SESSION_SHELL
+        $env.SHLVL = "2"
+        assert equal (session-shell) $"($nu.current-exe) -l"
+    })
+    (run-test "nu session-shell empty for the first (login) shell" {
+        hide-env --ignore-errors SESSION_SHELL
+        $env.SHLVL = "1"
+        assert equal (session-shell) ""
+    })
+    (run-test "nu session-shell prefers an inherited value" {
+        $env.SESSION_SHELL = "/opt/other-shell -l"
+        $env.SHLVL = "2"
+        assert equal (session-shell) "/opt/other-shell -l"
+    })
+    (run-test "nu session-shell empty for a non-numeric SHLVL" {
+        hide-env --ignore-errors SESSION_SHELL
+        $env.SHLVL = "banana"
+        assert equal (session-shell) ""
+    })
+
+    ###############
     # want-tmux gating (mirrors want-shpool but on the tmux binary)
     (run-test "nu want-tmux true when remote" {
         $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
@@ -2498,6 +2523,31 @@ except OSError: pass
             print 'did-not-exit'
         " | str trim)
         assert ($r | str contains "did-not-exit") $"autoshpool failure must not exit the shell: got ($r)"
+    })
+    (run-test "nu handoff passes SESSION_SHELL to the launcher without keeping it" {
+        # The launcher must see session-shell's value (the shell's own binary,
+        # -l) while the shell keeps nothing: with-env scopes it to the call, so
+        # a failed handoff leaves later nested shells uninfluenced.
+        let dir = (mktemp -d)
+        "#!/bin/sh\necho \"launcher saw [$SESSION_SHELL]\"\nexit 1" | save ($dir | path join "autoshpool")
+        ^chmod +x ($dir | path join "autoshpool")
+        "#!/bin/sh" | save ($dir | path join "shpool")
+        ^chmod +x ($dir | path join "shpool")
+        let script = ('
+            source CONFIG_PATH
+            $env.stdin-is-tty = {|| true }
+            $env.WANT_TMUX = "0"
+            $env.PATH = [STUB_DIR /usr/bin /bin]
+            $env.SSH_CONNECTION = "1.2.3.4 22 5.6.7.8 22"
+            hide-env --ignore-errors SHPOOL_SESSION_NAME
+            hide-env --ignore-errors SESSION_SHELL
+            $env.SHLVL = "2"
+            maybe-start-session-and-exit
+            if ($env.SESSION_SHELL? | default "") == "" { print "after-empty" } else { print "after-set" }
+        ' | str replace "CONFIG_PATH" $CONFIG | str replace "STUB_DIR" $dir)
+        let r = (nu --no-config-file -c $script | str trim)
+        assert ($r | str contains " -l]") $"launcher did not see the launching shell: got ($r)"
+        assert ($r | str contains "after-empty") $"SESSION_SHELL leaked past the handoff: got ($r)"
     })
     (run-test "nu maybe-start-session-and-exit inherits stdout to autoshpool" {
         # Regression: previously used `^autoshpool | complete`, which

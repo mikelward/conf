@@ -919,12 +919,40 @@ function apply_shpool_initial_pwd
     set --erase SHPOOL_INITIAL_PWD
 end
 
+# Print the shell the user explicitly started, for autoshpool to run in the
+# sessions it creates (shpool attach --cmd). An inherited value wins (so
+# SESSION_SHELL=... overrides); otherwise empty -- and the daemon's default
+# shell applies -- unless SHLVL shows a parent shell: fish increments SHLVL
+# before running config, so 1 is the terminal's or login's own first shell,
+# the default rather than an explicit choice. (No numeric guard, unlike the
+# other shells: SHLVL is fish's own read-only variable, sanitized to a number
+# before config runs.) -l so the session's shell starts as a login shell,
+# matching the shpool daemon's default spawn. Printed rather than exported so
+# a shell that never hands off (or whose handoff fails) leaves nothing for
+# later nested shells to inherit -- the handoff scopes the value with
+# `set -lx`, the same restore-on-return pattern ssh_to uses. Mirrors shrc's
+# session_shell; kept in parity across bash/zsh/fish/nushell/mesh.
+function session_shell
+    if test -n "$SESSION_SHELL"
+        echo $SESSION_SHELL
+        return 0
+    end
+    test "$SHLVL" -ge 2; or return 0
+    echo "$(status fish-path) -l"
+end
+
 function maybe_start_session_and_exit
     switch (session_backend)
     case shpool
-        want_shpool; and autoshpool; and exit
+        if want_shpool
+            set -lx SESSION_SHELL "$(session_shell)"
+            autoshpool; and exit
+        end
     case tmux
-        want_tmux; and autotmux; and exit
+        if want_tmux
+            set -lx SESSION_SHELL "$(session_shell)"
+            autotmux; and exit
+        end
     end
 end
 

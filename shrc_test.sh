@@ -1174,6 +1174,62 @@ connected_remotely() { true; }
 assert_false want_shpool
 inside_tmux() { false; }
 
+# session_shell prints this shell's own binary for autoshpool's session
+# creation, but only when SHLVL shows a parent shell; the handoff scopes it
+# to the launcher invocation so nothing persists in this shell. The expected
+# value depends on which shell runs this test file; a shell with neither
+# ZSH_VERSION nor BASH_VERSION (dash) prints nothing.
+_saved_shlvl="$SHLVL"
+if test -n "$ZSH_VERSION"; then
+    _expected_session_shell="$(command -v zsh) -l"
+elif test -n "$BASH_VERSION"; then
+    _expected_session_shell="$BASH -l"
+else
+    _expected_session_shell=""
+fi
+
+start_test "session_shell prints a nested shell's own binary"
+SHLVL=2
+assert_equal "$_expected_session_shell" "$(session_shell)"
+
+start_test "session_shell empty for the first (login) shell"
+SHLVL=1
+assert_equal "" "$(session_shell)"
+
+start_test "session_shell empty for a non-numeric SHLVL"
+SHLVL=banana
+assert_equal "" "$(session_shell)"
+
+SHLVL="$_saved_shlvl"
+
+# The handoff scopes SESSION_SHELL to the launcher call: the launcher sees
+# the value, and a failed handoff leaves nothing behind for later nested
+# shells to inherit. Stubs live in a subshell so the real session functions
+# are untouched for later tests.
+start_test "handoff passes SESSION_SHELL to the launcher without keeping it"
+_out="$(
+    SHLVL=2
+    unset SESSION_SHELL
+    session_backend() { puts shpool; }
+    want_shpool() { true; }
+    autoshpool() { puts "launcher saw [$SESSION_SHELL]"; false; }
+    maybe_start_session_and_exit
+    puts "after [$SESSION_SHELL]"
+)"
+assert_equal "launcher saw [$_expected_session_shell]
+after []" "$_out"
+
+start_test "handoff prefers an inherited SESSION_SHELL"
+_out="$(
+    SHLVL=2
+    SESSION_SHELL="/opt/other-shell -l"
+    session_backend() { puts shpool; }
+    want_shpool() { true; }
+    autoshpool() { puts "launcher saw [$SESSION_SHELL]"; false; }
+    maybe_start_session_and_exit
+)"
+assert_equal "launcher saw [/opt/other-shell -l]" "$_out"
+
 # want_tmux mirrors want_shpool but gates on both the tmux and autotmux
 # binaries. Reuse the in_shpool / inside_tmux / stdin_is_tty stubs from
 # above; only the looked-up command names differ.
