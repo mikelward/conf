@@ -1906,7 +1906,7 @@ $env.config = ($env.config | upsert hooks.pre_prompt (
 # default swallows errors (including missing-binary) so a vcs not on
 # PATH doesn't surface at every prompt.
 $env.vcs-auto-fetch = {||
-    try { ^vcs auto-fetch out>/dev/null err>/dev/null }
+    try { ^vcs auto-fetch out+err> /dev/null }
 }
 
 # Spawn a detached background fetch via the vcs binary, which knows the
