@@ -3126,6 +3126,20 @@ except OSError: pass
         assert (not ($log | path exists))
     })
 
+    # Regression: the default $env.vcs-auto-fetch closure must pass only
+    # the subcommand to the vcs binary. Nu redirection targets need a
+    # space (out+err> /dev/null); "out>/dev/null" parses as a literal
+    # argument, which vcs rejects as an unknown flag on every cd.
+    (run-test "nu default vcs-auto-fetch passes only the subcommand" {
+        let bin = (mktemp -d)
+        let log = ([$bin "vcs.log"] | path join)
+        ("#!/bin/sh\necho \"$*\" >> \"" + $log + "\"\n") | save -f ($bin | path join "vcs")
+        ^chmod +x ($bin | path join "vcs")
+        $env.PATH = ([$bin] ++ $env.PATH)
+        do $env.vcs-auto-fetch
+        assert equal (open $log | str trim) "auto-fetch"
+    })
+
     # FAILSAFE=1 cross-shell escape hatch: config.nu should print
     # "failsafe mode" on stderr and bail before running the heavy
     # startup path. In nu, `def` is parse-time so helper *commands*
