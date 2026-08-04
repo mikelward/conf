@@ -65,6 +65,11 @@ if (
 $env.USERNAME = (whoami | str trim)
 $env.HOSTNAME = (try { hostname -f | str trim } catch { hostname | str trim })
 $env.UID = (id -u | str trim | into int)
+# Computed rather than inherited, deliberately: TTY differs per terminal, and
+# nushell, zsh, env.mesh and rc.elv all export theirs, so an inherited one names
+# whichever terminal a daemon was started from -- under shpool, never this
+# session's pty. Don't add a "keep what's already set" guard here to save the
+# fork; that is the bug shrc, env.mesh and rc.elv had.
 $env.TTY = (try { tty | str trim } catch { "" })
 
 $env.HISTORY_FILE = ([$env.HOME ".history"] | path join)

@@ -253,7 +253,17 @@ fn set-up-standard-variables {
     # terminal, so the name is only kept when the capture succeeded --
     # exporting the diagnostic would put "not a tty" into every child's TTY,
     # and into every log-history line.
-    if (not (has-env TTY)) { set-env TTY (capture-word tty &quiet=$true) }
+    #
+    # Recomputed rather than inherited, unlike the three above: TTY is the one
+    # that differs per terminal, and plenty of things put it in the environment
+    # -- zsh fills and exports it before any rc runs, and config.nu, env.mesh
+    # and this file export their own. A long-lived process started from one
+    # shell therefore hands that terminal's pty to everything it later spawns,
+    # and shpool's daemon is exactly that: every session it opens inherited the
+    # pty of whichever terminal first started the daemon, so log-history filed
+    # every command against the wrong terminal. config.fish and config.nu
+    # already compute it unconditionally.
+    set-env TTY (capture-word tty &quiet=$true)
 }
 
 #######
