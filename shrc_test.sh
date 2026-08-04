@@ -2974,6 +2974,16 @@ start_test "the atuin config keeps Up prefix-matched and host-scoped"
 assert_true grep -qx 'search_mode_shell_up_key_binding = "prefix"' "$_srcdir/config/atuin/config.toml"
 assert_true grep -qx 'filter_mode_shell_up_key_binding = "host"' "$_srcdir/config/atuin/config.toml"
 
+start_test "the atuin config draws the search inline rather than full-screen"
+# atuin's default inline_height of 0 means full-screen, which clears the
+# scrollback the search exists to save you re-typing. Asserted on the
+# value rather than just "not 0" because at a large height the alternate
+# screen is back in all but name.
+assert_true grep -qx 'inline_height = 9' "$_srcdir/config/atuin/config.toml"
+assert_true grep -qx 'style = "compact"' "$_srcdir/config/atuin/config.toml"
+assert_true grep -qx 'show_preview = false' "$_srcdir/config/atuin/config.toml"
+assert_true grep -qx 'show_help = false' "$_srcdir/config/atuin/config.toml"
+
 ###############
 # atuin history recording. shrc drives `atuin history start/end` from its
 # own precommand/preprompt hooks: atuin's bash hooks are shaped for
