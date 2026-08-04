@@ -1079,7 +1079,39 @@ result="$(
 )"
 assert_equal "ok" "$result"
 
+# Regression: `Host host1 host2` defines one alias per host, each bound to
+# its own host. shrc no longer runs `emulate sh`, so without the function
+# opting back into sh word splitting the loop saw the whole line as a
+# single alias and bound every generated function to the full host list.
+start_test "set_up_ssh_aliases splits a multi-host Host line"
+result="$(
+    eval "$_set_up_ssh_aliases_def"
+    HOME="$(mktemp -d)"
+    mkdir -p "$HOME/.ssh"
+    printf 'Host host1 host2\n' > "$HOME/.ssh/config"
+    ssh_to() { puts "[$*]"; }
+    set_up_ssh_aliases
+    host1
+    host2
+    rm -rf "$HOME"
+)"
+assert_contains "[host1]" "$result"
+assert_contains "[host2]" "$result"
+
 unset _set_up_ssh_aliases_def
+
+# Regression: psgrep accumulates ps options in the scalar $ps_args and
+# expands it unquoted, so the words have to reach ps separately. Without
+# sh word splitting zsh passed the whole string -- leading space included
+# -- as a single argument, which ps rejects.
+start_test "psgrep passes ps options as separate arguments"
+result="$(
+    pgrep() { puts "1234"; }
+    psc() { for _a in "$@"; do puts "[$_a]"; done; }
+    psgrep -w -H mypattern
+)"
+assert_contains "[-w]" "$result"
+assert_contains "[-H]" "$result"
 
 start_test "inside_tmux with TMUX set"
 TMUX="/tmp/tmux-1000/default,12345,0"
