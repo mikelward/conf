@@ -1993,12 +1993,22 @@ result="$(HOME="$_fakehome" run_with_timeout 15 env -u TTY mesh -c "
 " </dev/null)"
 assert_equal "[]" "$result"
 
-start_test "mesh TTY keeps an inherited value"
+# Regression: env.mesh used to keep an inherited TTY to save a fork, which is
+# right for a nested shell on the same terminal and wrong for every shell a
+# daemon spawns. zsh fills and exports TTY before any rc runs, and config.nu,
+# rc.elv and env.mesh export their own, so the value is usually present -- and
+# under shpool it names whichever terminal started the daemon, not this
+# session's pty. log-history then filed every command against the wrong
+# terminal and publish-jobs wrote over another terminal's job file.
+#
+# Asserted as empty rather than as the real pty because the harness has no
+# terminal: what matters is that the inherited value did not survive.
+start_test "mesh TTY is recomputed rather than inherited"
 result="$(HOME="$_fakehome" run_with_timeout 15 env TTY=/dev/pts/7 mesh -c "
     source $_env_mesh
-    puts \$env.TTY
+    puts \"[\$env.TTY]\"
 " </dev/null)"
-assert_equal "/dev/pts/7" "$result"
+assert_equal "[]" "$result"
 
 ###############
 # TEST: the session-script wrappers report the script's own status

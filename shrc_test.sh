@@ -2432,22 +2432,22 @@ result="$(TTY= SHRC_LOAD_FUNCTIONS_ONLY=1 "$_real_shell" -c \
     '. "$1"; printf "[%s]" "$TTY"' shrctest "$_srcdir/shrc" </dev/null 2>/dev/null)"
 assert_equal "[]" "$result"
 
-# TTY is a *special parameter* in zsh: the shell fills it with its own
-# terminal at startup, before any rc runs, and exports the result. An
-# inherited TTY is therefore already gone by the time shrc is sourced -- and
-# gone for good, since zsh overwrites the environment entry too (`env` shows
-# an empty `TTY=`), so shrc has nothing left to honor. Under zsh the shell's
-# own answer is the authoritative one anyway. The inherit path is real
-# everywhere TTY is an ordinary variable, so it is still asserted there; the
-# "empty when stdin is not a terminal" case above covers zsh.
-start_test "TTY keeps an inherited value"
+# Regression: shrc used to keep an inherited TTY to save a fork, which is
+# right for a nested shell on the same terminal and wrong for every shell a
+# daemon spawns. zsh fills and exports TTY as a special parameter before any rc
+# runs, and config.nu, env.mesh and rc.elv export their own, so the value is
+# usually present -- and under shpool it names whichever terminal started the
+# daemon, not this session's pty. log_history then files every command against
+# the wrong terminal and publish_jobs writes over another terminal's job file.
+# shrc now computes its own, as config.fish and config.nu already did.
+#
+# Asserted as "empty" rather than "the real pty" because the harness redirects
+# stdin from /dev/null: what matters is that the inherited value did not
+# survive.
+start_test "TTY is recomputed rather than inherited"
 result="$(TTY=/dev/pts/98 SHRC_LOAD_FUNCTIONS_ONLY=1 "$_real_shell" -c \
     '. "$1"; printf "[%s]" "$TTY"' shrctest "$_srcdir/shrc" </dev/null 2>/dev/null)"
-if test -n "$ZSH_VERSION"; then
-    assert_equal "[]" "$result"
-else
-    assert_equal "[/dev/pts/98]" "$result"
-fi
+assert_equal "[]" "$result"
 
 ###############
 # CDPATH

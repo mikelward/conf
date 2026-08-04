@@ -53,6 +53,12 @@ set UID (id -u)
 # terminal, so the plain capture would put that diagnostic into TTY -- and
 # from there into every log_history line and every child. Fall back to empty,
 # as config.nu's `try { tty } catch { "" }` does.
+#
+# Computed rather than inherited, deliberately: TTY differs per terminal, and
+# zsh, config.nu, env.mesh and rc.elv all export theirs, so an inherited one
+# names whichever terminal a daemon was started from -- under shpool, never
+# this session's pty. Don't add a "keep what's already set" guard here to save
+# the fork; that is the bug shrc, env.mesh and rc.elv had.
 if isatty stdin
     set TTY (tty)
 else

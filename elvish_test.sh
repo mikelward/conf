@@ -204,6 +204,26 @@ EOF
 assert_contains "mode=\$true" "$result"
 
 ###############
+# TEST: standard variables
+
+# Regression: rc.elv used to keep an inherited TTY to save a fork, which is
+# right for a nested shell on the same terminal and wrong for every shell a
+# daemon spawns. Under shpool the daemon hands each session the environment it
+# was started with, so the session got the pty of whichever terminal started
+# the daemon and log-history filed every command against the wrong terminal.
+#
+# Asserted as empty rather than as the real pty because this harness has no
+# terminal at all: what matters is that the inherited value did not survive.
+start_test "elvish TTY is recomputed rather than inherited"
+result="$(HOME="$_fakehome" TTY=/dev/pts/98 TERM=dumb NO_COLOR=1 \
+    XDG_CONFIG_HOME="$_srcdir/config" \
+    run_with_timeout 30 elvish 2>/dev/null <<'EOF'
+echo "["$E:TTY"]"
+EOF
+)"
+assert_equal "[]" "$result"
+
+###############
 # TEST: basic helpers
 
 start_test "elvish env-or falls back only when unset"

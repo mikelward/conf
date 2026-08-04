@@ -236,9 +236,20 @@ setup_shell_compat_interactive() {
 # `tty` prints "not a tty" on *stdout* and exits nonzero when stdin isn't a
 # terminal, so the plain capture would put that diagnostic into TTY -- and
 # from there into every child and every log_history line. Fall back to empty.
-if test -z "${TTY:-}"; then
-    TTY="$(tty)" || TTY=
-fi
+#
+# Recomputed rather than inherited, unlike the three above: TTY is the one that
+# differs per terminal, and plenty of things put it in the environment -- zsh
+# fills and exports it as a special parameter before any rc runs, and
+# config.nu, env.mesh and rc.elv all export their own. A long-lived process
+# started from one shell therefore hands that terminal's pty to everything it
+# later spawns, and shpool's daemon is exactly that: every session it opens
+# inherited the pty of whichever terminal first started the daemon, so
+# log_history filed every command in every session against the wrong terminal
+# and publish_jobs wrote over another terminal's job file. config.fish and
+# config.nu already compute it unconditionally; this brings the rest into line.
+# The cost is one `tty` fork, which is what the common case (nothing inherited)
+# already paid.
+TTY="$(tty)" || TTY=
 
 #######
 # PATH FUNCTIONS
