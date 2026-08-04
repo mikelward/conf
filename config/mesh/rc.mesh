@@ -21,7 +21,7 @@
 # own: env.mesh returns before defining failsafe-wanted only when failsafe is
 # already on, but a shell started with --norc-style surgery, or a checkout
 # with only rc.mesh linked, must still bail cleanly.
-if $env:get(FAILSAFE, "0") == "1" or $env:get(LC_FAILSAFE, "0") == "1" or "$env.HOME/.failsafe":exists {
+if $env:get(FAILSAFE, false):bool or $env:get(LC_FAILSAFE, false):bool or "$env.HOME/.failsafe":exists {
   puts "failsafe mode" >&2
   prompt "$ "
   return

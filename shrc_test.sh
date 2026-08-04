@@ -2651,6 +2651,49 @@ if test "$_real_shell" = bash || test "$_real_shell" = zsh; then
     assert_not_contains "failsafe mode" "$_failsafe_out"
     assert_contains "AFTER" "$_failsafe_out"
 
+    # 1 and true are the two spellings of on, and 0 and false the two of
+    # off. Only these four: anything else is reported rather than read as
+    # off in silence, since someone writing FAILSAFE=yes meant *on*.
+    start_test "FAILSAFE=true triggers failsafe mode"
+    _failsafe_out=$(FAILSAFE=true HOME="$_testdir" \
+        "$_real_shell" -c '. "$1"; echo AFTER' \
+        -- "$_srcdir/shrc" 2>&1)
+    assert_contains "failsafe mode" "$_failsafe_out"
+    assert_contains "AFTER" "$_failsafe_out"
+
+    start_test "LC_FAILSAFE=true triggers failsafe mode"
+    _failsafe_out=$(LC_FAILSAFE=true HOME="$_testdir" \
+        "$_real_shell" -c '. "$1"; echo AFTER' \
+        -- "$_srcdir/shrc" 2>&1)
+    assert_contains "failsafe mode" "$_failsafe_out"
+
+    for _failsafe_off in 0 false; do
+        start_test "FAILSAFE=$_failsafe_off loads shrc normally and says nothing"
+        _failsafe_out=$(FAILSAFE="$_failsafe_off" HOME="$_testdir" \
+            "$_real_shell" -c '. "$1"; echo AFTER' \
+            -- "$_srcdir/shrc" 2>&1)
+        assert_not_contains "failsafe mode" "$_failsafe_out"
+        assert_not_contains "is not 1/0/true/false" "$_failsafe_out"
+        assert_contains "AFTER" "$_failsafe_out"
+    done
+
+    # A spelling outside the four is the case a bare `= 1` comparison
+    # swallowed: failsafe stays off, but the person who typed it hears why.
+    start_test "FAILSAFE=yes is reported and read as off"
+    _failsafe_out=$(FAILSAFE=yes HOME="$_testdir" \
+        "$_real_shell" -c '. "$1"; echo AFTER' \
+        -- "$_srcdir/shrc" 2>&1)
+    assert_contains "FAILSAFE=yes is not 1/0/true/false" "$_failsafe_out"
+    assert_not_contains "failsafe mode" "$_failsafe_out"
+    assert_contains "AFTER" "$_failsafe_out"
+
+    start_test "LC_FAILSAFE=yes is reported under its own name"
+    _failsafe_out=$(LC_FAILSAFE=yes HOME="$_testdir" \
+        "$_real_shell" -c '. "$1"; echo AFTER' \
+        -- "$_srcdir/shrc" 2>&1)
+    assert_contains "LC_FAILSAFE=yes is not 1/0/true/false" "$_failsafe_out"
+    assert_not_contains "failsafe mode" "$_failsafe_out"
+
     # LC_FAILSAFE=1 is the ssh-survivable alias (most sshd configs
     # AcceptEnv LC_*), so `LC_FAILSAFE=1 ssh host` reaches the remote.
     start_test "LC_FAILSAFE=1 also triggers failsafe mode"

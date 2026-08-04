@@ -8,20 +8,51 @@
 #
 # Mikel Ward <mikel@mikelward.com>
 
-# Cross-shell failsafe escape hatch. Mirrors shrc's FAILSAFE=1 check and
+# Cross-shell failsafe escape hatch. Mirrors shrc's FAILSAFE check and
 # the equivalent in config.fish: bail out before defining commands,
 # setting up the prompt, or jumping into shpool, so a misbehaving rc
 # (e.g. an autoshpool loop) can be recovered from with `FAILSAFE=1 nu`.
-# LC_FAILSAFE=1 is accepted as an alias so the flag survives sshd's
+# LC_FAILSAFE is accepted as an alias so the flag survives sshd's
 # env sanitization (most sshd configs AcceptEnv LC_*).
 # ~/.failsafe is a persistent opt-in: `touch ~/.failsafe` to keep every
 # new shell in failsafe mode without having to re-set the env var.
+
+# On for 1/true, off for 0/false or unset. Anything else is a typo rather
+# than a third spelling -- someone writing FAILSAFE=yes meant *on*, and
+# silently reading it as off leaves them wondering why nothing happened -- so
+# it is reported and read as off. Kept in step with mesh's `:bool`, which
+# config/mesh reads the same two flags with. The value is passed in rather
+# than looked up by name so this needs no dynamic `$env` access.
+def failsafe-flag [name: string, value: any] {
+    if $value == null {
+        return false
+    }
+    # nu's environment is typed, so the same four spellings arrive as two
+    # different kinds of value: a string from the process environment
+    # (`FAILSAFE=true nu`), but a native bool or int from inside a live session
+    # (`$env.FAILSAFE = true`, `with-env {FAILSAFE: 1}`). Both are accepted --
+    # rejecting a native `true` with a message reading "true is not
+    # 1/0/true/false" would be absurd, and would drop the escape hatch on the
+    # floor for anyone re-sourcing this config in a session.
+    match $value {
+        true | false => $value,
+        1 => true,
+        0 => false,
+        "1" | "true" => true,
+        "0" | "false" => false,
+        _ => {
+            print --stderr $"nu: ($name)=($value) is not 1/0/true/false, reading as false"
+            false
+        }
+    }
+}
+
 # Outer parens wrap the multi-line condition: nu's parser otherwise
 # treats `if (cond)` followed by a newline as a complete `if` missing a
 # block.
 if (
-    (($env.FAILSAFE? | default "0") == "1")
-    or (($env.LC_FAILSAFE? | default "0") == "1")
+    (failsafe-flag "FAILSAFE" $env.FAILSAFE?)
+    or (failsafe-flag "LC_FAILSAFE" $env.LC_FAILSAFE?)
     or (($env.HOME | path join ".failsafe") | path exists)
 ) {
     print --stderr "failsafe mode"

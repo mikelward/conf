@@ -1248,6 +1248,44 @@ assert_contains "AFTER" "$_failsafe_out"
 # switchshpool lives past the failsafe early-return, so a normal load defines it.
 assert_contains "switchshpool-defined" "$_failsafe_out"
 
+# 1 and true are the two spellings of on, 0 and false the two of off. Only
+# these four: anything else is reported rather than read as off in silence,
+# since someone writing FAILSAFE=yes meant *on*.
+start_test "fish FAILSAFE=true triggers failsafe mode"
+_failsafe_out="$(HOME=$_testdir/fakehome FAILSAFE=true run_with_timeout 15 \
+    fish --no-config -c "source $_config; echo AFTER" 2>&1)"
+assert_contains "failsafe mode" "$_failsafe_out"
+assert_contains "AFTER" "$_failsafe_out"
+
+start_test "fish LC_FAILSAFE=true triggers failsafe mode"
+_failsafe_out="$(HOME=$_testdir/fakehome LC_FAILSAFE=true run_with_timeout 15 \
+    fish --no-config -c "source $_config; echo AFTER" 2>&1)"
+assert_contains "failsafe mode" "$_failsafe_out"
+
+for _failsafe_off in 0 false; do
+    start_test "fish FAILSAFE=$_failsafe_off loads config.fish and says nothing"
+    _failsafe_out="$(HOME=$_testdir/fakehome FAILSAFE="$_failsafe_off" run_with_timeout 15 \
+        fish --no-config -c "source $_config; echo AFTER" 2>&1)"
+    assert_not_contains "failsafe mode" "$_failsafe_out"
+    assert_not_contains "is not 1/0/true/false" "$_failsafe_out"
+    assert_contains "AFTER" "$_failsafe_out"
+done
+
+start_test "fish FAILSAFE=yes is reported and read as off"
+_failsafe_out="$(HOME=$_testdir/fakehome FAILSAFE=yes run_with_timeout 15 \
+    fish --no-config -c "source $_config; echo AFTER" 2>&1)"
+assert_contains "FAILSAFE=yes is not 1/0/true/false" "$_failsafe_out"
+assert_not_contains "failsafe mode" "$_failsafe_out"
+assert_contains "AFTER" "$_failsafe_out"
+
+# The helper is private to the failsafe check and must not survive into the
+# session's function namespace.
+start_test "fish failsafe helper does not outlive the check"
+_failsafe_out="$(HOME=$_testdir/fakehome run_with_timeout 15 \
+    fish --no-config -c "source $_config; functions -q __failsafe_flag; and echo LEAKED; or echo GONE" 2>&1)"
+assert_contains "GONE" "$_failsafe_out"
+assert_not_contains "LEAKED" "$_failsafe_out"
+
 # LC_FAILSAFE=1 is the ssh-survivable alias (most sshd configs
 # AcceptEnv LC_*), so `LC_FAILSAFE=1 ssh host` reaches the remote.
 start_test "fish LC_FAILSAFE=1 also triggers failsafe mode"

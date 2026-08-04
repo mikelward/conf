@@ -3223,6 +3223,93 @@ except OSError: pass
         assert ($r.stdout | str contains ".history") $"HISTORY_FILE should point under HOME/.history; got stdout=($r.stdout)"
     })
 
+    # 1 and true are the two spellings of on, 0 and false the two of off.
+    # Only these four: anything else is reported rather than read as off in
+    # silence, since someone writing FAILSAFE=yes meant *on*.
+    (run-test "nu FAILSAFE=true triggers failsafe mode" {
+        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let r = (with-env {FAILSAFE: "true", HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
+            ^nu --no-config-file -c $cmd
+        } | complete)
+        assert ($r.stderr | str contains "failsafe mode") $"expected failsafe mode on stderr, got: ($r.stderr)"
+        assert ($r.stdout | str contains "HISTORY_FILE=SENTINEL")
+    })
+
+    (run-test "nu LC_FAILSAFE=true triggers failsafe mode" {
+        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let r = (with-env {LC_FAILSAFE: "true", HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
+            ^nu --no-config-file -c $cmd
+        } | complete)
+        assert ($r.stderr | str contains "failsafe mode") $"expected failsafe mode on stderr, got: ($r.stderr)"
+        assert ($r.stdout | str contains "HISTORY_FILE=SENTINEL")
+    })
+
+    # Written out rather than looped: a `for` variable is not in scope inside
+    # the closure `run-test` takes, so the two off spellings each get a block.
+    (run-test "nu FAILSAFE=0 loads config.nu and says nothing" {
+        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let r = (with-env {FAILSAFE: "0", HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
+            ^nu --no-config-file -c $cmd
+        } | complete)
+        assert (not ($r.stderr | str contains "failsafe mode")) $"failsafe should stay off; got: ($r.stderr)"
+        assert (not ($r.stderr | str contains "is not 1/0/true/false")) $"0 is a known spelling and must not be reported; got: ($r.stderr)"
+        assert (not ($r.stdout | str contains "HISTORY_FILE=SENTINEL")) $"startup should run; got stdout=($r.stdout)"
+    })
+
+    (run-test "nu FAILSAFE=false loads config.nu and says nothing" {
+        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let r = (with-env {FAILSAFE: "false", HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
+            ^nu --no-config-file -c $cmd
+        } | complete)
+        assert (not ($r.stderr | str contains "failsafe mode")) $"failsafe should stay off; got: ($r.stderr)"
+        assert (not ($r.stderr | str contains "is not 1/0/true/false")) $"false is a known spelling and must not be reported; got: ($r.stderr)"
+        assert (not ($r.stdout | str contains "HISTORY_FILE=SENTINEL")) $"startup should run; got stdout=($r.stdout)"
+    })
+
+    # nu's environment is typed: inside a live session the flag can hold a
+    # native bool or int rather than the string a subprocess would inherit.
+    # Both spellings of on have to work, or re-sourcing this config in a
+    # session drops the escape hatch -- and reports `true` as not being `true`.
+    (run-test "nu FAILSAFE as a native bool triggers failsafe mode" {
+        let cmd = "$env.FAILSAFE = true; source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let r = (with-env {HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
+            ^nu --no-config-file -c $cmd
+        } | complete)
+        assert ($r.stderr | str contains "failsafe mode") $"expected failsafe mode on stderr, got: ($r.stderr)"
+        assert (not ($r.stderr | str contains "is not 1/0/true/false")) $"a native bool is a known spelling; got: ($r.stderr)"
+        assert ($r.stdout | str contains "HISTORY_FILE=SENTINEL")
+    })
+
+    (run-test "nu FAILSAFE as a native int triggers failsafe mode" {
+        let cmd = "$env.FAILSAFE = 1; source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let r = (with-env {HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
+            ^nu --no-config-file -c $cmd
+        } | complete)
+        assert ($r.stderr | str contains "failsafe mode") $"expected failsafe mode on stderr, got: ($r.stderr)"
+        assert (not ($r.stderr | str contains "is not 1/0/true/false")) $"a native int is a known spelling; got: ($r.stderr)"
+        assert ($r.stdout | str contains "HISTORY_FILE=SENTINEL")
+    })
+
+    (run-test "nu FAILSAFE as a native false loads config.nu and says nothing" {
+        let cmd = "$env.FAILSAFE = false; source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let r = (with-env {HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
+            ^nu --no-config-file -c $cmd
+        } | complete)
+        assert (not ($r.stderr | str contains "failsafe mode")) $"failsafe should stay off; got: ($r.stderr)"
+        assert (not ($r.stderr | str contains "is not 1/0/true/false")) $"a native bool is a known spelling; got: ($r.stderr)"
+        assert (not ($r.stdout | str contains "HISTORY_FILE=SENTINEL")) $"startup should run; got stdout=($r.stdout)"
+    })
+
+    (run-test "nu FAILSAFE=yes is reported and read as off" {
+        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let r = (with-env {FAILSAFE: "yes", HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
+            ^nu --no-config-file -c $cmd
+        } | complete)
+        assert ($r.stderr | str contains "FAILSAFE=yes is not 1/0/true/false") $"expected the unknown spelling to be reported, got: ($r.stderr)"
+        assert (not ($r.stderr | str contains "failsafe mode")) $"failsafe should stay off for an unknown spelling; got: ($r.stderr)"
+        assert (not ($r.stdout | str contains "HISTORY_FILE=SENTINEL")) $"startup should still run; got stdout=($r.stdout)"
+    })
+
     # LC_FAILSAFE=1 is the ssh-survivable alias (most sshd configs
     # AcceptEnv LC_*), so `LC_FAILSAFE=1 ssh host` reaches the remote.
     (run-test "nu LC_FAILSAFE=1 also triggers failsafe mode" {

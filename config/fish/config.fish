@@ -2,21 +2,48 @@
 #
 # Mikel Ward <mikel@mikelward.com>
 
-# Cross-shell failsafe escape hatch. Mirrors shrc's FAILSAFE=1 check
+# Cross-shell failsafe escape hatch. Mirrors shrc's FAILSAFE check
 # and the equivalent in config.nu: bail out before defining functions,
 # setting up the prompt, or jumping into shpool, so a misbehaving rc
 # (e.g. an autoshpool loop) can be recovered from with `FAILSAFE=1 fish`.
-# LC_FAILSAFE=1 is accepted as an alias so the flag survives sshd's
+# LC_FAILSAFE is accepted as an alias so the flag survives sshd's
 # env sanitization (most sshd configs AcceptEnv LC_*).
 # ~/.failsafe is a persistent opt-in: `touch ~/.failsafe` to keep every
 # new shell in failsafe mode without having to re-set the env var.
-if test "$FAILSAFE" = 1; or test "$LC_FAILSAFE" = 1; or test -e $HOME/.failsafe
+
+# On for 1/true, off for 0/false or unset. Anything else is a typo rather
+# than a third spelling -- someone writing FAILSAFE=yes meant *on*, and
+# silently reading it as off leaves them wondering why nothing happened -- so
+# it is reported and read as off. Kept in step with mesh's `:bool`, which
+# config/mesh reads the same two flags with.
+function __failsafe_flag --argument-names name
+    set -q $name; or return 1
+    # Dereferenced into a local first: `$$name` is fish's indirection, and it
+    # is one thing to rely on in a `switch` operand, another inside a quoted
+    # message.
+    set -l value $$name
+    switch "$value"
+        case 1 true
+            return 0
+        case 0 false
+            return 1
+        case '*'
+            echo "fish: $name=$value is not 1/0/true/false, reading as false" >&2
+            return 1
+    end
+end
+
+if __failsafe_flag FAILSAFE; or __failsafe_flag LC_FAILSAFE; or test -e $HOME/.failsafe
     echo failsafe mode >&2
     function fish_prompt
         echo (basename $PWD)'$ '
     end
+    functions --erase __failsafe_flag
     return
 end
+# The helper answered the only question it exists for, so it does not stay in
+# the session's function namespace.
+functions --erase __failsafe_flag
 
 # standardize on bash-like variables that everyone assumes are preset
 set USERNAME (id -un)

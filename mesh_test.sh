@@ -105,6 +105,43 @@ result="$(HOME="$_fakehome" LC_FAILSAFE=1 run_with_timeout 15 mesh -c "
 " 2>&1 </dev/null)"
 assert_contains "failsafe mode" "$result"
 
+# `:bool` reads 1/true as on and 0/false as off. Anything else is reported on
+# stderr rather than read as off in silence, so `FAILSAFE=yes` -- which the
+# old `== "1"` comparison swallowed -- now tells the person who typed it.
+start_test "mesh FAILSAFE=true bails out of rc.mesh"
+result="$(HOME="$_fakehome" FAILSAFE=true run_with_timeout 15 mesh -c "
+    source $_rc_mesh
+    puts done
+" 2>&1 </dev/null)"
+assert_contains "failsafe mode" "$result"
+
+start_test "mesh LC_FAILSAFE=true bails out of rc.mesh"
+result="$(HOME="$_fakehome" LC_FAILSAFE=true run_with_timeout 15 mesh -c "
+    source $_rc_mesh
+    puts done
+" 2>&1 </dev/null)"
+assert_contains "failsafe mode" "$result"
+
+for _failsafe_off in 0 false; do
+    start_test "mesh FAILSAFE=$_failsafe_off loads rc.mesh and says nothing"
+    result="$(HOME="$_fakehome" FAILSAFE="$_failsafe_off" run_with_timeout 15 mesh -c "
+        source $_rc_mesh
+        puts done
+    " 2>&1 </dev/null)"
+    assert_not_contains "failsafe mode" "$result"
+    assert_not_contains "is not 1/0/true/false" "$result"
+    assert_contains "done" "$result"
+done
+
+start_test "mesh FAILSAFE=yes is reported and read as off"
+result="$(HOME="$_fakehome" FAILSAFE=yes run_with_timeout 15 mesh -c "
+    source $_rc_mesh
+    puts done
+" 2>&1 </dev/null)"
+assert_contains "is not 1/0/true/false" "$result"
+assert_not_contains "failsafe mode" "$result"
+assert_contains "done" "$result"
+
 start_test "mesh ~/.failsafe bails out of rc.mesh"
 touch "$_fakehome/.failsafe"
 result="$(HOME="$_fakehome" run_with_timeout 15 mesh -c "
