@@ -25,6 +25,11 @@ jobs:
           # Read-only test job; don't leave a write-capable token in
           # the local git config for subsequent steps.
           persist-credentials: false
+      # Without this the job covers bash and dash only: every other target
+      # prints "SKIP: ... not installed" and still exits 0, so the check goes
+      # green having run a fraction of the suite.
+      - name: install the shells the suite tests
+        run: sudo ./install-ci-shells.sh
       - name: make test
         # Runners check out fresh, so there is no cache to invalidate;
         # `make test` is equivalent to `make test-full` in this context.
