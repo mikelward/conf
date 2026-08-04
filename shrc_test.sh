@@ -1206,13 +1206,30 @@ SHLVL="$_saved_shlvl"
 # the value, and a failed handoff leaves nothing behind for later nested
 # shells to inherit. Stubs live in a subshell so the real session functions
 # are untouched for later tests.
+#
+# The launcher has to be a real external command here, not a stub function,
+# because that is what the guarantee rests on. POSIX keeps a prefix
+# assignment in place when the command turns out to be a shell *function* --
+# and shrc runs `emulate sh` under zsh, so zsh does exactly that, while bash
+# outside posix mode discards it either way. Stubbing `autoshpool` as a
+# function therefore tested the shell's own semantics rather than shrc's, and
+# disagreed between the two shells. The real `autoshpool` is a command on
+# PATH, which is precisely why `VAR=v autoshpool` cannot outlive the call.
+mkdir -p "$_testdir/bin"
+cat >"$_testdir/bin/autoshpool" <<'EOF'
+#!/bin/sh
+printf 'launcher saw [%s]\n' "$SESSION_SHELL"
+exit 1
+EOF
+chmod +x "$_testdir/bin/autoshpool"
+
 start_test "handoff passes SESSION_SHELL to the launcher without keeping it"
 _out="$(
     SHLVL=2
     unset SESSION_SHELL
+    PATH="$_testdir/bin:$PATH"
     session_backend() { puts shpool; }
     want_shpool() { true; }
-    autoshpool() { puts "launcher saw [$SESSION_SHELL]"; false; }
     maybe_start_session_and_exit
     puts "after [$SESSION_SHELL]"
 )"
@@ -2415,10 +2432,22 @@ result="$(TTY= SHRC_LOAD_FUNCTIONS_ONLY=1 "$_real_shell" -c \
     '. "$1"; printf "[%s]" "$TTY"' shrctest "$_srcdir/shrc" </dev/null 2>/dev/null)"
 assert_equal "[]" "$result"
 
+# TTY is a *special parameter* in zsh: the shell fills it with its own
+# terminal at startup, before any rc runs, and exports the result. An
+# inherited TTY is therefore already gone by the time shrc is sourced -- and
+# gone for good, since zsh overwrites the environment entry too (`env` shows
+# an empty `TTY=`), so shrc has nothing left to honor. Under zsh the shell's
+# own answer is the authoritative one anyway. The inherit path is real
+# everywhere TTY is an ordinary variable, so it is still asserted there; the
+# "empty when stdin is not a terminal" case above covers zsh.
 start_test "TTY keeps an inherited value"
 result="$(TTY=/dev/pts/98 SHRC_LOAD_FUNCTIONS_ONLY=1 "$_real_shell" -c \
     '. "$1"; printf "[%s]" "$TTY"' shrctest "$_srcdir/shrc" </dev/null 2>/dev/null)"
-assert_equal "[/dev/pts/98]" "$result"
+if test -n "$ZSH_VERSION"; then
+    assert_equal "[]" "$result"
+else
+    assert_equal "[/dev/pts/98]" "$result"
+fi
 
 ###############
 # CDPATH
