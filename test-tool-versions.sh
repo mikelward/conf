@@ -29,3 +29,15 @@ NU_SHA256=9008d309aaa35e29ed5d5985306a83e2bf5093e31677d4cd969914552d12b8fb
 # distro copy is not what CI installs.
 FISH_VERSION=4.1.2
 FISH_SHA256=3d68eb2617fb1f07006723893f078784e37e7e2923d4bc61ab4654c2966fd369
+
+# Elvish is the odd one out: installed from source rather than from a published
+# binary, and so with no SHA256 beside it.
+#
+# Upstream publishes its releases as tarballs on dl.elv.sh rather than as
+# GitHub assets, and the only checksum on offer sits next to the tarball on the
+# same host -- which is no check at all against the case the pins here exist
+# for, a replaced asset or a compromised publisher. `go install` at a tagged
+# version is verified against the Go checksum database, an independent
+# transparency log, which is the same guarantee reached from a better
+# direction. The runner already has Go: `make` builds the vcs submodule with it.
+ELVISH_VERSION=0.21.0

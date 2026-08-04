@@ -112,6 +112,7 @@ test-all: \
 	test-fish \
 	test-nu \
 	test-mesh \
+	test-elvish \
 	test-lint \
 	test-env \
 	test-gitconfig \
@@ -226,6 +227,22 @@ $(CACHE)/test-mesh.stamp: config/mesh/env.mesh config/mesh/rc.mesh \
 		echo "SKIP: test-mesh (mesh not installed)"; \
 	fi
 test-mesh: $(CACHE)/test-mesh.stamp
+
+# elvish_test.sh is a bash driver that tests config/elvish/rc.elv and
+# config/elvish/lib/interactive.elv; elvish itself isn't a hard requirement.
+# Stamp only touched when elvish is present, so installing elvish later re-runs
+# the suite. The parse check is the first test in the file (`elvish
+# -compileonly`), so there's no separate syntax step here; lib/interactive.elv
+# names $edit:, which only exists when elvish has a terminal, so the only way to
+# compile it is the pty test at the end of the driver.
+$(CACHE)/test-elvish.stamp: config/elvish/rc.elv config/elvish/lib/interactive.elv \
+                            shrc_test_lib.sh elvish_test.sh | $(CACHE)
+	@if command -v elvish >/dev/null 2>&1; then \
+		bash elvish_test.sh && touch $@; \
+	else \
+		echo "SKIP: test-elvish (elvish not installed)"; \
+	fi
+test-elvish: $(CACHE)/test-elvish.stamp
 
 # Static lint/parse checks for non-fish files; bundled into one target
 # since each check is sub-second. shellcheck, dash, and bash are all
@@ -364,6 +381,6 @@ test-sway: $(CACHE)/test-sway.stamp
 	vcs-build vcs-sync vcs-fetch \
 	test test-verbose test-full test-all test-claude-settings test-session-start-hook \
 	test-dash test-bash test-zsh test-prompt test-vcs \
-	test-fish test-nu test-mesh test-lint \
+	test-fish test-nu test-mesh test-elvish test-lint \
 	test-env test-gitconfig test-makefile test-amethyst test-karabiner \
 	test-hypr test-sway
