@@ -11,3 +11,15 @@
 # belongs.
 search_mode_shell_up_key_binding = "prefix"
 filter_mode_shell_up_key_binding = "host"
+
+# Draw the search in a few lines above the prompt instead of switching to
+# the alternate screen. The default (inline_height = 0) is full-screen,
+# which clears the terminal on a keystroke pressed dozens of times an
+# hour: the scrollback the search was meant to help you avoid re-typing
+# is exactly what disappears while you search it. compact drops the
+# framing that only earns its space at full height, and the preview and
+# help lines go with it -- at nine rows they're most of the pane.
+inline_height = 9
+style = "compact"
+show_preview = false
+show_help = false
