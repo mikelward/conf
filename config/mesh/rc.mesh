@@ -1423,14 +1423,26 @@ func publish-jobs-file() {
 # published, not its arguments -- shrc:1825 and config.fish:1691 reduce their
 # job lines with the same awk. Called from preprompt, so it refreshes on every
 # redraw.
+# Set once a failed write has turned publishing off, so the warning below is
+# said one time rather than once per prompt.
+#
+# A file-scope variable rather than an exported one, which is what this used to
+# be: the failure is *this* shell's -- its $TTY, its $XDG_RUNTIME_DIR -- and an
+# export handed the disable to every shell this one started, including ones
+# whose own path was perfectly writable. Through a daemon's inherited
+# environment it reached further still: one bad shell could switch job
+# publishing off for every shpool session opened afterwards. Same class of leak
+# as an inherited $TTY, and the fix is the same -- keep per-shell state in the
+# shell.
+shell-jobs-disabled = false
+
 func publish-jobs() {
   file = publish-jobs-file()
   return if $file == ""
   # One failed write turns publishing off for the rest of this shell. This runs
   # on every prompt, so a warning per prompt would be worse than the problem it
-  # reports; said once, then stopped. Kept in the environment because a
-  # function-local flag wouldn't survive to the next prompt.
-  return if $env:get(SHELL_JOBS_DISABLED, "") != ""
+  # reports; said once, then stopped.
+  return if $shell-jobs-disabled
   # A stale-but-set $XDG_RUNTIME_DIR -- a long-lived multiplexer session whose
   # /run/user/$UID was cleaned up -- disables publishing for this prompt rather
   # than breaking the render, as config.nu:867's `try` does.
@@ -1455,7 +1467,7 @@ func publish-jobs() {
     # A partial write leaves a truncated line, which a status bar would read as
     # a real job list -- worse than no file. Drop it and stop trying.
     rm -f $file
-    export SHELL_JOBS_DISABLED = 1
+    global shell-jobs-disabled = true
     warn "shell jobs: cannot write the status file; publishing is off for this shell"
   }
 }

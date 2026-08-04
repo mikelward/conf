@@ -2367,11 +2367,25 @@ result="$(_mesh_run_config "
     \$env.XDG_RUNTIME_DIR = \"$_jobs_runtime\"
 " 'publish-jobs
 publish-jobs
-off = $env:get(SHELL_JOBS_DISABLED, "no")
-puts "disabled=$off"' 2>&1)"
+puts "disabled=$shell-jobs-disabled"' 2>&1)"
 # Said once, not twice, for two calls.
 assert_equal "1" "$(printf '%s\n' "$result" | grep -c 'publishing is off')"
-assert_contains "disabled=1" "$result"
+assert_contains "disabled=true" "$result"
+
+# The flag is this shell's, not the environment's. It used to be an exported
+# SHELL_JOBS_DISABLED, which handed the disable to every shell this one started
+# -- and, through a daemon's inherited environment, to shpool sessions on
+# terminals that could write perfectly well.
+start_test "mesh a failed write does not disable publishing for child shells"
+rm -rf "$_jobs_runtime"
+mkdir -p "$_jobs_runtime/shell-jobs/dev/pts/9"
+result="$(_mesh_run_config "
+    \$env.TTY = \"/dev/pts/9\"
+    \$env.XDG_RUNTIME_DIR = \"$_jobs_runtime\"
+" 'publish-jobs
+leaked = $env:get(SHELL_JOBS_DISABLED, "no")
+puts "leaked=$leaked"' 2>&1)"
+assert_contains "leaked=no" "$result"
 
 # No /tmp fallback on purpose: a predictable per-uid path there could be
 # pre-created as a symlink for the prompt to truncate on every render.
