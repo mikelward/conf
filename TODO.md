@@ -30,3 +30,50 @@ Two things to check when it lands, because both are exercised by the current
 config and neither is old: `:bool` (mikelward/mesh#394) is what
 `config/mesh/env.mesh` reads `FAILSAFE` with, and the suite needs `mesh -c` to
 stay able to source a config non-interactively.
+
+## Up without atuin's search UI
+
+`config/atuin/config.toml` draws the history search in a nine-row inline
+pane rather than full-screen. Up still opens a search UI, just a small
+one. The alternative is a per-shell widget that queries atuin
+non-interactively and replaces the line in place, so Up behaves exactly
+like readline's prefix search while still reading atuin's database:
+
+```
+atuin search --cmd-only --search-mode prefix --filter-mode host \
+    --limit 1 --offset $n -- "$prefix"
+```
+
+Deferred until the inline pane has been lived with — it may be enough.
+
+Cost if picked up: roughly 120 lines across the shells, plus a fork and a
+SQLite query per keypress (single-digit ms locally, no network) where
+readline's own search is in-memory and free.
+
+Per shell, in increasing order of pain:
+
+* **fish** — `commandline -r` and a `bind` on the up key. Clean.
+* **zsh** — ZLE supplies `$BUFFER`, `$CURSOR` and `$LASTWIDGET`, the last
+  being exactly the "is this a repeat press" state the walk back through
+  matches needs.
+* **bash** — `bind -x` with `READLINE_LINE` / `READLINE_POINT`, but
+  readline has no `$LASTWIDGET`, so repeat-press state has to be
+  reconstructed from the buffer. `bind -x` widgets already need care
+  around shrc's DEBUG trap.
+* **nushell** — may not be possible. reedline keybindings dispatch to a
+  fixed set of edit events or `executehostcommand`; feeding a command's
+  output back into the line buffer isn't exposed the way ZLE exposes it.
+
+Unverified, because atuin wasn't installed where this was written:
+whether `atuin search` takes `--offset` (fallback: `--limit $n | tail -1`,
+which re-queries n rows per press), and whether offset 0 is the most
+recent match.
+
+Two design decisions to settle first, both of which outlast the code:
+
+* A widget that takes Up outright loses moving up a line inside a
+  multi-line buffer. zsh's `up-line-or-beginning-search` handles that and
+  the widget would need the same guard.
+* If nushell can't do this, AGENTS.md's parity rule needs an explicit
+  carve-out for line-editor capability — otherwise nushell keeps atuin's
+  pane while the other shells don't, and the rule says that isn't allowed.
