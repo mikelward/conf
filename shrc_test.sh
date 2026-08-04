@@ -3224,4 +3224,56 @@ unset -f fzf zoxide carapace atuin
 unset ATUIN_SESSION ATUIN_HISTORY_ID
 shell="$_saved_shell"
 
+###############
+# TERMINAL WIDTH
+# COLUMNS is unset or 0 whenever the prompt renders without a terminal -- a
+# redirected prompt, a test harness, a CI runner. 0 is not a width, and every
+# caller of `bar` silently rendered nothing when it was passed through, so the
+# separator vanished exactly where nobody was looking. config/mesh/rc.mesh got
+# this right first; this is the same fallback.
+# terminal_width assigns $_terminal_width rather than printing: the prompt
+# calls it on every render, and a command substitution would fork a subshell
+# for what is pure parameter expansion.
+#
+# Set and restore COLUMNS in place rather than running each case in a
+# subshell: assert_* counters live in the shell that runs them, so a
+# subshelled assertion cannot fail the suite -- it just vanishes.
+_saved_columns=${COLUMNS-}
+_had_columns=${COLUMNS+yes}
+
+start_test "terminal_width falls back to 80 with no COLUMNS"
+unset COLUMNS
+terminal_width
+assert_equal "80" "$_terminal_width"
+
+start_test "terminal_width falls back to 80 when COLUMNS is 0"
+COLUMNS=0
+terminal_width
+assert_equal "80" "$_terminal_width"
+
+start_test "terminal_width uses COLUMNS when it is a real width"
+COLUMNS=132
+terminal_width
+assert_equal "132" "$_terminal_width"
+
+# A non-numeric COLUMNS must not make `test -gt` noisy or take the real-width
+# branch -- it is no more a width than 0 is.
+start_test "terminal_width falls back to 80 for a non-numeric COLUMNS"
+COLUMNS=wide
+terminal_width 2>/dev/null
+assert_equal "80" "$_terminal_width"
+
+start_test "terminal_width does not print its answer"
+COLUMNS=132
+result="$(terminal_width)"
+assert_equal "" "$result"
+
+start_test "the separator is non-empty with no terminal"
+unset COLUMNS
+terminal_width
+result="$(bar "$_terminal_width")"
+assert_true test -n "$result"
+
+if test -n "$_had_columns"; then COLUMNS=$_saved_columns; else unset COLUMNS; fi
+
 test_summary "$_real_shell shrc_test"

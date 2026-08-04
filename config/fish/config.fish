@@ -1485,7 +1485,7 @@ if is_interactive
         # cache is scoped to this render and direct callers stay fresh.
         set -g _session_name (session_name | string collect)
         printf '\n'
-        bar $COLUMNS
+        bar (terminal_width)
         printf '\r%s \n' (prompt_line | string collect)
         vcs unmerged 2>/dev/null
         job_info
@@ -1696,6 +1696,18 @@ if is_interactive
     # print a leading space before $argv if $argv is non-empty
     function maybe_space
         test -n "$argv"; and printf ' %s' "$argv"
+    end
+
+    # The terminal's width, or 80 when there isn't a terminal. $COLUMNS is
+    # unset (or 0) whenever the prompt renders without one -- a redirected
+    # prompt, a test harness, a CI runner -- and 0 is not a width: every
+    # caller silently renders nothing. Matches rc.mesh's `terminal-width`.
+    function terminal_width
+        if set -q COLUMNS; and test "$COLUMNS" -gt 0 2>/dev/null
+            echo $COLUMNS
+        else
+            echo 80
+        end
     end
 
     # print $argv[1] "―" characters (used as a separator in the prompt)

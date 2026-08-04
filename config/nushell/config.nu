@@ -1134,6 +1134,17 @@ def green  [...args: string] { $"(ansi green)($args | str join ' ')(ansi reset)"
 def red    [...args: string] { $"(ansi red)($args | str join ' ')(ansi reset)" }
 def yellow [...args: string] { $"(ansi yellow)($args | str join ' ')(ansi reset)" }
 
+# The terminal's width, or 80 when there isn't a terminal.
+#
+# `term size` reports 0 columns when stdout is not a terminal -- a redirected
+# prompt, a test harness, a CI runner -- and 0 is not a width. The `try` around
+# it catches an *error*; a successful 0 sails through, and every caller then
+# renders nothing. Matches config/mesh/rc.mesh's `terminal-width`.
+def terminal-width [] {
+    let cols = (try { term size | get columns } catch { 80 })
+    if $cols <= 0 { 80 } else { $cols }
+}
+
 # print a bar of length $n
 def bar [n: int] {
     if $n <= 0 { "" } else {
@@ -1339,8 +1350,7 @@ def --env render-prompt [] {
     # each forking `tmux display-message`. Cleared at the end so the cache is
     # scoped to this render and direct callers stay fresh.
     $env._SESSION_NAME = (session-name)
-    let cols = (try { term size | get columns } catch { 80 })
-    let sep = (bar $cols)
+    let sep = (bar (terminal-width))
     let line = (prompt-line)
     let nl = (char newline)
     let cr = (char cr)

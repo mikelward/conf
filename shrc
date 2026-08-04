@@ -1561,7 +1561,8 @@ preprompt() {
     _session_name="$(session_name)"
     set_color 'normal'
     printf '\n'
-    bar $((COLUMNS))
+    terminal_width
+    bar "$_terminal_width"
     printf '\r%s \n' "$(prompt_line)"
     unmerged 2>/dev/null
     job_info
@@ -1667,6 +1668,25 @@ prompt_line() {
 
 maybe_space() {
     test -n "$*" && printf ' %s' "$*"
+}
+
+# The terminal's width, or 80 when there isn't a terminal, left in
+# $_terminal_width. COLUMNS is unset (or 0) whenever the prompt renders without
+# one -- a redirected prompt, a test harness, a CI runner -- and 0 is not a
+# width: every caller silently renders nothing. Matches rc.mesh's
+# `terminal-width`.
+#
+# It assigns rather than prints because the prompt calls it on every render,
+# and `$(terminal_width)` would fork a command-substitution subshell for what
+# is otherwise pure parameter expansion -- ~9.6ms per prompt, measured by
+# Codex on the PR. A non-numeric COLUMNS is no more a width than 0, and the
+# case guard keeps `test -gt` from complaining about it.
+terminal_width() {
+    _terminal_width=${COLUMNS:-0}
+    case $_terminal_width in
+        ''|*[!0-9]*) _terminal_width=0 ;;
+    esac
+    test "$_terminal_width" -gt 0 || _terminal_width=80
 }
 
 bar() {
