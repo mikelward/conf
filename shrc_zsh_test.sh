@@ -42,4 +42,47 @@ result=$(zsh --no-rcs -c '
 ' </dev/null 2>/dev/null | grep -E '^(ON|OFF)$' | tail -1)
 assert_equal "OFF" "$result"
 
+# shrc used to run `emulate sh` under zsh, which turned SH_WORD_SPLIT on
+# and made unquoted parameters split the way they do in sh. It no longer
+# does, so zsh keeps its own semantics: an unquoted parameter stays one
+# word.
+start_test "shrc leaves SH_WORD_SPLIT off (zsh semantics, not sh)"
+result=$(zsh --no-rcs -c '
+    SHRC_LOAD_FUNCTIONS_ONLY=1 source '"$_srcdir"'/shrc >/dev/null 2>&1
+    if [[ -o SH_WORD_SPLIT ]]; then print -r "ON"; else print -r "OFF"; fi
+' </dev/null 2>/dev/null | grep -E '^(ON|OFF)$' | tail -1)
+assert_equal "OFF" "$result"
+
+# `emulate sh` also turned GLOB_SUBST on, which made the *result* of an
+# unquoted expansion get treated as a glob pattern. Dropping the emulate
+# leaves it off, so a parameter holding `*` stays literal.
+start_test "shrc leaves GLOB_SUBST off"
+result=$(zsh --no-rcs -c '
+    SHRC_LOAD_FUNCTIONS_ONLY=1 source '"$_srcdir"'/shrc >/dev/null 2>&1
+    if [[ -o GLOB_SUBST ]]; then print -r "ON"; else print -r "OFF"; fi
+' </dev/null 2>/dev/null | grep -E '^(ON|OFF)$' | tail -1)
+assert_equal "OFF" "$result"
+
+# NOMATCH stays off deliberately: under zsh's default an unmatched glob is
+# a fatal error, which would abort the rc partway through sourcing rather
+# than leaving the pattern as a literal word the way sh does.
+start_test "shrc leaves NO_NOMATCH set so an unmatched glob doesn't abort"
+result=$(zsh --no-rcs -c '
+    SHRC_LOAD_FUNCTIONS_ONLY=1 source '"$_srcdir"'/shrc >/dev/null 2>&1
+    print -r -- /nonexistent-'"$$"'/*.nothing
+    print -r "SURVIVED"
+' </dev/null 2>/dev/null | grep -E '^SURVIVED$' | tail -1)
+assert_equal "SURVIVED" "$result"
+
+# The functions that still need sh word splitting opt in with
+# `emulate -L sh`, whose LOCAL_OPTIONS scope is the function. Calling one
+# must not leave splitting on for the caller.
+start_test "emulate -L sh in inpath does not leak splitting to the caller"
+result=$(zsh --no-rcs -c '
+    SHRC_LOAD_FUNCTIONS_ONLY=1 source '"$_srcdir"'/shrc >/dev/null 2>&1
+    inpath /usr/bin >/dev/null 2>&1
+    if [[ -o SH_WORD_SPLIT ]]; then print -r "LEAKED"; else print -r "CONTAINED"; fi
+' </dev/null 2>/dev/null | grep -E '^(LEAKED|CONTAINED)$' | tail -1)
+assert_equal "CONTAINED" "$result"
+
 test_summary "shrc_zsh_test"
