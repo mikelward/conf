@@ -35,10 +35,13 @@ fi
 # test PATH that keeps /usr/bin is not hermetic: CI installs shellcheck there,
 # `command -v shellcheck` then succeeds, and every "when it is missing" case
 # silently asserts the already-installed branch instead.
-# Mirrors the version pins in the hook: the stubbed tar has to lay the
-# binaries down where the installers expect to find them.
-SC_DIR=0.10.0
-NU_DIR=0.113.1
+# The stubbed tar has to lay the binaries down where the installers expect to
+# find them, which means knowing the pinned versions. Read from the same file
+# the hook sources rather than copied: hard-coded here, a bump in
+# test-tool-versions.sh sent the hook looking in one directory while the stub
+# wrote to another, and the failure named the download rather than the pin.
+SC_DIR=$(sed -n 's/^SHELLCHECK_VERSION=//p' "$_srcdir/test-tool-versions.sh")
+NU_DIR=$(sed -n 's/^NU_VERSION=//p' "$_srcdir/test-tool-versions.sh")
 
 _stub_dir() {
     _curl_status=$1

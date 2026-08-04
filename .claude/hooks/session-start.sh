@@ -15,21 +15,18 @@
 # disagrees with CI has its explanation in the session log.
 set -euo pipefail
 
-# Bump a version and its checksum together. The pin fixes *which* release is
-# wanted; the checksum is what makes the downloaded bytes actually that
-# release, so a replaced asset or a compromised publisher account cannot hand
-# this hook a binary it then installs and every later test executes.
-SHELLCHECK_VERSION=0.10.0
-SHELLCHECK_SHA256=6c881ab0698e4e6ea235245f22832860544f17ba386442fe7e9d629f8cbedf87
-# Matches the version on the maintainer's machine. 0.101.0 could not parse
-# config/nushell/config.nu at all, so the whole nu-native suite died on a
-# parser error rather than running.
-NU_VERSION=0.113.1
-NU_SHA256=9008d309aaa35e29ed5d5985306a83e2bf5093e31677d4cd969914552d12b8fb
-
 if test "${CLAUDE_CODE_REMOTE:-}" != "true"; then
     exit 0
 fi
+
+# The pins live in one file shared with install-ci-shells.sh, so a bump lands
+# in both environments at once. Two copies of a version is how CI and a session
+# end up testing different builds of the same shell.
+# `${0%/*}` rather than `dirname`: the hook's own tests run it under a PATH
+# that deliberately excludes /usr/bin, symlinking in one coreutil at a time, so
+# reaching for a binary here would make sourcing the pins the thing that fails.
+# shellcheck source=../../test-tool-versions.sh
+. "${0%/*}/../../test-tool-versions.sh"
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
@@ -38,8 +35,15 @@ trap 'rm -rf "$tmp"' EXIT
 # startup with nothing on screen to say why. Bound both: a GitHub outage should
 # fail in a couple of minutes with a message, not hang until something upstream
 # gives up. --max-time covers the transfer, which for nu is ~76 MB.
+#
+# Retried for the same reason install-ci-shells.sh is: a reset mid-transfer on
+# a download that size is the network's doing, not a signal, and losing nu to
+# one costs the session its nu-native tests. --retry-all-errors is the part
+# that covers a connection reset; curl does not count that as retryable on its
+# own. The checksum still decides what gets installed.
 curl_opts=(--fail --silent --show-error --location
-           --connect-timeout 10 --max-time 300)
+           --connect-timeout 10 --max-time 300
+           --retry 3 --retry-delay 2 --retry-all-errors)
 
 report_version() {
     echo "session-start: using the installed $1: $2" >&2

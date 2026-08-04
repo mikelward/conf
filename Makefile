@@ -118,6 +118,7 @@ test-all: \
 	test-makefile \
 	test-claude-settings \
 	test-session-start-hook \
+	test-install-ci-shells \
 	test-amethyst \
 	test-karabiner \
 	test-hypr \
@@ -272,10 +273,17 @@ $(CACHE)/test-makefile.stamp: Makefile makefile_test.sh shrc_test_lib.sh \
 test-makefile: $(CACHE)/test-makefile.stamp
 
 $(CACHE)/test-session-start-hook.stamp: .claude/hooks/session-start.sh \
+                          test-tool-versions.sh \
                           session_start_hook_test.sh shrc_test_lib.sh | $(CACHE)
 	@sh session_start_hook_test.sh
 	@touch $@
 test-session-start-hook: $(CACHE)/test-session-start-hook.stamp
+
+$(CACHE)/test-install-ci-shells.stamp: install-ci-shells.sh test-tool-versions.sh \
+                          install_ci_shells_test.sh shrc_test_lib.sh | $(CACHE)
+	@sh install_ci_shells_test.sh
+	@touch $@
+test-install-ci-shells: $(CACHE)/test-install-ci-shells.stamp
 
 $(CACHE)/test-claude-settings.stamp: .claude/settings.json \
                           claude_settings_test.sh shrc_test_lib.sh | $(CACHE)
