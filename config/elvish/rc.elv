@@ -1755,44 +1755,26 @@ fn format-duration {|seconds|
     put $whole" seconds"
 }
 
-# describe a command's failure the way shrc's *_last_error functions do, or ""
-# when it succeeded or was merely suspended
-fn describe-error {|err|
-    if (eq $err $nil) { put ''; return }
-    var reason = $err[reason]
-    if (not (has-key $reason type)) { put (to-string $reason); return }
-    if (==s $reason[type] external-cmd/signaled) {
-        # Elvish names signals the way Go's Signal.String() does -- "interrupt",
-        # "stopped" -- rather than SIGINT/SIGTSTP.
-        if (==s $reason[signal-name] interrupt) { put interrupted; return }
-        # A suspended command isn't an error to report; shrc skips status 148
-        # for the same reason.
-        if (has-value [stopped 'stopped (signal)' 'terminal stop'] $reason[signal-name]) {
-            put ''
-            return
-        }
-        put "killed by "$reason[signal-name]
-        return
-    }
-    if (==s $reason[type] external-cmd/exited) {
-        put "status "$reason[exit-status]
-        return
-    }
-    put (to-string $reason)
-}
-
-# report a command that failed or took a noticeable while. Elvish's
-# after-command hook hands us the status and the elapsed seconds rather than
-# making us recover them, which is what shrc's SECONDS bookkeeping is for.
+# report a command that took a noticeable while. Elvish's after-command hook
+# hands us the elapsed seconds rather than making us recover them, which is what
+# shrc's SECONDS bookkeeping is for.
+#
+# The duration and nothing else, deliberately. shrc, config.fish, config.nu and
+# rc.mesh all print a red "status N" from here, because their shells say nothing
+# at all about a command that failed. Elvish reports the exception itself, with
+# the command and its source location -- more than this line could -- so adding
+# a status line printed every failure twice:
+#
+#     status 3
+#     Exception: sh exited with 3
+#       [tty 1]:1:1-14: sh -c "exit 3"
+#
+# The same goes for an interrupt, which Elvish also names. Duration is the one
+# part it doesn't report.
 fn command-finished {|m|
-    var reported = (describe-error $m[error])
-    if (not-eq $reported '') { set reported = (red $reported) }
     var duration = (format-duration $m[duration])
-    if (not-eq $duration '') {
-        if (not-eq $reported '') { set reported = $reported' ' }
-        set reported = $reported(yellow "took "$duration)
-    }
-    if (not-eq $reported '') { echo $reported }
+    if (==s $duration '') { return }
+    echo (yellow "took "$duration)
 }
 
 # log every interactive command, the way shrc's precommand does

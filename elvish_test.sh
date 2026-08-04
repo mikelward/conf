@@ -807,31 +807,25 @@ start_test "elvish format-duration reports seconds, minutes and hours"
 result="$(_elvish_run '' 'echo (format-duration 5) / (format-duration 125) / (format-duration 3725)')"
 assert_equal "5 seconds / 2 minutes 5 seconds / 1 hours 2 minutes 5 seconds" "$result"
 
-start_test "elvish describe-error says nothing for a command that succeeded"
-result="$(_elvish_run '' 'echo "["(describe-error $nil)"]"')"
-assert_equal "[]" "$result"
-
-start_test "elvish describe-error reports a non-zero exit status"
-result="$(_elvish_run '' 'var err = $nil
-try { failing-tool 2>/dev/null } catch e { set err = $e }
-echo (describe-error $err)')"
-assert_equal "status 1" "$result"
-
-start_test "elvish describe-error reports an interrupt as interrupted"
-result="$(_elvish_run '' 'var err = $nil; try { sh -c "kill -INT $$" } catch e { set err = $e }; echo (describe-error $err)')"
-assert_equal "interrupted" "$result"
-
 start_test "elvish exit-status extracts the number atuin needs"
 result="$(_elvish_run '' 'var err = $nil
 try { sh -c "exit 7" } catch e { set err = $e }
 echo (exit-status $nil) (exit-status $err)')"
 assert_equal "0 7" "$result"
 
-start_test "elvish command-finished reports a failure and a slow command"
+# The duration only: Elvish prints its own exception for a failed command, so a
+# status line here reported every failure twice.
+start_test "elvish command-finished reports the duration, not the status"
 result="$(_elvish_run 'set color = $false' 'var err = $nil
 try { sh -c "exit 3" } catch e { set err = $e }
 command-finished [&error=$err &duration=(num 5) &src=[&]]')"
-assert_equal "status 3 took 5 seconds" "$result"
+assert_equal "took 5 seconds" "$result"
+
+start_test "elvish command-finished says nothing about a quick failure"
+result="$(_elvish_run 'set color = $false' 'var err = $nil
+try { sh -c "exit 3" } catch e { set err = $e }
+command-finished [&error=$err &duration=(num 0.1) &src=[&]]')"
+assert_equal "" "$result"
 
 start_test "elvish command-finished says nothing about a quick success"
 result="$(_elvish_run '' 'command-finished [&error=$nil &duration=(num 0.1) &src=[&]]')"
