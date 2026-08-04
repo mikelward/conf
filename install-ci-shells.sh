@@ -15,6 +15,9 @@
 #         written against 4.x, so the distro copy would test the wrong shell.
 #   nu    a pinned release binary. Not packaged by Ubuntu at all, and the
 #         version matters -- see the note in test-tool-versions.sh.
+#   elvish a pinned `go install`. Upstream publishes no GitHub release asset to
+#         pin, and the checksum beside its tarball is served by the same host
+#         it would be checking; the Go checksum database is the independent one.
 #
 # mesh is deliberately absent; see TODO.md.
 set -euo pipefail
@@ -81,6 +84,31 @@ install_nu() {
     install -m 755 "$tmp/nu-$NU_VERSION-x86_64-unknown-linux-gnu/nu" /usr/local/bin/nu || return 1
 }
 
+# Go is at /usr/local/go/bin on the runner image, which sudo's secure_path
+# does not include -- so `command -v go` inside this script comes up empty even
+# though the job's own steps can run it.
+find_go() {
+    if command -v go >/dev/null 2>&1; then
+        command -v go
+        return 0
+    fi
+    if test -x /usr/local/go/bin/go; then
+        echo /usr/local/go/bin/go
+        return 0
+    fi
+    return 1
+}
+
+install_elvish() {
+    _go=$(find_go) || {
+        echo "install-ci-shells: no go toolchain; cannot build elvish" >&2
+        return 1
+    }
+    # GOBIN rather than the default $HOME/go/bin: this runs under sudo, so the
+    # default would land in root's home, which is on nobody's PATH.
+    GOBIN=/usr/local/bin "$_go" install "src.elv.sh/cmd/elvish@v$ELVISH_VERSION" || return 1
+}
+
 install_zsh() {
     # -qq and DEBIAN_FRONTEND keep a failure visible instead of buried under
     # progress output, and stop a package asking a question no one can answer.
@@ -123,7 +151,7 @@ install_tool() {
 # -- it skips, and the job passes having tested less than it claims -- which is
 # exactly the silent hole this script was written to close.
 status=0
-for entry in "zsh install_zsh" "fish install_fish" "nu install_nu"; do
+for entry in "zsh install_zsh" "fish install_fish" "nu install_nu" "elvish install_elvish"; do
     # shellcheck disable=SC2086 # the pair is two fields on purpose
     set -- $entry
     if ! install_tool "$1" "$2"; then

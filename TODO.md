@@ -77,3 +77,44 @@ Two design decisions to settle first, both of which outlast the code:
 * If nushell can't do this, AGENTS.md's parity rule needs an explicit
   carve-out for line-editor capability — otherwise nushell keeps atuin's
   pane while the other shells don't, and the rule says that isn't allowed.
+
+## Let `$SHELL` switch a login shell into Elvish
+
+`shrc`'s `want_reexec` re-execs into `$SHELL` when the login shell sshd started
+differs from the one wanted, which is how `echo 'export SHELL=/bin/bash' >>
+~/.env` changes shells without `chsh`. It only recognises bash and zsh:
+
+```sh
+case "${SHELL:-}" in
+    */bash|bash) test "$shell" = bash && return 1;;
+    */zsh|zsh)   test "$shell" = zsh && return 1;;
+    *) return 1;;
+esac
+```
+
+So `SHELL=/usr/local/bin/elvish` falls through the `*)` arm and nothing
+happens; reaching Elvish as a login shell needs `chsh` today. Adding an
+`*/elvish|elvish)` arm would make `~/.env` enough, which is the point of the
+mechanism.
+
+Two things to settle first. `$shell` is set from `$ZSH_VERSION` / `$BASH_VERSION`
+and only ever holds bash/zsh/ksh/sh, so the "already in it" guard needs a
+different test for a shell that never sources `shrc` at all. And the re-exec
+runs `exec "$SHELL" -l`: Elvish accepts `-l` but treats it as a no-op, so a
+login Elvish would rely on `rc.elv` alone — which is fine today only because
+there is nothing an Elvish login shell reads that an interactive one doesn't.
+
+## Install Elvish in the agent container too
+
+`install-ci-shells.sh` builds Elvish on the CI runner, but
+`.claude/hooks/session-start.sh` installs only shellcheck and nu, so an agent
+session starts without it and `make test` prints `SKIP: test-elvish` — the same
+silently-covers-less problem the CI installer exists to close, one environment
+over.
+
+The pin is already shared (`ELVISH_VERSION` in `test-tool-versions.sh`), so
+this is the `go install` from the CI installer plus the hook's report-the-
+version wrapper. The one thing to check is whether the container image ships a
+Go toolchain; the CI runner does, since `make` builds the vcs submodule with
+it, but the hook runs somewhere else and would need a fallback message rather
+than a failed install if it doesn't.

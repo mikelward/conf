@@ -1,11 +1,11 @@
 #!/bin/sh
 #
-# Tests for install-ci-shells.sh, the step that puts zsh, fish and nu on the
-# CI runner so `make test` covers more than bash and dash.
+# Tests for install-ci-shells.sh, the step that puts zsh, fish, nu and elvish
+# on the CI runner so `make test` covers more than bash and dash.
 #
-# The script downloads from the network, shells out to apt, and installs into
-# /usr/local/bin, so these tests never run it for real. Each case puts a fake
-# curl/tar/install/apt-get on PATH and checks the script's decisions: does it
+# The script downloads from the network, shells out to apt and go, and installs
+# into /usr/local/bin, so these tests never run it for real. Each case puts a
+# fake curl/tar/install/apt-get/go on PATH and checks the script's decisions: does it
 # skip what is already there, does it fetch the pinned release, does it refuse
 # a bad download, does it report a failure rather than exiting 0 on a shell
 # whose suite would then silently skip.
@@ -97,6 +97,18 @@ fi
 exit 0
 EOF
 
+    # `go install` is the elvish path. Leaves a runnable binary under GOBIN
+    # the way the real one does, so the version probe afterwards finds it.
+    cat >"$_dir/go" <<EOF
+#!/bin/sh
+# GOBIN is logged too: where the build lands is the decision worth asserting,
+# since the default would be root's home under sudo.
+echo "go GOBIN=\${GOBIN-unset} \$*" >>"$_dir/calls"
+printf '#!/bin/sh\nprintf "9.9.9\\n"\n' >"$_dir/elvish"
+chmod +x "$_dir/elvish"
+exit 0
+EOF
+
     # The stubbed curl writes nothing, so the real sha256sum would fail every
     # happy-path case. Stubbed to pass; the mismatch case overrides it.
     cat >"$_dir/sha256sum" <<EOF
@@ -105,15 +117,16 @@ echo "sha256sum \$*" >>"$_dir/calls"
 exit 0
 EOF
 
-    chmod +x "$_dir/curl" "$_dir/tar" "$_dir/install" "$_dir/apt-get" "$_dir/sha256sum"
+    chmod +x "$_dir/curl" "$_dir/tar" "$_dir/install" "$_dir/apt-get" "$_dir/sha256sum" \
+             "$_dir/go"
     puts "$_dir"
 }
 
 # A runner image that already ships a shell is not ours to replace, and a
 # re-run must not re-download what is already there.
-start_test "skips every install when all three shells are present"
+start_test "skips every install when all four shells are present"
 _stubs=$(_stub_dir 0)
-for _present in zsh fish nu; do
+for _present in zsh fish nu elvish; do
     printf '#!/bin/sh\nprintf "9.9.9\\n"\n' >"$_stubs/$_present"
     chmod +x "$_stubs/$_present"
 done
@@ -126,7 +139,7 @@ rm -rf "$_stubs"
 # The case the script exists for. Each shell is fetched from the source that
 # actually publishes it, which is the decision worth pinning down: fish and nu
 # from their own releases, zsh from apt.
-start_test "installs all three when none is present"
+start_test "installs all four when none is present"
 _stubs=$(_stub_dir 0)
 PATH="$_stubs" "$_script" >/dev/null 2>&1
 assert_equal "0" "$?"
@@ -137,6 +150,13 @@ start_test "fetches nu from its own release rather than apt"
 assert_contains "nushell/nushell/releases" "$_calls"
 start_test "installs zsh from apt, which is the only source that has it"
 assert_contains "apt-get install" "$_calls"
+# elvish publishes no release asset to pin, so it is built from source at a
+# tagged version and verified by the Go checksum database instead.
+start_test "builds elvish from its module at a pinned version"
+_elvish_version=$(sed -n 's/^ELVISH_VERSION=//p' "$_srcdir/test-tool-versions.sh")
+assert_contains "src.elv.sh/cmd/elvish@v$_elvish_version" "$_calls"
+start_test "puts the elvish build somewhere already on PATH"
+assert_contains "go GOBIN=/usr/local/bin install" "$_calls"
 rm -rf "$_stubs"
 
 # The pins are what make a red CI run mean "the config broke" rather than
@@ -230,7 +250,7 @@ rm -rf "$_stubs"
 # as "using the installed ...". `make test` then ran against it.
 start_test "refuses a present shell whose version probe fails"
 _stubs=$(_stub_dir 0)
-for _broken in zsh fish nu; do
+for _broken in zsh fish nu elvish; do
     printf '#!/bin/sh\nexit 1\n' >"$_stubs/$_broken"
     chmod +x "$_stubs/$_broken"
 done
