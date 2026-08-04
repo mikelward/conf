@@ -20,7 +20,7 @@
 - When modifying VCS functions or prompt functions, run performance tests, include timing info, and warn of any regressions.
 - Per-VCS subcommand behaviour (git/hg/jj) lives in the `vcs` Go binary in the `vcs/` submodule (https://github.com/mikelward/vcs); add tests there for changes to subcommand semantics. `make test` builds the submodule binaries automatically.
 - When touching `config/nushell/*` files, install `nu` locally before running tests so that the nu-native tests (`config/nushell/config_test.nu`) execute rather than being skipped.
-- Do not use `apt-get` or `apt` to install tools. Use direct binary downloads (e.g. from GitHub releases) or `cargo install` instead.
+- Prefer direct binary downloads (e.g. from GitHub releases) or `cargo install` over `apt-get` / `apt`, and pin the version with a checksum when you do — that is what makes a red CI run mean "the config broke" rather than "upstream moved". `apt` is acceptable where upstream publishes no binary to pin: `install-ci-shells.sh` takes it for zsh alone, and fish and nu from their own releases. This bullet used to ban `apt` outright, which was documenting a sandbox where it timed out rather than stating a preference; that no longer reproduces, and the CI runner is ordinary Ubuntu.
 - Fix any preexisting test failures as the *first* commit of the series. Don't stack new work on a red baseline. If the failure is genuinely unrelated and out of scope, say so up front and confirm before skipping it.
 - Don't paper over flaky/racy tests with `sleep`, retry loops, or bumped timeouts. Make the ordering explicit, or fix the underlying race. A test that passes "most of the time" is broken.
 - Don't disable a failing check to make it pass — fix the underlying issue.
