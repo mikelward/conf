@@ -3739,22 +3739,50 @@ echo '# second build'" | save --force $bin
         assert equal (do $completer ["git" "sta"]) null
     })
 
+    # `term size` reports 0 columns when stdout is not a terminal -- a
+    # redirected prompt, a test harness, a CI runner -- and the `try` around it
+    # only catches an *error*, so a successful 0 sailed through and `bar`
+    # rendered nothing. That is how the separator went missing on CI while
+    # every local run looked fine. config/mesh/rc.mesh got this right first.
+    (run-test "nu terminal-width is always a usable width" {
+        let w = (terminal-width)
+        assert ($w > 0) $"terminal-width should never be 0 or negative; got ($w)"
+    })
+
+    (run-test "nu separator is non-empty at the reported width" {
+        assert (((bar (terminal-width)) | str length) > 0) "the separator must not vanish when there is no terminal"
+    })
+
+    (run-test "nu bar still yields nothing for a non-positive width" {
+        assert equal (bar 0) ""
+        assert equal (bar (-5)) ""
+    })
+
     (run-test "nu puts home bins and /usr/local/bin before system PATH" {
         let home = (mktemp -d)
         mkdir ($home | path join ".cargo" "bin")
         mkdir ($home | path join ".local" "bin")
         mkdir ($home | path join "android-sdk-linux" "platform-tools")
-        let script = $'$env.HOME = "($home)"; $env.PATH = ["/usr/bin" "/bin"]; source "($CONFIG)"; $env.PATH | first 6 | str join ":" | print'
+        let script = $'$env.HOME = "($home)"; $env.PATH = ["/usr/bin" "/bin"]; source "($CONFIG)"; $env.PATH | str join ":" | print'
         let out = (^nu --no-config-file -c $script | lines | last)
-        let expected = ([
+        let path = ($out | split row ":")
+        # Relative order, not absolute position. The config's contract is that
+        # these come *before* the system directories, which is what the name
+        # says; it does not own position 1. A host with brew installed has
+        # `brew shellenv` legitimately prepending its own entries -- the GitHub
+        # runner is one -- and pinning `first 6` failed there on a correct
+        # config, which is a test asserting the machine rather than the code.
+        let want = [
             ($home | path join ".cargo" "bin")
             ($home | path join ".local" "bin")
             ($home | path join "android-sdk-linux" "platform-tools")
             "/usr/local/bin"
             "/usr/bin"
             "/bin"
-        ] | str join ":")
-        assert equal $expected $out
+        ]
+        let positions = ($want | each {|d| $path | enumerate | where item == $d | get index.0? })
+        assert ($positions | all {|p| $p != null }) $"every expected directory should be on PATH; got ($out)"
+        assert equal $positions ($positions | sort) $"expected ($want | str join ':') in that order; got ($out)"
     })
 ]
 

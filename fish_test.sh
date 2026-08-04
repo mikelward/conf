@@ -1950,12 +1950,60 @@ start_test "fish treats an empty GOPATH as missing"
 result="$(_fish_run_config 'set -gx GOPATH ""' '' 'echo $GOPATH')"
 assert_equal "$_testdir/fakehome" "$result"
 
-start_test "fish puts home bins and /usr/local/bin before system PATH"
+# Relative order, not absolute position. The config's contract is that these
+# come *before* the system directories, which is what this test's name says; it
+# does not own position 1. A host with brew installed has `brew shellenv`
+# legitimately prepending its own entries -- the GitHub runner is one -- and
+# pinning $PATH[1..6] failed there on a correct config, which is a test
+# asserting the machine rather than the code.
+#
+# Positions are compared rather than the string matched, because these paths
+# are substrings of each other (/bin inside /usr/bin) and of the temp home.
+_path_positions() {
+    _joined=$1
+    shift
+    _out=
+    for _want in "$@"; do
+        _i=0
+        _found=
+        # Colon-terminated so the last element still has a separator to strip:
+        # `${_rest#*:}` cannot shrink a colon-less string, so a value that is
+        # absent would otherwise spin here forever rather than reporting itself.
+        _rest="$_joined:"
+        while test -n "$_rest"; do
+            if test "${_rest%%:*}" = "$_want"; then
+                _found=$_i
+                break
+            fi
+            _rest=${_rest#*:}
+            _i=$((_i + 1))
+        done
+        test -n "$_found" || { puts "missing:$_want"; return 1; }
+        _out="$_out $_found"
+    done
+    puts "$_out"
+}
+
 result="$(_fish_run_config '
     mkdir -p $HOME/.cargo/bin $HOME/.local/bin $HOME/android-sdk-linux/platform-tools
     set -gx PATH /usr/bin /bin
-' '' 'string join : $PATH[1..6]')"
-assert_equal "$_testdir/fakehome/.cargo/bin:$_testdir/fakehome/.local/bin:$_testdir/fakehome/android-sdk-linux/platform-tools:/usr/local/bin:/usr/bin:/bin" "$result"
+' '' 'string join : $PATH')"
+_positions="$(_path_positions "$result" \
+    "$_testdir/fakehome/.cargo/bin" \
+    "$_testdir/fakehome/.local/bin" \
+    "$_testdir/fakehome/android-sdk-linux/platform-tools" \
+    /usr/local/bin /usr/bin /bin)"
+# Assert presence before order. On a miss _path_positions prints `missing:<p>`
+# and returns 1; capturing that without checking the status left the order
+# assertion comparing the diagnostic against its own sorted form, which passes
+# -- so dropping a directory from PATH entirely would have gone unseen.
+_positions_status=$?
+start_test "fish has every expected directory on PATH"
+assert_equal "0" "$_positions_status"
+
+start_test "fish puts home bins and /usr/local/bin before system PATH"
+assert_equal "$(puts "$_positions" | tr ' ' '\n' | sort -n | tr '\n' ' ')" \
+    "$(puts "$_positions" | tr ' ' '\n' | tr '\n' ' ')"
 
 ###############
 # TEST: interactive tool integrations (fzf, zoxide, carapace, atuin).
@@ -2031,5 +2079,27 @@ result="$(_fish_run "
     echo \$CARAPACE_BRIDGES
 ")"
 assert_contains "bash" "$result"
+
+###############
+# TERMINAL WIDTH
+# $COLUMNS is unset or 0 whenever the prompt renders without a terminal -- a
+# redirected prompt, a test harness, a CI runner. 0 is not a width, and `bar`
+# then renders nothing, so the separator vanished exactly where nobody was
+# looking. config/mesh/rc.mesh got this right first; this is the same fallback.
+start_test "fish terminal_width falls back to 80 with no COLUMNS"
+result="$(_fish_run_config '' 'set -e COLUMNS' 'terminal_width')"
+assert_equal "80" "$result"
+
+start_test "fish terminal_width falls back to 80 when COLUMNS is 0"
+result="$(_fish_run_config '' 'set -g COLUMNS 0' 'terminal_width')"
+assert_equal "80" "$result"
+
+start_test "fish terminal_width uses COLUMNS when it is a real width"
+result="$(_fish_run_config '' 'set -g COLUMNS 132' 'terminal_width')"
+assert_equal "132" "$result"
+
+start_test "fish separator is non-empty with no terminal"
+result="$(_fish_run_config '' 'set -e COLUMNS' 'bar (terminal_width) | string length')"
+assert_equal "80" "$result"
 
 test_summary "fish_test"
