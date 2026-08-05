@@ -184,7 +184,44 @@ def auth [] { do $env.auth }
 # short alias for auth
 def a [] { auth }
 
-# return true if an SSH key is loaded into the agent
+# run a predicate under a wall-clock limit, returning null if it hits the limit.
+#
+# A predicate, not a general wrapper: only the closure's return value survives.
+# It runs in a spawned job, so anything it changes about this shell's state is
+# lost, and its stdout goes nowhere the caller can see.
+#
+# nu is the only shell in this config that can express this directly:
+# `job recv --timeout` is a receive with a deadline, so there is no watchdog
+# job, no signal handling and no polling. shrc has to build the same guard out
+# of a background job and a second job that sleeps and kills. See
+# config/mesh/rc.mesh and config/fish/config.fish for the two that cannot
+# express it at all.
+# The tag keeps this receive from reading mail that is not its own, and it has
+# to be per-call rather than a fixed constant. Two different messages could
+# otherwise be mistaken for this call's answer: one the user's own
+# `job spawn { ... | job send 0 }` posted, and -- the harder one -- a *previous*
+# prompt's worker that finished in the window between its recv giving up and its
+# kill landing, leaving a stale answer queued for the next call to read
+# instantly. The worker's own job id is unique per invocation and nu hands out
+# ids in increasing order without reusing them, so it needs no counter of its
+# own; `job spawn` returns the same id the job sees from `job id`.
+def with-timeout [limit: duration, predicate: closure] {
+    let parent = (job id)
+    let worker = (job spawn {|| (do $predicate) | job send --tag (job id) $parent })
+    let answer = (try { job recv --tag $worker --timeout $limit } catch { null })
+    # Stops a predicate that outlived the limit. A job that already answered has
+    # left the table, and `job kill` raises on an id that is gone, so the failure
+    # this ignores is the ordinary case rather than a swallowed error.
+    try { job kill $worker }
+    $answer
+}
+
+# return true if an SSH key is loaded into the agent.
+#
+# A hook: reassign $env.auth-info, or redefine this in an autoload file, for a
+# site-specific notion of "authenticated". It is deliberately unbounded --
+# $env.auth-info is what puts it under a time limit, so an override inherits
+# that guard instead of having to reimplement it.
 def is-ssh-valid [] {
     let r = (try { ^ssh-add -L | complete } catch { {exit_code: 1} })
     $r.exit_code == 0
@@ -196,10 +233,49 @@ def is-ssh-valid [] {
 # report additional auth problems (Kerberos, AWS SSO, ...); need-auth
 # dispatches through $env so the override propagates.
 $env.auth-info = {||
-    let problems = (if (is-ssh-valid) { [] } else { ["SSH"] })
+    # Bounded because this renders every prompt and the check can block
+    # indefinitely: a stale $SSH_AUTH_SOCK -- typically a forwarded agent whose
+    # ssh connection has gone away -- leaves `ssh-add -L` waiting on a socket
+    # nobody answers, and an unguarded call there wedges every new prompt. The
+    # limit lives here rather than in is-ssh-valid so an override of that hook
+    # is guarded too. A check that cannot answer in time counts as a problem,
+    # so the prompt says SSH rather than quietly claiming all is well.
+    # $SSH_VALID_TIMEOUT is a plain number of seconds -- `2`, `0.5` -- not a nu
+    # duration. One environment variable is read by shrc as well, where it goes
+    # to sleep(1), and `2sec` is a sleep error there; a spelling that only works
+    # in one of the two shells is worse than the one both agree on.
+    let limit = (auth-limit)
+    # `default false` is what makes a check that ran out of time a problem:
+    # with-timeout reports null there, and null is not a boolean.
+    let ok = (with-timeout $limit {|| is-ssh-valid } | default false)
+    let problems = (if $ok { [] } else { ["SSH"] })
     if ($problems | is-empty) { "" } else { yellow ($problems | str join " ") }
 }
-def auth-info [] { do $env.auth-info }
+
+# how long an auth check may take, as a duration. $SSH_VALID_TIMEOUT is a plain
+# number of seconds -- `2`, `0.5` -- not a nu duration: one environment variable
+# is read by shrc as well, where it goes to sleep(1), and `2sec` is a sleep error
+# there. A spelling that only works in one of the two shells is worse than the
+# one both agree on.
+def auth-limit [] {
+    try { ($env.SSH_VALID_TIMEOUT | into float) * 1sec } catch { 2sec }
+}
+
+# $env.auth-info is a documented override point, so it gets the same guard the
+# hook inside it does -- an override that checks Kerberos or AWS SSO and blocks
+# would otherwise hang every prompt, which is the whole bug this file is fixing.
+#
+# Both layers are bounded rather than just this one, so the ordinary case keeps
+# its precise answer: the default closure bounds is-ssh-valid itself and says
+# `SSH`, where this outer backstop only knows that *something* took too long.
+# $AUTH_TIMEOUT is the longer of the two by default, which is what leaves the
+# inner limit to fire first, so the prompt's usual output is unchanged and
+# `auth` appears only for an override. Both knobs are plain seconds, same as
+# shrc reads them.
+def auth-info [] {
+    let limit = (try { $env.AUTH_TIMEOUT | into float | $in * 1sec } catch { 5sec })
+    with-timeout $limit {|| do $env.auth-info } | default (yellow "auth")
+}
 
 # return true if auth-info reports any problems.
 def need-auth [] {

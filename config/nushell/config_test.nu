@@ -1899,6 +1899,101 @@ except OSError: pass
     })
 
     ###############
+    # with-timeout, and the hang it exists to stop
+    (run-test "nu with-timeout returns a fast predicate's answer" {
+        assert (with-timeout 5sec {|| true })
+        assert (not (with-timeout 5sec {|| false }))
+    })
+    (run-test "nu with-timeout reports null when the limit is hit" {
+        assert equal (with-timeout 200ms {|| sleep 5sec; true }) null
+    })
+    # An untagged receive takes any message in the mailbox in FIFO order, and
+    # this runs on every prompt, so a value the user's own background job
+    # posted would be read as the predicate's answer and its own receiver left
+    # with nothing.
+    (run-test "nu with-timeout does not read another job's mailbox message" {
+        job spawn {|| "not-the-answer" | job send 0 } | ignore
+        sleep 300ms
+        assert (with-timeout 2sec {|| true })
+        # The unrelated message is still queued, untouched.
+        assert equal (job recv --timeout 2sec) "not-the-answer"
+    })
+    # The other message a fixed tag could confuse this with is a *previous*
+    # worker's, one that finished between its own recv giving up and its kill
+    # landing. That window is microseconds wide and does not reproduce on
+    # demand -- a worker still sleeping when the limit expires is simply killed
+    # before it can send -- so there is no honest test for it here. The per-call
+    # tag closes it by construction instead: nu hands out job ids in increasing
+    # order without reuse, so no earlier worker's reply can ever carry this
+    # call's tag.
+    # $env.auth-info is documented as overridable for extra auth checks
+    # (Kerberos, AWS SSO), and those are exactly the sort that block. The guard
+    # inside the default closure does nothing for an override that replaces it.
+    (run-test "nu auth-info bounds an overridden auth-info hook" {
+        $env.AUTH_TIMEOUT = "0.2"
+        $env.auth-info = {|| sleep 10sec; "" }
+        let started = (date now)
+        assert str contains (auth-info) "auth"
+        assert (((date now) - $started) < 5sec)
+    })
+    # The outer backstop must not steal the ordinary case's precise answer.
+    (run-test "nu auth-info still says SSH, not auth, when ssh-add hangs" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nsleep 10\nexit 0" | save ($dir | path join "ssh-add")
+        ^chmod +x ($dir | path join "ssh-add")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        $env.SSH_VALID_TIMEOUT = "0.2"
+        assert str contains (auth-info) "SSH"
+    })
+    # One variable is read by shrc too, where it goes to sleep(1), so the
+    # spelling has to be one both shells accept.
+    (run-test "nu auth-info reads SSH_VALID_TIMEOUT as plain seconds" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nsleep 5\nexit 0" | save ($dir | path join "ssh-add")
+        ^chmod +x ($dir | path join "ssh-add")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        $env.SSH_VALID_TIMEOUT = "0.2"
+        let started = (date now)
+        assert str contains (auth-info) "SSH"
+        assert (((date now) - $started) < 3sec)
+    })
+    (run-test "nu with-timeout returns before the predicate would have" {
+        let started = (date now)
+        with-timeout 200ms {|| sleep 10sec; true }
+        assert (((date now) - $started) < 5sec)
+    })
+    # The regression test for the hang. Unbounded, the stub sleeps past the
+    # limit and then *succeeds*, so auth-info would report no problem at all;
+    # bounded, the check is abandoned and auth-info says SSH.
+    (run-test "nu auth-info warns when ssh-add outlives the limit" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nsleep 5\nexit 0" | save ($dir | path join "ssh-add")
+        ^chmod +x ($dir | path join "ssh-add")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        $env.SSH_VALID_TIMEOUT = "0.2"
+        assert str contains (auth-info) "SSH"
+    })
+    # The point of bounding in auth-info rather than in is-ssh-valid: the hook
+    # is overridable, and an override has to inherit the guard.
+    (run-test "nu auth-info bounds an overridden is-ssh-valid hook" {
+        $env.SSH_VALID_TIMEOUT = "0.2"
+        $env.auth-info = {||
+            let limit = (try { ($env.SSH_VALID_TIMEOUT | into float) * 1sec } catch { 2sec })
+            let ok = (with-timeout $limit {|| sleep 10sec; true } | default false)
+            if $ok { "" } else { "SSH" }
+        }
+        assert str contains (auth-info) "SSH"
+    })
+    (run-test "nu auth-info falls back to its default limit on a junk setting" {
+        let dir = (mktemp -d)
+        "#!/bin/sh\nexit 1" | save ($dir | path join "ssh-add")
+        ^chmod +x ($dir | path join "ssh-add")
+        $env.PATH = [$dir "/usr/bin" "/bin"]
+        $env.SSH_VALID_TIMEOUT = "not-a-number"
+        assert str contains (auth-info) "SSH"
+    })
+
+    ###############
     # Sourcing config.nu under an interactive tty (via `script`) runs the
     # startup `if (need-auth) { auth }` block. If ssh-add isn't on PATH
     # (a minimal container, a BSD without OpenSSH client tools, ...),

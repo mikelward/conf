@@ -140,7 +140,22 @@ function auth_info
     count $problems >/dev/null; and yellow $problems
 end
 
-# returns whether an SSH key is loaded
+# returns whether an SSH key is loaded.
+#
+# TODO: bound this the way shrc's auth_info does. `ssh-add -L` blocks forever
+# against a stale $SSH_AUTH_SOCK -- a forwarded agent whose ssh connection has
+# gone away -- and this runs on every prompt, so the hang wedges the session.
+# shrc guards it from the caller by backgrounding the hook and killing it on a
+# deadline; fish cannot, because it backgrounds *externals only*. A function or
+# a `begin` block under `&` runs to completion first and leaves $last_pid
+# untouched, so there is nothing to wait on and nothing to kill:
+#
+#     function slow; command sleep 3; end
+#     slow &                  # returns after 3s, $last_pid unchanged
+#     command sleep 3 &       # returns at once, $last_pid set
+#
+# Guarding the external here instead would leave a fish-function override of
+# this hook unguarded, which is the case the guard exists for.
 function is_ssh_valid
     ssh-add -L >/dev/null 2>&1
 end

@@ -616,7 +616,17 @@ fn i-am-root { ==s (env-or UID '') 0 }
 ##################
 # AUTHENTICATION
 
-# return true if an ssh key is loaded
+# return true if an ssh key is loaded.
+#
+# TODO: bound this the way shrc's auth_info does. `ssh-add -L` blocks forever
+# against a stale $SSH_AUTH_SOCK -- a forwarded agent whose ssh connection has
+# gone away -- and this runs on every prompt, so the hang wedges the session.
+# shrc guards it from the caller by backgrounding the hook and killing it on a
+# deadline; Elvish backgrounds a function happily but has no way to hear back
+# from one. `wait`, `jobs`, `bg` and `disown` are all unbound -- `fg` exists and
+# is not job control in the usual sense -- so a background command's status is
+# unreachable. `run-parallel` and `peach` are the concurrency Elvish does offer,
+# and both block until everything finishes, which is the opposite of a deadline.
 fn is-ssh-valid { if ?(quiet ssh-add -L) { put $true } else { put $false } }
 
 # print which things need re-authenticating, pre-colored, or nothing
