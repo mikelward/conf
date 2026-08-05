@@ -54,6 +54,20 @@ fn -prompt-glyph {|root color|
 # The pane's size and style come from config/atuin/config.toml, which atuin
 # reads whoever launched it, so the inline nine-row search the other shells get
 # is what appears here too -- nothing to keep in parity by hand.
+#
+# TODO: no parity on that config's enter_accept, which runs the chosen command
+# rather than only offering it for editing. atuin marks a command as
+# run-it-now with an `__atuin_accept__:` prefix, and only for the shells it
+# ships an integration for -- it reads ATUIN_SHELL, which those integrations
+# set per invocation, so it is never set here and Elvish gets a bare command.
+# The selection lands on the line either way; Enter just doesn't run it.
+#
+# The route, when it is worth the risk: run the search with ATUIN_SHELL naming
+# a shell atuin knows, so the prefix is emitted, then strip it and call
+# `edit:return-line`. Not taken yet because that variable also picks the
+# keymap atuin reports itself in, so it makes Elvish claim to be a shell it
+# isn't for every other purpose the variable serves -- a wider lie than the
+# one behavior it buys.
 fn -atuin-search {
     var chosen = ''
     try {

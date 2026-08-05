@@ -3037,6 +3037,17 @@ assert_true grep -qx 'show_preview = false' "$_srcdir/config/atuin/config.toml"
 assert_true grep -qx 'show_help = false' "$_srcdir/config/atuin/config.toml"
 assert_true grep -qx 'show_tabs = false' "$_srcdir/config/atuin/config.toml"
 
+start_test "the atuin config runs the selected command on Enter"
+# atuin's enter_accept defaults to false for a config that never names it,
+# whatever the config file it writes for a new install says, so it has to
+# be spelled out. Tab and Right-at-end-of-query still hand the command to
+# the line editor rather than running it.
+assert_true grep -qx 'enter_accept = true' "$_srcdir/config/atuin/config.toml"
+# A top-level key, so no [table] header may precede it -- below one, TOML
+# reads it as <table>.enter_accept and atuin never sees it.
+assert_true awk '/^\[/{exit} /^enter_accept = /{_found=1; exit} END{exit !_found}' \
+    "$_srcdir/config/atuin/config.toml"
+
 ###############
 # atuin history recording. shrc drives `atuin history start/end` from its
 # own precommand/preprompt hooks: atuin's bash hooks are shaped for

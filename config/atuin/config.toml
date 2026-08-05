@@ -26,3 +26,13 @@ style = "compact"
 show_preview = false
 show_help = false
 show_tabs = false
+
+# Enter runs the selected command. atuin's own default is the opposite --
+# the code default is false and only the config file it writes for a new
+# install says true, so a config that has never named the setting, like
+# this one, silently gets false.
+#
+# Tab still hands the command back to the shell's line editor instead of
+# running it, as does Right at the end of the query
+# (keys.accept_past_line_end, atuin's own default).
+enter_accept = true
