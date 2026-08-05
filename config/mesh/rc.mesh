@@ -102,6 +102,18 @@ func i-am-root() {
 # call yields the wrapped command's exit status, which is an int, and mesh no
 # longer reads an int as a condition. In command position `if` branches on the
 # status, which is what this is asking for.
+#
+# TODO: bound this the way shrc's auth_info does. `ssh-add -L` blocks forever
+# against a stale $SSH_AUTH_SOCK -- a forwarded agent whose ssh connection has
+# gone away -- and this runs on every prompt, so the hang wedges the session.
+# mesh has most of what the guard needs and is closer than fish or Elvish: `&`
+# backgrounds a *function*, `wait` reports its status in $sh.status, and
+# `kill $j` signals the whole process group, so a hook wrapping its blocking
+# command in more shell is still reached -- something shrc's version cannot do.
+# What is missing is a wait with a deadline, and a way to background without the
+# `[1] 1234` / `[1] Done` notices, which would otherwise print on every prompt
+# ($sh.options has no monitor-mode equivalent). Both are tracked upstream in
+# mesh's TODO.md under "Bounding a wait".
 func is-ssh-valid() {
   if quiet ssh-add -L { return true }
   return false
