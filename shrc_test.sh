@@ -2386,9 +2386,12 @@ result="$(
     HOME="$_download_dir/no-such-home"
     wget() { puts "wget ran"; }
     download http://example.invalid/f 2>/dev/null
-    puts "rc=$?"
+    # `cd` reports a missing directory as 1 in bash and zsh but 2 in dash, and
+    # POSIX leaves the value open, so the contract worth asserting is "failed
+    # without fetching" rather than one shell's spelling of failure.
+    if test "$?" -ne 0; then puts "failed"; fi
 )"
-assert_equal "rc=1" "$result"
+assert_equal "failed" "$result"
 rm -rf "$_download_dir"
 unset -f download
 
