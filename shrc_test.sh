@@ -649,6 +649,209 @@ quiet false
 assert_equal "1" "$?"
 
 ###############
+# KILL_TREE / WITH_TIMEOUT
+
+# kill_tree is asserted against stubbed `pgrep` and `kill` rather than real
+# processes. The bug was about *which pids get signalled and in what order*,
+# and that is exactly what this reads back -- with no forking, no waiting and
+# no dependence on how loaded the machine is. The earlier version drove real
+# processes and was flaky under a parallel `make`, which is worse than no test.
+start_test "kill_tree signals the process before its descendants"
+# The whole thing runs in a command substitution so the stubs are scoped to it
+# and the order is read straight off its stdout. A shared log file did not
+# survive: a watchdog left over from a with_timeout test above fires on its own
+# schedule, and under a parallel `make` it sometimes landed inside this test's
+# window and appended a kill of its own.
+_kt_log="$_testdir/kill-tree.log"
+: > "$_kt_log"
+_kt_order=$(
+    # A three-generation tree: 100 -> 200 -> 300.
+    pgrep() {
+        case "$2" in
+            100) puts 200;;
+            200) puts 300;;
+            *)   return 1;;
+        esac
+    }
+    # Via a file, not stdout: kill_tree redirects its own `kill` to /dev/null,
+    # so a stub that printed would be silenced by the code under test.
+    kill() { puts "$2" >> "$_kt_log"; }
+    have_command() { true; }
+    kill_tree 100
+    tr '\n' ' ' < "$_kt_log"
+)
+assert_equal "100 200 300 " "$_kt_order"
+
+
+start_test "with_timeout passes a fast command's success through"
+with_timeout 5 true
+assert_equal "0" "$?"
+
+start_test "with_timeout passes a fast command's failure through"
+with_timeout 5 false
+assert_equal "1" "$?"
+
+start_test "with_timeout reports 124 when the limit is hit"
+with_timeout 1 sleep 5
+assert_equal "124" "$?"
+
+# The hook this guards is a shell function, which is the whole reason for
+# doing this with job control instead of timeout(1).
+start_test "with_timeout bounds a shell function, not just an external"
+_slow_predicate() { sleep 5; return 0; }
+with_timeout 1 _slow_predicate
+assert_equal "124" "$?"
+
+# A wrapper that outlives its child can recover: kill the blocked command
+# inside `f() { sleep 5; return 0; }` and the function carries on to its
+# `return 0`, so the job exits successfully and a check that ran out of time
+# gets reported as healthy. Killing parents first denies it that.
+start_test "with_timeout does not let a timed-out wrapper report success"
+_recovering_hook() { sleep 5; return 0; }
+with_timeout 1 _recovering_hook
+assert_equal "124" "$?"
+
+start_test "with_timeout bounds a function that wraps its blocker in more shell"
+_slow_wrapper() { true; sleep 5; return 0; }
+with_timeout 1 _slow_wrapper
+assert_equal "124" "$?"
+
+# Backgrounding a shell function forks a subshell and the blocking command runs
+# as its child, so signalling the job alone reaps the wrapper and orphans what
+# was actually stuck -- one `ssh-add` left on the dead socket per timed-out
+# prompt.
+#
+# The probe reports its *own* pid and the test asks after exactly that process.
+# Counting matching processes instead would be racy: the suites run in parallel
+# under `make`, so bash's probe and zsh's probe are alive at the same time and
+# each would see the other's. `exec` keeps the pid the stub already wrote, so
+# the recorded pid is the sleep's own.
+# `kill -0` is not the question to ask: it succeeds on a *zombie*, and a
+# signalled child stays one until whoever inherits it reaps it -- promptly
+# under bash, not always under zsh. A zombie has already released its socket
+# and its memory, so for this test it is dead. State Z says so on both Linux
+# and macOS; no state at all means it is gone entirely.
+_process_is_running() {
+    case "$(ps -o stat= -p "$1" 2>/dev/null)" in
+        "" | Z*) return 1;;
+        *) return 0;;
+    esac
+}
+
+_process_is_not_running() {
+    ! _process_is_running "$1"
+}
+
+start_test "with_timeout_output prints what the command printed"
+result="$(with_timeout_output 5 echo "hello there")"
+assert_equal "hello there" "$result"
+
+start_test "with_timeout_output prints nothing and reports 124 on the limit"
+_slow_printer() { sleep 5; puts "too late"; }
+result="$(with_timeout_output 1 _slow_printer)"
+assert_equal "124" "$?"
+assert_equal "" "$result"
+
+start_test "with_timeout_output passes a command's failure through"
+with_timeout_output 5 false >/dev/null
+assert_equal "1" "$?"
+
+# The prompt path calls this from inside `$(...)`, where an assignment to the
+# cache variable is lost with the subshell -- so a helper that only cached
+# would fork mktemp and leave an empty file behind on every render.
+start_test "with_timeout_output leaves no temp file behind when it made one"
+# Its own TMPDIR, not a count of /tmp: the suites run in parallel under `make`,
+# so anything counting a shared directory measures the other suites too.
+_leak_dir="$_testdir/leak"
+mkdir -p "$_leak_dir"
+_with_timeout_file=""
+_i=0
+while test "$_i" -lt 5; do
+    result="$(TMPDIR="$_leak_dir" with_timeout_output 5 echo hi)"
+    _i=$((_i + 1))
+done
+assert_equal "0" "$(ls "$_leak_dir" | wc -l | tr -d ' ')"
+
+start_test "with_timeout_output reuses a pre-allocated file"
+allocate_timeout_file
+_allocated="$_with_timeout_file"
+assert_true test -n "$_allocated"
+result="$(with_timeout_output 5 echo reused)"
+assert_equal "reused" "$result"
+assert_true test -e "$_allocated"
+rm -f "$_allocated"
+_with_timeout_file=""
+
+# need_auth and maybe_background_fetch both consult auth_info on the prompt
+# path, so bounding only prompt_line left a blocking override able to hang the
+# render before the guard was ever reached.
+start_test "need_auth bounds an overridden auth_info hook"
+auth_info() { sleep 10; }
+AUTH_TIMEOUT=1 need_auth
+assert_equal "0" "$?"
+
+start_test "maybe_background_fetch bounds an overridden auth_info hook"
+have_command() { true; }
+vcs() { :; }
+_LAST_BG_FETCH_PWD=""
+AUTH_TIMEOUT=1 maybe_background_fetch
+assert_equal "0" "$?"
+unset -f auth_info have_command vcs
+SHRC_LOAD_FUNCTIONS_ONLY=1 . "$_srcdir/shrc"
+
+###############
+# AUTH_INFO / IS_SSH_VALID
+
+_auth_dir="$_testdir/auth"
+mkdir -p "$_auth_dir"
+
+# A stub that outlives the limit it is given, so an unbounded call is
+# distinguishable from a bounded one: unbounded it sleeps and then
+# *succeeds*, so auth_info would report no problem; bounded it is killed
+# and auth_info reports SSH.
+cat > "$_auth_dir/ssh-add" << 'STUB'
+#!/bin/sh
+sleep 5
+exit 0
+STUB
+chmod +x "$_auth_dir/ssh-add"
+
+start_test "auth_info warns when ssh-add outlives the limit"
+result=$(PATH="$_auth_dir:$PATH" SSH_VALID_TIMEOUT=1 auth_info)
+assert_equal "SSH" "$result"
+
+# The point of bounding in auth_info rather than in is_ssh_valid: the hook
+# is overridable, and an override has to inherit the guard.
+start_test "auth_info bounds an overridden is_ssh_valid hook"
+_saved_is_ssh_valid_body="ssh-add -L >/dev/null 2>&1"
+is_ssh_valid() { sleep 5; return 0; }
+result=$(SSH_VALID_TIMEOUT=1 auth_info)
+assert_equal "SSH" "$result"
+eval "is_ssh_valid() { $_saved_is_ssh_valid_body; }"
+
+start_test "auth_info is quiet when ssh-add answers in time"
+cat > "$_auth_dir/ssh-add" << 'STUB'
+#!/bin/sh
+exit 0
+STUB
+chmod +x "$_auth_dir/ssh-add"
+result=$(PATH="$_auth_dir:$PATH" SSH_VALID_TIMEOUT=5 auth_info)
+assert_equal "" "$result"
+
+start_test "auth_info warns when ssh-add reports no identities"
+cat > "$_auth_dir/ssh-add" << 'STUB'
+#!/bin/sh
+exit 1
+STUB
+chmod +x "$_auth_dir/ssh-add"
+result=$(PATH="$_auth_dir:$PATH" SSH_VALID_TIMEOUT=5 auth_info)
+assert_equal "SSH" "$result"
+
+start_test "is_ssh_valid itself stays an unbounded predicate"
+PATH="$_auth_dir:$PATH" is_ssh_valid
+assert_equal "1" "$?"
+
+###############
 # RUN
 
 start_test "run executes command"
