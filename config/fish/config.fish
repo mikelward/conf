@@ -407,7 +407,12 @@ end
 function confirm
     # fish read cannot send its prompt to stderr.
     printf '%s? [Y/n] ' "$argv" >&2
-    read --prompt-str "" REPLY
+    # Nothing to read is a decline, as in shrc, rc.mesh and rc.elv: a caller
+    # with no one at the keyboard must not have the prompt answered yes for it.
+    # fish needs no content check beside this, unlike shrc's `read` -- it
+    # reports success for a final line with no trailing newline and fails only
+    # at true end of input.
+    read --prompt-str "" REPLY; or return 1
     switch "$REPLY"
     case Y y ''
         true

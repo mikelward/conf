@@ -155,10 +155,20 @@ def is-env-set [name: string] {
     ($name in $env) and (($env | get $name | into string) | is-not-empty)
 }
 
-# prompt the user for a yes/no answer; default yes on empty reply
+# prompt the user for a yes/no answer; default yes on empty reply, and decline
+# when there is nothing to read at all -- a caller with no one at the keyboard
+# (`confirm x < /dev/null`, a cron job) must not have the prompt answered yes on
+# its behalf. shrc, config.fish, rc.mesh and rc.elv answer the same way.
+#
+# The read is taken as bytes because nu strips a trailing newline from external
+# output, which collapses an empty line and end of input into the same `""`.
+# The byte count is what separates them: zero only at end of input, one (the
+# newline alone) for the bare-Enter case that still means yes.
 def confirm [prompt: string] {
     print --stderr -n $"($prompt)? [Y/n] "
-    let reply = (^head -n 1 | str downcase | str trim)
+    let line = (^head -n 1 | into binary)
+    if ($line | length) == 0 { return false }
+    let reply = ($line | decode utf-8 | str downcase | str trim)
     ($reply == "") or ($reply | str starts-with "y")
 }
 

@@ -598,6 +598,26 @@ printf 'y\n' | confirm "are you sure" >"$_testdir/confirm.out" 2>"$_testdir/conf
 assert_equal "" "$(cat "$_testdir/confirm.out")"
 assert_equal "are you sure? [Y/n] " "$(cat "$_testdir/confirm.err")"
 
+start_test "confirm takes yes, no, and a bare Enter"
+printf 'y\n' | confirm x 2>/dev/null
+assert_equal "0" "$?"
+printf 'n\n' | confirm x 2>/dev/null
+assert_equal "1" "$?"
+printf '\n' | confirm x 2>/dev/null
+assert_equal "0" "$?"
+
+# Nothing to read at all is a decline: a caller with no one at the keyboard
+# must not have the prompt answered yes on its behalf.
+start_test "confirm declines at end of input"
+confirm x </dev/null 2>/dev/null
+assert_equal "1" "$?"
+
+# `read` fails on a final line with no trailing newline too, but sets REPLY --
+# so this is the case a bare `|| return 1` would turn into a decline.
+start_test "confirm reads a final line with no trailing newline"
+printf 'y' | confirm x 2>/dev/null
+assert_equal "0" "$?"
+
 ###############
 # ERROR AND WARN
 
