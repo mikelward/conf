@@ -163,9 +163,13 @@ setup_shell_compat_common() {
         # word-split or glob the way they do in sh. The handful of
         # functions that still rely on sh splitting opt back in
         # individually with `emulate -L sh`; grep for it to see what is
-        # left to port. Only options that affect how the *rest of shrc*
-        # parses and runs belong here; the interactive-only
-        # history/completion/prompt options live in
+        # left to port.
+        #
+        # What's left here is only the sh behavior this file itself still
+        # depends on -- the porting backlog. Options wanted because zsh is
+        # *better* than sh (KSH_GLOB, SH_GLOB off, ...) are not compat and
+        # live in zshrc, which sets them before sourcing this file. The
+        # interactive-only history/completion/prompt options live in
         # setup_shell_compat_interactive, which runs after the session
         # handoff so a launcher that re-execs or hands off doesn't pay for
         # setup it's about to throw away.
@@ -176,18 +180,6 @@ setup_shell_compat_common() {
         # has been audited, or a pattern that matches nothing aborts the
         # rc mid-source.
         setopt NO_NOMATCH
-        # so aliases like + and - work
-        unsetopt POSIX_ALIASES >/dev/null 2>&1
-
-        # enable ksh default features
-        setopt KSH_GLOB         # !(pattern) etc. like in ksh
-        unsetopt BARE_GLOB_QUAL # otherwise !(pattern) breaks
-
-        # zsh-style autoload, required for e.g. bashcompinit
-        unsetopt KSH_AUTOLOAD
-
-        # allow numeric glob (and incidentally, grouping of globs inside parens)
-        unsetopt SH_GLOB
         ;;
     bash)
         # set_prompt sets PS1 to a string likely including '$', don't expand it

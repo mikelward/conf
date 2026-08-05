@@ -1,5 +1,84 @@
 # TODO
 
+## Finish splitting zsh out of shrc into zshrc
+
+`zshrc` is now a real file that sets zsh's improvement options and then sources
+`shrc`. The first slice is done; this is the rest.
+
+Why the split exists: `shrc` has to parse under dash, which parses the whole
+file including the `zsh)` arm it never runs, so anything dash's parser rejects
+is unusable there — `zle_highlight=( ... )` is already over that line, which is
+why `shrc:3036` assigns `zle_highlight[1]` instead. `path=( ${path:#$1} )` could
+never live in `shrc` at all.
+
+Roughly 250 of `shrc`'s remaining lines are still zsh-only and would move:
+
+| What | Where it is now |
+|---|---|
+| Interactive prefs (history, `PROMPT_SUBST`, `AUTO_REMOVE_SLASH`) | `shrc:207-233` — see the ordering trap below |
+| Interactive setup: `compinit`/`bashcompinit`/`zstyle`/`compctl`, `zle` widgets, `bindkey`, `precmd`/`preexec` hooks | `shrc:3011-3214` (~200 lines) |
+| Prompt escape wrapping (`%{`/`%}`) | `shrc:2131` and the `escape_start`/`escape_end` pair |
+| The six `emulate -L sh` functions | `delete_path`, `inpath`, `path`, `shift_options`, `psgrep`, `set_up_ssh_aliases` — rewritten zsh-native, not moved verbatim |
+
+**The ordering trap.** The improvement options moved cleanly because they're
+plain flags with no ordering constraint — `zshrc` sets them, then sources
+`shrc`. The interactive prefs are not like that. `setup_shell_compat_interactive`
+is called *after* `maybe_start_session_and_exit` precisely so a shell that
+re-execs or hands off to tmux/shpool never pays for setup it's about to throw
+away. Hoisting those options to the top of `zshrc` would run them before the
+handoff and lose that. They need `shrc` to call back into `zshrc`, not a move.
+
+The six `emulate -L sh` functions are the payoff, because `$path` is a real
+array in zsh:
+
+```zsh
+inpath()       { (( ${path[(I)$1]} )) }
+delete_path()  { path=( ${path:#$1} ) }
+prepend_path() { path=( $1 ${path:#$1} ) }
+```
+
+That version handles PATH entries containing spaces and parens for free —
+two of the cross-shell tests exist only to pin down the quoting the POSIX
+version needs.
+
+Everything else stays in `shrc` as the portable core for bash and for hosts
+without zsh: the basic/general functions, environment setup, the prompt and
+VCS code, session management (tmux/shpool), and the tool integrations.
+
+**The load-order problem is the real work.** `zshrc` has to source `shrc`'s
+definitions, install its overrides, and only then run the actions — otherwise
+`shrc` clobbers the overrides, or calls its own version during startup
+(`setup_fnm` calls `add_path` while sourcing). `SHRC_LOAD_FUNCTIONS_ONLY`
+already suppresses all three action blocks, but there's no way to run them
+afterwards: they're inline `if test -z ...` guards, not callable units. So
+the split needs those three blocks wrapped in functions first — something
+like `shrc_setup_env` / `shrc_setup_session` / `shrc_setup_interactive`,
+called from the tail of `shrc` unless the flag is set. That refactor is
+worth landing on its own, before any zsh code moves.
+
+Costs worth weighing before continuing:
+
+- **Another parity target.** `AGENTS.md` requires keeping `shrc`, fish,
+  nushell, the mesh pair and the Elvish pair in step; `zshrc` makes zsh a
+  separate one again, so anything moved here has to be checked against all
+  of them rather than assumed to be zsh's business alone. This cost went up
+  while the split was in review — Elvish landed on `main` in the meantime,
+  which is itself the point: the list grows, and each addition makes a
+  seventh file cheaper to forget.
+- **`shrc_test.sh` runs under both bash and zsh** (444 tests each), which is
+  what proves the two shells agree. Every option that moves to `zshrc` is one
+  that cross-check no longer sees, so `shrc_zsh_test.sh` has to grow to cover
+  what it stops proving — as it did for the improvement options.
+- **`NO_NOMATCH` is still a deferral.** `shrc` sets it to keep sh's
+  literal-glob behavior; auditing every glob so real zsh `NOMATCH` can be
+  left on is separate work.
+
+`NO_UNSET` was considered and rejected for now: it aborts the current suite
+immediately, `shrc` has 134 bare positional references and none using
+`${1:-}`, and `compinit`/`bashcompinit` and third-party completions read
+unset parameters routinely. `setopt LOCAL_OPTIONS NO_UNSET` inside
+individual functions gets most of the safety without the blast radius.
+
 ## Add mesh to CI once it stabilizes
 
 `make test` runs `mesh_test.sh` (378 tests over `config/mesh/env.mesh` and

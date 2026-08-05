@@ -161,10 +161,13 @@ test-bash: $(CACHE)/test-bash.stamp
 # zsh is optional; skip gracefully when it isn't installed. Only touch
 # the stamp when zsh was actually present and the tests ran, otherwise
 # installing zsh later wouldn't trigger a re-run.
-$(CACHE)/test-zsh.stamp: shrc shrc_test_lib.sh shrc_test.sh shrc_zsh_test.sh \
+# zshrc is zsh-only syntax, so its syntax check lives here rather than in
+# test-lint: shellcheck and `dash -n` can't read it, and test-lint has no
+# skip branch for a missing zsh.
+$(CACHE)/test-zsh.stamp: shrc zshrc shrc_test_lib.sh shrc_test.sh shrc_zsh_test.sh \
                          config/atuin/config.toml | $(CACHE)
 	@if command -v zsh >/dev/null 2>&1; then \
-		zsh shrc_test.sh && zsh shrc_zsh_test.sh && touch $@; \
+		zsh -n zshrc && zsh shrc_test.sh && zsh shrc_zsh_test.sh && touch $@; \
 	else \
 		echo "SKIP: test-zsh (zsh not installed)"; \
 	fi
