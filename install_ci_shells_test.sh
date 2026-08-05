@@ -139,10 +139,22 @@ rm -rf "$_stubs"
 # The case the script exists for. Each shell is fetched from the source that
 # actually publishes it, which is the decision worth pinning down: fish and nu
 # from their own releases, zsh from apt.
+# stderr is kept rather than discarded, and printed when the status is wrong.
+# The script names which shell failed and why on every path; throwing that away
+# left a CI-only failure here with nothing to go on but "expected 0, actual 1",
+# while the call assertions below still passed -- so the run reached every
+# installer and something after the logging returned non-zero, and which one it
+# was could not be recovered from the job log. A flake nobody can read is a
+# flake nobody can fix.
 start_test "installs all four when none is present"
 _stubs=$(_stub_dir 0)
-PATH="$_stubs" "$_script" >/dev/null 2>&1
-assert_equal "0" "$?"
+_err=$(PATH="$_stubs" "$_script" 2>&1 >/dev/null)
+_status=$?
+if test "$_status" -ne 0; then
+    puts "  the script said:" >&2
+    puts "$_err" >&2
+fi
+assert_equal "0" "$_status"
 _calls=$(cat "$_stubs/calls" 2>/dev/null)
 start_test "fetches fish from its own release rather than apt"
 assert_contains "fish-shell/fish-shell/releases" "$_calls"
