@@ -159,23 +159,16 @@ reexec_into_shell
 setup_shell_compat_common() {
     case "$shell" in
     zsh)
-        # Treat zsh as zsh: no `emulate sh`, so unquoted parameters don't
-        # word-split or glob the way they do in sh. The handful of
-        # functions that still rely on sh splitting opt back in
-        # individually with `emulate -L sh`; grep for it to see what is
-        # left to port. Only options that affect how the *rest of shrc*
-        # parses and runs belong here; the interactive-only
-        # history/completion/prompt options live in
+        # make zsh as similar to bash as possible. Only options that affect
+        # how the *rest of shrc* parses and runs belong here; the
+        # interactive-only history/completion/prompt options live in
         # setup_shell_compat_interactive, which runs after the session
         # handoff so a launcher that re-execs or hands off doesn't pay for
         # setup it's about to throw away.
+        emulate sh
+        setopt BRACE_EXPAND
         setopt INTERACTIVE_COMMENTS
         setopt KSH_TYPESET
-        # sh leaves an unmatched glob as a literal word; zsh makes it a
-        # fatal error. Keep sh's behavior until every glob in this file
-        # has been audited, or a pattern that matches nothing aborts the
-        # rc mid-source.
-        setopt NO_NOMATCH
         # so aliases like + and - work
         unsetopt POSIX_ALIASES >/dev/null 2>&1
 
@@ -285,7 +278,6 @@ append_path() {
 }
 
 delete_path() {
-  is_zsh && emulate -L sh   # splits $PATH on IFS
   local _dir=$1
   PATH=$(
     _newpath=
@@ -300,7 +292,6 @@ delete_path() {
 }
 
 inpath() {
-  is_zsh && emulate -L sh   # splits $PATH on IFS
   local _dir=$1
   (
     IFS=:
@@ -926,7 +917,6 @@ nonempty() {
 # print the full path to an executable, ignoring aliases and functions
 # like whence -p/type -P, but should work in all shells
 path() {
-    is_zsh && emulate -L sh   # splits $PATH on IFS
     (
         IFS=:
         for d in $PATH; do
@@ -994,7 +984,6 @@ psc() {
 # pgrep with default ps options
 # psgrep [<ps options>] <pattern>
 psgrep() {
-    is_zsh && emulate -L sh   # splits $ps_args into separate ps arguments
     # last arg is pgrep pattern, rest are args for ps
     local ps_args
     while test $# -gt 1; do
@@ -1088,7 +1077,6 @@ first_arg_last() {
 # e.g. shift_options git checkout -- -b => git checkout -b
 #                 => git checkout -b
 shift_options() {
-    is_zsh && emulate -L sh   # splits $_options into separate arguments
     local _command="$1"
     local _target="$2"
     shift 2
@@ -2699,7 +2687,6 @@ ssh_to() {
 if test -z "${SHRC_LOAD_FUNCTIONS_ONLY:-}"; then
 
 set_up_ssh_aliases() {
-    is_zsh && emulate -L sh   # splits a multi-host `Host host1 host2` line
     test -f "$HOME/.ssh/config" || return 0
     set -f
     local _field1 _rest
@@ -3048,13 +3035,9 @@ if is_interactive; then
         compinit
         bashcompinit
 
-        # user input appears in bold. Index 1, not 0: without `emulate sh`
-        # KSH_ARRAYS is off, so zsh arrays start at 1 and [0] is an
-        # invalid subscript. A `zle_highlight=( ... )` literal would read
-        # better but dash can't parse it, and dash parses this arm even
-        # though it never runs it.
+        # user input appears in bold
         declare -a zle_highlight
-        zle_highlight[1]="default:bold"
+        zle_highlight[0]="default:bold"
 
         escape_start='%{'
         escape_end='%}'
