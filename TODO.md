@@ -1,5 +1,25 @@
 # TODO
 
+## Run the prompt and VCS suites under zsh
+
+`test-prompt` and `test-vcs` are bash-only, so `shrc`'s prompt code and
+`shrc.vcs` — both of which run on every zsh prompt — have no zsh coverage at
+all. That gap is why removing `emulate sh` could break `x` / `xa` / `f` with a
+fully green suite (reverted in #259): the option contract is now asserted in
+`shrc_zsh_test.sh`, but the code paths themselves are still only exercised
+under bash.
+
+The blocker is the drivers, not the code under test. The Makefile notes they
+use "bash/zsh-only syntax (here-strings, arrays)" — arrays are the real
+problem, since `shrc`'s `emulate sh` turns `KSH_ARRAYS` on and a driver
+written for bash's 0-based arrays reads differently under zsh. Auditing
+`shrc_prompt_test.sh` and `shrc_vcs_test.sh` for indexing and `${#arr}` is
+most of the work; `shrc_test.sh` already runs under both, so the harness
+itself is fine.
+
+Worth doing before any further zsh work, not after: every silent failure in
+that attempt was in a path some suite didn't reach.
+
 ## Add mesh to CI once it stabilizes
 
 `make test` runs `mesh_test.sh` (378 tests over `config/mesh/env.mesh` and
