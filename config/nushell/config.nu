@@ -80,9 +80,14 @@ $env.HISTORY_FILE = ([$env.HOME ".history"] | path join)
 # Nushell treats $env.PATH as a list, so these operate on that list.
 
 # add $dir to the start of $env.PATH (if it exists and is not already there)
+#
+# `uniq` keeps the first occurrence, so the copy just prepended survives and an
+# entry further down still moves to the front -- the same one-statement shape
+# env.mesh gets from `:prepend($dir):dedup`, and it collapses whatever
+# duplicates the inherited PATH arrived carrying too.
 def --env prepend-path [dir: string] {
     if not ($dir | path exists) { return }
-    $env.PATH = ($env.PATH | where {|it| $it != $dir } | prepend $dir)
+    $env.PATH = ($env.PATH | prepend $dir | uniq)
 }
 
 # add $dir to the end of $env.PATH (if it exists and is not already there)
