@@ -3035,6 +3035,7 @@ assert_true grep -qx 'inline_height = 9' "$_srcdir/config/atuin/config.toml"
 assert_true grep -qx 'style = "compact"' "$_srcdir/config/atuin/config.toml"
 assert_true grep -qx 'show_preview = false' "$_srcdir/config/atuin/config.toml"
 assert_true grep -qx 'show_help = false' "$_srcdir/config/atuin/config.toml"
+assert_true grep -qx 'show_tabs = false' "$_srcdir/config/atuin/config.toml"
 
 ###############
 # atuin history recording. shrc drives `atuin history start/end` from its

@@ -17,9 +17,12 @@ filter_mode_shell_up_key_binding = "host"
 # which clears the terminal on a keystroke pressed dozens of times an
 # hour: the scrollback the search was meant to help you avoid re-typing
 # is exactly what disappears while you search it. compact drops the
-# framing that only earns its space at full height, and the preview and
-# help lines go with it -- at nine rows they're most of the pane.
+# framing that only earns its space at full height, and the preview,
+# help and tab lines go with it -- at nine rows they're most of the pane.
+# The tab bar lists one tab until the inspector is opened, so its row is
+# spent on nothing.
 inline_height = 9
 style = "compact"
 show_preview = false
 show_help = false
+show_tabs = false
