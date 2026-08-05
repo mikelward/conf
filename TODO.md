@@ -39,7 +39,41 @@ prepend_path() { path=( $1 ${path:#$1} ) }
 
 That version handles PATH entries containing spaces and parens for free —
 two of the cross-shell tests exist only to pin down the quoting the POSIX
-version needs.
+version needs. Verified, including a `/a b` entry with a space.
+
+**The quoting trap.** `${arr:#pat}` and `"${arr:#pat}"` are *different
+operators*, and the quoted one fails silently:
+
+```zsh
+${path:#/second}    # array filter -- drops the matching element
+"${path:#/second}"  # joins to a scalar first, so :# becomes
+                    # "strip shortest matching prefix" -- a no-op here
+```
+
+So `delete_path` above is correct only while that expansion stays unquoted.
+That is the opposite of the quoting discipline the rest of `shrc` teaches,
+and the failure mode is a `PATH` that silently keeps the entry you asked to
+remove. Any test for these must assert on the resulting `PATH`, not just
+that the function ran.
+
+**`KSH_ARRAYS` was considered and rejected.** It would make zsh arrays
+0-based like ksh/bash, which sounds like it would ease sharing array code
+with `shrc.vcs` and `bashrc.fuzzycomplete`. It doesn't, and it breaks the
+rewrites above:
+
+- `(( ${path[(I)$1]} ))` works as a boolean *because* zsh is 1-based: 0
+  means "not found". Under `KSH_ARRAYS` a match in the first position also
+  returns 0, so `inpath` reports the first `PATH` entry as missing.
+- `$path` stops being the array and becomes its first element, so
+  `path=( ${path:#$1} )` truncates `PATH` to one entry.
+- `${#arr}` silently changes from element count to the string length of
+  element 0. `$arr` and `${#arr}` both keep working and just mean something
+  else, which is worse than an error.
+
+There is also nothing to gain: `shrc.vcs` only uses `+=(...)`,
+`"${arr[@]}"` and `${#arr[@]}`, which behave identically either way
+(verified). `KSH_ARRAYS` is a compatibility option — turning it on is the
+same move as `emulate sh`, which this work removed.
 
 Everything else stays in `shrc` as the portable core for bash and for hosts
 without zsh: the basic/general functions, environment setup, the prompt and
