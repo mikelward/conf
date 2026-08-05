@@ -31,13 +31,21 @@ if $env:get(FAILSAFE, false):bool or $env:get(LC_FAILSAFE, false):bool or "$env.
 # BASIC HELPERS
 #
 # One rule holds across this file and env.mesh: **nothing here declares a flag
-# of its own, so anything taking a `...rest` is a `wrapper func`.** A plain
-# `func` scans every `--`-leading argument against its signature, which breaks
-# both kinds of rest parameter -- one holding a delegated command's options
-# (`setx curl --location URL`) and one holding data that merely looks like an
-# option (`bak --weird-name`, `error "--x is unset"`). The three helpers that
-# do take an option of their own -- retry, body, recent -- read it off the
-# front by hand, because a declared flag would be matched anywhere in the list.
+# of its own**, so mesh reads no `--`-leading argument as one -- a signature
+# that declares no flags parses none, and an undeclared `--word` reaches the
+# `...rest` as data. That covers both kinds of rest parameter: one holding a
+# delegated command's options (`setx curl --location URL`) and one holding data
+# that merely looks like an option (`bak --weird-name`, `error "--x is unset"`).
+# The three helpers that do take an option of their own -- retry, body, recent
+# -- read it off the front by hand, because a declared flag would be matched
+# anywhere in the list *and* would switch the whole function back to parsing
+# flags, so `retry --sleep=1 curl --location URL` would reject curl's flag.
+#
+# `wrapper func` is still written wherever the callee should own the two words
+# an ordinary function reads before binding -- the `--` terminator and
+# `--help`. That is every delegation to an external program, which is most of
+# the wrappers below; a helper that only computes over its arguments is a plain
+# `func`.
 
 # ask the user whether to do something; true on yes or a bare Enter
 #

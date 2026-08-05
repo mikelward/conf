@@ -451,11 +451,37 @@ assert_equal "H1
 H2
 xxx" "$result"
 
-# starts-with takes data, and a value call scans an argument whose runtime
-# value begins with `--` as a flag unless the callee is a wrapper.
+# starts-with takes data. mesh reads an option from the call site rather than
+# from the value, so a quoted argument that begins with `--` arrives intact and
+# the helper needs no `wrapper` to say so.
 start_test "mesh starts-with accepts an argument that looks like a flag"
 result="$(_mesh_run 'puts starts-with("--sleep=5", "--sleep=")')"
 assert_equal "true" "$result"
+
+# The same, through a variable: what the call means has to be readable from the
+# line rather than from whatever the variable turned out to hold.
+start_test "mesh starts-with accepts a flag-shaped value through a variable"
+result="$(_mesh_run '
+    arg = "--sleep=5"
+    puts starts-with($arg, "--sleep=")
+')"
+assert_equal "true" "$result"
+
+# None of the helpers declares a flag, so an undeclared `--word` written bare
+# reaches the `...rest` as data instead of being refused. This is what `confirm`
+# and `bak` are called with, and what used to need `wrapper` on every one.
+start_test "mesh a flagless helper takes a bare dashed word as data"
+result="$(_mesh_run '
+    func takes-words(...words) { puts $words:join(" ") }
+    takes-words --force is set, continue
+')"
+assert_equal "--force is set, continue" "$result"
+
+# warn and error keep their `wrapper`, so `--help` reaches the message rather
+# than printing mesh's generated help over it.
+start_test "mesh warn passes a dashed message through untouched"
+result="$(_mesh_run 'warn "--x is unset"' 2>&1)"
+assert_equal "--x is unset" "$result"
 
 ###############
 # TEST: rerc reloads both halves
