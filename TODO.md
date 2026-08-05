@@ -118,3 +118,40 @@ version wrapper. The one thing to check is whether the container image ships a
 Go toolchain; the CI runner does, since `make` builds the vcs submodule with
 it, but the hook runs somewhere else and would need a fallback message rather
 than a failed install if it doesn't.
+
+## Make `confirm` decline at end of input in every shell
+
+`confirm` reads one line and takes a bare Enter as yes. With nothing on stdin
+— `confirm x < /dev/null`, or any unattended script — the five shells disagree
+about what that means:
+
+* **mesh** and **Elvish** decline. `rc.elv` catches the failed `read-line`;
+  `rc.mesh` reads through `gets()`, which yields `false` at end of input and
+  falls through the match to no.
+* **`shrc`**, **fish** and **nushell** proceed. Their read leaves the variable
+  empty, and empty is the bare-Enter case, so an absent operator is read as
+  agreement.
+
+Declining is the safer reading: a prompt answered yes on behalf of someone who
+is not there is the direction that costs something. This entry is the other
+three, plus tests.
+
+Per shell, in increasing order of pain — measured against the installed shells,
+not assumed:
+
+* **fish** — `read` returns 0 for a final line with content and no trailing
+  newline, and 1 only at true end of input, so the whole change is
+  `read --prompt-str "" REPLY; or return 1`.
+* **`shrc`** — `read -r` returns nonzero at end of input *and* on a partial
+  last line, but sets the variable in the second case, so a piped `y` with no
+  trailing newline would be declined by a bare `gets REPLY || return 1`. Needs
+  the content check beside it: `gets REPLY || test -n "$REPLY" || return 1`.
+* **nushell** — the current `^head -n 1 | str downcase | str trim` cannot tell
+  the two apart at all: nu strips the trailing newline from external output, so
+  an empty line and end of input are both `""`. `^head -n 1 | into binary |
+  length` does distinguish them (0 bytes only at end of input), so the read has
+  to be restructured around that rather than patched.
+
+Tests mirror the pair already in `mesh_test.sh`: the status, and — for `shrc`
+and fish — that a partial last line is still read as an answer rather than
+becoming the regression this guard would otherwise introduce.
