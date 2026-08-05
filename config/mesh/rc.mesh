@@ -44,10 +44,18 @@ if $env:get(FAILSAFE, false):bool or $env:get(LC_FAILSAFE, false):bool or "$env.
 # The prompt goes to stderr: it is UI rather than output, so `confirm x > log`
 # still asks, and a caller reading stdout gets only what it asked for. bash's
 # own `read -p` prompts on stderr for the same reason.
+#
+# `gets()` -- the value form -- rather than the `gets reply` command form,
+# because the command form leaves `reply` *unchanged* at end of input, and there
+# is nothing there to leave it as: `confirm x < /dev/null` died on an unbound
+# variable instead of answering. The value form yields `false` there, which
+# falls through the match to a decline, as rc.elv's `catch` does. Declining is
+# the safe reading -- a caller with no one at the keyboard should not have a
+# prompt answered yes on their behalf.
 wrapper func confirm(...question) {
   text = $question:join(" ")
   print "$text? [Y/n] " >&2
-  gets reply
+  reply = gets()
   match $reply {
     Y | y | "" => { return true }
     _          => { return false }

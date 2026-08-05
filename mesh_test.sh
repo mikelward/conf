@@ -551,6 +551,22 @@ start_test "mesh confirm takes no"
 assert_equal "1" "$(_confirm_status 'n
 ')"
 
+# End of input is a decline, not a crash. The `gets reply` command form left
+# `reply` unchanged at end of input -- unbound, here -- so `confirm x` with
+# nothing to read died on "reply: unbound variable" and reported failure for
+# the wrong reason. `gets()` yields false there, which the match reads as no.
+# rc.elv answers false at end of input too.
+start_test "mesh confirm declines at end of input"
+assert_equal "1" "$(_confirm_status '')"
+
+start_test "mesh confirm says nothing about an unbound variable at end of input"
+printf '' | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout 15 mesh -c "
+    source $_env_mesh
+    source $_rc_mesh
+    confirm are you sure
+" >/dev/null 2>"$_testdir/confirm-eof.err"
+assert_not_contains "unbound variable" "$(cat "$_testdir/confirm-eof.err")"
+
 # The prompt itself, asserted once, on stderr. mesh used to swallow a
 # function's earlier stdout when its last statement was a `match` and it was
 # called for its value, so the prompt never appeared at all; mikelward/mesh
