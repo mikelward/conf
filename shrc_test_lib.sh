@@ -424,6 +424,20 @@ run_interactive_with_timeout() {
 #
 # Usage: _fish_run_config PRE_SOURCE POST_SOURCE SNIPPET
 _fish_run_config() {
+    _fish_run_config_stdin "$@" </dev/null
+}
+
+# Same, but leaving stdin connected to the caller's, for the helpers that read
+# it -- confirm, and anything else that consumes a line. The redirect above is
+# about keeping fish -i away from make's controlling terminal, and a pipe is no
+# more a tty than /dev/null is, so feeding one keeps that protection.
+#
+# Without this a test can pipe input in, watch it go nowhere, and still pass:
+# fish sees end of input, confirm declines, and an assertion expecting a
+# decline is satisfied for entirely the wrong reason.
+#
+# Usage: _fish_run_config_stdin PRE_SOURCE POST_SOURCE SNIPPET
+_fish_run_config_stdin() {
     local _pre="$1"
     local _post="$2"
     local _snippet="$3"
@@ -444,7 +458,7 @@ _fish_run_config() {
             source $_srcdir/config/fish/config.fish
             $_post
             $_snippet
-        " </dev/null
+        "
 }
 
 # Create a temp directory for testing
