@@ -627,6 +627,33 @@ result="$(_mesh_run '
 ')"
 assert_equal "1" "$result"
 
+# The move-to-front half of `prepend-path`, which `:prepend(...):dedup` now
+# does in one statement: an entry already further down comes to the front
+# rather than being left where it was or landing twice.
+start_test "mesh prepend-path moves an entry already on PATH to the front"
+result="$(_mesh_run '
+    append-path /etc
+    prepend-path /etc
+    count = 0
+    for d in $env.PATH {
+        if $d == "/etc" { count = $count + 1 }
+    }
+    puts $env.PATH[0] $count
+')"
+assert_equal "/etc 1" "$result"
+
+# `:dedup` collapses the duplicates the inherited PATH arrived with, not just
+# the one being added -- what keeps a `rerc` from growing the list. config.nu's
+# `uniq` does the same; bash, fish and Elvish have no one-statement equivalent
+# and still delete only the entry being moved.
+start_test "mesh prepend-path collapses a duplicate already on the inherited PATH"
+result="$(_mesh_run '
+    $env.PATH = ["/tmp" "/etc" "/tmp"]
+    prepend-path /usr
+    puts $env.PATH:join(",")
+')"
+assert_equal "/usr,/tmp,/etc" "$result"
+
 start_test "mesh delete-path removes an entry"
 result="$(_mesh_run '
     prepend-path /etc

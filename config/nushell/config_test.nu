@@ -357,6 +357,14 @@ let results = [
         prepend-path "/definitely/not/a/real/dir"
         assert equal $env.PATH ["/usr/bin"]
     })
+    # `uniq` normalizes the whole list, not just the entry being moved, which is
+    # what keeps a reload from growing an inherited PATH. env.mesh's `:dedup`
+    # does the same; bash, fish and Elvish have no one-statement equivalent.
+    (run-test "nu prepend-path collapses an inherited duplicate" {
+        $env.PATH = ["/usr/bin" "/bin" "/usr/bin"]
+        prepend-path "/tmp"
+        assert equal $env.PATH ["/tmp" "/usr/bin" "/bin"]
+    })
     (run-test "nu append-path existing dir" {
         $env.PATH = ["/usr/bin"]
         append-path "/tmp"
