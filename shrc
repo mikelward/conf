@@ -176,6 +176,11 @@ setup_shell_compat_common() {
         # has been audited, or a pattern that matches nothing aborts the
         # rc mid-source.
         setopt NO_NOMATCH
+        # sh's `command` runs builtins too; zsh's own only looks for an
+        # external command, so `command fg` / `command exit` (which use
+        # the prefix to step past a same-named function or alias) die
+        # with "command not found".
+        setopt POSIX_BUILTINS
         # so aliases like + and - work
         unsetopt POSIX_ALIASES >/dev/null 2>&1
 

@@ -74,6 +74,39 @@ result=$(zsh --no-rcs -c '
 ' </dev/null 2>/dev/null | grep -E '^SURVIVED$' | tail -1)
 assert_equal "SURVIVED" "$result"
 
+# Regression: `x` (via `xa`) drains suspended jobs with `command fg` and
+# leaves through `_exit`, which runs `command exit`. Both spell the
+# builtin with a `command` prefix to step past a same-named function or
+# alias, and zsh's own `command` only searches for an external command --
+# so without POSIX_BUILTINS logging out died with
+# "command not found: fg" and never exited.
+start_test "shrc sets POSIX_BUILTINS so command finds fg and exit"
+result=$(zsh --no-rcs -c '
+    SHRC_LOAD_FUNCTIONS_ONLY=1 source '"$_srcdir"'/shrc >/dev/null 2>&1
+    if [[ -o POSIX_BUILTINS ]]; then print -r "ON"; else print -r "OFF"; fi
+' </dev/null 2>/dev/null | grep -E '^(ON|OFF)$' | tail -1)
+assert_equal "ON" "$result"
+
+# The behavior that option buys: `command <builtin>` resolves. A
+# subshell keeps the exit from taking the test runner with it.
+start_test "command exit reaches the builtin under zsh"
+result=$(zsh --no-rcs -c '
+    SHRC_LOAD_FUNCTIONS_ONLY=1 source '"$_srcdir"'/shrc >/dev/null 2>&1
+    (command exit 7)
+    print -r "rc=$?"
+' </dev/null 2>/dev/null | grep -E '^rc=' | tail -1)
+assert_equal "rc=7" "$result"
+
+# `command fg` with no job control reports "no job control in this
+# shell" and fails -- which is what xa's loop reads as "nothing left to
+# resume". The bug made it 127/"command not found" instead.
+start_test "command fg reaches the builtin under zsh"
+result=$(zsh --no-rcs -c '
+    SHRC_LOAD_FUNCTIONS_ONLY=1 source '"$_srcdir"'/shrc >/dev/null 2>&1
+    command fg 2>&1 | grep -c "command not found"
+' </dev/null 2>/dev/null | tail -1)
+assert_equal "0" "$result"
+
 # The functions that still need sh word splitting opt in with
 # `emulate -L sh`, whose LOCAL_OPTIONS scope is the function. Calling one
 # must not leave splitting on for the caller.
