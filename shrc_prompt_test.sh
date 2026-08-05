@@ -330,6 +330,22 @@ assert_equal "laptop shpool ~ SSH" "$result"
 is_ssh_valid() { true; }
 
 ###############
+# auth_info is a hook too: .shrc.local can replace it outright, and an override
+# that blocks takes the guard inside the stock auth_info with it. prompt_line
+# consults it through bounded_auth_info so a replacement inherits a limit it
+# never wrote.
+start_test "prompt_line bounds an overridden auth_info hook"
+_saved_auth_info_body='is_ssh_valid || puts SSH'
+auth_info() { sleep 10; }
+on_production_host() { false; }
+in_shpool() { false; }
+inside_project() { false; }
+PWD="$HOME"
+result="$(AUTH_TIMEOUT=1 prompt_line)"
+assert_contains "auth" "$result"
+eval "auth_info() { $_saved_auth_info_body; }"
+is_ssh_valid() { true; }
+
 start_test "prompt_line inside a project delegates dir info to prompt_info"
 
 prompt_info() { echo "conf main"; }

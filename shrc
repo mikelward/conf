@@ -343,7 +343,19 @@ auth() {
 # otherwise.
 auth_info() {
     local problems=""
-    is_ssh_valid || problems="$problems SSH"
+    # Bounded because this renders every prompt and the check can block
+    # indefinitely: a stale $SSH_AUTH_SOCK -- typically a forwarded agent whose
+    # ssh connection has gone away -- leaves `ssh-add -L` waiting on a socket
+    # nobody answers, and an unguarded call there wedges every new prompt. The
+    # limit lives here rather than in is_ssh_valid so an override of that hook
+    # is guarded too. A check that cannot answer in time counts as a problem,
+    # so the prompt says SSH rather than quietly claiming all is well.
+    #
+    # $SSH_VALID_TIMEOUT is a plain number of seconds -- `2`, `0.5`. The same
+    # variable is read by the nushell config, which converts it to a duration
+    # there; a nu-spelled `2sec` would reach sleep(1) here and fail every check,
+    # so the number both shells accept is the one this takes.
+    with_timeout "${SSH_VALID_TIMEOUT:-2}" is_ssh_valid || problems="$problems SSH"
     test -n "$problems" && yellow "${problems# }"
 }
 
@@ -455,14 +467,36 @@ want_tmux() {
     connected_remotely || inside_project
 }
 
-# returns whether an SSH key is loaded
+# returns whether an SSH key is loaded.
+#
+# A hook: override it in .shrc.local for a site-specific notion of "authenticated".
+# It is deliberately unbounded -- auth_info is what puts it under a time limit,
+# so an override inherits that guard instead of having to reimplement it.
 is_ssh_valid() {
     ssh-add -L >/dev/null 2>&1
 }
 
 # returns whether I need to authenticate.
 need_auth() {
-    test -n "$(auth_info)"
+    test -n "$(bounded_auth_info)"
+}
+
+# auth_info under a time limit.
+#
+# Every caller runs on the prompt path, and auth_info is a hook .shrc.local can
+# replace outright -- so the limit lives here, once, rather than at each call
+# site where the next caller added would quietly miss it. The stock auth_info
+# bounds is_ssh_valid itself and says SSH; this can only report that something
+# took too long, so $AUTH_TIMEOUT defaults higher than $SSH_VALID_TIMEOUT and
+# `auth` shows only for an override.
+bounded_auth_info() {
+    local _auth
+    _auth="$(with_timeout_output "${AUTH_TIMEOUT:-5}" auth_info)"
+    if test "$?" -eq 124; then
+        yellow auth
+        return
+    fi
+    test -n "$_auth" && puts "$_auth"
 }
 
 # return true if this machine is my workstation
@@ -567,6 +601,147 @@ log_history() {
 # run a command with output silenced
 quiet() {
     "$@" >/dev/null 2>&1
+}
+
+# print a process and its descendants, parents before children.
+#
+# The walk has to finish before anything is signalled: a dead parent's children
+# are reparented to init, where `pgrep -P` can no longer find them. pgrep is on
+# both Linux (procps) and macOS (BSD base); where it is missing this degrades to
+# the named process alone, which is what a plain `kill` would have reached.
+process_tree() {
+    local _pid="$1"
+    local _child
+    puts "$_pid"
+    if have_command pgrep; then
+        for _child in $(pgrep -P "$_pid" 2>/dev/null); do
+            process_tree "$_child"
+        done
+    fi
+}
+
+# signal a process and everything it started, parents before children.
+#
+# Parents first, because a wrapper that outlives its child can *recover*: kill
+# the blocked command inside `is_ssh_valid() { sleep 5; return 0; }` and the
+# function simply carries on to its `return 0`, so the job exits successfully
+# and a check that ran out of time is reported as healthy. Signalling the
+# wrapper first denies it that. The snapshot above is what makes this order
+# possible at all -- walking and killing in one pass has to go children-first
+# or it loses the descendants.
+kill_tree() {
+    local _pid
+    for _pid in $(process_tree "$1"); do
+        kill -TERM "$_pid" >/dev/null 2>&1
+    done
+}
+
+# run a predicate under a wall-clock limit, returning 124 if it hits the limit.
+# The limit goes to sleep(1), so fractions like 0.5 work where sleep takes them.
+#
+# Built on the shell's own job control rather than timeout(1) because the
+# callers guard *hooks*, and a hook is a shell function -- timeout(1) execs an
+# external command and cannot see one. It also sidesteps timeout(1) not being
+# portable: macOS ships no such binary, and Homebrew's coreutils installs it
+# under a different name.
+#
+# A predicate, not a general wrapper: only the exit status survives. The
+# command runs in a background subshell, so assignments it makes are lost, and
+# its stdout goes to /dev/null. That redirect is load-bearing, not tidiness --
+# callers run inside `$(...)`, and a child that outlived the kill would
+# otherwise hold the command substitution's pipe open and hang the very prompt
+# this is here to keep responsive.
+#
+# The kill has to reach the job's *descendants*, not just the job. Backgrounding
+# a shell function forks a subshell, and the blocking command runs as that
+# subshell's child -- so signalling the job alone reaps the wrapper and orphans
+# the thing that was actually stuck. For the case this exists for, that is one
+# `ssh-add` left blocked on the dead socket per timed-out prompt, forever.
+#
+# Killing the process *group* is the other way to do this, and it is a real
+# alternative rather than an impossible one: `set -m` does give the job a group
+# of its own, with or without a controlling terminal. It is not used here
+# because monitor mode has to be *on* when the job is forked, and on a terminal
+# that changes what the job is allowed to do -- one that touches the tty takes
+# SIGTTIN/SIGTTOU and stops instead of running, and `wait` returns on a stop, so
+# a hook that prompts would be reported as a timeout while still sitting there.
+# The trade is a dependency on pgrep against a job-control behavior change on
+# the prompt's own path.
+#
+# Monitor mode is turned off around the job and restored afterwards: without
+# that, an interactive shell announces every background job, and this runs on
+# every prompt.
+with_timeout() {
+    local _limit="$1"
+    shift
+    bounded_run /dev/null "$_limit" "$@"
+}
+
+# run a command under a wall-clock limit and print what it printed, or print
+# nothing and return 124 if it hits the limit.
+#
+# The output goes to a file rather than down a pipe, and that is the whole
+# reason this is separate from with_timeout: a child that outlived the kill
+# holding the caller's pipe open is exactly what wedges a prompt. Nothing waits
+# on a file.
+#
+# The file is made once per shell and kept. mktemp is a fork and this runs on
+# every prompt, while a predictable name in a shared /tmp is a symlink someone
+# else can aim at a file of yours.
+with_timeout_output() {
+    local _limit="$1"
+    shift
+    local _file="$_with_timeout_file"
+    local _borrowed=1
+    if test -z "$_file"; then
+        # Nothing pre-allocated one, so this call owns it and has to clean up.
+        # Every prompt-path caller runs inside `$(...)`, where an assignment to
+        # the cache variable would be lost with the subshell -- so a helper that
+        # merely cached would fork mktemp and leak a file on every render.
+        _file="$(mktemp)" || return 1
+        _borrowed=""
+    fi
+    : > "$_file"
+    bounded_run "$_file" "$_limit" "$@"
+    local _status=$?
+    if test "$_status" -ne 124; then
+        cat "$_file"
+    fi
+    test -n "$_borrowed" || rm -f "$_file"
+    return "$_status"
+}
+
+# make the file with_timeout_output reuses, in the shell itself rather than in
+# one of the command substitutions that call it. preprompt runs this once per
+# render, so the prompt path pays no mktemp and leaves nothing behind.
+allocate_timeout_file() {
+    if test -z "$_with_timeout_file"; then
+        _with_timeout_file="$(mktemp)" || return 1
+    fi
+}
+
+# the machinery both of the above share. $1 is where the command's stdout goes;
+# the rest is with_timeout's contract.
+bounded_run() {
+    local _sink="$1"
+    local _limit="$2"
+    shift 2
+    local _monitor=""
+    case "$-" in *m*) _monitor=1; set +m;; esac
+    "$@" > "$_sink" &
+    local _job=$!
+    ( sleep "$_limit"; kill_tree "$_job" ) >/dev/null 2>&1 &
+    local _watchdog=$!
+    wait "$_job"
+    local _status=$?
+    kill -TERM "$_watchdog" >/dev/null 2>&1
+    wait "$_watchdog" >/dev/null 2>&1
+    test -n "$_monitor" && set -m
+    # A signalled job reports 128+signo; the limit is the only signal sent here.
+    if test "$_status" -gt 128; then
+        return 124
+    fi
+    return "$_status"
 }
 
 # run a command, or just print what would be run if SIMULATE is true
@@ -1572,6 +1747,7 @@ preprompt() {
     atuin_precmd "$_last_status"
     current_command=
     SECONDS=0
+    allocate_timeout_file
     maybe_background_fetch
     # Warm the session name once so host_info and title (run in separate
     # command-substitution subshells below) reuse it instead of each
@@ -1604,7 +1780,7 @@ maybe_background_fetch() {
         return
     fi
     have_command vcs || return
-    test -n "$(auth_info)" && return
+    test -n "$(bounded_auth_info)" && return
     # `command` bypasses the no-op vcs() stub defined above (and any
     # shrc.vcs wrapper) so the call goes straight to the binary.
     command vcs auto-fetch >/dev/null 2>&1 || return
@@ -1677,7 +1853,18 @@ dir_info() {
 # captured once so ssh-add -L (via is_ssh_valid) only runs one time per
 # prompt — calling need_auth and auth_info separately would double that.
 prompt_line() {
-    local _auth="$(auth_info)"
+    # auth_info is a hook in its own right -- .shrc.local can replace it
+    # outright -- so it gets the same treatment its own hook does. Without this,
+    # an override that blocks wedges every prompt exactly as a blocking
+    # is_ssh_valid did, and the guard inside the stock auth_info goes with the
+    # function an override replaced.
+    #
+    # Both layers stay bounded so the ordinary case keeps its precise answer:
+    # auth_info bounds is_ssh_valid itself and says SSH, where this outer
+    # backstop only knows that *something* took too long. $AUTH_TIMEOUT is the
+    # longer of the two by default, which is what leaves the inner limit to fire
+    # first -- `auth` shows only for an override.
+    local _auth="$(bounded_auth_info)"
     local _out="$(host_info) $(dir_info)"
     if test -n "$_auth"; then
         _out="$_out $_auth"
