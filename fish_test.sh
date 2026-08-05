@@ -19,15 +19,25 @@ _config="$_srcdir/config/fish/config.fish"
 # config.fish's interactive setup (history file, ssh alias parsing,
 # shpool startup) runs against a clean workspace. The have_command stub
 # runs AFTER source so it overrides any definition config.fish installs.
-_fish_run() {
-    _fish_run_config "" '
+_fish_have_command_stub='
         function have_command
             switch $argv[1]
                 case shpool autoshpool brew yum apt-get; return 1
                 case "*"; command -v $argv[1] >/dev/null 2>&1
             end
         end
-    ' "$1"
+'
+
+_fish_run() {
+    _fish_run_config "" "$_fish_have_command_stub" "$1"
+}
+
+# Same, but leaving stdin connected to the caller's. The default detaches it,
+# so a test that pipes input to a helper which reads stdin -- confirm -- would
+# otherwise be feeding /dev/null and asserting against end-of-input behavior
+# without knowing it.
+_fish_run_stdin() {
+    _fish_run_config_stdin "" "$_fish_have_command_stub" "$1"
 }
 
 ###############
@@ -56,6 +66,27 @@ start_test "fish confirm prints its prompt to stderr"
 printf 'y\n' | _fish_run 'confirm "are you sure"' >"$_testdir/confirm.out" 2>"$_testdir/confirm.err"
 assert_equal "" "$(cat "$_testdir/confirm.out")"
 assert_equal "are you sure? [Y/n] " "$(cat "$_testdir/confirm.err")"
+
+start_test "fish confirm takes yes, no, and a bare Enter"
+printf 'y\n' | _fish_run_stdin 'confirm x' 2>/dev/null
+assert_equal "0" "$?"
+printf 'n\n' | _fish_run_stdin 'confirm x' 2>/dev/null
+assert_equal "1" "$?"
+printf '\n' | _fish_run_stdin 'confirm x' 2>/dev/null
+assert_equal "0" "$?"
+
+# Nothing to read at all is a decline: a caller with no one at the keyboard
+# must not have the prompt answered yes on its behalf.
+start_test "fish confirm declines at end of input"
+_fish_run_stdin 'confirm x' </dev/null 2>/dev/null
+assert_equal "1" "$?"
+
+# fish's read reports success for a final line with no trailing newline, unlike
+# shrc's, so this needs no content check beside the status -- asserted so the
+# difference is pinned rather than assumed.
+start_test "fish confirm reads a final line with no trailing newline"
+printf 'y' | _fish_run_stdin 'confirm x' 2>/dev/null
+assert_equal "0" "$?"
 
 ###############
 # TEST: shift_options moves leading -x options past the target argument

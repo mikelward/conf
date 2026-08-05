@@ -643,8 +643,25 @@ let results = [
         let out = ("no" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
         assert str contains $out "false"
     })
-    (run-test "nu confirm defaults to yes on empty reply" {
+    # A bare Enter is one byte, and still means yes. Piping "" instead sends
+    # *zero* bytes -- end of input, not an empty line -- which is why this case
+    # is spelled with the newline and the decline case below is not.
+    (run-test "nu confirm defaults to yes on a bare Enter" {
+        let out = ("\n" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        assert str contains $out "true"
+    })
+    # Nothing to read at all declines: a caller with no one at the keyboard must
+    # not have the prompt answered yes for it. shrc, config.fish, rc.mesh and
+    # rc.elv agree.
+    (run-test "nu confirm declines at end of input" {
         let out = ("" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        assert str contains $out "false"
+    })
+    # The byte count separates end of input from an empty line, so a final line
+    # with no trailing newline has to stay an answer rather than becoming a
+    # decline -- the regression the guard would otherwise introduce.
+    (run-test "nu confirm reads a final line with no trailing newline" {
+        let out = ("y" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
         assert str contains $out "true"
     })
     (run-test "nu confirm treats non-y reply as no" {

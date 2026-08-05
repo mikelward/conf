@@ -356,10 +356,18 @@ auth_info() {
     test -n "$problems" && yellow "${problems# }"
 }
 
-# ask the user whether to do something, return true if they say yes or Enter
+# ask the user whether to do something, return true if they say yes or Enter.
+# Nothing to read at all is a decline: a caller with no one at the keyboard
+# (`confirm x < /dev/null`, a cron job) must not have the prompt answered yes
+# on its behalf. rc.mesh and rc.elv answer the same way.
+#
+# `read` reports failure both at end of input and on a final line with no
+# trailing newline, but sets REPLY in the second case and clears it in the
+# first -- bash, zsh and dash all agree -- so the content check is what keeps a
+# piped `y` with no newline an answer rather than a decline.
 confirm() {
     printf '%s? [Y/n] ' "$*" >&2
-    gets REPLY
+    gets REPLY || test -n "$REPLY" || return 1
     case "$REPLY" in
         [Yy]|'')
             true;;
