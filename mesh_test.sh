@@ -824,6 +824,64 @@ result="$(PATH="$_fake_fnm_bin:$PATH" _mesh_run_config '' '
 assert_equal "1" "$(printf '%s\n' "$result" | tr ',' '\n' | grep -c 'fnm-shell-')"
 assert_contains "$_testdir/fnm-shell-4/bin" "$result"
 
+# Every name `fnm env` publishes is applied through `$env[$name]`, so one this
+# file has never heard of arrives on its own -- which is what shrc and fish get
+# from eval'ing the snippet, and what the per-name match here used to trade
+# away.
+start_test "mesh setup-fnm applies a variable it does not know by name"
+_new_fnm_bin="$_testdir/newvarfnmbin"
+mkdir -p "$_new_fnm_bin"
+cat > "$_new_fnm_bin/fnm" <<EOF
+#!/bin/sh
+echo "export FNM_DIR=\"$_testdir/fnm\";"
+echo "export FNM_SOMETHING_NEW=\"whatever\";"
+EOF
+chmod +x "$_new_fnm_bin/fnm"
+result="$(PATH="$_new_fnm_bin:$PATH" _mesh_run_config '' '
+    setup-fnm
+    puts $env.FNM_SOMETHING_NEW
+' 2>&1)"
+assert_contains "whatever" "$result"
+
+# Nothing expands a value here, so one still naming another variable would be
+# exported with the `$` in it. Say which one and leave it unset -- a path a
+# child cannot use is worse than a missing one.
+start_test "mesh setup-fnm reports a value it cannot expand and leaves it unset"
+_ref_fnm_bin="$_testdir/reffnmbin"
+mkdir -p "$_ref_fnm_bin"
+cat > "$_ref_fnm_bin/fnm" <<'EOF'
+#!/bin/sh
+echo 'export FNM_LATER_DIR="$HOME/elsewhere";'
+EOF
+chmod +x "$_ref_fnm_bin/fnm"
+result="$(PATH="$_ref_fnm_bin:$PATH" _mesh_run_config '' '
+    setup-fnm
+    later = $env:get(FNM_LATER_DIR, "unset")
+    puts "later=$later"
+' 2>&1)"
+assert_contains "FNM_LATER_DIR refers to another variable" "$result"
+assert_contains "later=unset" "$result"
+
+# `\$` is bash's *literal* dollar inside double quotes, which is how a home
+# directory with a `$` in its name arrives. Rejecting it as a reference would
+# drop FNM_MULTISHELL_PATH and with it the node shim.
+_dollar_fnm_bin="$_testdir/dollarfnmbin"
+mkdir -p "$_dollar_fnm_bin"
+cat > "$_dollar_fnm_bin/fnm" <<'EOF'
+#!/bin/sh
+echo 'export FNM_DIR="/home/user/we\$rd/fnm";'
+EOF
+chmod +x "$_dollar_fnm_bin/fnm"
+
+start_test "mesh setup-fnm keeps an escaped dollar as a literal"
+result="$(PATH="$_dollar_fnm_bin:$PATH" _mesh_run_config '' '
+    setup-fnm
+    dir = $env:get(FNM_DIR, "unset")
+    puts "dir=$dir"
+' 2>&1)"
+assert_contains 'dir=/home/user/we$rd/fnm' "$result"
+assert_not_contains "refers to another variable" "$result"
+
 ###############
 # TEST: setup-brew derives what `brew shellenv` would export
 
