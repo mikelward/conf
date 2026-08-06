@@ -1110,6 +1110,19 @@ except OSError: pass
         assert equal $files "baktest"
         assert equal $content "hello"
     })
+    # Without the option terminator `mv` reads a `--`-leading name as an
+    # option of its own and refuses the rename, in both directions.
+    (run-test "nu bak and unbak handle a name that looks like an option" {
+        cd $env.HOME
+        ["--weird" "--weird.bak"] | each {|f| if ($f | path exists) { ^rm -f -- $f } } | ignore
+        "hello" | save --force "--weird"
+        bak "--weird"
+        assert ("--weird.bak" | path exists)
+        unbak "--weird.bak"
+        assert ("--weird" | path exists)
+        assert equal (open "--weird") "hello"
+        ["--weird" "--weird.bak"] | each {|f| if ($f | path exists) { ^rm -f -- $f } } | ignore
+    })
     (run-test "nu unbak short filename roundtrip" {
         cd $env.HOME
         ["shortbak" "shortbak.bak"] | each {|f| if ($f | path exists) { ^rm -f $f } } | ignore

@@ -385,8 +385,16 @@ func names() {
 }
 
 # rename each file to <file>.bak
+#
+# `--` because a name may begin with one: a wrapper is what lets `bak --weird`
+# through the shell, and without the terminator `mv` reads that name as an
+# option of its own and refuses it. The text copy is for the same name -- see
+# unbak below.
 wrapper func bak(...files) {
-  for file in $files { mv -i $file "${file}.bak" }
+  for file in $files {
+    name = "$file"
+    mv -i -- $name "${name}.bak"
+  }
 }
 
 # undo bak
@@ -399,9 +407,9 @@ wrapper func unbak(...files) {
     name = "$file"
     if $name ~ *.bak {
       target = $name:replaceend(".bak", "")
-      mv -i $name $target if $name:exists
+      mv -i -- $name $target if $name:exists
     } else {
-      mv -i "${name}.bak" $name if "${name}.bak":exists
+      mv -i -- "${name}.bak" $name if "${name}.bak":exists
     }
   }
 }

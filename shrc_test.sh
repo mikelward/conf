@@ -904,6 +904,18 @@ assert_true test -f "$_tmpdir/testfile"
 start_test "unbak removes .bak (original name)"
 assert_false test -f "$_tmpdir/testfile.bak"
 
+# A name beginning with `--` reaches `mv` as an option unless the terminator
+# is passed, so both directions would refuse the rename and leave the file
+# where it was.
+start_test "bak backs up a file whose name looks like an option"
+touch "$_tmpdir/--weird"
+(cd "$_tmpdir" && bak --weird)
+assert_true test -f "$_tmpdir/--weird.bak"
+start_test "unbak restores a file whose name looks like an option"
+(cd "$_tmpdir" && unbak --weird.bak)
+assert_true test -f "$_tmpdir/--weird"
+rm -f "$_tmpdir/--weird"
+
 start_test "bak multiple files a"
 touch "$_tmpdir/a" "$_tmpdir/b"
 (cd "$_tmpdir" && bak a b)
