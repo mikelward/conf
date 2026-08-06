@@ -545,15 +545,20 @@ wrapper func each(cmd, ...args) {
 # run a command on each null-delimited item from stdin, e.g.
 # `find . -print0 | each0 wc -l`
 #
-# Delegated to xargs rather than written as the loop `each` is: mesh's `gets`
-# reads a line and nothing else, and `"\0"` is not a valid escape, so there is
-# no way to read or split on the delimiter from here. The cost is that this one
-# runs programs only -- xargs cannot call a mesh function, where `each` can.
+# The same loop `each` is, over `gets --nulls`, which reads a NUL-terminated
+# item. It used to delegate to xargs because `gets` read a line and nothing
+# else and `"\0"` is not a valid escape, so the delimiter could not be spelled
+# from here; the cost was that this one ran programs only, where `each` can
+# call a mesh function. The loop has no such limit, which is the whole reason
+# to prefer it.
 #
-# `-r` matters: GNU xargs runs the command once even on empty input, where the
-# shrc and fish loops run it zero times. BSD and macOS xargs already behave
-# that way and accept -r as a no-op for GNU compatibility, so it is portable.
-wrapper func each0(cmd, ...args) { xargs -0 -r -n 1 $cmd ...$args }
+# Empty input runs the command zero times, matching the shrc and fish loops --
+# that is what xargs needed `-r` to be talked into, and a loop gets it for free.
+wrapper func each0(cmd, ...args) {
+  while gets --nulls item {
+    $cmd ...$args $item
+  }
+}
 
 # see what changes a command would make to a file, e.g. `trydiff mdformat f`
 # A failing command leaves partial output behind, and showing that as a
