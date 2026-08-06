@@ -1,5 +1,20 @@
 # TODO
 
+## Decisions needing review
+
+Calls autopilot made without asking, each one chosen for being cheap to undo.
+Delete an entry once you have agreed with it or reversed it.
+
+- [ ] **The mesh config drops its `status` shortcut.** `status` became a mesh
+      builtin (the status-value constructor) in mikelward/mesh#443, and a
+      builtin's name is refused as a `func` or an `alias` — so `alias status =
+      command vcs status` now fails at startup, printing a diagnostic on every
+      shell. It is removed from `config/mesh/rc.mesh` only; shrc, fish, nu and
+      Elvish keep both `status` and `st`, and mesh keeps `st`. The alternative
+      is asking mesh to unreserve the name, which is its own open question
+      (`TODO.md` in the mesh repo, "reserved names in general").
+      *Reversible:* one line, the moment mesh has a spelling for it.
+
 ## Run the prompt and VCS suites under zsh
 
 `test-prompt` and `test-vcs` are bash-only, so `shrc`'s prompt code and

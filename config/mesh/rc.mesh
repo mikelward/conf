@@ -145,7 +145,7 @@ func bounded-auth-info() {
   # raised -- a missing Kerberos or AWS helper, a bad `$env` read -- comes back
   # empty, and reading that as "" would tell the prompt all is well on the
   # strength of a check that never answered. It is the same rule 124 gets.
-  return style("auth", fg: yellow) if $sh.status != 0
+  return style("auth", fg: yellow) if not $sh.status
   return "" if $answer == ""
   return style($answer, fg: yellow)
 }
@@ -285,7 +285,7 @@ wrapper func setx(cmd, ...args) {
 # subtraction, three messages for one cause.
 func age(file) {
   stamp = $(stat -c "%Y" $file)
-  return "" if $sh.status != 0
+  return "" if not $sh.status
   return $(date +%s):int - $stamp:int
 }
 
@@ -511,7 +511,7 @@ func isort(file) {
   staged = "${file}.bak"
   sort $file > $staged
   produced = $sh.status
-  if $produced != 0 {
+  if not $produced {
     rm -f $staged
     error "isort: sort failed; $file is unchanged"
     fail $produced
@@ -585,7 +585,9 @@ func trydiff(cmd, file) {
   # `rm`'s status and config.nu with a `try`; both end up at 0 the same way.
   status = $sh.status
   rm -f $temp
-  return true if $status < 2
+  # `:code` because a status compares only with another status: `$status < 2`
+  # is a type error, and `== 0` would be silently false.
+  return true if $status:code < 2
   fail $status
 }
 
@@ -711,7 +713,7 @@ wrapper func tz2tz(from, to, ...spec) {
   # for the same cause. shrc:1039 and config.fish:684 both `|| return 1` here.
   # The guard also has to come before `$epoch` is read at all: a capture whose
   # command failed leaves the name unbound, not empty.
-  fail if $sh.status != 0
+  fail if not $sh.status
   TZ=$to date -d "@$epoch"
 }
 
@@ -897,7 +899,7 @@ func set-up-ssh-aliases() {
   # same shape does report it, which is what makes this a divergence in mesh
   # rather than a rule about redirections.
   puts "# Generated from ~/.ssh/config by rc.mesh. Do not edit." > $staged
-  if $sh.status != 0 {
+  if not $sh.status {
     warn "ssh aliases: cannot write the cache file; host aliases are not defined"
     fail
   }
@@ -908,7 +910,7 @@ func set-up-ssh-aliases() {
   # header into place and source it: every host alias silently gone, looking
   # exactly like a config with no Host entries.
   contents = $(cat $config)
-  if $sh.status != 0 {
+  if not $sh.status {
     rm -f $staged
     warn "ssh aliases: cannot read the ssh config; host aliases are not defined"
     fail
@@ -956,7 +958,7 @@ func set-up-ssh-aliases() {
       # Statement-then-status rather than `if not`, for the builtin-redirect
       # reason given above the header write.
       puts "wrapper func $name(...args) { ssh-to $name ...\$args }" >> $staged
-      if $sh.status != 0 {
+      if not $sh.status {
         rm -f $staged
         warn "ssh aliases: cannot write the cache file; host aliases are not defined"
         fail
@@ -1016,7 +1018,7 @@ func set-up-ssh-aliases() {
   # the same reason the others are.
   source $generated
   status = $sh.status
-  if $status != 0 {
+  if not $status {
     warn "ssh aliases: the generated file could not be sourced; host aliases are not defined"
     fail $status
   }
@@ -1112,7 +1114,10 @@ alias recommit = command vcs recommit
 alias revert = command vcs revert
 alias review = command vcs review
 alias reword = command vcs reword
-alias status = command vcs status
+# No `status` shortcut here, unlike shrc, fish, nu and Elvish: `status` is a
+# mesh builtin (the status-value constructor), and a builtin's name is refused
+# as a `func` or `alias`. `st` below is the spelling that survives, and
+# `vcs status` always works.
 alias submit = command vcs submit
 alias submitforce = command vcs submitforce
 alias unknown = command vcs unknown
@@ -1507,7 +1512,7 @@ func publish-jobs() {
   # /run/user/$UID was cleaned up -- disables publishing for this prompt rather
   # than breaking the render, as config.nu:867's `try` does.
   quiet mkdir -p $file:dir
-  return unless $sh.status == 0
+  return unless $sh.status
   summary = []
   for id, job in $sh.jobs {
     # Same filter as job-info: the prompt's own `vcs` plumbing isn't a job the
@@ -1523,7 +1528,7 @@ func publish-jobs() {
   }
   # `print` rather than `puts`: the format has no trailing newline.
   print $text > $file
-  if $sh.status != 0 {
+  if not $sh.status {
     # A partial write leaves a truncated line, which a status bar would read as
     # a real job list -- worse than no file. Drop it and stop trying.
     rm -f $file
@@ -1579,7 +1584,7 @@ func maybe-background-fetch(auth = bounded-auth-info()) {
   # next prompt rather than disabling the fetch for this directory until the
   # next cd.
   quiet command vcs auto-fetch
-  return unless $sh.status == 0
+  return unless $sh.status
   global last-fetch-dir = $here
 }
 
@@ -1623,11 +1628,13 @@ func format-duration(ms) {
 
 func command-finished(cmd, status, elapsed) {
   reported = ""
+  # The arms are statuses rather than integers: `postexec` is handed a status
+  # value, and a `0` arm would never match it.
   match $status {
-    0        => { }
-    130      => { reported = red("interrupted") }
-    148      => { }
-    _        => { reported = red("status $status") }
+    status(0)   => { }
+    status(130) => { reported = red("interrupted") }
+    status(148) => { }
+    _           => { reported = red("status $status") }
   }
   duration = format-duration($elapsed)
   if $duration != "" {
@@ -1855,14 +1862,14 @@ wrapper func cs(...args) {
   return unless session-script-wanted()
   backend = session-backend()
   SESSION_BACKEND=$backend changesession ...$args
-  return unless $sh.status == 0
+  return unless $sh.status
   return unless $args:len == 0
   return if inside-tmux()
   exit if in-shpool()
 }
 wrapper func csp(...args) {
   changeshpool ...$args
-  return unless $sh.status == 0
+  return unless $sh.status
   return unless $args:len == 0
   exit if in-shpool()
 }
@@ -1875,13 +1882,13 @@ wrapper func ms(...args) {
   return unless session-script-wanted()
   backend = session-backend()
   SESSION_BACKEND=$backend makesession ...$args
-  return unless $sh.status == 0
+  return unless $sh.status
   return if inside-tmux()
   exit if in-shpool()
 }
 wrapper func msp(...args) {
   makeshpool ...$args
-  return unless $sh.status == 0
+  return unless $sh.status
   exit if in-shpool()
 }
 
@@ -1907,7 +1914,7 @@ wrapper func mgd(...args) { gitd -f ...$args and autosession }
 func rerc() {
   source "$env.HOME/.config/mesh/env.mesh"
   status = $sh.status
-  if $status != 0 {
+  if not $status {
     error "rerc: env.mesh failed; the environment is unchanged and rc.mesh was not read"
     fail $status
   }
@@ -1931,7 +1938,7 @@ func read-local-rc() {
   # on the `return` side: `fail 0` is refused, status being a channel that only
   # carries failure.
   status = $sh.status
-  return true if $status == 0
+  return true if $status
   warn "rc.local.mesh failed; the rest of the interactive setup still ran"
   fail $status
 }
