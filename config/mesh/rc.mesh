@@ -63,25 +63,16 @@ wrapper func confirm(...question) {
 }
 
 # return true if this session came in over ssh
-func connected-via-ssh() {
-  if $env:get(SSH_CONNECTION, "") != "" { return true }
-  return false
-}
+func connected-via-ssh() { return $env:get(SSH_CONNECTION, "") != "" }
 
 # return true if this session is on a remote machine
 func connected-remotely() { return connected-via-ssh() }
 
 # return true if this session is attached to shpool
-func in-shpool() {
-  if $env:get(SHPOOL_SESSION_NAME, "") != "" { return true }
-  return false
-}
+func in-shpool() { return $env:get(SHPOOL_SESSION_NAME, "") != "" }
 
 # return true if this session is inside tmux
-func inside-tmux() {
-  if $env:get(TMUX, "") != "" { return true }
-  return false
-}
+func inside-tmux() { return $env:get(TMUX, "") != "" }
 
 # return true if stdin is a terminal. Pulled out as a helper so tests can
 # replace it without rigging up a pty, the same reason shrc has stdin-is-tty.
@@ -91,10 +82,7 @@ func stdin-is-tty() { return $sh.stdin:tty }
 # computed rather than forking `id -u`: bash, zsh and fish read their own $UID
 # for free and this runs on every prompt, so a fork per prompt is one this
 # config has no reason to pay.
-func i-am-root() {
-  if $env:get(UID, "") == "0" { return true }
-  return false
-}
+func i-am-root() { return $env:get(UID, "") == "0" }
 
 # return true if an ssh key is loaded.
 #
@@ -163,10 +151,7 @@ func bounded-auth-info() {
 }
 
 # return true if anything needs authenticating
-func need-auth() {
-  if bounded-auth-info() != "" { return true }
-  return false
-}
+func need-auth() { return bounded-auth-info() != "" }
 
 # hook for authenticating (to ssh-agent, etc.)
 func auth() { ssh-add }
@@ -238,15 +223,9 @@ func on-my-machine() {
   return on-my-laptop()
 }
 
-func on-test-host() {
-  if $env:get(HOSTNAME, "") ~ *test* { return true }
-  return false
-}
+func on-test-host() { return $env:get(HOSTNAME, "") ~ *test* }
 
-func on-dev-host() {
-  if $env:get(HOSTNAME, "") ~ *dev* { return true }
-  return false
-}
+func on-dev-host() { return $env:get(HOSTNAME, "") ~ *dev* }
 
 # return true if this machine is a production machine
 func on-production-host() {
@@ -257,10 +236,7 @@ func on-production-host() {
 }
 
 # return true if it isn't already obvious which host I'm on
-func show-hostname-in-title() {
-  return false if inside-tmux()
-  return true
-}
+func show-hostname-in-title() { return not inside-tmux() }
 
 # log the running of a command to a file
 wrapper func log-history(...args) {
@@ -1065,10 +1041,7 @@ func projectname() {
 func project() { puts projectname() }
 
 # return true if we are inside a VCS workspace
-func inside-project() {
-  if projectroot() != "" { return true }
-  return false
-}
+func inside-project() { return projectroot() != "" }
 
 # print the directory that builds are relative to
 func buildroot() { return projectroot() }
