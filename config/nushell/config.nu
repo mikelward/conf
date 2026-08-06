@@ -669,7 +669,7 @@ def addrs [] { ips }
 def bak [...files: path] {
     for f in $files {
         let s = ($f | into string)
-        ^mv -i $s ($s + ".bak")
+        ^mv -i -- $s ($s + ".bak")
     }
 }
 
@@ -679,10 +679,10 @@ def unbak [...files: path] {
         let s = ($f | into string)
         if ($s | str ends-with ".bak") {
             let dest = ($s | str substring 0..<(-4))
-            if ($s | path exists) { ^mv -i $s $dest }
+            if ($s | path exists) { ^mv -i -- $s $dest }
         } else {
             let src = ($s + ".bak")
-            if ($src | path exists) { ^mv -i $src $s }
+            if ($src | path exists) { ^mv -i -- $src $s }
         }
     }
 }

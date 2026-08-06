@@ -396,7 +396,7 @@ end
 
 function bak
     for file in $argv
-        mv -i $file $file.bak
+        mv -i -- $file $file.bak
     end
 end
 
@@ -406,9 +406,9 @@ function unbak
         case '*.bak'
             # strip only the suffix; basename would also strip the
             # directory and move the file into $PWD
-            test -e $file; and mv -i $file (string replace -r '\.bak$' '' -- $file)
+            test -e $file; and mv -i -- $file (string replace -r '\.bak$' '' -- $file)
         case '*'
-            test -e $file.bak; and mv -i $file.bak $file
+            test -e $file.bak; and mv -i -- $file.bak $file
         end
     end
 end

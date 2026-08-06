@@ -654,6 +654,17 @@ unbak roundtrip.txt; echo after-unbak=(to-string (os:exists roundtrip.txt))')"
 assert_equal "after-bak=\$true
 after-unbak=\$true" "$result"
 
+# Without the option terminator `mv` reads a `--`-leading name as an option of
+# its own and refuses the rename, in both directions.
+start_test "elvish bak and unbak handle a name that looks like an option"
+mkdir -p "$_testdir/weirdname"
+touch "$_testdir/weirdname/--weird"
+result="$(_elvish_run "cd $_testdir/weirdname" \
+    'bak --weird; echo after-bak=(to-string (os:exists ./--weird.bak))
+unbak --weird.bak; echo after-unbak=(to-string (os:exists ./--weird))')"
+assert_equal "after-bak=\$true
+after-unbak=\$true" "$result"
+
 start_test "elvish mcd makes the directory and enters it"
 result="$(_elvish_run "cd $_testdir" 'mcd made-by-mcd; echo (path:base $pwd)')"
 assert_equal "made-by-mcd" "$result"

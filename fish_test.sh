@@ -1694,6 +1694,21 @@ result="$(_fish_run '
 ')"
 assert_equal "restored" "$result"
 
+# Without the option terminator `mv` reads a `--`-leading name as an option of
+# its own and refuses the rename, in both directions.
+start_test "fish bak and unbak handle a name that looks like an option"
+result="$(_fish_run '
+    mkdir -p $HOME/unbak_t3
+    cd $HOME/unbak_t3
+    touch ./--weird
+    bak --weird
+    test -e ./--weird.bak; and echo backed-up
+    unbak --weird.bak
+    test -e ./--weird; and echo restored
+')"
+assert_equal "backed-up
+restored" "$result"
+
 ###############
 # TEST: find_test_file / trydiff do what their names say
 

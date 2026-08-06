@@ -476,16 +476,28 @@ _mesh_run "
 " >/dev/null 2>&1
 assert_true test -f "$_bak_dir/note"
 
-# A name beginning with `--` reaches a wrapper as mesh's Flag value, and the
-# reader inside unbak asks `~`, which takes a string. Being a wrapper is what
-# lets the name through, so refusing it here would give that back -- whether
-# `mv` then accepts the name is `mv`'s business, not this shell's.
-start_test "mesh unbak reads a name that looks like a flag"
+# Two things have to hold for a name beginning with `--`: it reaches a wrapper
+# as mesh's Flag value, so the reader inside unbak has to read it as text
+# (`~` takes a string), and `mv` has to be given the option terminator, or it
+# reads the name as an option of its own and refuses the rename.
+start_test "mesh bak backs up a file whose name looks like a flag"
+rm -rf "$_bak_dir"
+mkdir -p "$_bak_dir"
+touch "$_bak_dir/--weird"
+_mesh_run "
+    cd $_bak_dir
+    bak --weird
+" >/dev/null 2>&1
+assert_true test -f "$_bak_dir/--weird.bak"
+
+start_test "mesh unbak restores a file whose name looks like a flag"
 result="$(_mesh_run "
     cd $_bak_dir
     unbak --weird.bak
-" 2>&1 | grep -c 'must be a string' || true)"
-assert_equal "0" "$result"
+" 2>&1)"
+assert_true test -f "$_bak_dir/--weird"
+# Neither the shell's reader nor `mv` may object on the way through.
+assert_equal "" "$result"
 
 ###############
 # TEST: rerc reloads both halves

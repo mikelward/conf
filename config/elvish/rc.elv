@@ -879,15 +879,15 @@ fn names {
 }
 
 # rename each file to <file>.bak
-fn bak {|@files| for file $files { mv -i $file $file.bak } }
+fn bak {|@files| for file $files { mv -i -- $file $file.bak } }
 
 # undo bak
 fn unbak {|@files|
     for file $files {
         if (str:has-suffix $file .bak) {
-            if (os:exists $file) { mv -i $file (str:trim-suffix $file .bak) }
+            if (os:exists $file) { mv -i -- $file (str:trim-suffix $file .bak) }
         } elif (os:exists $file.bak) {
-            mv -i $file.bak $file
+            mv -i -- $file.bak $file
         }
     }
 }
