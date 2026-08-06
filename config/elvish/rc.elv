@@ -426,13 +426,6 @@ fn fnm-default-path {
     put $E:HOME/.local/share/fnm
 }
 
-# The FNM_* variables `fnm env` is documented to set. An unrecognized one is
-# reported rather than dropped, so a new fnm variable shows up as a warning
-# instead of a silently missing shim.
-var fnm-variables = [FNM_MULTISHELL_PATH FNM_DIR FNM_LOGLEVEL FNM_NODE_DIST_MIRROR
-                     FNM_COREPACK_ENABLED FNM_RESOLVE_ENGINES FNM_ARCH
-                     FNM_VERSION_FILE_STRATEGY]
-
 # fnm (Fast Node Manager): put its dir on PATH, then apply the node shims and
 # FNM_* variables `fnm env` publishes. The standalone installer drops the binary
 # in that dir; a Homebrew/Cargo/release install puts fnm elsewhere on PATH and
@@ -469,11 +462,26 @@ fn setup-fnm {
         # anyway. It goes on the front of Elvish's list PATH below, as
         # config/nushell/config.nu does.
         if (==s $entry[0] PATH) { continue }
-        if (has-value $fnm-variables $entry[0]) {
-            set-env $entry[0] $entry[1]
-        } else {
-            warn "fnm: "$entry[0]" is not one this shell knows how to set; node may be missing a setting"
+        # Every other name is applied as it comes, so a variable fnm adds later
+        # arrives on its own rather than waiting for this file to learn it --
+        # what shrc and fish get from eval'ing the snippet, nu from `load-env`,
+        # and env.mesh from `$env[$name]`.
+        #
+        # Nothing expands a value here, so one still naming another variable
+        # would be set with the `$` in it. Say which one, and leave it unset
+        # rather than set to a path no child can use.
+        #
+        # A `\$` is not one of those: that is bash's spelling of a *literal*
+        # dollar inside double quotes, which is how a home directory with a `$`
+        # in its name reaches us. Rejecting it too would drop
+        # FNM_MULTISHELL_PATH and with it the node shim, where sourcing the
+        # snippet in shrc keeps the path.
+        if (re:match '(^|[^\\])\$' $entry[1]) {
+            warn "fnm: "$entry[0]" refers to another variable, which this shell cannot expand; leaving it unset"
+            continue
         }
+        # The unescape bash would have done.
+        set-env $entry[0] (str:replace '\$' '$' $entry[1])
     }
     var shim = (env-or FNM_MULTISHELL_PATH '')
     if (and (not-eq $old-shim '') (not-eq $old-shim $shim)) { delete-path $old-shim/bin }

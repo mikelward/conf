@@ -22,7 +22,7 @@ that attempt was in a path some suite didn't reach.
 
 ## Add mesh to CI once it stabilizes
 
-`make test` runs `mesh_test.sh` (378 tests over `config/mesh/env.mesh` and
+`make test` runs `mesh_test.sh` (401 tests over `config/mesh/env.mesh` and
 `config/mesh/rc.mesh`) only when `mesh` is on PATH, so on the CI runner it
 prints `SKIP: test-mesh (mesh not installed)` and the job still goes green.
 `install-ci-shells.sh` installs zsh, fish and nu but deliberately leaves mesh

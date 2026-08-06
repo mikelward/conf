@@ -339,6 +339,54 @@ start_test "elvish fnm-default-path falls back to XDG_DATA_HOME"
 result="$(_elvish_run 'unset-env FNM_PATH; set-env XDG_DATA_HOME /xdg' 'echo (fnm-default-path)')"
 assert_equal "/xdg/fnm" "$result"
 
+# Every name `fnm env` publishes is applied as it comes, so one this file has
+# never heard of arrives on its own -- which is what shrc and fish get from
+# eval'ing the snippet, nu from `load-env`, and env.mesh from `$env[$name]`.
+_new_fnm_bin="$_testdir/newvarfnmbin"
+mkdir -p "$_new_fnm_bin"
+cat > "$_new_fnm_bin/fnm" <<EOF
+#!/bin/sh
+echo "export FNM_DIR=\"$_testdir/fnm\";"
+echo "export FNM_SOMETHING_NEW=\"whatever\";"
+EOF
+chmod +x "$_new_fnm_bin/fnm"
+
+start_test "elvish setup-fnm applies a variable it does not know by name"
+result="$(PATH="$_new_fnm_bin:$PATH" _elvish_run '' 'setup-fnm; echo (env-or FNM_SOMETHING_NEW unset)')"
+assert_contains "whatever" "$result"
+
+# Nothing expands a value here, so one still naming another variable would be
+# set with the `$` in it. Say which one and leave it unset -- a path a child
+# cannot use is worse than a missing one.
+_ref_fnm_bin="$_testdir/reffnmbin"
+mkdir -p "$_ref_fnm_bin"
+cat > "$_ref_fnm_bin/fnm" <<'EOF'
+#!/bin/sh
+echo 'export FNM_LATER_DIR="$HOME/elsewhere";'
+EOF
+chmod +x "$_ref_fnm_bin/fnm"
+
+start_test "elvish setup-fnm reports a value it cannot expand and leaves it unset"
+result="$(PATH="$_ref_fnm_bin:$PATH" _elvish_run_all '' 'setup-fnm; echo (env-or FNM_LATER_DIR unset)')"
+assert_contains "FNM_LATER_DIR refers to another variable" "$result"
+assert_contains "unset" "$result"
+
+# `\$` is bash's *literal* dollar inside double quotes, which is how a home
+# directory with a `$` in its name arrives. Rejecting it as a reference would
+# drop FNM_MULTISHELL_PATH and with it the node shim.
+_dollar_fnm_bin="$_testdir/dollarfnmbin"
+mkdir -p "$_dollar_fnm_bin"
+cat > "$_dollar_fnm_bin/fnm" <<'EOF'
+#!/bin/sh
+echo 'export FNM_DIR="/home/user/we\$rd/fnm";'
+EOF
+chmod +x "$_dollar_fnm_bin/fnm"
+
+start_test "elvish setup-fnm keeps an escaped dollar as a literal"
+result="$(PATH="$_dollar_fnm_bin:$PATH" _elvish_run_all '' 'setup-fnm; echo (env-or FNM_DIR unset)')"
+assert_contains '/home/user/we$rd/fnm' "$result"
+assert_not_contains "refers to another variable" "$result"
+
 ###############
 # TEST: host predicates
 
