@@ -647,6 +647,72 @@ result="$(_elvish_run '' "each-line echo prefix < $_testdir/lines.txt")"
 assert_equal "prefix a
 prefix b" "$result"
 
+# Null-delimited so an item may contain a space -- or a newline, which is the
+# whole reason the form exists and what splitting on lines would destroy.
+printf 'a b\0c\0' > "$_testdir/items.nul"
+start_test "elvish each0 runs the command once per null-delimited item"
+result="$(_elvish_run '' "each0 echo X < $_testdir/items.nul")"
+assert_equal "X a b
+X c" "$result"
+
+printf 'a\nb\0c\0' > "$_testdir/newline.nul"
+start_test "elvish each0 keeps a newline inside an item"
+result="$(_elvish_run '' "each0 echo X < $_testdir/newline.nul")"
+assert_equal "X a
+b
+X c" "$result"
+
+# The capability the xargs delegation cost: xargs runs programs, so an Elvish
+# function was unreachable through each0 while each-line could call one. Passed
+# as `$shout~`, the function value -- the same way every other `as-command`
+# caller in the config takes one, since a bare word is a string to Elvish.
+start_test "elvish each0 calls an elvish function, not just a program"
+result="$(_elvish_run 'fn shout {|item| echo "["$item"]" }' \
+    "each0 \$shout~ < $_testdir/items.nul")"
+assert_equal "[a b]
+[c]" "$result"
+
+# Zero times, matching the shrc, fish and mesh loops. xargs needed `-r` to agree
+# -- GNU runs the command once on empty input without it -- and a loop simply
+# never enters, so the agreement no longer rests on a flag.
+printf '' > "$_testdir/empty.nul"
+start_test "elvish each0 runs nothing at all on empty input"
+result="$(_elvish_run '' "each0 echo X < $_testdir/empty.nul")"
+assert_equal "" "$result"
+
+# An item with no trailing NUL is still an item, the same rule a file's last
+# line without a newline follows. `read-upto` hands this one back without a
+# terminator to trim, which is why it is worth pinning.
+printf 'a\0b' > "$_testdir/unterminated.nul"
+start_test "elvish each0 takes a final item with no trailing NUL"
+result="$(_elvish_run '' "each0 echo X < $_testdir/unterminated.nul")"
+assert_equal "X a
+X b" "$result"
+
+# A failing command *raises* in Elvish rather than returning a status, so an
+# uncaught invocation would abandon the rest of the input -- where xargs drained
+# it and the shrc and fish loops keep going. All three items have to run.
+printf 'bad\0good\0after\0' > "$_testdir/failing.nul"
+start_test "elvish each0 keeps going after an item's command fails"
+result="$(_elvish_run '' "each0 sh -c 'echo saw \$1; test \"\$1\" != bad' _ \
+    < $_testdir/failing.nul")"
+assert_equal "saw bad
+saw good
+saw after" "$result"
+
+# And what the caller sees is the *last* invocation's outcome, as in the shrc
+# and fish loops: an earlier failure with a later success is a success.
+start_test "elvish each0 reports the last invocation, not an earlier failure"
+result="$(_elvish_run '' "if ?(each0 sh -c 'test \"\$1\" != bad' _ \
+    < $_testdir/failing.nul) { echo ok } else { echo fail }")"
+assert_equal "ok" "$result"
+
+printf 'good\0bad\0' > "$_testdir/failing-last.nul"
+start_test "elvish each0 fails when the last invocation fails"
+result="$(_elvish_run '' "if ?(each0 sh -c 'test \"\$1\" != bad' _ \
+    < $_testdir/failing-last.nul) { echo ok } else { echo fail }")"
+assert_equal "fail" "$result"
+
 start_test "elvish bak and unbak round-trip a file"
 result="$(_elvish_run "cd $_testdir; echo original > roundtrip.txt" \
     'bak roundtrip.txt; echo after-bak=(to-string (os:exists roundtrip.txt.bak))

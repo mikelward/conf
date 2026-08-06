@@ -1019,14 +1019,29 @@ fn each-line {|cmd @args| each {|line| (as-command $cmd) $@args $line } }
 # run a command on each null-delimited item from stdin, e.g.
 # `find . -print0 | each0 wc -l`.
 #
-# Delegated to xargs rather than written as the loop each-line is: Elvish's
-# `each` splits byte input on newlines and nothing else. The cost is that this
-# one runs programs only -- xargs cannot call an Elvish function.
+# `each` is no use here -- it splits byte input on newlines and nothing else --
+# but `read-upto` takes the delimiter, so this is a loop like each-line rather
+# than the xargs delegation it used to be, and can call an Elvish function where
+# xargs could only run programs.
 #
-# `-r` matters: GNU xargs runs the command once even on empty input, where the
-# shrc and fish loops run it zero times. BSD and macOS xargs already behave that
-# way and accept -r as a no-op for GNU compatibility, so it is portable.
-fn each0 {|cmd @args| xargs -0 -r -n 1 $cmd $@args }
+# `read-upto` returns the terminator with the item, so it is trimmed off; a final
+# item without one comes back as itself and is still an item. End of input is the
+# empty string, which is why the break tests before the trim: an *empty* item
+# arrives as the terminator alone and must not end the loop.
+# Each invocation is caught with `?(...)`, because a failing external command
+# raises in Elvish rather than returning a status, and an uncaught raise here
+# would abandon the rest of the input -- where xargs drained it and the shrc and
+# fish loops keep going. The last outcome is re-raised at the end, so what the
+# caller sees is the last invocation's result, as in those loops.
+fn each0 {|cmd @args|
+    var last = $ok
+    while $true {
+        var item = (read-upto "\x00")
+        if (eq $item "") { break }
+        set last = ?((as-command $cmd) $@args (str:trim-suffix $item "\x00"))
+    }
+    if (not-eq $last $ok) { fail $last }
+}
 
 # see what changes a command would make to a file, e.g. `trydiff mdformat f`.
 # A failing command leaves partial output behind, and showing that as a proposed

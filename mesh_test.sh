@@ -1921,12 +1921,37 @@ result="$(printf 'a b\0c\0' | _mesh_run_stdin '' 'each0 echo X')"
 assert_equal "X a b
 X c" "$result"
 
-# GNU xargs runs the command once even with nothing to feed it, where the shrc
-# and fish loops run it zero times; `-r` is what makes them agree. BSD and
-# macOS xargs already skip it and accept -r as a no-op, so the flag is portable.
+# A newline *inside* an item is the case the NUL form exists for, and the one
+# `each` cannot express: a line read would tear this name in half.
+start_test "mesh each0 keeps a newline inside an item"
+result="$(printf 'a\nb\0c\0' | _mesh_run_stdin '' 'each0 echo X')"
+assert_equal "X a
+b
+X c" "$result"
+
+# The capability the xargs delegation cost: xargs runs programs, so a mesh
+# function was unreachable through each0 while `each` could call one. The loop
+# closes that gap, which is the reason for preferring it over the delegation.
+start_test "mesh each0 calls a mesh function, not just a program"
+result="$(printf 'one\0two\0' | _mesh_run_stdin '
+    func shout(item) { puts "[$item]" }
+' 'each0 shout')"
+assert_equal "[one]
+[two]" "$result"
+
+# Zero times, matching the shrc and fish loops. xargs needed `-r` to agree --
+# GNU runs the command once on empty input without it -- and a loop simply
+# never enters, so the agreement no longer rests on a flag.
 start_test "mesh each0 runs nothing at all on empty input"
 result="$(printf '' | _mesh_run_stdin '' 'each0 echo X')"
 assert_equal "" "$result"
+
+# An item with no trailing NUL is still an item, the same rule a file's last
+# line without a newline follows.
+start_test "mesh each0 takes a final item with no trailing NUL"
+result="$(printf 'a\0b' | _mesh_run_stdin '' 'each0 echo X')"
+assert_equal "X a
+X b" "$result"
 
 start_test "mesh dev reads the filesystem out of column-padded df output"
 result="$(_mesh_run_config '
