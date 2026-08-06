@@ -521,10 +521,14 @@ rm -f "$_fakehome/.config/mesh/env.local.mesh" "$_fakehome/.config/mesh/env.mesh
 # Kept in step with config.nu's list rather than trimmed to a handful: `pull`,
 # `push`, `review` and the short `ci`/`st` are everyday commands that stopped
 # resolving when the port defined only eight.
+#
+# `status` is deliberately absent, and is the one shortcut mesh cannot have:
+# it is a mesh builtin, so `alias status` is refused. `st` is the spelling that
+# survives here; the other shells keep both.
 start_test "mesh defines the vcs shortcuts the other shells define"
 result="$(_mesh_run '
     missing = []
-    for name in [add amend annotate base branch branches changed changelog changes checkout commit commitforce diffs fix graph incoming lint map outgoing pending precommit presubmit pull push recommit revert review reword status submit submitforce unknown upload uploadchain am ci di gr lg ma st] {
+    for name in [add amend annotate base branch branches changed changelog changes checkout commit commitforce diffs fix graph incoming lint map outgoing pending precommit presubmit pull push recommit revert review reword submit submitforce unknown upload uploadchain am ci di gr lg ma st] {
         if not is-runnable($name) { missing += [$name] }
     }
     puts $missing:repr
@@ -2882,12 +2886,14 @@ result="$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
 assert_equal "# Generated from ~/.ssh/config by rc.mesh. Do not edit.
 wrapper func host1(...args) { ssh-to host1 ...\$args }" "$result"
 
-start_test "mesh status still reaches vcs after the ssh aliases load"
+# And the shortcut that survives still reaches vcs: `status` is mesh's own
+# builtin now, so `st` is what carries the vcs spelling.
+start_test "mesh st still reaches vcs after the ssh aliases load"
 result="$(PATH="$_fake_vcs_bin:$PATH" HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
     source $_env_mesh
     source $_rc_mesh
     set-up-ssh-aliases
-    status
+    st
 " </dev/null 2>&1)"
 assert_equal "" "$result"
 assert_contains "status" "$(cat "$_testdir/vcs-calls")"
