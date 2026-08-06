@@ -3270,19 +3270,125 @@ result="$(PATH="$_fake_ssh_add_bin:$PATH" FAKE_SSH_ADD_STATUS=0 _mesh_run_config
 assert_equal "" "$result"
 
 ###############
-# is-ssh-valid forks `ssh-add -L`, so preprompt asks auth-info once and hands
-# the answer to both maybe-background-fetch and prompt-line.
+# The hang the two limits exist to stop: a stale $SSH_AUTH_SOCK leaves
+# `ssh-add -L` waiting on a socket nobody answers, and the prompt runs it on
+# every render.
+_hanging_ssh_add_bin="$_testdir/hangingsshaddbin"
+mkdir -p "$_hanging_ssh_add_bin"
+printf '#!/bin/sh\nsleep 30\nexit 0\n' > "$_hanging_ssh_add_bin/ssh-add"
+chmod +x "$_hanging_ssh_add_bin/ssh-add"
+
+# Unbounded, the stub outlives the limit and then *succeeds*, so auth-info
+# would report no problem at all; bounded, the check is abandoned and the
+# prompt says SSH. `timeout` reports 124, which is a failed check either way.
+start_test "mesh auth-info names SSH when ssh-add outlives the limit"
+result="$(PATH="$_hanging_ssh_add_bin:$PATH" SSH_VALID_TIMEOUT=0.3 _mesh_run_config '' \
+    'puts auth-info()' 2>&1)"
+assert_equal "SSH" "$result"
+
+# The point of the limit is that it comes back, not just that it answers. The
+# stub sleeps 30s against a 0.3s limit, so the margin here is the whole gap
+# rather than a tuned threshold.
+start_test "mesh auth-info returns before a hanging ssh-add would have"
+_started="$(date +%s)"
+PATH="$_hanging_ssh_add_bin:$PATH" SSH_VALID_TIMEOUT=0.3 _mesh_run_config '' \
+    'puts auth-info()' >/dev/null 2>&1
+assert_true test "$(($(date +%s) - _started))" -lt 10
+
+# An unset or empty setting takes the default; anything else goes to `timeout`
+# as written.
+start_test "mesh check-limit reads a plain number of seconds"
+result="$(SSH_VALID_TIMEOUT=0.5 _mesh_run_config '' \
+    'l = check-limit("SSH_VALID_TIMEOUT", "2")
+puts $l' 2>&1)"
+assert_equal "0.5" "$result"
+
+start_test "mesh check-limit falls back when the setting is empty"
+result="$(SSH_VALID_TIMEOUT= _mesh_run_config '' \
+    'l = check-limit("SSH_VALID_TIMEOUT", "2")
+puts $l' 2>&1)"
+assert_equal "2" "$result"
+
+# auth-info is a hook ~/.rc.local.mesh can replace outright, and an override
+# that checks Kerberos or AWS SSO is exactly the sort that blocks -- so the
+# prompt calls it through a limit of its own. All this outer one can say is
+# that something took too long.
+start_test "mesh bounded-auth-info bounds an overridden auth-info hook"
+result="$(AUTH_TIMEOUT=0.3 _mesh_run_config '
+    func auth-info() { sleep 30; return "" }
+' 'a = bounded-auth-info()
+puts $a' 2>&1)"
+assert_equal "auth" "$result"
+
+# The outer backstop must not steal the ordinary case's precise answer: the
+# inner limit is the shorter one, so it fires first and the prompt still names
+# SSH rather than the vaguer `auth`.
+start_test "mesh bounded-auth-info still says SSH when ssh-add is the slow part"
+result="$(PATH="$_hanging_ssh_add_bin:$PATH" SSH_VALID_TIMEOUT=0.3 AUTH_TIMEOUT=5 \
+    _mesh_run_config '' 'a = bounded-auth-info()
+puts $a' 2>&1)"
+assert_equal "SSH" "$result"
+
+# Whatever the hook reports travels back out of the fork it ran in.
+start_test "mesh bounded-auth-info reports what the hook said"
+result="$(_mesh_run_config '
+    func auth-info() { return "KRB AWS" }
+' 'a = bounded-auth-info()
+puts $a' 2>&1)"
+assert_equal "KRB AWS" "$result"
+
+start_test "mesh bounded-auth-info is empty when the hook reports nothing"
+result="$(_mesh_run_config '
+    func auth-info() { return "" }
+' 'a = bounded-auth-info()
+puts "<$a>"' 2>&1)"
+assert_equal "<>" "$result"
+
+# A hook that raises rather than answering -- a missing Kerberos or AWS helper,
+# a bad `$env` read -- comes back empty with a nonzero status, which is not the
+# limit's 124. Read as an empty answer it would tell the prompt all is well on
+# the strength of a check that never ran, and maybe-background-fetch would
+# fetch as though authenticated.
+start_test "mesh bounded-auth-info reports a hook that failed without answering"
+result="$(_mesh_run_config '
+    func auth-info() { return $env.DEFINITELY_NOT_SET }
+' 'a = bounded-auth-info()
+puts $a' 2>/dev/null)"
+assert_equal "auth" "$result"
+
+start_test "mesh need-auth is true when the hook could not answer"
+result="$(_mesh_run_config '
+    func auth-info() { return $env.DEFINITELY_NOT_SET }
+' 'if need-auth() { puts needed } else { puts fine }' 2>/dev/null)"
+assert_equal "needed" "$result"
+
+# The startup gate at the foot of rc.mesh runs before any prompt, so it needs
+# the bounded accessor too -- an override that blocks would otherwise hang the
+# shell before it drew anything.
+start_test "mesh need-auth goes through the limit"
+result="$(AUTH_TIMEOUT=0.3 _mesh_run_config '
+    func auth-info() { sleep 30; return "" }
+' 'if need-auth() { puts needed } else { puts fine }' 2>&1)"
+assert_equal "needed" "$result"
+
+###############
+# is-ssh-valid forks `ssh-add -L`, so preprompt asks once and hands the answer
+# to both maybe-background-fetch and prompt-line.
+#
+# Counted in a file rather than in a shell global: bounded-auth-info runs the
+# hook under `timeout`, which is a fork, so an increment made there dies with
+# it.
 start_test "mesh preprompt asks auth-info once per render"
-result="$(PATH="$_fake_vcs_bin:$PATH" _mesh_run_config '
+_auth_calls="$_testdir/auth-calls"
+rm -f "$_auth_calls"
+PATH="$_fake_vcs_bin:$PATH" _mesh_run_config "
     func terminal-width() { return 1 }
-    auth-asks = 0
     func auth-info() {
-        global auth-asks = $auth-asks + 1
-        return ""
+        puts asked >> $_auth_calls
+        return \"\"
     }
-' 'preprompt
-puts "asks=$auth-asks"' 2>/dev/null | tail -1)"
-assert_equal "asks=1" "$result"
+" 'preprompt' >/dev/null 2>&1
+assert_equal "1" "$(wc -l < "$_auth_calls" | tr -d ' ')"
 
 ###############
 # TEST: i-am-root reads $UID rather than forking
