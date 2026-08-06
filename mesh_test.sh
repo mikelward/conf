@@ -2273,6 +2273,66 @@ puts "[$after]"')"
 assert_equal "[unset]" "$result"
 
 ###############
+# TEST: the session predicates answer both ways
+#
+# Each is a one-line `return <comparison>`, so the risk is a predicate that
+# answers the same thing whatever the environment holds. Both answers are
+# asserted for that reason.
+
+start_test "mesh connected-via-ssh reads SSH_CONNECTION"
+result="$(_mesh_run '
+    $env.SSH_CONNECTION = "192.0.2.1 22 192.0.2.2 22"
+    puts connected-via-ssh() connected-remotely()
+')"
+assert_equal "true true" "$result"
+
+start_test "mesh connected-via-ssh is false without SSH_CONNECTION"
+assert_equal "false false" "$(_mesh_run 'puts connected-via-ssh() connected-remotely()')"
+
+start_test "mesh in-shpool reads SHPOOL_SESSION_NAME"
+result="$(_mesh_run '
+    $env.SHPOOL_SESSION_NAME = "work"
+    puts in-shpool()
+')"
+assert_equal "true" "$result"
+
+start_test "mesh in-shpool is false outside shpool"
+assert_equal "false" "$(_mesh_run 'puts in-shpool()')"
+
+start_test "mesh inside-tmux reads TMUX"
+result="$(_mesh_run '
+    $env.TMUX = "/tmp/tmux-1000/default,1,0"
+    puts inside-tmux()
+')"
+assert_equal "true" "$result"
+
+start_test "mesh inside-tmux is false outside tmux"
+assert_equal "false" "$(_mesh_run 'puts inside-tmux()')"
+
+# tmux already shows the host, so the title does not repeat it.
+start_test "mesh show-hostname-in-title is false inside tmux"
+result="$(_mesh_run '
+    $env.TMUX = "/tmp/tmux-1000/default,1,0"
+    puts show-hostname-in-title()
+')"
+assert_equal "false" "$result"
+
+start_test "mesh show-hostname-in-title is true outside tmux"
+assert_equal "true" "$(_mesh_run 'puts show-hostname-in-title()')"
+
+start_test "mesh inside-project follows projectroot"
+result="$(_mesh_run_config '
+    func projectroot() { return "/home/user/project" }
+' 'puts inside-project()')"
+assert_equal "true" "$result"
+
+start_test "mesh inside-project is false with no project root"
+result="$(_mesh_run_config '
+    func projectroot() { return "" }
+' 'puts inside-project()')"
+assert_equal "false" "$result"
+
+###############
 # TEST: host classification
 
 start_test "mesh on-my-laptop reads ~/.laptop"
@@ -2294,6 +2354,13 @@ result="$(_mesh_run '
     puts on-test-host() on-dev-host()
 ')"
 assert_equal "true false" "$result"
+
+start_test "mesh on-dev-host matches by hostname"
+result="$(_mesh_run '
+    $env.HOSTNAME = "web-dev-3"
+    puts on-test-host() on-dev-host()
+')"
+assert_equal "false true" "$result"
 
 start_test "mesh on-production-host is false on a test host"
 result="$(_mesh_run '
@@ -3431,6 +3498,13 @@ result="$(_mesh_run_config '
     func auth-info() { return $env.DEFINITELY_NOT_SET }
 ' 'if need-auth() { puts needed } else { puts fine }' 2>/dev/null)"
 assert_equal "needed" "$result"
+
+# The other direction: an authenticated session must not run `auth` at startup.
+start_test "mesh need-auth is false when the hook has nothing to report"
+result="$(_mesh_run_config '
+    func auth-info() { return "" }
+' 'if need-auth() { puts needed } else { puts fine }' 2>/dev/null)"
+assert_equal "fine" "$result"
 
 # The startup gate at the foot of rc.mesh runs before any prompt, so it needs
 # the bounded accessor too -- an override that blocks would otherwise hang the
