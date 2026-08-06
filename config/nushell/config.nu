@@ -190,12 +190,14 @@ def a [] { auth }
 # It runs in a spawned job, so anything it changes about this shell's state is
 # lost, and its stdout goes nowhere the caller can see.
 #
-# nu is the only shell in this config that can express this directly:
-# `job recv --timeout` is a receive with a deadline, so there is no watchdog
-# job, no signal handling and no polling. shrc has to build the same guard out
-# of a background job and a second job that sleeps and kills. See
-# config/mesh/rc.mesh and config/fish/config.fish for the two that cannot
-# express it at all.
+# nu says this in one builtin: `job recv --timeout` is a receive with a
+# deadline, so there is no watchdog job, no signal handling and no polling.
+# shrc has to build the same guard out of a background job and a second job
+# that sleeps and kills. mesh says it in one builtin too -- `timeout 2s cmd`,
+# which kills the command rather than only giving up on it -- so
+# config/mesh/rc.mesh needs no helper here at all. config/fish/config.fish and
+# config/elvish/rc.elv are the two that cannot express it, each with a TODO
+# saying why.
 # The tag keeps this receive from reading mail that is not its own, and it has
 # to be per-call rather than a fixed constant. Two different messages could
 # otherwise be mistaken for this call's answer: one the user's own

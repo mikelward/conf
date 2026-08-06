@@ -103,31 +103,68 @@ func i-am-root() {
 # longer reads an int as a condition. In command position `if` branches on the
 # status, which is what this is asking for.
 #
-# TODO: bound this the way shrc's auth_info does. `ssh-add -L` blocks forever
-# against a stale $SSH_AUTH_SOCK -- a forwarded agent whose ssh connection has
-# gone away -- and this runs on every prompt, so the hang wedges the session.
-# mesh has most of what the guard needs and is closer than fish or Elvish: `&`
-# backgrounds a *function*, `wait` reports its status in $sh.status, and
-# `kill $j` signals the whole process group, so a hook wrapping its blocking
-# command in more shell is still reached -- something shrc's version cannot do.
-# What is missing is a wait with a deadline, and a way to background without the
-# `[1] 1234` / `[1] Done` notices, which would otherwise print on every prompt
-# ($sh.options has no monitor-mode equivalent). Both are tracked upstream in
-# mesh's TODO.md under "Bounding a wait".
+# A hook: redefine it in ~/.rc.local.mesh for a site-specific notion of
+# "authenticated". It is deliberately unbounded -- auth-info is what puts it
+# under a time limit, so an override inherits that guard instead of having to
+# reimplement it.
 func is-ssh-valid() {
   if quiet ssh-add -L { return true }
   return false
 }
 
-# print which things need re-authenticating, pre-colored, or nothing
+# how long the check named by $name may take, defaulting to $fallback.
+#
+# Plain seconds -- `2`, `0.5` -- rather than one of mesh's own duration
+# spellings, because shrc reads the same two variables and hands them to
+# sleep(1), where `500ms` is an error. The value is passed to `timeout` as
+# written; a spelling it cannot read is its own to report.
+func check-limit(name, fallback) {
+  limit = $env:get($name, "")
+  return $fallback if $limit == ""
+  return $limit
+}
+
+# print which things need re-authenticating, pre-colored, or nothing.
+#
+# A hook: ~/.rc.local.mesh can replace it to report Kerberos, AWS SSO, and so
+# on. bounded-auth-info is what the prompt calls, so an override inherits a
+# limit of its own.
 func auth-info() {
-  return "" if is-ssh-valid()
+  # Bounded because a stale $SSH_AUTH_SOCK -- a forwarded agent whose ssh
+  # connection has gone away -- leaves `ssh-add -L` waiting on a socket nobody
+  # answers, and this renders every prompt. The limit is here rather than in
+  # is-ssh-valid so an override of that hook is guarded too, and `timeout`'s
+  # 124 makes a check that ran out of time a failed one: the prompt says SSH
+  # rather than claiming all is well.
+  if timeout check-limit("SSH_VALID_TIMEOUT", "2") is-ssh-valid { return "" }
   return style("SSH", fg: yellow)
+}
+
+# auth-info under a time limit -- what the prompt calls.
+#
+# auth-info is replaceable in its own right, so the limit lives here, once,
+# rather than at each call site where the next caller added would quietly miss
+# it. The stock hook bounds is-ssh-valid and says SSH; this can only report
+# that *something* took too long, so $AUTH_TIMEOUT defaults higher and `auth`
+# shows only for an override.
+#
+# The yellow is re-applied because the answer arrives as text: `timeout` runs
+# the call in a fork, and mesh writes no color into a capture. A hook that
+# colors its own answer differently is flattened to this file's convention.
+func bounded-auth-info() {
+  answer = $(timeout check-limit("AUTH_TIMEOUT", "5") puts auth-info())
+  # Any nonzero status is a problem, not just the limit's 124: a hook that
+  # raised -- a missing Kerberos or AWS helper, a bad `$env` read -- comes back
+  # empty, and reading that as "" would tell the prompt all is well on the
+  # strength of a check that never answered. It is the same rule 124 gets.
+  return style("auth", fg: yellow) if $sh.status != 0
+  return "" if $answer == ""
+  return style($answer, fg: yellow)
 }
 
 # return true if anything needs authenticating
 func need-auth() {
-  if auth-info() != "" { return true }
+  if bounded-auth-info() != "" { return true }
   return false
 }
 
@@ -1386,11 +1423,12 @@ func dir-info() {
 }
 
 # the context line: host, directory, and anything needing authentication.
-# `auth` is a parameter so preprompt can compute auth-info once and hand the
-# same answer to maybe-background-fetch: `ssh-add -L` (via is-ssh-valid) is a
-# fork, and asking twice per prompt would double it. Defaulted for direct
-# callers, matching the "captured once per prompt" note at shrc:1563.
-func prompt-line(auth = auth-info()) {
+# `auth` is a parameter so preprompt can compute the answer once and hand the
+# same one to maybe-background-fetch: `ssh-add -L` (via is-ssh-valid) is a
+# fork, and the two limits around it are two more, so asking twice per prompt
+# would double all three. Defaulted for direct callers, matching the "captured
+# once per prompt" note at shrc:1563.
+func prompt-line(auth = bounded-auth-info()) {
   out = host-info()
   out += " "
   out += dir-info()
@@ -1544,7 +1582,7 @@ func title() {
 # session stays there after the user authenticates. `auth` comes from preprompt
 # so the retry costs no extra `ssh-add -L`.
 last-fetch-dir = ""
-func maybe-background-fetch(auth = auth-info()) {
+func maybe-background-fetch(auth = bounded-auth-info()) {
   here = $(pwd)
   return if $here == $last-fetch-dir
   return unless have-command(vcs)
@@ -1561,9 +1599,9 @@ func maybe-background-fetch(auth = auth-info()) {
 
 # what the prompt draws before each command line
 func preprompt() {
-  # Asked once and handed to both callers below: is-ssh-valid forks `ssh-add -L`,
-  # and this is the prompt's hot path.
-  auth = auth-info()
+  # Asked once and handed to both callers below: is-ssh-valid forks `ssh-add -L`
+  # and each `timeout` around it forks again, and this is the prompt's hot path.
+  auth = bounded-auth-info()
   maybe-background-fetch $auth
   puts ""
   bar terminal-width()
