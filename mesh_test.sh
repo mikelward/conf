@@ -458,6 +458,36 @@ result="$(_mesh_run 'puts starts-with("--sleep=5", "--sleep=")')"
 assert_equal "true" "$result"
 
 ###############
+# TEST: bak/unbak round-trip, and the flag-shaped name a wrapper exists for
+
+_bak_dir="$_testdir/bakdir"
+start_test "mesh bak and unbak round-trip a file"
+rm -rf "$_bak_dir"
+mkdir -p "$_bak_dir"
+printf 'contents\n' > "$_bak_dir/note"
+_mesh_run "
+    cd $_bak_dir
+    bak note
+" >/dev/null 2>&1
+assert_true test -f "$_bak_dir/note.bak"
+_mesh_run "
+    cd $_bak_dir
+    unbak note.bak
+" >/dev/null 2>&1
+assert_true test -f "$_bak_dir/note"
+
+# A name beginning with `--` reaches a wrapper as mesh's Flag value, and the
+# reader inside unbak asks `~`, which takes a string. Being a wrapper is what
+# lets the name through, so refusing it here would give that back -- whether
+# `mv` then accepts the name is `mv`'s business, not this shell's.
+start_test "mesh unbak reads a name that looks like a flag"
+result="$(_mesh_run "
+    cd $_bak_dir
+    unbak --weird.bak
+" 2>&1 | grep -c 'must be a string' || true)"
+assert_equal "0" "$result"
+
+###############
 # TEST: rerc reloads both halves
 
 start_test "mesh rerc re-reads env.mesh as well as rc.mesh"

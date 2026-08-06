@@ -35,6 +35,14 @@ being designed in `docs/DESIGN.md`, so tracking its `main` would put the config
 tests at the mercy of an in-progress language — a mesh change could turn CI red
 here with nothing wrong in this repo. That is a worse signal than the skip.
 
+That has already happened once, which is the case for the skip rather than
+against it: mesh gave `--name` a value type of its own, so a `wrapper func`'s
+rest arguments hold flags rather than strings, and `retry`'s and `clone`'s
+readers — comparing one against a string, matching another with `~` — started
+refusing calls that had worked. The suite caught it locally the next time it
+was run against a fresh mesh; pinned CI would have caught it on the commit that
+landed, and unpinned CI would have blamed this repo for it.
+
 When it settles enough to pin — a tagged release, or a commit worth holding
 still — add it alongside the others:
 

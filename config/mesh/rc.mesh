@@ -355,11 +355,16 @@ wrapper func bak(...files) {
 # undo bak
 wrapper func unbak(...files) {
   for file in $files {
-    if $file ~ *.bak {
-      target = $file:replaceend(".bak", "")
-      mv -i $file $target if $file:exists
+    # Text before anything looks at it, as recent and shift-options do: a name
+    # that begins with `--` arrives as mesh's Flag value, and `~`, `:replaceend`
+    # and `:exists` all want a string. Being a wrapper is what lets such a name
+    # through at all; refusing it at the reader would give that back.
+    name = "$file"
+    if $name ~ *.bak {
+      target = $name:replaceend(".bak", "")
+      mv -i $name $target if $name:exists
     } else {
-      mv -i "${file}.bak" $file if "${file}.bak":exists
+      mv -i "${name}.bak" $name if "${name}.bak":exists
     }
   }
 }
@@ -617,11 +622,17 @@ wrapper func nonempty(...args) { find . -size +0 ...$args -printf '%T@ %f\n' }
 wrapper func retry(...args) {
   seconds = 10
   rest = $args
-  if $rest:len > 1 and $rest[0] == "--sleep" {
+  # Interpolated to text before anything looks at it, as recent does with its
+  # count: a `--…` word reaches a wrapper as mesh's Flag value, which compares
+  # only with another flag and takes no string modifier, so `== "--sleep"` and
+  # `starts-with(…, "--sleep=")` both fail on the value they are meant to read.
+  raw = $rest:get(0, "")
+  head = "$raw"
+  if $rest:len > 1 and $head == "--sleep" {
     seconds = $rest[1]
     rest = $rest[2..]
-  } else if $rest:len > 0 and starts-with($rest:get(0, ""), "--sleep=") {
-    seconds = $rest[0]:stripstart("--sleep=")
+  } else if starts-with($head, "--sleep=") {
+    seconds = $head:stripstart("--sleep=")
     rest = $rest:rest
   }
   return if $rest:len == 0
@@ -1107,13 +1118,18 @@ alias st = command vcs status
 # A wrapper all the same, so the flags that follow the URL reach the clone
 # command rather than being scanned against this signature.
 wrapper func clone(url, ...args) {
-  if $url ~ *.git {
+  # Matched on the text rather than on `url` itself: a caller who led with an
+  # option binds mesh's Flag value here, and `~` takes a string on the left. A
+  # flag matches neither pattern, which is how a misordered call still does
+  # nothing rather than erroring at the reader.
+  target = "$url"
+  if $target ~ *.git {
     if have-command(jj) {
       jj git clone $url ...$args
     } else if confirm("jj is not installed. Clone using git") {
       git clone $url ...$args
     }
-  } else if $url ~ */hg* {
+  } else if $target ~ */hg* {
     hg clone $url ...$args
   }
 }
