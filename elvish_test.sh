@@ -647,6 +647,30 @@ result="$(_elvish_run '' "each-line echo prefix < $_testdir/lines.txt")"
 assert_equal "prefix a
 prefix b" "$result"
 
+# Same reason each0 catches: a failing command raises in Elvish, and a raise
+# inside the closure propagates out of `each` and abandons the lines after it,
+# where the shrc, fish and mesh loops keep going. All three lines have to run.
+printf 'a\nb\nc\n' > "$_testdir/failing-lines.txt"
+start_test "elvish each-line keeps going after a line's command fails"
+result="$(_elvish_run '' "each-line sh -c 'echo saw \$1; test \"\$1\" != b' _ \
+    < $_testdir/failing-lines.txt")"
+assert_equal "saw a
+saw b
+saw c" "$result"
+
+# And the caller sees the last invocation's outcome, as in those loops: an
+# earlier failure followed by a success is a success.
+start_test "elvish each-line reports the last invocation, not an earlier failure"
+result="$(_elvish_run '' "if ?(each-line sh -c 'test \"\$1\" != b' _ \
+    < $_testdir/failing-lines.txt) { echo ok } else { echo fail }")"
+assert_equal "ok" "$result"
+
+printf 'a\nb\n' > "$_testdir/failing-last-line.txt"
+start_test "elvish each-line fails when the last invocation fails"
+result="$(_elvish_run '' "if ?(each-line sh -c 'test \"\$1\" != b' _ \
+    < $_testdir/failing-last-line.txt) { echo ok } else { echo fail }")"
+assert_equal "fail" "$result"
+
 # Null-delimited so an item may contain a space -- or a newline, which is the
 # whole reason the form exists and what splitting on lines would destroy.
 printf 'a b\0c\0' > "$_testdir/items.nul"

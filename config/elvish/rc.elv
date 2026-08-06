@@ -1014,7 +1014,17 @@ fn dev {|file|
 # Named each-line rather than `each`, which is one of Elvish's own builtins and
 # already does very nearly this (`ls | each {|f| wc -l $f }`); shadowing it
 # would cost every other use of it in this file.
-fn each-line {|cmd @args| each {|line| (as-command $cmd) $@args $line } }
+#
+# Caught per line for the reason each0 is: a failing external command raises in
+# Elvish rather than returning a status, and a raise inside the closure
+# propagates out of `each`, abandoning the lines after it -- where the shrc,
+# fish and mesh loops keep going. The last outcome is re-raised at the end, so
+# the caller sees the last invocation's result as it does there.
+fn each-line {|cmd @args|
+    var last = $ok
+    each {|line| set last = ?((as-command $cmd) $@args $line) }
+    if (not-eq $last $ok) { fail $last }
+}
 
 # run a command on each null-delimited item from stdin, e.g.
 # `find . -print0 | each0 wc -l`.
