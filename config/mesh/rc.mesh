@@ -1243,6 +1243,55 @@ func session-name() {
   return ""
 }
 
+# The session and project names for the render in progress. Two callers want
+# each of them now -- host-info draws the context line and title-text names the
+# window -- and both answers cost a fork: `tmux display-message` inside tmux,
+# `vcs rootdir` inside a repo. Warmed once per render so a prompt pays one of
+# each instead of two. shrc:2204 warms `_session_name` across exactly this pair
+# for the same reason, and config.fish:1509 does too.
+#
+# shrc drops its cache at the end of the render; this cannot, because the title
+# is its own hook and runs *after* preprompt returns. The flag stays set and
+# preprompt re-warms it every time, so the values a reader sees are the ones
+# from the prompt it is sitting at -- which is also what makes them right for
+# preexec, where nothing has changed between the prompt and the command it
+# launched. Cold -- a test, a direct call before any prompt -- asks for itself.
+prompt-cache-warm = false
+prompt-session-name-cached = ""
+prompt-project-name-cached = ""
+
+func warm-prompt-cache() {
+  global prompt-session-name-cached = session-name()
+  global prompt-project-name-cached = projectname()
+  global prompt-cache-warm = true
+}
+
+func prompt-session-name() {
+  return $prompt-session-name-cached if $prompt-cache-warm
+  return session-name()
+}
+
+func prompt-project-name() {
+  return $prompt-project-name-cached if $prompt-cache-warm
+  return projectname()
+}
+
+# Cold again once the command line is away. Everything from here until the next
+# prompt is the user's own command, which may `cd` or switch branches, so a
+# command that reaches title-text or host-info -- `cd /tmp; puts title-text()`
+# is the sharp case -- must get live answers rather than the ones the prompt
+# drew with. The other shells never had this to worry about: theirs resolve on
+# every call and shrc's cache is dropped at the end of its own render, which is
+# the line this replaces.
+#
+# Its own preexec hook, registered last, rather than a line at the end of
+# title-busy: the cache's lifetime should not depend on the title being
+# registered at all, and that coupling is exactly what left it stale. Takes the
+# command mesh hands every preexec handler, and ignores it.
+func cool-prompt-cache(cmd) {
+  global prompt-cache-warm = false
+}
+
 # the hostname and session tag for the context line. The hostname is red on a
 # production host; the session tag is a green session name when attached, or a
 # yellow warning naming the backend that would start when not.
@@ -1260,7 +1309,7 @@ func host-info() {
   }
   out += $host
   out += " "
-  session = session-name()
+  session = prompt-session-name()
   if $session != "" {
     out += green($session)
     return $out
@@ -1420,20 +1469,33 @@ func unpublish-jobs(status = 0) {
   rm -f $file
 }
 
-# print the window title: "<hostname> <session> <project-or-pwd>", each
-# leading part omitted when empty. mesh writes its own title (user@host: dir)
-# and offers no way to replace it, so this is a command to run by hand rather
-# than something the prompt installs.
-func title() {
+# the window title: "<hostname> <session> <project-or-pwd>", each leading part
+# omitted when empty.
+#
+# `title-text` rather than `title`, which is now mesh's builtin for naming the
+# window and so is refused as a function name. That builtin is the mechanism;
+# the interface is a pair of hooks -- `preprompt` for where the shell is while
+# it waits, `preexec` for what it is running while it is busy -- and mesh's own
+# titles are ordinary prelude functions registered on them (`puts $sh.prelude`
+# prints them). Registering over the `title` hook name replaces them.
+func title-text() {
   parts = []
   if show-hostname-in-title() { parts += [short-hostname()] }
-  session = session-name()
+  session = prompt-session-name()
   if $session != "" { parts += [$session] }
-  name = projectname()
+  name = prompt-project-name()
   if $name == "" { name = $(pwd):base }
   parts += [$name]
   return $parts:join(" ")
 }
+
+# Both moments get the same text, which is the parity call rather than the
+# mesh-native one: shrc's preprompt and precommand both `set_title "$(title)"`,
+# and rc.elv's preprompt and command-started both `set-title (title)`. mesh
+# ships the command line as the busy title instead; taking that here would make
+# mesh the one shell whose window says something different mid-command.
+func title-idle() { title title-text() }
+func title-busy(cmd) { title-idle }
 
 # spawn a detached background fetch through the `vcs` binary, which knows the
 # right fetch command per VCS, the marker file to mtime-gate against, and how
@@ -1467,6 +1529,10 @@ func preprompt() {
   # Asked once and handed to both callers below: is-ssh-valid forks `ssh-add -L`
   # and each `timeout` around it forks again, and this is the prompt's hot path.
   auth = bounded-auth-info()
+  # Before anything reads them: the context line below and the title hook that
+  # runs after this returns both want the session and project names, and both
+  # cost a fork.
+  warm-prompt-cache
   maybe-background-fetch $auth
   puts ""
   bar terminal-width()
@@ -1850,6 +1916,19 @@ log-history "New session as" $env:get(USERNAME, "") "in mesh"
 on preprompt context preprompt
 on preexec history command-started
 on postexec report command-finished
+# Under the `title` name, so these replace the shipped prelude handlers rather
+# than fighting them for the window: two handlers on one moment would both run
+# and the later registration would win every redraw.
+#
+# Registered *after* the context hook, and load-bearing: hooks run in
+# registration order, so `preprompt` has warmed the session and project names
+# by the time title-idle reads them. Swapping these two lines would make the
+# title fork for both all over again.
+on preprompt title title-idle
+on preexec title title-busy
+# Last on preexec, so the title above has read the warm values and everything
+# after -- the user's command -- sees live ones.
+on preexec cache cool-prompt-cache
 # Clear the published job file on the way out. shrc traps EXIT and fish uses a
 # fish_exit handler for the same reason; config.nu has no exit hook and has to
 # leave a stale file behind.
