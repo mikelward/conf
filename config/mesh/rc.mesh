@@ -1216,14 +1216,25 @@ func green(text) { return style($text, fg: green) }
 func red(text) { return style($text, fg: red) }
 func yellow(text) { return style($text, fg: yellow) }
 
-# replace a leading $HOME in the working directory with "~"
+# replace a leading $HOME in the working directory with "~".
+#
+# `:tilde` is mesh's own inverse of the `~` a word expands -- the same code the
+# shell's default window title runs -- so the body is four lines of prefix
+# surgery handed back to the shell rather than a behavior change. It agrees
+# with what was here on every case worth having: a whole-component match, so a
+# $HOME of /home/user leaves /home/username alone, which the old
+# trailing-slash compare also got right.
+#
+# The exact-$HOME test stays in front of it for the one case where they part:
+# `:tilde` ignores a $HOME of `/` entirely -- reasonably, since otherwise every
+# absolute path would render as `~`-something -- but that also leaves the root
+# directory as `/` where shrc:1829, config.fish:1562 and config.nu:1347 each
+# answer `~` from an exact-home branch of their own. An account or a container
+# with HOME=/ is the case, and parity decides it.
 func tilde-pwd() {
   here = $(pwd)
-  home = $env.HOME
-  return "~" if $here == $home
-  rest = $here:replacestart("$home/", "")
-  return "~/$rest" if $rest != $here
-  return $here
+  return "~" if $here == $env.HOME
+  return $here:tilde
 }
 
 # a short version of the hostname for the prompt and the window title
