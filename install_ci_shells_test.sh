@@ -180,6 +180,25 @@ start_test "puts the elvish build somewhere already on PATH"
 assert_contains "go GOBIN=/usr/local/bin install" "$_calls"
 rm -rf "$_stubs"
 
+# The case find_go's fallback exists for, and the one that actually happens on
+# the runner: Go is installed but off PATH, since this script runs under sudo
+# and secure_path leaves /usr/local/go/bin out. Every other case here hands the
+# stub over on PATH, so without this the fallback could regress and CI would
+# only find out by losing elvish silently.
+start_test "finds go through GOROOT when it is not on PATH"
+_stubs=$(_stub_dir 0)
+for _present in zsh fish nu; do
+    printf '#!/bin/sh\nprintf "9.9.9\\n"\n' >"$_stubs/$_present"
+    chmod +x "$_stubs/$_present"
+done
+mkdir -p "$_stubs/goroot/bin"
+mv "$_stubs/go" "$_stubs/goroot/bin/go"
+GOROOT="$_stubs/goroot" PATH="$_stubs" "$_script" >/dev/null 2>&1
+assert_equal "0" "$?"
+start_test "builds elvish through the GOROOT fallback"
+assert_contains "src.elv.sh/cmd/elvish@v$_elvish_version" "$(cat "$_stubs/calls" 2>/dev/null)"
+rm -rf "$_stubs"
+
 # The pins are what make a red CI run mean "the config broke" rather than
 # "upstream moved", so the fetched URL has to carry the pinned version.
 start_test "fetches the pinned fish version"

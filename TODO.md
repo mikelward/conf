@@ -15,6 +15,23 @@ Delete an entry once you have agreed with it or reversed it.
       (`TODO.md` in the mesh repo, "reserved names in general").
       *Reversible:* one line, the moment mesh has a spelling for it.
 
+## Replace a broken nu rather than only reporting it
+
+`.claude/hooks/session-start.sh` now rebuilds over an `elvish` that is on
+`PATH` but will not run, because `Makefile:240` and `elvish_test.sh:30` gate on
+`command -v elvish` alone — so a file that resolves takes the run branch and
+fails the suite instead of skipping it.
+
+`Makefile:207` gates nu exactly the same way, so a broken nu has the same
+effect. The hook only reports it, and the message was corrected to say the
+suite will fail rather than promising a skip.
+
+What is left is the replacement attempt. It was not done alongside elvish's
+because the trade is different: elvish is a `go install` measured in seconds,
+while nu is a ~76 MB download, and doing that unprompted at session start on
+the chance the local copy is broken is a bigger call than it looks. Worth
+deciding deliberately rather than by symmetry.
+
 ## Run the prompt and VCS suites under zsh
 
 `test-prompt` and `test-vcs` are bash-only, so `shrc`'s prompt code and
@@ -146,18 +163,3 @@ different test for a shell that never sources `shrc` at all. And the re-exec
 runs `exec "$SHELL" -l`: Elvish accepts `-l` but treats it as a no-op, so a
 login Elvish would rely on `rc.elv` alone — which is fine today only because
 there is nothing an Elvish login shell reads that an interactive one doesn't.
-
-## Install Elvish in the agent container too
-
-`install-ci-shells.sh` builds Elvish on the CI runner, but
-`.claude/hooks/session-start.sh` installs only shellcheck and nu, so an agent
-session starts without it and `make test` prints `SKIP: test-elvish` — the same
-silently-covers-less problem the CI installer exists to close, one environment
-over.
-
-The pin is already shared (`ELVISH_VERSION` in `test-tool-versions.sh`), so
-this is the `go install` from the CI installer plus the hook's report-the-
-version wrapper. The one thing to check is whether the container image ships a
-Go toolchain; the CI runner does, since `make` builds the vcs submodule with
-it, but the hook runs somewhere else and would need a fallback message rather
-than a failed install if it doesn't.

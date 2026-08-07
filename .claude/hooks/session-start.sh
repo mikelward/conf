@@ -1,12 +1,17 @@
 #!/bin/bash
 # Install the tools `make test` needs but the container does not ship.
 #
-# Of the two, shellcheck is the blocking one: without it the lint target dies
-# with exit 127 and the whole suite fails. nushell is optional — its absence only
-# skips config/nushell/config_test.nu, but AGENTS.md asks for those tests to run
-# when the nushell config is touched.
+# Of the three, shellcheck is the blocking one: without it the lint target dies
+# with exit 127 and the whole suite fails. nushell and Elvish are optional —
+# their absence only skips config/nushell/config_test.nu and elvish_test.sh, but
+# AGENTS.md asks for those tests to run when their configs are touched, and a
+# suite that skips is one that silently covers less than the job claims.
 #
-# apt is off-limits here, so both come from GitHub releases.
+# apt is off-limits here, so shellcheck and nushell come from GitHub releases.
+# Elvish is built with `go install`, for the reason spelled out beside
+# ELVISH_VERSION in test-tool-versions.sh: upstream publishes no release asset
+# to pin, and the Go checksum database is the independent check its own host
+# cannot provide.
 #
 # Anything already on PATH is left alone — an environment that ships its own
 # build is not ours to overwrite, and the hook re-runs on every SessionStart.
@@ -62,6 +67,10 @@ nu_version() {
     nu --version | head -1
 }
 
+elvish_version() {
+    elvish --version | head -1
+}
+
 verify_sha256() {
     if ! echo "$2  $1" | sha256sum --check --strict -; then
         echo "session-start: ${1##*/} failed its checksum; refusing to install it" >&2
@@ -102,6 +111,71 @@ install_nu() {
     install -m 755 "$tmp/nu-$NU_VERSION-x86_64-unknown-linux-gnu/nu" /usr/local/bin/nu || return 1
 }
 
+# Go is not always on PATH even where it is installed: this image keeps it at
+# /usr/local/go/bin, which the hook's own environment does not include, and the
+# CI runner has the same layout with sudo's secure_path leaving it out. $GOROOT
+# is what names a Go installation somewhere else again, so it decides where to
+# look before the default does.
+find_go() {
+    if command -v go >/dev/null 2>&1; then
+        command -v go
+        return 0
+    fi
+    if test -x "${GOROOT:-/usr/local/go}/bin/go"; then
+        echo "${GOROOT:-/usr/local/go}/bin/go"
+        return 0
+    fi
+    return 1
+}
+
+# There is no download to checksum here and no extract step: the module proxy
+# and the Go checksum database have already done that job by the time anything
+# lands. Everything after that is the same shape as the other two installers,
+# and for the same reasons.
+#
+# GOBIN points at $tmp rather than /usr/local/bin so the build lands somewhere
+# unpublished and verify_runs gets its say first. Building straight into
+# /usr/local/bin would put a binary on PATH before anything had run it, and
+# `command -v elvish` succeeding is irreversible in practice: this hook stops
+# retrying, and the Makefile's own `command -v elvish` gate picks the run
+# branch, so `make test` fails on the leftover instead of skipping cleanly.
+#
+# Bounded for the same reason the curl transfers are. This runs before the
+# session is usable and `go install` has no duration flag of its own, so a
+# proxy that accepts the connection and then stalls would hold up startup
+# indefinitely rather than letting Elvish drop out as the optional tool it is.
+# The budget matches curl's --max-time; a build here is ~8s against a warm
+# module cache and well under a minute cold.
+ELVISH_BUILD_TIMEOUT=300
+
+# $1 is where to publish, defaulting to /usr/local/bin. It is a parameter
+# because replacing a broken elvish means overwriting *the file that resolved*,
+# which is not always this one: env:34 puts five dirs ($HOME/scripts.local,
+# $HOME/scripts, $HOME/bin, $HOME/.cargo/bin, $HOME/.local/bin) ahead of
+# /usr/local/bin, so publishing here would leave the broken copy still winning
+# the PATH lookup and the re-probe still failing.
+install_elvish() {
+    _dest=${1:-/usr/local/bin/elvish}
+    _go=$(find_go) || {
+        echo "session-start: no go toolchain; cannot build elvish" >&2
+        return 1
+    }
+    # Status captured rather than tested inside `if !`, which would report the
+    # negation's status and lose the 124 that says it was the clock, not the
+    # build.
+    _build=0
+    GOBIN="$tmp" timeout "$ELVISH_BUILD_TIMEOUT" "$_go" \
+        install "src.elv.sh/cmd/elvish@v$ELVISH_VERSION" || _build=$?
+    if test "$_build" -ne 0; then
+        if test "$_build" -eq 124; then
+            echo "session-start: the elvish build did not finish within ${ELVISH_BUILD_TIMEOUT}s; giving up on it" >&2
+        fi
+        return 1
+    fi
+    verify_runs "$tmp/elvish" elvish || return 1
+    install -m 755 "$tmp/elvish" "$_dest" || return 1
+}
+
 if command -v shellcheck >/dev/null 2>&1; then
     if _version=$(shellcheck_version); then
         report_version shellcheck "$_version"
@@ -127,7 +201,10 @@ if command -v nu >/dev/null 2>&1; then
     if _version=$(nu_version); then
         report_version nushell "$_version"
     else
-        echo "session-start: nu is on PATH but will not run; config/nushell tests will skip" >&2
+        # Not "will skip": Makefile:207 gates on `command -v nu` alone, so a nu
+        # that resolves but will not run takes the run branch. Reported rather
+        # than rebuilt over — unlike elvish, replacing it is a 76 MB download.
+        echo "session-start: nu is on PATH but will not run; the nushell suite will fail rather than skip" >&2
     fi
 elif install_nu; then
     if _version=$(nu_version); then
@@ -137,4 +214,31 @@ elif install_nu; then
     fi
 else
     echo "session-start: nushell install failed; config/nushell tests will skip" >&2
+fi
+
+# Also not fatal, and for the same reason as nushell: without it elvish_test.sh
+# skips and everything else still runs.
+#
+# The present-but-broken case is the exception, and it does not skip. Makefile:240
+# and elvish_test.sh:30 both gate on `command -v elvish` alone, so a file that
+# resolves but will not run takes the run branch and fails the suite. Building
+# over it is the only outcome that leaves the container usable — and cheap
+# enough to be worth trying, since this build is seconds rather than a 76 MB
+# download.
+if _elvish=$(command -v elvish 2>/dev/null); then
+    if _version=$(elvish_version); then
+        report_version elvish "$_version"
+    elif install_elvish "$_elvish" && _version=$(elvish_version); then
+        report_version elvish "$_version"
+    else
+        echo "session-start: elvish is on PATH but will not run and could not be replaced; the elvish suite will fail rather than skip" >&2
+    fi
+elif install_elvish; then
+    if _version=$(elvish_version); then
+        report_version elvish "$_version"
+    else
+        echo "session-start: installed elvish will not run; config/elvish tests will skip" >&2
+    fi
+else
+    echo "session-start: elvish install failed; config/elvish tests will skip" >&2
 fi
