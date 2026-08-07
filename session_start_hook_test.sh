@@ -97,9 +97,19 @@ EOF
 
     # The stubbed curl writes nothing, so the real sha256sum would fail every
     # happy-path case. Stubbed to pass; the checksum-mismatch case overrides it.
+    #
+    # It drains stdin, which is not decoration. The hook pipes the expected sum
+    # in -- `echo "$2  $1" | sha256sum --check --strict -` -- under `set -o
+    # pipefail`, so a stub that exits without reading can close the pipe before
+    # `echo` writes to it. `echo` then fails with EPIPE and pipefail makes the
+    # whole pipeline fail, turning a fine checksum into `failed its checksum`
+    # and the install into a spurious error. It is a race, so it showed up as
+    # this suite failing under parallel `make test` and naming a different test
+    # each time. A real sha256sum reads its input; so does this.
     cat >"$_dir/sha256sum" <<EOF
 #!/bin/sh
 echo "sha256sum \$*" >>"$_dir/calls"
+cat >/dev/null
 exit 0
 EOF
 
@@ -280,7 +290,7 @@ rm -rf "$_stubs"
 # be extracted and installed, and every later test would execute it.
 start_test "a checksum mismatch stops before extraction"
 _stubs=$(_stub_dir 0)
-printf '#!/bin/sh\necho "sha256sum $*" >>"%s/calls"\nexit 1\n' "$_stubs" >"$_stubs/sha256sum"
+printf '#!/bin/sh\necho "sha256sum $*" >>"%s/calls"\ncat >/dev/null\nexit 1\n' "$_stubs" >"$_stubs/sha256sum"
 printf '#!/bin/sh\nexit 0\n' >"$_stubs/nu"
 chmod +x "$_stubs/sha256sum" "$_stubs/nu"
 _err=$(CLAUDE_CODE_REMOTE=true PATH="$_stubs" "$_hook" 2>&1 >/dev/null)

@@ -111,9 +111,18 @@ EOF
 
     # The stubbed curl writes nothing, so the real sha256sum would fail every
     # happy-path case. Stubbed to pass; the mismatch case overrides it.
+    #
+    # It drains stdin, which is not decoration. The script pipes the expected
+    # sum in -- `echo "$2  $1" | sha256sum --check --strict -` -- under `set -o
+    # pipefail`, so a stub that exits without reading can close the pipe before
+    # `echo` writes to it. `echo` then fails with EPIPE and pipefail makes the
+    # whole pipeline fail, turning a fine checksum into `failed its checksum`.
+    # It is a race, so it surfaced as this suite failing under parallel
+    # `make test`. A real sha256sum reads its input; so does this.
     cat >"$_dir/sha256sum" <<EOF
 #!/bin/sh
 echo "sha256sum \$*" >>"$_dir/calls"
+cat >/dev/null
 exit 0
 EOF
 
@@ -203,6 +212,7 @@ _stubs=$(_stub_dir 0)
 cat >"$_stubs/sha256sum" <<EOF
 #!/bin/sh
 echo "sha256sum \$*" >>"$_stubs/calls"
+cat >/dev/null
 exit 1
 EOF
 chmod +x "$_stubs/sha256sum"
