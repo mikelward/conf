@@ -15,6 +15,18 @@ Delete an entry once you have agreed with it or reversed it.
       (`TODO.md` in the mesh repo, "reserved names in general").
       *Reversible:* one line, the moment mesh has a spelling for it.
 
+- [ ] **The mesh config renames its `title` function to `title-text`.** Same
+      cause as the `status` entry above: `title` became a mesh builtin — the
+      one that actually names the window — so `func title()` is refused and
+      printed a diagnostic on every shell. shrc, fish, nu and Elvish keep a
+      user-callable `title` that prints the string; in mesh, typing `title`
+      now writes a title rather than printing one, and `title-text()` is what
+      prints it. The window title itself is no longer a command to run by
+      hand: `title-idle` / `title-busy` are registered on the `preprompt` and
+      `preexec` hooks, so mesh names the window like the other four shells do.
+      *Reversible:* the hook registrations are two lines, and the builder can
+      take any name.
+
 ## Replace a broken nu rather than only reporting it
 
 `.claude/hooks/session-start.sh` now rebuilds over an `elvish` that is on

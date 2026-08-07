@@ -2496,23 +2496,36 @@ start_test "mesh terminal-width falls back to 80 with no terminal"
 result="$(_mesh_run 'puts terminal-width()' 2>/dev/null)"
 assert_equal "80" "$result"
 
-start_test "mesh title names host and project"
+start_test "mesh title-text names host and project"
 result="$(_mesh_run '
     $env.HOSTNAME = "host1"
     func projectname() { return "myproject" }
-    puts title()
+    puts title-text()
 ')"
 assert_equal "host1 myproject" "$result"
 
-start_test "mesh title drops the hostname inside tmux"
+start_test "mesh title-text drops the hostname inside tmux"
 result="$(_mesh_run '
     $env.HOSTNAME = "host1"
     $env.TMUX = "/tmp/tmux-0/default,1,0"
     func session-name() { return "sess" }
     func projectname() { return "myproject" }
-    puts title()
+    puts title-text()
 ')"
 assert_equal "sess myproject" "$result"
+
+# `title` is mesh's builtin and writes to the terminal rather than stdout, so
+# what is assertable here is that both handlers name the window from the same
+# builder -- the parity point, since shrc's preprompt and precommand both set
+# the context title and neither shows the command line.
+start_test "mesh title-idle and title-busy both go through title-text"
+result="$(_mesh_run '
+    func title-text() { puts asked; return "the title" }
+    title-idle
+    title-busy "some command"
+')"
+assert_equal "asked
+asked" "$result"
 
 start_test "mesh job-info is empty with no jobs"
 result="$(_mesh_run 'puts "[$(puts job-info())]"')"
@@ -2550,9 +2563,54 @@ _prompt_vcs_calls() {
     sort "$_testdir/vcs-calls" 2>/dev/null | tr '\n' ' ' | sed 's/ $//'
 }
 
-start_test "mesh preprompt runs vcs exactly twice, as prompt-info and unmerged"
+# Three, and the third is the window title's. `rootdir` is what names the
+# project in the title, and preprompt warms it once so the title hook -- which
+# runs after preprompt returns -- reuses it instead of asking again. shrc pays
+# the same three: its preprompt calls set_title "$(title)", which reaches
+# project_or_pwd -> projectname -> projectroot -> `vcs rootdir`.
+start_test "mesh preprompt runs vcs exactly three times, one of them for the title"
 result="$(_prompt_vcs_calls)"
-assert_equal "prompt-info --color=always unmerged" "$result"
+assert_equal "prompt-info --color=always rootdir unmerged" "$result"
+
+# The point of the warm cache: the title hook is a second reader of both
+# answers, and neither is asked twice in one render.
+start_test "mesh a render asks for the session and project names once each"
+result="$(_mesh_run '
+    func session-name() { puts asked-session >&2; return "sess" }
+    func projectname() { puts asked-project >&2; return "proj" }
+    warm-prompt-cache
+    host-info()
+    title-text()
+    puts done
+' 2>&1 | sort | tr '\n' ' ' | sed 's/ $//')"
+assert_equal "asked-project asked-session done" "$result"
+
+# Cold -- a test, or a direct call before any prompt has drawn -- asks rather
+# than answering from a cache that was never filled.
+start_test "mesh prompt-session-name asks when the cache is cold"
+result="$(_mesh_run '
+    func session-name() { return "fresh" }
+    puts prompt-session-name()
+')"
+assert_equal "fresh" "$result"
+
+# The command line is the other side of it: once preexec has run, the user's
+# own command must see live answers, not the ones the prompt drew with. The
+# sharp case is `cd /tmp; puts title-text()` from inside a repository, which
+# would otherwise still name the repository it left.
+start_test "mesh cool-prompt-cache puts the accessors back on live answers"
+result="$(_mesh_run '
+    project = "before"
+    func session-name() { return "sess" }
+    func projectname() { return $project }
+    warm-prompt-cache
+    global project = "after"
+    puts prompt-project-name()
+    cool-prompt-cache "some command"
+    puts prompt-project-name()
+')"
+assert_equal "before
+after" "$result"
 
 # The binary's command is `diffs`, alongside `diffedit` and `diffstat`; there
 # is no `diff` in vcs/commands.go, so a `vcs diff` shortcut would just fail.
@@ -3596,6 +3654,53 @@ case "$result" in
         if test "$_mesh_prompt_budget_ms" -gt 0; then
             assert_true test "$result" -le "$_mesh_prompt_budget_ms"
         fi
+        ;;
+esac
+
+# The other half of a render, and the one the compose measurement above cannot
+# reach: inside tmux the context line and the window title both want the
+# session and project names, and both answers are forks. This times the pair
+# with real stub binaries on PATH -- so the number is fork cost, not string
+# building -- and again inside mesh, keeping interpreter startup out of it.
+#
+# Reported, not asserted. This one measures process spawns -- 50 with the cache
+# warm, 100 without -- where the compose benchmark above measures interpretation
+# with its forks stubbed out, so its wall clock is at the mercy of whatever else
+# the machine is doing: the same run here has come back at 195ms and at 660ms on
+# a loaded box. A budget over that spread would be too loose to catch anything
+# and a tight one would just flake, so the *shape* is guarded deterministically
+# instead, by "a render asks for the session and project names once each" above.
+# This number is here to be read when the prompt path changes.
+_fake_tmux_bin="$_testdir/fake-tmux-bin"
+mkdir -p "$_fake_tmux_bin"
+cat > "$_fake_tmux_bin/tmux" <<'EOF'
+#!/bin/sh
+echo mysession
+EOF
+chmod +x "$_fake_tmux_bin/tmux"
+
+start_test "mesh render inside tmux reports its timing"
+result="$(PATH="$_fake_tmux_bin:$_fake_vcs_bin:$PATH" TMUX="/tmp/tmux-0/default,1,0" _mesh_run '
+    $env.HOSTNAME = "host1"
+    warm-prompt-cache
+    host-info()
+    title-text()
+    start = $(date +%s%N)
+    i = 0
+    while $i < 50 {
+      warm-prompt-cache
+      host-info()
+      title-text()
+      i = $i + 1
+    }
+    end = $(date +%s%N)
+    puts (($end:int - $start:int) / 1000000)
+' 2>/dev/null)"
+case "$result" in
+    ''|*[!0-9]*) skip_block "mesh tmux render perf check: date +%s%N unavailable" ;;
+    *)
+        echo "  50 x render inside tmux (host-info + title): ${result}ms"
+        assert_true test "$result" -ge 0
         ;;
 esac
 
