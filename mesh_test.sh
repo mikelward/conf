@@ -2839,9 +2839,7 @@ result="$(PATH="$_fake_ssh_bin:$PATH" _mesh_run_config '
 ' 'ssh-to host1')"
 assert_equal "rw: -r host1" "$result"
 
-# The generator writes definitions to a file and sources it, because mesh has
-# no eval and no dynamically-named func. Host names here are placeholders, not
-# anyone's real config.
+# Host names here are placeholders, not anyone's real config.
 _ssh_config_home="$_testdir/sshhome"
 _write_ssh_config() {
     rm -rf "$_ssh_config_home"
@@ -2856,18 +2854,41 @@ host host3
 EOF
 }
 
-start_test "mesh set-up-ssh-aliases defines a wrapper per usable Host entry"
+# Run a snippet with the ssh config in place and the aliases already defined.
+_ssh_aliases_run() {
+    HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
+        source $_env_mesh
+        source $_rc_mesh
+        set-up-ssh-aliases
+        $1
+" </dev/null 2>&1
+}
+
+start_test "mesh set-up-ssh-aliases defines an alias per usable Host entry"
 _write_ssh_config
-HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    set-up-ssh-aliases
-" </dev/null >/dev/null 2>&1
-result="$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
-assert_equal "# Generated from ~/.ssh/config by rc.mesh. Do not edit.
-wrapper func host1(...args) { ssh-to host1 ...\$args }
-wrapper func host2(...args) { ssh-to host2 ...\$args }
-wrapper func host3(...args) { ssh-to host3 ...\$args }" "$result"
+result="$(_ssh_aliases_run 'puts (is-function(host1))
+        puts (is-function(host2))
+        puts (is-function(host3))')"
+assert_equal "true
+true
+true" "$result"
+
+# A pattern, a negation and a dotted name are not hosts to connect to.
+start_test "mesh set-up-ssh-aliases skips patterns, negations and dotted names"
+result="$(_ssh_aliases_run 'puts (is-function(neg-ated))')"
+assert_equal "false" "$result"
+
+# The property the whole thing exists for: each alias carries *its own* host,
+# baked at the definition. An alias body is otherwise syntax read at call time,
+# where the loop variable is long gone.
+start_test "mesh ssh host aliases each connect to their own host"
+result="$(_ssh_aliases_run "func ssh-to(...args) { puts to: ...\$args }
+        host1
+        host2
+        host3")"
+assert_equal "to: host1
+to: host2
+to: host3" "$result"
 
 # A `Host status` must not take over the `status` shortcut. shrc and fish get
 # this from ordering -- ssh aliases first, shortcut block after -- which isn't
@@ -2877,14 +2898,9 @@ start_test "mesh ssh aliases do not shadow a config shortcut"
 rm -rf "$_ssh_config_home"
 mkdir -p "$_ssh_config_home/.ssh"
 printf 'Host status host1\n' > "$_ssh_config_home/.ssh/config"
-HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    set-up-ssh-aliases
-" </dev/null >/dev/null 2>&1
-result="$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
-assert_equal "# Generated from ~/.ssh/config by rc.mesh. Do not edit.
-wrapper func host1(...args) { ssh-to host1 ...\$args }" "$result"
+result="$(_ssh_aliases_run "func ssh-to(...args) { puts to: ...\$args }
+        host1")"
+assert_equal "to: host1" "$result"
 
 # And the shortcut that survives still reaches vcs: `status` is mesh's own
 # builtin now, so `st` is what carries the vcs spelling.
@@ -2898,31 +2914,12 @@ result="$(PATH="$_fake_vcs_bin:$PATH" HOME="$_ssh_config_home" run_with_timeout 
 assert_equal "" "$result"
 assert_contains "status" "$(cat "$_testdir/vcs-calls")"
 
-# A host named after a *program* is still allowed: shadowing `git` with a host
-# alias is the user's call, and the other shells allow it too.
 start_test "mesh ssh aliases may still shadow a program name"
-rm -rf "$_ssh_config_home/.cache"
+rm -rf "$_ssh_config_home"
+mkdir -p "$_ssh_config_home/.ssh"
 printf 'Host ls\n' > "$_ssh_config_home/.ssh/config"
-HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    set-up-ssh-aliases
-" </dev/null >/dev/null 2>&1
-assert_contains "wrapper func ls(" "$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
-
-# The generated file names every Host entry in ~/.ssh/config, which is itself
-# 0600, and ~/.cache is usually world-traversable -- so a default-umask 0644
-# would publish the host list to any other local user. shrc and fish have
-# nothing to protect: their `eval` never touches disk.
-start_test "mesh ssh aliases are written to a private cache file"
-_write_ssh_config
-rm -rf "$_ssh_config_home/.cache"
-HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    set-up-ssh-aliases
-" </dev/null >/dev/null 2>&1
-assert_equal "600" "$(stat -c '%a' "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
+result="$(_ssh_aliases_run 'puts (is-function(ls))')"
+assert_equal "true" "$result"
 
 # is-shell-name must catch every class of name mesh owns: keywords and
 # builtins via `type -t`, and built-in value calls (invisible to -t, whose
@@ -2935,20 +2932,15 @@ start_test "mesh is-shell-name passes an ordinary host name"
 result="$(_mesh_run_config '' 'puts is-shell-name(host1)')"
 assert_equal "false" "$result"
 
-# A name mesh owns is a different matter: `files` is a built-in value call, so
-# `wrapper func files(…)` is a *syntax* error and mesh refuses the whole file --
-# one such Host entry would take every unrelated alias down with it.
+# `files` is a built-in value call, so mesh refuses to bind it. The refusal now
+# costs that name alone -- the loop carries on and every other host is still
+# defined, where the generated file used to lose all of them together.
 start_test "mesh ssh aliases skip a name mesh cannot bind"
-rm -rf "$_ssh_config_home/.cache"
+rm -rf "$_ssh_config_home"
+mkdir -p "$_ssh_config_home/.ssh"
 printf 'Host files host1\n' > "$_ssh_config_home/.ssh/config"
-HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    set-up-ssh-aliases
-" </dev/null >/dev/null 2>&1
-result="$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
-assert_equal "# Generated from ~/.ssh/config by rc.mesh. Do not edit.
-wrapper func host1(...args) { ssh-to host1 ...\$args }" "$result"
+result="$(_ssh_aliases_run 'puts (is-function(host1))')"
+assert_equal "true" "$result"
 
 start_test "mesh ssh aliases survive a Host mesh cannot bind"
 result="$(PATH="$_fake_ssh_bin:$PATH" HOME="$_ssh_config_home" HOSTNAME=mybox \
@@ -2963,36 +2955,11 @@ assert_equal "ssh: -t -oSendEnv=LC_CLIENT_HOST host1 uptime [mybox]" "$result"
 # A reserved word is the milder flavor -- a runtime error rather than a syntax
 # one -- but it still cannot be defined, so it is skipped by the same rule.
 start_test "mesh ssh aliases skip a reserved word"
-rm -rf "$_ssh_config_home/.cache"
+rm -rf "$_ssh_config_home"
+mkdir -p "$_ssh_config_home/.ssh"
 printf 'Host source host1\n' > "$_ssh_config_home/.ssh/config"
-HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    set-up-ssh-aliases
-" </dev/null >/dev/null 2>&1
-result="$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
-assert_equal "# Generated from ~/.ssh/config by rc.mesh. Do not edit.
-wrapper func host1(...args) { ssh-to host1 ...\$args }" "$result"
-
-# The filters cover what is known unbindable, but mesh owns that namespace and
-# can grow it, so a file that fails to source says so rather than losing every
-# alias silently. Simulated by planting an unparsable generated file and
-# blocking the rebuild that would replace it.
-start_test "mesh set-up-ssh-aliases reports a generated file it cannot source"
-rm -rf "$_ssh_config_home/.cache"
-mkdir -p "$_ssh_config_home/.cache/mesh"
-result="$(HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    # Land a file mesh will refuse, after the writes have all succeeded.
-    func mv(...args) { puts 'this is not( valid mesh' > $_ssh_config_home/.cache/mesh/ssh-hosts.mesh }
-    set-up-ssh-aliases
-    puts \"status=\$sh.status\"
-" </dev/null 2>&1)"
-assert_contains "could not be sourced" "$result"
-assert_not_contains "status=0" "$result"
-
-_write_ssh_config
+result="$(_ssh_aliases_run 'puts (is-function(host1))')"
+assert_equal "true" "$result"
 
 start_test "mesh ssh host aliases forward every argument to ssh-to"
 _write_ssh_config
@@ -3008,134 +2975,14 @@ result="$(PATH="$_fake_ssh_bin:$PATH" HOME="$_ssh_config_home" HOSTNAME=mybox \
 " </dev/null 2>&1)"
 assert_equal "ssh: -t -oSendEnv=LC_CLIENT_HOST --unknown-flag host1 [mybox]" "$result"
 
-# A config with nothing usable must leave no stale definitions behind.
-start_test "mesh set-up-ssh-aliases truncates a previous generation"
-_write_ssh_config
-HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    set-up-ssh-aliases
-" </dev/null >/dev/null 2>&1
-printf 'Host *.example\n' > "$_ssh_config_home/.ssh/config"
-HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    set-up-ssh-aliases
-" </dev/null >/dev/null 2>&1
-result="$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
-assert_equal "# Generated from ~/.ssh/config by rc.mesh. Do not edit." "$result"
-
-# Two shells starting at once share the cache path, so the file is built under
-# a per-process name and renamed into place. A reader therefore sees either the
-# old generation or the complete new one -- never the window between a truncate
-# and the last append, where every write succeeds and the result is still wrong.
-start_test "mesh set-up-ssh-aliases leaves no staged file behind"
-_write_ssh_config
-rm -rf "$_ssh_config_home/.cache"
-HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    set-up-ssh-aliases
-" </dev/null >/dev/null 2>&1
-result="$(ls "$_ssh_config_home/.cache/mesh")"
-assert_equal "ssh-hosts.mesh" "$result"
-
-# The reader never observes a partial file: whatever a concurrent shell sees is
-# a complete generation. Asserted by racing several shells and requiring every
-# resulting file to be whole.
-start_test "mesh set-up-ssh-aliases stays whole under concurrent shells"
-_write_ssh_config
-rm -rf "$_ssh_config_home/.cache"
-for _i in 1 2 3 4 5; do
-    HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-        source $_env_mesh
-        source $_rc_mesh
-        set-up-ssh-aliases
-        host1 --version > /dev/null 2>&1
-    " </dev/null >/dev/null 2>&1 &
-done
-wait
-result="$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
-assert_equal "# Generated from ~/.ssh/config by rc.mesh. Do not edit.
-wrapper func host1(...args) { ssh-to host1 ...\$args }
-wrapper func host2(...args) { ssh-to host2 ...\$args }
-wrapper func host3(...args) { ssh-to host3 ...\$args }" "$result"
-
-# An unwritable cache must not fall through to the source: a stale file from
-# an earlier session would otherwise be sourced as if fresh, reinstating hosts
-# the config no longer names. A path blocked by a *directory* rather than a
-# permission bit, since these tests run as root in CI.
-start_test "mesh set-up-ssh-aliases reports an uncreatable cache directory"
-_write_ssh_config
-touch "$_ssh_config_home/blocked"
-result="$(HOME="$_ssh_config_home" XDG_CACHE_HOME="$_ssh_config_home/blocked/cache" \
-    run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    set-up-ssh-aliases
-    puts \"status=\$sh.status\"
-    host1
-" </dev/null 2>&1)"
-assert_contains "cannot create the cache directory" "$result"
-assert_contains "status=1" "$result"
-assert_contains "command not found: host1" "$result"
-
-# A directory at the cache path is caught before anything is written: `mv` would
-# move the staged file *inside* it and succeed, leaving `source` to fail on the
-# directory with a diagnostic that doesn't say what went wrong.
-start_test "mesh set-up-ssh-aliases reports a directory at the cache path"
-_write_ssh_config
-mkdir -p "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh"
-result="$(HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    set-up-ssh-aliases
-    puts \"status=\$sh.status\"
-    host1
-" </dev/null 2>&1)"
-assert_contains "the cache path is a directory" "$result"
-assert_contains "status=1" "$result"
-assert_contains "command not found: host1" "$result"
-
-# A failure partway through the loop leaves a truncated file whose last line is
-# usually half a definition, so sourcing it is a parse error rather than a
-# short alias list. The append is checked and the artifact dropped. Simulated by
-# making the file unwritable *after* the header lands, which is what a full
-# filesystem looks like from here.
-# A failure partway through the loop leaves a truncated *staged* file, whose
-# last line is usually half a definition. It is dropped rather than renamed, so
-# the previous generation stays in place and nothing half-built is sourced.
-# Simulated by replacing the staged file with a directory after the header
-# lands, which is what a full filesystem looks like from here.
-start_test "mesh set-up-ssh-aliases drops a partly written staged file"
-_write_ssh_config
-rm -rf "$_ssh_config_home/.cache"
-result="$(HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    # Stand in for the append failing: the header write lands, the next cannot.
-    # Hooked on the per-name check the loop makes just before each append, so
-    # the staged file is replaced by a directory once the header is already in
-    # place. Answers false so the append it guards is still reached.
-    func is-function(name) {
-        staged = \"$_ssh_config_home/.cache/mesh/ssh-hosts.mesh.\$sh.pid\"
-        rm -f \$staged
-        mkdir -p \$staged
-        return false
-    }
-    set-up-ssh-aliases
-    puts \"status=\$sh.status\"
-    host1
-" </dev/null 2>&1)"
-assert_contains "cannot write the cache file" "$result"
-assert_contains "status=1" "$result"
-assert_contains "command not found: host1" "$result"
-
 # The config passed the is-it-a-file test and then failed to read anyway --
 # permissions changed since, an I/O error. A failing capture in a `for` head
-# iterates nothing and carries on, so without the check the header-only file
-# would be renamed into place and sourced: every host alias gone, looking
-# exactly like a config with no Host entries.
+# iterates nothing and carries on, so without the check every host alias would
+# be silently missing, looking exactly like a config with no Host entries.
+#
+# A fake `cat` rather than a chmod, so the test does not depend on the uid it
+# runs as: root reads a 0000 file regardless of mode, which would make this
+# skip exactly where it is most likely to be run.
 _fake_cat_bin="$_testdir/fakecatbin"
 mkdir -p "$_fake_cat_bin"
 printf '#!/bin/sh\necho "cat: cannot read" >&2\nexit 1\n' > "$_fake_cat_bin/cat"
@@ -3154,98 +3001,7 @@ assert_contains "cannot read the ssh config" "$result"
 assert_contains "status=1" "$result"
 assert_contains "command not found: host1" "$result"
 
-start_test "mesh set-up-ssh-aliases leaves no staged file after a failed read"
-assert_equal "" "$(ls "$_ssh_config_home/.cache/mesh/" 2>/dev/null | grep 'ssh-hosts.mesh\.' || true)"
-
-# The create and the rename are the two checked steps with no coverage of
-# their own. Both are reached through `command`, which bypasses this file's
-# own shortcuts but not PATH, so a fake binary is what stands in for the
-# failure -- the staged path carries the pid and cannot be blocked ahead of
-# time the way the others are.
-_fake_fail_bin="$_testdir/fakefailbin"
-mkdir -p "$_fake_fail_bin"
-
-start_test "mesh set-up-ssh-aliases reports an uncreatable cache file"
-_write_ssh_config
-rm -rf "$_ssh_config_home/.cache"
-printf '#!/bin/sh\necho "install: cannot create" >&2\nexit 1\n' > "$_fake_fail_bin/install"
-chmod +x "$_fake_fail_bin/install"
-result="$(HOME="$_ssh_config_home" PATH="$_fake_fail_bin:$PATH" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    set-up-ssh-aliases
-    puts \"status=\$sh.status\"
-    host1
-" </dev/null 2>&1)"
-rm -f "$_fake_fail_bin/install"
-assert_contains "cannot create the cache file" "$result"
-assert_contains "status=1" "$result"
-assert_contains "command not found: host1" "$result"
-
-# A failed rename must drop the staged file too: leaving it behind accumulates
-# one per shell start, and the previous generation is the one that stays.
-start_test "mesh set-up-ssh-aliases reports a failed rename"
-_write_ssh_config
-rm -rf "$_ssh_config_home/.cache"
-printf '#!/bin/sh\necho "mv: cannot rename" >&2\nexit 1\n' > "$_fake_fail_bin/mv"
-chmod +x "$_fake_fail_bin/mv"
-result="$(HOME="$_ssh_config_home" PATH="$_fake_fail_bin:$PATH" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    set-up-ssh-aliases
-    puts \"status=\$sh.status\"
-    host1
-" </dev/null 2>&1)"
-rm -f "$_fake_fail_bin/mv"
-assert_contains "cannot replace the cache file" "$result"
-assert_contains "status=1" "$result"
-assert_contains "command not found: host1" "$result"
-
-start_test "mesh set-up-ssh-aliases leaves no staged file after a failed rename"
-assert_equal "" "$(ls "$_ssh_config_home/.cache/mesh/" 2>/dev/null | grep 'ssh-hosts.mesh\.' || true)"
-
-# The generated file is syntax-checked with `mesh -n` before it is installed,
-# so a name that gets past the filters above and is still unbindable costs
-# only itself -- the previous generation stays in place. Before `-n` the only
-# check was sourcing, by which point the bad file had already been renamed
-# over the good one and every alias was gone until ~/.ssh/config was edited.
-#
-# Forced rather than found: the filters cover every name mesh currently
-# refuses, so the case is reached by making the writer emit a name that is a
-# syntax error. That is precisely the "a later mesh grows a keyword" scenario
-# the check exists for.
-start_test "mesh set-up-ssh-aliases keeps the last good file when the new one will not parse"
-rm -rf "$_ssh_config_home"
-mkdir -p "$_ssh_config_home/.ssh" "$_ssh_config_home/.cache/mesh"
-# `files` is a built-in value call, so `wrapper func files(…)` is a syntax
-# error that costs the whole file. is-shell-name catches it today; blinding
-# that one filter is what a mesh which grew the keyword *after* this config
-# was written looks like from here, which is the case `-n` guards.
-printf 'Host host1\nHost files\n' > "$_ssh_config_home/.ssh/config"
-printf 'wrapper func previous(...args) { puts "previous generation" }\n' \
-    > "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh"
-result="$(HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
-    func is-shell-name(name) { return false }
-    set-up-ssh-aliases
-    puts \"status=\$sh.status\"
-" </dev/null 2>&1)"
-assert_contains "not valid mesh" "$result"
-assert_contains "status=1" "$result"
-
-start_test "mesh set-up-ssh-aliases leaves the previous generation in place"
-assert_equal 'wrapper func previous(...args) { puts "previous generation" }' \
-    "$(cat "$_ssh_config_home/.cache/mesh/ssh-hosts.mesh")"
-
-start_test "mesh set-up-ssh-aliases leaves no staged file after a failed check"
-assert_equal "" "$(ls "$_ssh_config_home/.cache/mesh/" 2>/dev/null | grep 'ssh-hosts.mesh\.' || true)"
-
-# The staged path is built from XDG_CACHE_HOME (or HOME), so it is the user's
-# to shape. The syntax check hands it to a child mesh, and interpolating it into
-# that child's program made `source a b` two arguments for a home directory with
-# a space in it -- failing the check and deleting a staged file that was fine.
-start_test "mesh set-up-ssh-aliases installs aliases under a path with a space"
+start_test "mesh set-up-ssh-aliases reads a config under a path with a space"
 _ssh_spaced_home="$_testdir/ssh home"
 rm -rf "$_ssh_spaced_home"
 mkdir -p "$_ssh_spaced_home/.ssh"
@@ -3254,13 +3010,9 @@ result="$(HOME="$_ssh_spaced_home" run_with_timeout 15 mesh -c "
     source $_env_mesh
     source $_rc_mesh
     set-up-ssh-aliases
-    puts \"status=\$sh.status\"
+    puts (is-function(host1))
 " </dev/null 2>&1)"
-assert_equal "status=0" "$result"
-
-start_test "mesh set-up-ssh-aliases writes the alias file under a path with a space"
-assert_equal 'wrapper func host1(...args) { ssh-to host1 ...$args }' \
-    "$(tail -n 1 "$_ssh_spaced_home/.cache/mesh/ssh-hosts.mesh")"
+assert_equal "true" "$result"
 
 start_test "mesh set-up-ssh-aliases does nothing without an ssh config"
 rm -rf "$_ssh_config_home"
