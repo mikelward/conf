@@ -86,14 +86,18 @@ install_nu() {
 
 # Go is at /usr/local/go/bin on the runner image, which sudo's secure_path
 # does not include -- so `command -v go` inside this script comes up empty even
-# though the job's own steps can run it.
+# though the job's own steps can run it. $GOROOT is what names a Go
+# installation somewhere else again, so it decides where to look before the
+# default does. Kept identical to the session-start hook's copy: two installers
+# disagreeing about where Go lives is the drift test-tool-versions.sh exists to
+# prevent, one field over.
 find_go() {
     if command -v go >/dev/null 2>&1; then
         command -v go
         return 0
     fi
-    if test -x /usr/local/go/bin/go; then
-        echo /usr/local/go/bin/go
+    if test -x "${GOROOT:-/usr/local/go}/bin/go"; then
+        echo "${GOROOT:-/usr/local/go}/bin/go"
         return 0
     fi
     return 1
