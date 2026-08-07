@@ -586,7 +586,7 @@ func trydiff(cmd, file) {
   status = $sh.status
   rm -f $temp
   # `:code` because a status compares only with another status: `$status < 2`
-  # is a type error, and `== 0` would be silently false.
+  # is a type error, and `== 0` reports rather than answering quietly.
   return true if $status:code < 2
   fail $status
 }
