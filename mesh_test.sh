@@ -1147,6 +1147,30 @@ result="$(_mesh_run '
 ')"
 assert_equal "/etc" "$result"
 
+# `:tilde` ignores a $HOME of `/`, so the exact-home test in front of it is
+# what keeps the root directory rendering as `~` -- which is what shrc, fish
+# and nushell each answer from an exact-home branch of their own.
+start_test "mesh tilde-pwd shortens a \$HOME of /"
+result="$(HOME=/ TERM=dumb NO_COLOR=1 SHPOOL_SESSION_NAME= TMUX= SSH_CONNECTION= \
+    run_with_timeout 15 mesh -c "
+        source $_env_mesh
+        source $_rc_mesh
+        cd /
+        puts tilde-pwd()
+    " </dev/null)"
+assert_equal "~" "$result"
+
+# A sibling whose name merely starts with $HOME's is not under it. Both the
+# old prefix compare and `:tilde` match whole components; this pins that across
+# the handover.
+start_test "mesh tilde-pwd leaves a sibling of \$HOME alone"
+mkdir -p "${_fakehome}extra"
+result="$(_mesh_run "
+    cd ${_fakehome}extra
+    puts tilde-pwd()
+")"
+assert_equal "${_fakehome}extra" "$result"
+
 start_test "mesh short-hostname drops the domain and the user prefix"
 result="$(_mesh_run '
     $env.HOSTNAME = "someuser-host1.example.com"
