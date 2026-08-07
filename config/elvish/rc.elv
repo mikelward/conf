@@ -1272,17 +1272,20 @@ fn unmerged { e:vcs unmerged }
 fn cv { e:vcs clearcache }
 
 # The `vcs` subcommands that earn a name of their own, kept in step with
-# config/nushell/config.nu and config/mesh/rc.mesh -- neither of which can do
-# what shrc.vcs does and generate one function per name from
-# `vcs --list-commands`.
+# config/nushell/config.nu. shrc.vcs generates one function per name from
+# `vcs --list-commands`, and config/mesh/rc.mesh now does the same; this file
+# and config.nu are the two that still cannot.
 #
-# TODO, carried over from config.nu and rc.mesh: this list is hand-maintained
-# and drifts from the binary, which currently ships 74 subcommands
-# (vcs/commands.go). The canonical list should be the binary itself --
-# generated into a file each shell reads at startup rather than restated in
-# every shell's config. In Elvish that file would have to be a module under
-# ~/.config/elvish/lib whose names are re-published with `edit:add-vars`, since
-# a module's names are namespaced.
+# TODO: this list is hand-maintained and drifts from the binary, which
+# currently ships 74 subcommands (vcs/commands.go) against the 35 named here.
+# Closing it needs a command defined under a *computed* name, which Elvish does
+# not offer where this file can use it: `set ns[$name"~"]` is refused ("assoc
+# is not supported"), and `edit:add-var` lives in the `$edit:` namespace, which
+# exists only when Elvish has a terminal -- naming it here would stop `rc.elv`
+# compiling under the test harness, which is the rule this file already follows
+# for everything else `$edit:`. A generator publishing into
+# ~/.config/elvish/lib and re-exported from lib/interactive.elv is the shape
+# that could work, since that file already names `$edit:`.
 #
 # Note `diffs`, not `diff`: the binary's command is the plural one, alongside
 # `diffedit` and `diffstat`. There is no `diff`.

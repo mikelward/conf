@@ -518,17 +518,19 @@ rm -f "$_fakehome/.config/mesh/env.local.mesh" "$_fakehome/.config/mesh/env.mesh
 ###############
 # TEST: the vcs shortcuts
 
-# Kept in step with config.nu's list rather than trimmed to a handful: `pull`,
-# `push`, `review` and the short `ci`/`st` are everyday commands that stopped
-# resolving when the port defined only eight.
+# The long-form shortcuts are generated from `vcs --list-commands` at
+# interactive start, so the list lives in vcs/commands.go rather than being
+# restated here -- see the generator tests further down. What this file still
+# hand-picks is the short forms, which have no subcommand of their own name,
+# and those are file-scope definitions like the other shells'.
 #
 # `status` is deliberately absent, and is the one shortcut mesh cannot have:
 # it is a mesh builtin, so `alias status` is refused. `st` is the spelling that
 # survives here; the other shells keep both.
-start_test "mesh defines the vcs shortcuts the other shells define"
+start_test "mesh defines the short vcs shortcuts the other shells define"
 result="$(_mesh_run '
     missing = []
-    for name in [add amend annotate base branch branches changed changelog changes checkout commit commitforce diffs fix graph incoming lint map outgoing pending precommit presubmit pull push recommit revert review reword submit submitforce unknown upload uploadchain am ci di gr lg ma st] {
+    for name in [am ci di gr lg ma st] {
         if not is-runnable($name) { missing += [$name] }
     }
     puts $missing:repr
@@ -2528,6 +2530,7 @@ cat > "$_fake_vcs_bin/vcs" <<EOF
 #!/bin/sh
 echo "\$@" >> "$_testdir/vcs-calls"
 case "\$1" in
+    --list-commands) printf 'commit\\ndiffs\\nrootdir\\nstatus\\nabsorb\\n' ;;
     rootdir) echo "$_testdir" ;;
     prompt-info) echo "myproject (main)" ;;
     unmerged) ;;
@@ -2555,8 +2558,63 @@ assert_equal "prompt-info --color=always unmerged" "$result"
 # is no `diff` in vcs/commands.go, so a `vcs diff` shortcut would just fail.
 start_test "mesh diffs runs the plural vcs subcommand"
 rm -f "$_testdir/vcs-calls"
-PATH="$_fake_vcs_bin:$PATH" _mesh_run_config '' 'diffs --stat' >/dev/null 2>&1
+PATH="$_fake_vcs_bin:$PATH" _mesh_run_config '' 'set-up-vcs-aliases
+    diffs --stat' >/dev/null 2>&1
 assert_contains "diffs --stat" "$(cat "$_testdir/vcs-calls")"
+
+###############
+# TEST: the vcs shortcuts are generated from the binary
+
+# One alias per name the binary lists, so a subcommand added to vcs is
+# reachable without editing this file -- which is what the hand-written list
+# could not promise. `absorb` is in the fake's list and was never in that list.
+start_test "mesh set-up-vcs-aliases defines an alias per listed subcommand"
+result="$(PATH="$_fake_vcs_bin:$PATH" _mesh_run_config '' 'set-up-vcs-aliases
+    puts (is-function(commit))
+    puts (is-function(absorb))')"
+assert_equal "true
+true" "$result"
+
+# Each alias carries its own subcommand, baked at the definition: an alias body
+# is otherwise syntax read at call time, where the loop variable is long gone.
+start_test "mesh generated vcs aliases each run their own subcommand"
+rm -f "$_testdir/vcs-calls"
+PATH="$_fake_vcs_bin:$PATH" _mesh_run_config '' 'set-up-vcs-aliases
+    commit -m one
+    absorb' >/dev/null 2>&1
+assert_contains "commit -m one" "$(cat "$_testdir/vcs-calls")"
+assert_contains "absorb" "$(cat "$_testdir/vcs-calls")"
+
+# `status` is a mesh builtin, so it cannot be bound at all. The generator skips
+# it and every other name in the list is still defined.
+start_test "mesh set-up-vcs-aliases skips a name mesh owns"
+result="$(PATH="$_fake_vcs_bin:$PATH" _mesh_run_config '' 'set-up-vcs-aliases
+    puts (is-function(status))')"
+assert_equal "false" "$result"
+
+# A shortcut this file defines with behavior of its own keeps it: `rootdir`
+# silences stderr, which a plain generated alias would not.
+start_test "mesh set-up-vcs-aliases leaves a config function alone"
+result="$(PATH="$_fake_vcs_bin:$PATH" _mesh_run_config '' 'set-up-vcs-aliases
+    puts rootdir()')"
+assert_equal "$_testdir" "$result"
+
+# Nothing to generate from and nothing pretending otherwise.
+start_test "mesh set-up-vcs-aliases defines nothing without vcs"
+result="$(_mesh_run_config 'func have-command(name) { return false }' 'set-up-vcs-aliases
+    puts (is-function(absorb))')"
+assert_equal "false" "$result"
+
+# A `vcs` that is present but cannot list its subcommands is reported rather
+# than leaving every shortcut quietly undefined.
+_fake_badvcs_bin="$_testdir/fakebadvcsbin"
+mkdir -p "$_fake_badvcs_bin"
+printf '#!/bin/sh\necho "vcs: broken" >&2\nexit 1\n' > "$_fake_badvcs_bin/vcs"
+chmod +x "$_fake_badvcs_bin/vcs"
+
+start_test "mesh set-up-vcs-aliases reports a vcs that cannot list its subcommands"
+result="$(PATH="$_fake_badvcs_bin:$PATH" _mesh_run_config '' 'set-up-vcs-aliases' 2>&1)"
+assert_contains "cannot list the subcommands" "$result"
 
 ###############
 # TEST: publishing this shell's jobs for a status bar
@@ -2866,12 +2924,8 @@ _ssh_aliases_run() {
 
 start_test "mesh set-up-ssh-aliases defines an alias per usable Host entry"
 _write_ssh_config
-result="$(_ssh_aliases_run 'puts (is-function(host1))
-        puts (is-function(host2))
-        puts (is-function(host3))')"
-assert_equal "true
-true
-true" "$result"
+result="$(_ssh_aliases_run 'puts (is-function(host1)) (is-function(host2)) (is-function(host3))')"
+assert_equal "true true true" "$result"
 
 # A pattern, a negation and a dotted name are not hosts to connect to.
 start_test "mesh set-up-ssh-aliases skips patterns, negations and dotted names"
