@@ -953,55 +953,50 @@ alias prompt-info = command vcs prompt-info
 func unmerged() { command vcs unmerged }
 func cv() { command vcs clearcache }
 
-# The `vcs` subcommands that earn a name of their own, kept in step with
-# config/nushell/config.nu:1522 -- the closest analogue, since neither shell can
-# do what shrc.vcs:135 does and generate one function per name from
-# `vcs --list-commands`.
+# Give every `vcs` subcommand a command of its own, so `commit` runs
+# `vcs commit`. shrc.vcs:135 generates these with `eval` over the same
+# `vcs --list-commands`; mesh defines them directly, since `alias $name with
+# ($name) = ...` bakes the subcommand into the body -- an alias body is
+# otherwise syntax read at call time, where the loop variable is long gone.
 #
-# TODO, carried over from config.nu: this list is hand-maintained and drifts
-# from the binary, which currently ships 74 subcommands (vcs/commands.go). The
-# canonical list should be the binary itself -- generated into a sourced file
-# at install time rather than restated in each shell's config.
+# The list comes from the binary rather than being restated here, which is the
+# TODO this replaces (carried from config.nu:1522): the hand-written list had
+# drifted to 35 of the 74 subcommands vcs ships, and every addition to the
+# binary needed a matching edit in each shell's config to be reachable.
 #
-# Note `diffs`, not `diff`: the binary's command is the plural one, alongside
-# `diffedit` and `diffstat`. There is no `diff`.
-alias add = command vcs add
-alias amend = command vcs amend
-alias annotate = command vcs annotate
-alias base = command vcs base
-alias branch = command vcs branch
-alias branches = command vcs branches
-alias changed = command vcs changed
-alias changelog = command vcs changelog
-alias changes = command vcs changes
-alias checkout = command vcs checkout
-alias commit = command vcs commit
-alias commitforce = command vcs commitforce
-alias diffs = command vcs diffs
-alias fix = command vcs fix
-alias graph = command vcs graph
-alias incoming = command vcs incoming
-alias lint = command vcs lint
-alias map = command vcs map
-alias outgoing = command vcs outgoing
-alias pending = command vcs pending
-alias precommit = command vcs precommit
-alias presubmit = command vcs presubmit
-alias pull = command vcs pull
-alias push = command vcs push
-alias recommit = command vcs recommit
-alias revert = command vcs revert
-alias review = command vcs review
-alias reword = command vcs reword
-# No `status` shortcut here, unlike shrc, fish, nu and Elvish: `status` is a
-# mesh builtin (the status-value constructor), and a builtin's name is refused
-# as a `func` or `alias`. `st` below is the spelling that survives, and
-# `vcs status` always works.
-alias submit = command vcs submit
-alias submitforce = command vcs submitforce
-alias unknown = command vcs unknown
-alias upload = command vcs upload
-alias uploadchain = command vcs uploadchain
+# Costs one `vcs --list-commands` per interactive start, about 3ms on this
+# machine -- a process spawn and a write, no network and no disk beyond the
+# binary itself. Nothing runs at all when `vcs` is not installed.
+func set-up-vcs-aliases() {
+  return unless have-command(vcs)
+  # stderr is left alone rather than sent to /dev/null: when an installed vcs
+  # rejects `--list-commands` -- an older build, a broken one -- its own message
+  # is the only thing that says *why* every shortcut just disappeared, and the
+  # warning below can only say that one did.
+  commands = $(command vcs --list-commands)
+  # Bound and checked rather than iterated inline: a failing capture in a `for`
+  # head iterates nothing and carries on, which would silently leave every
+  # shortcut undefined and look exactly like a vcs that ships no subcommands.
+  if not $sh.status {
+    warn "vcs shortcuts: cannot list the subcommands; they are not defined"
+    fail
+  }
+  for name in $commands:split("\n") {
+    continue if $name == ""
+    # A name the binary grows that mesh cannot bind is reported and skipped,
+    # costing only itself; the rest of the shortcuts are defined either way.
+    continue unless $name ~ /^[A-Za-z_][A-Za-z0-9_-]*$/
+    # A shortcut this file defines with behavior of its own keeps it --
+    # `rootdir` silences stderr, `unmerged` is its own wrapper -- exactly as it
+    # did when these were written out below it.
+    continue if is-function($name)
+    # `status` is a mesh builtin (the status-value constructor) and a builtin's
+    # name is refused as a `func` or `alias`. `st` below is the spelling that
+    # survives, and `vcs status` always works.
+    continue if is-shell-name($name)
+    alias $name with ($name) = command vcs $name
+  }
+}
 
 # short aliases -- hand-picked, not generated, matching config.nu:1566
 alias am = command vcs amend
@@ -1838,8 +1833,16 @@ apply-shpool-initial-pwd
 maybe-start-session-and-exit
 
 # Past this point we're the shell we're keeping -- the handoff above exits if
-# it started a session -- so build the ssh-config host aliases here, as shrc
-# and config.fish do at the same point.
+# it started a session -- so build the generated aliases here, as shrc and
+# config.fish do at the same point. Both run a program, so neither can sit at
+# file scope: everything above the interactive marker stays side-effect free so
+# the file can be sourced by a test.
+#
+# vcs first, so a `Host` named after a subcommand cannot take it over. Each
+# generator skips a name that is already a function, so whichever runs first
+# wins -- and that was the order before, when the vcs shortcuts were file-scope
+# definitions and so always in place before the ssh ones were built.
+set-up-vcs-aliases
 set-up-ssh-aliases
 
 log-history "New session as" $env:get(USERNAME, "") "in mesh"

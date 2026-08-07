@@ -1695,7 +1695,13 @@ alias rdepends   = ^package rdepends
 # TODO: this list is hand-maintained and drifts from shrc.vcs / the
 # `vcs` binary's actual command set. The `vcs` binary supports
 # `--list-commands` which prints every subcommand; we should generate
-# this file from that output. Options under consideration:
+# this file from that output. shrc.vcs and config/mesh/rc.mesh both do
+# so already, which leaves this file and config/elvish/rc.elv as the
+# two that still restate the list. nu cannot follow directly: `def`
+# takes a literal name and is resolved at parse time, and there is no
+# `eval`, so a computed name has to reach nu through a generated file
+# it `source`s -- which is what the options below are about.
+# Options under consideration:
 #   (a) A nu generator script invoked from vcs/Makefile's install
 #       target, writing $nu.default-config-dir/vcs-aliases.nu, which
 #       config.nu then `source`s with a const path.
