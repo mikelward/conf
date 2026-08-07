@@ -84,21 +84,19 @@ func stdin-is-tty() { return $sh.stdin:tty }
 # config has no reason to pay.
 func i-am-root() { return $env:get(UID, "") == "0" }
 
-# return true if an ssh key is loaded.
+# report whether an ssh key is loaded.
 #
-# `quiet` is called as a *command* rather than as `quiet(ssh-add, -L)`: a value
-# call yields the wrapped command's exit status, which is an int, and mesh no
-# longer reads an int as a condition. In command position `if` branches on the
-# status, which is what this is asking for.
+# The value call answers with the wrapped command's status, and a status is a
+# condition in its own right -- true exactly when the code is 0 -- so there is
+# nothing to translate into a bool. This used to run `quiet` in command position
+# and branch on `$sh.status`, because a value call then yielded a bare int and
+# mesh reads no int as a condition; a status is a value of its own type now.
 #
 # A hook: redefine it in ~/.rc.local.mesh for a site-specific notion of
-# "authenticated". It is deliberately unbounded -- auth-info is what puts it
-# under a time limit, so an override inherits that guard instead of having to
-# reimplement it.
-func is-ssh-valid() {
-  if quiet ssh-add -L { return true }
-  return false
-}
+# "authenticated". A bool is just as good an answer. It is deliberately
+# unbounded -- auth-info is what puts it under a time limit, so an override
+# inherits that guard instead of having to reimplement it.
+func is-ssh-valid() { return quiet(ssh-add, -L) }
 
 # how long the check named by $name may take, defaulting to $fallback.
 #
@@ -178,7 +176,7 @@ func ssh-client-host() {
   }
   if $name == "" and have-command(dig) {
     answer = $(dig +short -x $ip 2> /dev/null)
-    if $answer != "" { name = $answer:split("\n")[0]:replaceend(".", "") }
+    if $answer != "" { name = $answer:lines[0]:replaceend(".", "") }
   }
   return $ip if $name == ""
   return $name:split(".")[0]
@@ -294,32 +292,28 @@ func addr(host) { dig +noall +answer +search $host a $host aaaa | get-address-re
 func ptr(ip) { dig +noall +answer -x $ip ptr | get-ptr-records }
 
 # read hostnames on stdin, printing each one with its addresses on one line.
-# `join` is a function here rather than a command, and a value call can't be
-# interpolated, so the flattening is bound first -- the addresses come back one
-# per line and shrc collapses them with `join " "`.
+# The addresses come back one per line and shrc collapses them with `join " "`;
+# `${…}` interpolates the value call that does the flattening here.
 func with-address-records() {
   while gets hostname {
-    line = one-line($(addr $hostname))
-    puts "$hostname $line"
+    puts "$hostname ${one-line($(addr $hostname))}"
   }
 }
 
 # read IP addresses on stdin, printing each one with its names
 func with-hostnames() {
   while gets ip {
-    line = one-line($(ptr $ip))
-    puts "$ip $line"
+    puts "$ip ${one-line($(ptr $ip))}"
   }
 }
 
-# collapse captured multi-line output to a single space-separated line
-func one-line(text) {
-  parts = []
-  for part in $text:split("\n") {
-    if $part != "" { parts += [$part] }
-  }
-  return $parts:join(" ")
-}
+# collapse captured multi-line output to a single space-separated line.
+#
+# `:words` rather than a `:lines` loop that skips the empties: it splits on
+# *runs* of whitespace and yields no empty element anywhere, which is exactly
+# what shrc's unquoted `$(addr "$hostname")` word split does before `join " "`
+# sees it.
+func one-line(text) { return $text:words:join(" ") }
 
 # read BIND-style DNS entries, print the A and AAAA records
 func get-address-records() { awk '$3 == "IN" && $4 ~ /^A/ { print $5 }' }
@@ -331,7 +325,7 @@ func get-ptr-records() { awk '$3 == "IN" && $4 == "PTR" { print $5 }' }
 func ips() {
   # `ip -o` aligns its columns, so `:words` rather than `:split(" ")`: a literal
   # split leaves empties between the columns and the family never lands in [2].
-  for line in $(ip -o a sh up primary scope global):split("\n") {
+  for line in $(ip -o a sh up primary scope global):lines {
     parts = $line:words
     continue if $parts:len < 4
     if $parts[2] ~ inet* { puts "$parts[1] $parts[3]" }
@@ -528,7 +522,7 @@ func rmkey(line) { delline $line "$env.HOME/.ssh/known_hosts" }
 # print the block device the given mount point (or file) lives on
 func dev(file) {
   # `df` pads its columns too, so `:words` applies here for the same reason.
-  for line in $(df -P -k $file):split("\n") {
+  for line in $(df -P -k $file):lines {
     parts = $line:words
     continue if $parts:len == 0
     if $parts:last ~ /^\// { puts $parts[0] }
@@ -754,8 +748,7 @@ wrapper func envgrep(pattern, ...pids) {
 # grep for a pattern in the environments of processes matching a pattern,
 # e.g. `pegrep SSH_AUTH_SOCK xfce4`
 func pegrep(env-pattern, proc-pattern) {
-  for pid in $(pgrep -f "^$proc-pattern"):split("\n") {
-    continue if $pid == ""
+  for pid in $(pgrep -f "^$proc-pattern"):lines {
     puts "$(ps -o pid= -o args= -p $pid) $(envgrep $env-pattern $pid)"
   }
 }
@@ -861,7 +854,7 @@ func set-up-ssh-aliases() {
     warn "ssh aliases: cannot read the ssh config; host aliases are not defined"
     fail
   }
-  for line in $contents:split("\n") {
+  for line in $contents:lines {
     parts = $line:words
     continue if $parts:len < 2
     keyword = $parts[0]
@@ -981,8 +974,7 @@ func set-up-vcs-aliases() {
     warn "vcs shortcuts: cannot list the subcommands; they are not defined"
     fail
   }
-  for name in $commands:split("\n") {
-    continue if $name == ""
+  for name in $commands:lines {
     # A name the binary grows that mesh cannot bind is reported and skipped,
     # costing only itself; the rest of the shortcuts are defined either way.
     continue unless $name ~ /^[A-Za-z_][A-Za-z0-9_-]*$/
@@ -1309,27 +1301,19 @@ func cool-prompt-cache(cmd) {
 func host-info() {
   host = short-hostname()
   if on-production-host() { host = red($host) }
-  # A value call cannot be interpolated into a string -- "$(f)" would run `f`
-  # as a command and capture its stdout, and these return a value rather than
-  # printing one -- so each piece is bound and appended.
+  # `${f()}` interpolates a value call, which is what lets these read as the
+  # line they render. The bare `$(f)` form is still a *command* capture -- it
+  # would run `f` as a command and take its stdout, where these return a value
+  # rather than printing one -- so the braces are the whole difference.
   out = ""
-  if i-am-root() {
-    out += "["
-    out += red(root)
-    out += "] "
-  }
-  out += $host
-  out += " "
+  if i-am-root() { out = "[${red(root)}] " }
+  out += "$host "
   session = prompt-session-name()
-  if $session != "" {
-    out += green($session)
-    return $out
-  }
+  return "$out${green($session)}" if $session != ""
   backend = $env:get(SESSION_BACKEND, "")
   if $backend == "" { backend = session-backend() }
   if $backend == "" { backend = shpool }
-  out += yellow($backend)
-  return $out
+  return "$out${yellow($backend)}"
 }
 
 # the directory part of the context line: `vcs prompt-info` renders it (one
@@ -1354,14 +1338,9 @@ func dir-info() {
 # would double all three. Defaulted for direct callers, matching the "captured
 # once per prompt" note at shrc:1563.
 func prompt-line(auth = bounded-auth-info()) {
-  out = host-info()
-  out += " "
-  out += dir-info()
-  if $auth != "" {
-    out += " "
-    out += $auth
-  }
-  return $out
+  out = "${host-info()} ${dir-info()}"
+  return $out if $auth == ""
+  return "$out $auth"
 }
 
 # a rule the width of the terminal. `$sh.width` is read from the terminal at
@@ -1730,9 +1709,11 @@ alias vl = view /var/log/syslog
 alias wcp = with-agent scp
 alias wsh = with-agent ssh
 # Refuse to leave while jobs are still running, listing them instead --
-# shrc:1421's `_exit`, whose leading underscore mesh won't take as a name.
-# There is no non-job-control arm: mesh publishes $sh.jobs unconditionally,
-# where shrc has to check for `-m` first.
+# shrc:1421's `_exit`. Kept under a kebab-case name now that mesh takes a
+# leading underscore, since that is this file's convention and `_exit` reads as
+# shell-private rather than as something to type. There is no non-job-control
+# arm: mesh publishes $sh.jobs unconditionally, where shrc has to check for
+# `-m` first.
 wrapper func safe-exit(...args) {
   if $sh.jobs:len == 0 {
     exit ...$args
