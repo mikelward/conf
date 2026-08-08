@@ -579,8 +579,8 @@ func trydiff(cmd, file) {
   # `rm`'s status and config.nu with a `try`; both end up at 0 the same way.
   status = $sh.status
   rm -f $temp
-  # `:code` because a status compares only with another status: `$status < 2`
-  # is a type error, and `== 0` reports rather than answering quietly.
+  # `:code` because *ordering* stays same-type -- `$status < 2` is a type error.
+  # Equality would not need it: `$status == 0` compares the code directly.
   return true if $status:code < 2
   fail $status
 }
@@ -1558,13 +1558,13 @@ func format-duration(ms) {
 
 func command-finished(cmd, status, elapsed) {
   reported = ""
-  # The arms are statuses rather than integers: `postexec` is handed a status
-  # value, and a `0` arm would never match it.
+  # Integer arms: a status compares to an int by its code, so these read as the
+  # exit codes they are. 130 is SIGINT, 148 SIGTSTP -- both expected, not errors.
   match $status {
-    status(0)   => { }
-    status(130) => { reported = red("interrupted") }
-    status(148) => { }
-    _           => { reported = red("status $status") }
+    0   => { }
+    130 => { reported = red("interrupted") }
+    148 => { }
+    _   => { reported = red("status $status") }
   }
   duration = format-duration($elapsed)
   if $duration != "" {

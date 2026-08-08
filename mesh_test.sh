@@ -2516,6 +2516,25 @@ start_test "mesh format-duration drops empty leading units"
 result="$(_mesh_run 'puts format-duration(125000)')"
 assert_equal "2 minutes 5 seconds" "$result"
 
+# command-finished matches its integer arms against the `Status` postexec hands
+# it, which works because a status compares to an int by its code. Success and
+# the two expected signals stay silent; anything else is reported.
+start_test "mesh command-finished says nothing on success"
+result="$(_mesh_run 'command-finished("x", status(0), 0)')"
+assert_equal "" "$result"
+
+start_test "mesh command-finished names an interrupt"
+result="$(_mesh_run 'command-finished("x", status(130), 0)')"
+assert_contains "interrupted" "$result"
+
+start_test "mesh command-finished stays quiet on a stop"
+result="$(_mesh_run 'command-finished("x", status(148), 0)')"
+assert_equal "" "$result"
+
+start_test "mesh command-finished reports any other status"
+result="$(_mesh_run 'command-finished("x", status(3), 0)')"
+assert_contains "status 3" "$result"
+
 start_test "mesh host-info tags the session name when attached"
 result="$(_mesh_run '
     $env.HOSTNAME = "host1"
