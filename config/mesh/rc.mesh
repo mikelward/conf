@@ -18,7 +18,7 @@
 ###############
 # FAILSAFE
 # Same escape hatch as env.mesh, restated because rc.mesh has to stand on its
-# own: env.mesh returns before defining failsafe-wanted only when failsafe is
+# own: env.mesh returns before defining want-failsafe only when failsafe is
 # already on, but a shell started with --norc-style surgery, or a checkout
 # with only rc.mesh linked, must still bail cleanly.
 if $env:get(FAILSAFE, false):bool or $env:get(LC_FAILSAFE, false):bool or "$env.HOME/.failsafe":exists {
