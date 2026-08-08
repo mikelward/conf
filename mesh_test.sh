@@ -158,7 +158,7 @@ assert_equal "defined" "$result"
 # env-on is the shared reader behind the FAILSAFE checks: unset means off, so
 # the default lives in the helper rather than at each call site. The tests above
 # go through rc.mesh's standalone copy of the rule; these exercise env.mesh's
-# `failsafe-wanted`, which is the half that calls env-on.
+# `want-failsafe`, which is the half that calls env-on.
 start_test "mesh env-on reads an unset flag as off"
 result="$(HOME="$_fakehome" run_with_timeout 15 mesh -c "
     source $_env_mesh
@@ -192,17 +192,17 @@ result="$(HOME="$_fakehome" FAILSAFE=yes run_with_timeout 15 mesh -c "
 " 2>&1 </dev/null)"
 assert_contains "is not 1/0/true/false" "$result"
 
-start_test "mesh failsafe-wanted answers for LC_FAILSAFE too"
+start_test "mesh want-failsafe answers for LC_FAILSAFE too"
 result="$(HOME="$_fakehome" LC_FAILSAFE=1 run_with_timeout 15 mesh -c "
     source $_env_mesh
-    puts failsafe-wanted()
+    puts want-failsafe()
 " 2>&1 </dev/null | tail -1)"
 assert_equal "true" "$result"
 
-start_test "mesh failsafe-wanted is false with no flag and no ~/.failsafe"
+start_test "mesh want-failsafe is false with no flag and no ~/.failsafe"
 result="$(HOME="$_fakehome" run_with_timeout 15 mesh -c "
     source $_env_mesh
-    puts failsafe-wanted()
+    puts want-failsafe()
 " 2>&1 </dev/null)"
 assert_equal "false" "$result"
 
