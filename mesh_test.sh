@@ -799,17 +799,32 @@ assert_equal "/etc /etc" "$result"
 
 start_test "mesh have-command finds a real command and misses a fake one"
 result="$(_mesh_run_config '' '
-    puts have-command("sh") have-command("no-such-command-xyz")
+    if have-command("sh") { puts found } else { puts missing }
+    if have-command("no-such-command-xyz") { puts found } else { puts missing }
 ')"
-assert_equal "true false" "$result"
+assert_equal "found
+missing" "$result"
 
 start_test "mesh have-command ignores functions, unlike is-runnable"
 result="$(_mesh_run_config '
     func only-a-function() { puts hi }
 ' '
-    puts have-command("only-a-function") is-runnable("only-a-function")
+    if have-command("only-a-function") { puts found } else { puts missing }
+    if is-runnable("only-a-function") { puts found } else { puts missing }
 ')"
-assert_equal "false true" "$result"
+assert_equal "missing
+found" "$result"
+
+# These answer with the lookup's own status rather than a bool, so branching on
+# them is unchanged but printing one shows `0` / `1`. Pinned because it is the
+# visible half of the contract: a caller who puts the answer somewhere a person
+# reads needs to know it is a status, and 0-is-yes reads backwards if you were
+# expecting a bool.
+start_test "mesh have-command answers with a status, not a bool"
+result="$(_mesh_run_config '' '
+    puts have-command("sh") have-command("no-such-command-xyz")
+')"
+assert_equal "0 1" "$result"
 
 start_test "mesh path prints the full path to a command"
 result="$(_mesh_run_config '' 'puts path("sh")')"
