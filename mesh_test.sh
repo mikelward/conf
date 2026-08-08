@@ -690,6 +690,23 @@ result="$(_mesh_run '
 ')"
 assert_equal "/etc 1" "$result"
 
+# The move-to-end half of `append-path`, the mirror of the test above.
+# `without(...):append(...)` is one chain rather than a delete statement and an
+# append, and `:dedup` cannot stand in for it here -- it keeps the *first*
+# occurrence, so an entry already on the front would win over the copy being
+# appended and the dir would never reach the end.
+start_test "mesh append-path moves an entry already on PATH to the end"
+result="$(_mesh_run '
+    prepend-path /etc
+    append-path /etc
+    count = 0
+    for d in $env.PATH {
+        if $d == "/etc" { count = $count + 1 }
+    }
+    puts $env.PATH:last $count
+')"
+assert_equal "/etc 1" "$result"
+
 # `:dedup` collapses the duplicates the inherited PATH arrived with, not just
 # the one being added -- what keeps a `rerc` from growing the list. config.nu's
 # `uniq` does the same; bash, fish and Elvish have no one-statement equivalent
@@ -1124,6 +1141,41 @@ assert_equal "mt=4" "$result"
 start_test "mesh starts-with tests a computed prefix"
 result="$(_mesh_run 'puts starts-with("abcdef", "abc") starts-with("abcdef", "xyz") starts-with("abc", "")')"
 assert_equal "true false false" "$result"
+
+# `without` is a `:filter` over a lambda that names `$entry` in its `with (…)`
+# list, and mesh capture is explicit: a lambda that failed to name it would see
+# an unbound name rather than quietly keeping or dropping everything. Every
+# occurrence goes, not just the first -- that is what makes a reload idempotent
+# however many copies the inherited list arrived with.
+start_test "mesh without drops every occurrence"
+result="$(_mesh_run '
+    kept = without(["/a" "/b" "/a" "/c" "/a"], "/a")
+    puts $kept:join(",")
+')"
+assert_equal "/b,/c" "$result"
+
+# An empty component in a man/info path names the system defaults at that
+# position, so it is data rather than padding -- `without` keeps it, and only
+# `drop-trailing-empty` takes the one at the end.
+# A `--`-leading element is *data*, and `:filter` never reads it as a flag: a
+# callable applied per element binds with flag scanning off, so the `wrapper`
+# that `without` itself needs at its written call site has no counterpart to
+# want on the lambda inside it. PATH is the live case -- `append-path /sbin`
+# runs at startup and goes through `without`, so a relative `--tools` component
+# on an inherited PATH would break every shell if this were not so.
+start_test "mesh without keeps a flag-shaped element"
+result="$(_mesh_run '
+    kept = without(["--tools" "/usr/bin" "--sleep=0" "-n"], "/usr/bin")
+    puts $kept:join(",")
+')"
+assert_equal "--tools,--sleep=0,-n" "$result"
+
+start_test "mesh without keeps empty elements"
+result="$(_mesh_run '
+    kept = without(["" "/a" "" "/b" ""], "/b")
+    puts $kept:len $kept:join(",")
+')"
+assert_equal "4 ,/a,," "$result"
 
 start_test "mesh tilde-pwd shortens \$HOME"
 result="$(_mesh_run '
