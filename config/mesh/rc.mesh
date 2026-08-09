@@ -930,7 +930,7 @@ func buildroot() { return projectroot() }
 # print the path from buildroot to the working directory
 func builddir() {
   root = buildroot()
-  here = $(pwd)
+  here = pwd()
   return "." if $here == $root or $root == ""
   return $here:replacestart("$root/", "")
 }
@@ -1226,7 +1226,7 @@ func yellow(text) { return style($text, fg: yellow) }
 # answer `~` from an exact-home branch of their own. An account or a container
 # with HOME=/ is the case, and parity decides it.
 func tilde-pwd() {
-  here = $(pwd)
+  here = pwd()
   return "~" if $here == $env.HOME
   return $here:tilde
 }
@@ -1476,7 +1476,7 @@ func title-text() {
   session = prompt-session-name()
   if $session != "" { parts += [$session] }
   name = prompt-project-name()
-  if $name == "" { name = $(pwd):base }
+  if $name == "" { name = pwd():base }
   parts += [$name]
   return $parts:join(" ")
 }
@@ -1502,7 +1502,7 @@ func title-busy(cmd) { title-idle }
 # so the retry costs no extra `ssh-add -L`.
 last-fetch-dir = ""
 func maybe-background-fetch(auth = bounded-auth-info()) {
-  here = $(pwd)
+  here = pwd()
   return if $here == $last-fetch-dir
   return unless have-command(vcs)
   return if $auth != ""
