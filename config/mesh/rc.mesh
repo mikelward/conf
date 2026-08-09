@@ -474,13 +474,15 @@ func cdfile(file) { cd $(realdir $file) }
 # `if find-up("marker") != "" { … }` -- since mesh has no truthy values; a
 # string is not a condition. Same shape as config.nu:613, and as
 # rootdir/projectname/builddir here.
+#
+# `:ancestors` walks both ends -- the working directory itself, where the
+# search starts, through to `/`, where a marker file can also sit -- so the
+# loop is the whole search and the `/` stop condition is the list running out.
 func find-up(name) {
-  dir = $(pwd)
-  loop {
+  for dir in pwd():ancestors {
     return "$dir/$name" if "$dir/$name":f
-    return "" if $dir == "/"
-    dir = $dir:dir
   }
+  return ""
 }
 
 # print the name of a source file's corresponding test file
