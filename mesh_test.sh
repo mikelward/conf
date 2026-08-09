@@ -1345,6 +1345,19 @@ result="$(_mesh_run "
 ")"
 assert_equal "$_testdir/up/marker" "$result"
 
+# The walk starts at the working directory rather than its parent, which is
+# where shrc:1011 and config.fish:557 start too. `:ancestors` includes the path
+# it was given, so this is the first element of the list the loop walks.
+start_test "mesh find-up finds a file in the working directory"
+result="$(_mesh_run "
+    cd $_testdir/up
+    puts find-up(\"marker\")
+")"
+assert_equal "$_testdir/up/marker" "$result"
+
+# The other end of the walk. `/` is the last ancestor rather than the stop
+# condition, so a search that reaches it still looks there; the miss is the
+# list running out, not a `$dir == "/"` test the loop no longer has.
 start_test "mesh find-up is empty when nothing matches"
 result="$(_mesh_run '
     cd /
