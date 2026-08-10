@@ -287,17 +287,31 @@ wrapper func setx(cmd, ...args) {
 # GENERAL FUNCTIONS
 # Useful things that could be commands if distributing them wasn't impractical.
 
-# print the age of a file in seconds, or nothing when it can't be read.
-# `stat` has already said why; without the guard its diagnostic would be
-# followed by an `unbound variable` for the capture and another for the
-# subtraction, three messages for one cause.
+# print the age of a file in seconds, failing with `stat`'s own status when it
+# can't be read. `stat` has already said why; without the guard its diagnostic
+# would be followed by an `unbound variable` for the capture and another for
+# the subtraction, three messages for one cause.
 #
-# `any` because the miss and the hit are different types: the empty string for
-# a file that can't be read, an int for one that can. Naming `int` would make
-# the documented "or nothing" a lie.
-any func age(file) {
+# The miss is a *status* rather than the empty string this used to answer with.
+# That is the parity answer -- shrc:767 and config.fish:330 both end up nonzero
+# on the same file, their `expr` / `math` failing on the empty capture, and
+# rc.elv:824 returns early putting nothing -- and it is the useful one: `age $f
+# && …` and `if age $f` ask the question directly, where a caller comparing
+# against `""` had to know the miss was spelled as a string.
+#
+# `fail`, not `return`, and that is the whole design. A returned status would
+# answer the miss but break the hit: an int is not a condition in mesh, so
+# `if age($f)` on a *readable* file would be a type error rather than a true.
+# Failing puts the miss on the status channel where a condition already reads
+# it, which leaves the value channel carrying only ever an int -- so the
+# declared type is `int` rather than the `any` a two-typed answer would force.
+# Same shape isort, trydiff and applydiff use for the same situation.
+int func age(file) {
   stamp = $(stat -c "%Y" $file)
-  return "" if not $sh.status
+  # Bound rather than read twice, as isort and trydiff bind theirs: the status
+  # forwarded is the capture's, not whatever the guard leaves behind.
+  produced = $sh.status
+  fail $produced if not $produced
   return $(date +%s):int - $stamp:int
 }
 
