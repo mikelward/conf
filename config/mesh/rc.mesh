@@ -45,9 +45,15 @@ if $env:get(FAILSAFE, false):bool or $env:get(LC_FAILSAFE, false):bool or "$env.
 # status, whatever the body produced -- so the declaration is what makes
 # `tilde-pwd()` a path rather than a `0`. The split falls out of what each one
 # is for: `str func host-info()` builds a string for the prompt to place,
-# `func preprompt()` draws one and answers nothing. Where the two ends of a
-# function genuinely differ in type -- `age`, `shpool-available` -- the type is
-# `any`, said once at the definition rather than guessed at each call.
+# `func preprompt()` draws one and answers nothing.
+#
+# Nothing here declares `any`, and that is a result rather than a rule. Where a
+# function looked two-typed it turned out to be answering one thing and
+# reporting another: `age` yields an int and *fails* for a file it cannot read
+# (`fail`, not a returned status, so a hit stays usable as a condition), and the
+# availability pair converts `have-command`'s status at the boundary rather than
+# passing it through. Both are worth the line they cost -- a type that says
+# `any` tells a caller nothing it did not already have to find out by reading.
 
 # ask the user whether to do something; true on yes or a bare Enter
 #
@@ -1094,22 +1100,40 @@ bool func want-tmux() {
 # name of the preferred session manager: "shpool" (the default when both are
 # available), "tmux" (the fallback), or empty when neither is enabled.
 #
-# `any` rather than `bool` on the two availability checks: they answer with a
-# bool on the lines that decide (`WANT_SHPOOL` is 0) and with `have-command`'s
-# status on the line that asks PATH. That mixture is deliberate -- the two
-# spellings say different things, a decision against versus whatever the lookup
-# found -- and a caller branching on either cannot tell them apart, so there is
-# no one type to name. `bool` would be a claim `help` and `type` would repeat.
-any func shpool-available() {
+# The two availability checks answer `bool`, which cost them one conversion: a
+# `have-command` on the last line is a *status*, so it used to make these two
+# answer with a bool on the lines that decide and a status on the line that asks
+# PATH. cab5193 left that mixture alone because no caller could tell them apart,
+# and it was harmless right up until a declared type had to name one of them.
+#
+# `bool` rather than `status` because these are questions, and nothing calls
+# them for a code. Both live only inside session-backend below, in four postfix
+# guards; unlike the rest of the session helpers they have no shrc, fish or
+# nushell counterpart to stay in parity with -- those inline the same three
+# conditions into their own session_backend -- so nothing outside this file
+# reads them either. Given that, `true`/`false` is what the *names* promise a
+# reader, where `0` for yes would read backwards.
+#
+# The conversion is a postfix guard rather than a comparison. `== 0` reads
+# well and is one line shorter, but it pins have-command to answering a
+# *status* specifically -- and that is not something this file gets to assume.
+# The tests stub have-command with a bool (it is the single choke point they
+# replace to keep a real shpool off the host), and ~/.rc.local.mesh may too, so
+# a comparison against a code turns "cannot compare a bool with an int" the
+# moment either does. A guard takes any condition, which is all this needs to
+# know about the answer.
+bool func shpool-available() {
   return false if $env:get(WANT_SHPOOL, "1") == "0"
   return false unless have-command(shpool)
-  return have-command(autoshpool)
+  return true if have-command(autoshpool)
+  return false
 }
 
-any func tmux-available() {
+bool func tmux-available() {
   return false if $env:get(WANT_TMUX, "1") == "0"
   return false unless have-command(tmux)
-  return have-command(autotmux)
+  return true if have-command(autotmux)
+  return false
 }
 
 str func session-backend() {
