@@ -2072,12 +2072,41 @@ start_test "mesh an effect-only function declares no return type"
 result="$(_mesh_run 'type preprompt' 2>&1)"
 assert_contains "    func preprompt()" "$result"
 
-# `any` where the two ends really are different types. shpool-available answers
-# with a bool on the lines that decide and with have-command's status on the
-# line that asks PATH; `bool` there would be a claim `type` repeats.
-start_test "mesh a mixed-answer function declares any"
+# A predicate answers `true`/`false`, including on the line that asks PATH:
+# `have-command` is a status, so shpool-available converts it rather than
+# passing it through and having to call itself `any`.
+start_test "mesh an availability check declares bool and answers one"
 result="$(_mesh_run 'type shpool-available' 2>&1)"
-assert_contains "any func shpool-available()" "$result"
+assert_contains "bool func shpool-available()" "$result"
+
+start_test "mesh shpool-available answers false when autoshpool is missing"
+result="$(_mesh_run_config '
+    status func have-command(name) {
+        match $name {
+            autoshpool => { return status(1) }
+            _ => { return status(0) }
+        }
+    }
+' 'puts shpool-available()')"
+assert_equal "false" "$result"
+
+# The converted line, not just the deciding ones: with everything on PATH the
+# answer is still a bool rather than have-command'"'"'s 0.
+start_test "mesh shpool-available answers true when both are present"
+result="$(_mesh_run_config '
+    status func have-command(name) { return status(0) }
+' 'puts shpool-available()')"
+assert_equal "true" "$result"
+
+# The conversion is a guard, not a `== 0`, so it survives a have-command that
+# answers with a bool -- which is how the tests stub it throughout, and how
+# ~/.rc.local.mesh may override it. A comparison would raise "cannot compare a
+# bool with an int" here instead.
+start_test "mesh shpool-available takes a bool-answering have-command"
+result="$(_mesh_run_config '
+    bool func have-command(name) { return true }
+' 'puts shpool-available()')"
+assert_equal "true" "$result"
 
 # The value channel itself, asked of a `str func` through a binding rather than
 # a call in command position -- which is exactly what the narrowing changed.
