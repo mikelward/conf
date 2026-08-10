@@ -3523,11 +3523,11 @@ assert_equal "auto-fetch" "$result"
 ###############
 # TEST: is-ssh-valid reads ssh-add's exit status
 #
-# Every other auth test stubs auth-info, so the real is-ssh-valid was never
-# run and a `quiet(ssh-add, -L)` that stopped working went unnoticed: a value
-# call yields the wrapped command's exit status, which is an int, and mesh no
-# longer reads an int as a condition. A fake ssh-add whose status the test
-# picks is what exercises the branch for real.
+# Every other auth test stubs auth-info, so the real is-ssh-valid was never run
+# and a `quiet ssh-add -L` that stopped working went unnoticed: mesh reads no
+# int as a condition, and the version of this that yielded one drew the prompt
+# anyway while complaining to stderr. A fake ssh-add whose status the test picks
+# is what exercises the branch for real.
 
 _fake_ssh_add_bin="$_testdir/fakesshaddbin"
 mkdir -p "$_fake_ssh_add_bin"
@@ -3543,6 +3543,15 @@ start_test "mesh is-ssh-valid is false when ssh-add has no key"
 result="$(PATH="$_fake_ssh_add_bin:$PATH" FAKE_SSH_ADD_STATUS=1 _mesh_run_config '' \
     'if is-ssh-valid() { puts valid } else { puts invalid }' 2>&1)"
 assert_equal "invalid" "$result"
+
+# The code itself, not just its truthiness. auth-info runs is-ssh-valid under
+# `timeout` and treats the 124 as a failed check, so the status has to arrive
+# as ssh-add left it; a translation to a bool somewhere in here would still
+# pass the true/false cases above while flattening this one to 1.
+start_test "mesh is-ssh-valid forwards ssh-add's exit code unchanged"
+result="$(PATH="$_fake_ssh_add_bin:$PATH" FAKE_SSH_ADD_STATUS=124 _mesh_run_config '' \
+    'puts is-ssh-valid()' 2>&1)"
+assert_equal "124" "$result"
 
 # The regression itself: the int-as-condition refusal went to stderr while the
 # prompt still drew, so asserting on the return value alone would not have

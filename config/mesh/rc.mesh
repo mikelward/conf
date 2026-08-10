@@ -102,17 +102,24 @@ bool func i-am-root() { return $env:get(UID, "") == "0" }
 
 # report whether an ssh key is loaded.
 #
-# The value call answers with the wrapped command's status, and a status is a
-# condition in its own right -- true exactly when the code is 0 -- so there is
-# nothing to translate into a bool. This used to run `quiet` in command position
-# and branch on `$sh.status`, because a value call then yielded a bare int and
-# mesh reads no int as a condition; a status is a value of its own type now.
+# The lookup is the answer, the same shape have-command and is-runnable have:
+# the body ends in a command, so the function yields that command's status, and
+# a status is a condition in its own right -- true exactly when the code is 0.
+# Nothing to translate into a bool, and nothing to return.
+#
+# It spent a while as `return quiet(ssh-add, -L)`, which is a step of migration
+# that was never unwound rather than a difference. The original ran `quiet` in
+# command position and branched on `$sh.status`, because a value call then
+# yielded a bare int and mesh reads no int as a condition; when a status became
+# a value of its own type the branch went, but the command became a value call
+# on the way past. Both forward ssh-add's code untouched -- `timeout`'s 124
+# included, which is what auth-info leans on -- so the plain command stands.
 #
 # A hook: redefine it in ~/.rc.local.mesh for a site-specific notion of
 # "authenticated". A bool is just as good an answer. It is deliberately
 # unbounded -- auth-info is what puts it under a time limit, so an override
 # inherits that guard instead of having to reimplement it.
-status func is-ssh-valid() { return quiet(ssh-add, -L) }
+status func is-ssh-valid() { quiet ssh-add -L }
 
 # how long the check named by $name may take, defaulting to $fallback.
 #
