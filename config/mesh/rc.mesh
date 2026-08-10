@@ -38,6 +38,16 @@ if $env:get(FAILSAFE, false):bool or $env:get(LC_FAILSAFE, false):bool or "$env.
 # option (`bak --weird-name`, `error "--x is unset"`). The three helpers that
 # do take an option of their own -- retry, body, recent -- read it off the
 # front by hand, because a declared flag would be matched anywhere in the list.
+#
+# A second rule, from mesh's return types: **a function that answers with a
+# value declares that value's type, and one that only acts declares nothing.**
+# An undeclared `func` has no value channel at all -- `x = f()` binds its
+# status, whatever the body produced -- so the declaration is what makes
+# `tilde-pwd()` a path rather than a `0`. The split falls out of what each one
+# is for: `str func host-info()` builds a string for the prompt to place,
+# `func preprompt()` draws one and answers nothing. Where the two ends of a
+# function genuinely differ in type -- `age`, `shpool-available` -- the type is
+# `any`, said once at the definition rather than guessed at each call.
 
 # ask the user whether to do something; true on yes or a bare Enter
 #
@@ -52,7 +62,7 @@ if $env:get(FAILSAFE, false):bool or $env:get(LC_FAILSAFE, false):bool or "$env.
 # falls through the match to a decline, as rc.elv's `catch` does. Declining is
 # the safe reading -- a caller with no one at the keyboard should not have a
 # prompt answered yes on their behalf.
-wrapper func confirm(...question) {
+bool wrapper func confirm(...question) {
   text = $question:join(" ")
   print "$text? [Y/n] " >&2
   reply = gets()
@@ -63,26 +73,26 @@ wrapper func confirm(...question) {
 }
 
 # return true if this session came in over ssh
-func connected-via-ssh() { return $env:get(SSH_CONNECTION, "") != "" }
+bool func connected-via-ssh() { return $env:get(SSH_CONNECTION, "") != "" }
 
 # return true if this session is on a remote machine
-func connected-remotely() { return connected-via-ssh() }
+bool func connected-remotely() { return connected-via-ssh() }
 
 # return true if this session is attached to shpool
-func in-shpool() { return $env:get(SHPOOL_SESSION_NAME, "") != "" }
+bool func in-shpool() { return $env:get(SHPOOL_SESSION_NAME, "") != "" }
 
 # return true if this session is inside tmux
-func inside-tmux() { return $env:get(TMUX, "") != "" }
+bool func inside-tmux() { return $env:get(TMUX, "") != "" }
 
 # return true if stdin is a terminal. Pulled out as a helper so tests can
 # replace it without rigging up a pty, the same reason shrc has stdin-is-tty.
-func stdin-is-tty() { return $sh.stdin:tty }
+bool func stdin-is-tty() { return $sh.stdin:tty }
 
 # return true if the current user is root. Reads the $UID env.mesh already
 # computed rather than forking `id -u`: bash, zsh and fish read their own $UID
 # for free and this runs on every prompt, so a fork per prompt is one this
 # config has no reason to pay.
-func i-am-root() { return $env:get(UID, "") == "0" }
+bool func i-am-root() { return $env:get(UID, "") == "0" }
 
 # report whether an ssh key is loaded.
 #
@@ -96,7 +106,7 @@ func i-am-root() { return $env:get(UID, "") == "0" }
 # "authenticated". A bool is just as good an answer. It is deliberately
 # unbounded -- auth-info is what puts it under a time limit, so an override
 # inherits that guard instead of having to reimplement it.
-func is-ssh-valid() { return quiet(ssh-add, -L) }
+status func is-ssh-valid() { return quiet(ssh-add, -L) }
 
 # how long the check named by $name may take, defaulting to $fallback.
 #
@@ -104,7 +114,7 @@ func is-ssh-valid() { return quiet(ssh-add, -L) }
 # spellings, because shrc reads the same two variables and hands them to
 # sleep(1), where `500ms` is an error. The value is passed to `timeout` as
 # written; a spelling it cannot read is its own to report.
-func check-limit(name, fallback) {
+str func check-limit(name, fallback) {
   limit = $env:get($name, "")
   return $fallback if $limit == ""
   return $limit
@@ -115,7 +125,7 @@ func check-limit(name, fallback) {
 # A hook: ~/.rc.local.mesh can replace it to report Kerberos, AWS SSO, and so
 # on. bounded-auth-info is what the prompt calls, so an override inherits a
 # limit of its own.
-func auth-info() {
+str func auth-info() {
   # Bounded because a stale $SSH_AUTH_SOCK -- a forwarded agent whose ssh
   # connection has gone away -- leaves `ssh-add -L` waiting on a socket nobody
   # answers, and this renders every prompt. The limit is here rather than in
@@ -137,7 +147,7 @@ func auth-info() {
 # The yellow is re-applied because the answer arrives as text: `timeout` runs
 # the call in a fork, and mesh writes no color into a capture. A hook that
 # colors its own answer differently is flattened to this file's convention.
-func bounded-auth-info() {
+str func bounded-auth-info() {
   answer = $(timeout check-limit("AUTH_TIMEOUT", "5") puts auth-info())
   # Any nonzero status is a problem, not just the limit's 124: a hook that
   # raised -- a missing Kerberos or AWS helper, a bad `$env` read -- comes back
@@ -149,7 +159,7 @@ func bounded-auth-info() {
 }
 
 # return true if anything needs authenticating
-func need-auth() { return bounded-auth-info() != "" }
+bool func need-auth() { return bounded-auth-info() != "" }
 
 # hook for authenticating (to ssh-agent, etc.)
 func auth() { ssh-add }
@@ -158,7 +168,7 @@ func a() { auth }
 # print the connecting ssh client's hostname (best effort), or nothing.
 # Tries, in order: LC_CLIENT_HOST (smuggled through by ssh-to, since servers
 # commonly AcceptEnv LC_*), reverse DNS of the client IP, then the raw IP.
-func ssh-client-host() {
+str func ssh-client-host() {
   return $env.LC_CLIENT_HOST if $env:get(LC_CLIENT_HOST, "") != ""
   return "" unless connected-via-ssh()
   ip = $env.SSH_CONNECTION:words:get(0, "")
@@ -184,7 +194,7 @@ func ssh-client-host() {
 
 # print this machine's name, per ~/.workstation. Cached, empty result
 # included, because the file is read on every prompt otherwise.
-func workstation() {
+str func workstation() {
   if $env:get(WORKSTATION_CACHED, "") == "" {
     export WORKSTATION_CACHED = 1
     file = "$env.HOME/.workstation"
@@ -198,7 +208,7 @@ func workstation() {
 }
 
 # return true if this machine is my workstation
-func on-my-workstation() {
+bool func on-my-workstation() {
   host = $env:get(HOSTNAME, "")
   return false if $host == ""
   return true if $host == workstation()
@@ -209,24 +219,24 @@ func on-my-workstation() {
 }
 
 # return true if this machine is my laptop
-func on-my-laptop() {
+bool func on-my-laptop() {
   return true if "$env.HOME/.laptop":exists
   return true if $env:get(HOSTNAME, "") ~ *laptop*
   return false
 }
 
 # return true if this is a non-production machine I use to get work done
-func on-my-machine() {
+bool func on-my-machine() {
   return true if on-my-workstation()
   return on-my-laptop()
 }
 
-func on-test-host() { return $env:get(HOSTNAME, "") ~ *test* }
+bool func on-test-host() { return $env:get(HOSTNAME, "") ~ *test* }
 
-func on-dev-host() { return $env:get(HOSTNAME, "") ~ *dev* }
+bool func on-dev-host() { return $env:get(HOSTNAME, "") ~ *dev* }
 
 # return true if this machine is a production machine
-func on-production-host() {
+bool func on-production-host() {
   return false if on-my-machine()
   return false if on-test-host()
   return false if on-dev-host()
@@ -234,7 +244,7 @@ func on-production-host() {
 }
 
 # return true if it isn't already obvious which host I'm on
-func show-hostname-in-title() { return not inside-tmux() }
+bool func show-hostname-in-title() { return not inside-tmux() }
 
 # log the running of a command to a file
 wrapper func log-history(...args) {
@@ -281,7 +291,11 @@ wrapper func setx(cmd, ...args) {
 # `stat` has already said why; without the guard its diagnostic would be
 # followed by an `unbound variable` for the capture and another for the
 # subtraction, three messages for one cause.
-func age(file) {
+#
+# `any` because the miss and the hit are different types: the empty string for
+# a file that can't be read, an int for one that can. Naming `int` would make
+# the documented "or nothing" a lie.
+any func age(file) {
   stamp = $(stat -c "%Y" $file)
   return "" if not $sh.status
   return $(date +%s):int - $stamp:int
@@ -313,7 +327,7 @@ func with-hostnames() {
 # *runs* of whitespace and yields no empty element anywhere, which is exactly
 # what shrc's unquoted `$(addr "$hostname")` word split does before `join " "`
 # sees it.
-func one-line(text) { return $text:words:join(" ") }
+str func one-line(text) { return $text:words:join(" ") }
 
 # read BIND-style DNS entries, print the A and AAAA records
 func get-address-records() { awk '$3 == "IN" && $4 ~ /^A/ { print $5 }' }
@@ -478,7 +492,7 @@ func cdfile(file) { cd $(realdir $file) }
 # `:ancestors` walks both ends -- the working directory itself, where the
 # search starts, through to `/`, where a marker file can also sit -- so the
 # loop is the whole search and the `/` stop condition is the list running out.
-func find-up(name) {
+str func find-up(name) {
   for dir in pwd():ancestors {
     return "$dir/$name" if "$dir/$name":f
   }
@@ -486,7 +500,7 @@ func find-up(name) {
 }
 
 # print the name of a source file's corresponding test file
-func find-test-file(file) {
+str func find-test-file(file) {
   base = $file:base
   dir = $file:dir
   stem = $base:stem
@@ -565,7 +579,7 @@ wrapper func each0(cmd, ...args) {
 # A command condition publishes its own status to the branch it picks, so the
 # 130 from a Ctrl-C survives into the report; it is read first thing in the
 # branch, before the `rm` below replaces it.
-func trydiff(cmd, file) {
+bool func trydiff(cmd, file) {
   temp = "${file}.trydiff.$sh.pid"
   if not $cmd $file > $temp {
     produced = $sh.status
@@ -906,15 +920,15 @@ func set-up-ssh-aliases() {
 # shortcuts below are written out instead.
 
 # print the root directory of the current project, or nothing
-func rootdir() {
+str func rootdir() {
   return "" unless have-command(vcs)
   return $(command vcs rootdir 2> /dev/null || true)
 }
-func projectroot() { return rootdir() }
+str func projectroot() { return rootdir() }
 func pr() { puts projectroot() }
 
 # print the name of the current project
-func projectname() {
+str func projectname() {
   root = projectroot()
   return "" if $root == ""
   return $root:base
@@ -922,13 +936,13 @@ func projectname() {
 func project() { puts projectname() }
 
 # return true if we are inside a VCS workspace
-func inside-project() { return projectroot() != "" }
+bool func inside-project() { return projectroot() != "" }
 
 # print the directory that builds are relative to
-func buildroot() { return projectroot() }
+str func buildroot() { return projectroot() }
 
 # print the path from buildroot to the working directory
-func builddir() {
+str func builddir() {
   root = buildroot()
   here = pwd()
   return "." if $here == $root or $root == ""
@@ -1040,7 +1054,7 @@ wrapper func clone(url, ...args) {
 # helper is required as well as shpool: a machine with shpool that hasn't
 # picked up the scripts repo must fall through to tmux rather than failing on
 # a missing autoshpool at every shell start.
-func want-shpool() {
+bool func want-shpool() {
   return false if $env:get(WANT_SHPOOL, "1") == "0"
   return false unless stdin-is-tty()
   return false if in-shpool()
@@ -1052,7 +1066,7 @@ func want-shpool() {
 }
 
 # return true if we should auto-start tmux in this session
-func want-tmux() {
+bool func want-tmux() {
   return false if $env:get(WANT_TMUX, "1") == "0"
   return false unless stdin-is-tty()
   return false if inside-tmux()
@@ -1065,19 +1079,26 @@ func want-tmux() {
 
 # name of the preferred session manager: "shpool" (the default when both are
 # available), "tmux" (the fallback), or empty when neither is enabled.
-func shpool-available() {
+#
+# `any` rather than `bool` on the two availability checks: they answer with a
+# bool on the lines that decide (`WANT_SHPOOL` is 0) and with `have-command`'s
+# status on the line that asks PATH. That mixture is deliberate -- the two
+# spellings say different things, a decision against versus whatever the lookup
+# found -- and a caller branching on either cannot tell them apart, so there is
+# no one type to name. `bool` would be a claim `help` and `type` would repeat.
+any func shpool-available() {
   return false if $env:get(WANT_SHPOOL, "1") == "0"
   return false unless have-command(shpool)
   return have-command(autoshpool)
 }
 
-func tmux-available() {
+any func tmux-available() {
   return false if $env:get(WANT_TMUX, "1") == "0"
   return false unless have-command(tmux)
   return have-command(autotmux)
 }
 
-func session-backend() {
+str func session-backend() {
   if $env:get(SESSION_BACKEND, "shpool") == "tmux" {
     return tmux if tmux-available()
     return shpool if shpool-available()
@@ -1164,7 +1185,7 @@ func apply-shpool-initial-pwd() {
 # that never hands off leaves nothing for later nested shells to inherit;
 # the handoff below restores the environment when the launcher fails. Kept
 # in parity with shrc, config.fish, and config.nu.
-func session-shell() {
+str func session-shell() {
   existing = $env:get(SESSION_SHELL, "")
   return $existing if $existing != ""
   level = $env:get(SHLVL, "0")
@@ -1205,10 +1226,10 @@ func maybe-start-session-and-exit() {
 # gone. The layout is shrc's: a rule, then a context line of host, directory,
 # and anything needing authentication, then a bare `$` to type at.
 
-func blue(text) { return style($text, fg: blue) }
-func green(text) { return style($text, fg: green) }
-func red(text) { return style($text, fg: red) }
-func yellow(text) { return style($text, fg: yellow) }
+str func blue(text) { return style($text, fg: blue) }
+str func green(text) { return style($text, fg: green) }
+str func red(text) { return style($text, fg: red) }
+str func yellow(text) { return style($text, fg: yellow) }
 
 # replace a leading $HOME in the working directory with "~".
 #
@@ -1225,14 +1246,14 @@ func yellow(text) { return style($text, fg: yellow) }
 # directory as `/` where shrc:1829, config.fish:1562 and config.nu:1347 each
 # answer `~` from an exact-home branch of their own. An account or a container
 # with HOME=/ is the case, and parity decides it.
-func tilde-pwd() {
+str func tilde-pwd() {
   here = pwd()
   return "~" if $here == $env.HOME
   return $here:tilde
 }
 
 # a short version of the hostname for the prompt and the window title
-func short-hostname() {
+str func short-hostname() {
   host = $env:get(HOSTNAME, "")
   return "" if $host == ""
   host = $host:split(".")[0]
@@ -1242,7 +1263,7 @@ func short-hostname() {
 }
 
 # print the current session name (shpool or tmux), or nothing
-func session-name() {
+str func session-name() {
   return $env.SHPOOL_SESSION_NAME if in-shpool()
   return $(tmux display-message -p '#S') if inside-tmux()
   return ""
@@ -1271,12 +1292,12 @@ func warm-prompt-cache() {
   global prompt-cache-warm = true
 }
 
-func prompt-session-name() {
+str func prompt-session-name() {
   return $prompt-session-name-cached if $prompt-cache-warm
   return session-name()
 }
 
-func prompt-project-name() {
+str func prompt-project-name() {
   return $prompt-project-name-cached if $prompt-cache-warm
   return projectname()
 }
@@ -1300,7 +1321,7 @@ func cool-prompt-cache(cmd) {
 # the hostname and session tag for the context line. The hostname is red on a
 # production host; the session tag is a green session name when attached, or a
 # yellow warning naming the backend that would start when not.
-func host-info() {
+str func host-info() {
   host = short-hostname()
   if on-production-host() { host = red($host) }
   # `${f()}` interpolates a value call, which is what lets these read as the
@@ -1324,7 +1345,7 @@ func host-info() {
 # would spend a whole `vcs rootdir` fork per prompt to learn what the empty
 # output already says -- the same reason config.fish and config.nu call
 # prompt-info unconditionally. have-command is a PATH lookup, not a fork.
-func dir-info() {
+str func dir-info() {
   info = ""
   if have-command(vcs) {
     info = $(command vcs prompt-info --color=always 2> /dev/null || true)
@@ -1339,7 +1360,7 @@ func dir-info() {
 # fork, and the two limits around it are two more, so asking twice per prompt
 # would double all three. Defaulted for direct callers, matching the "captured
 # once per prompt" note at shrc:1563.
-func prompt-line(auth = bounded-auth-info()) {
+str func prompt-line(auth = bounded-auth-info()) {
   out = "${host-info()} ${dir-info()}"
   return $out if $auth == ""
   return "$out $auth"
@@ -1350,7 +1371,7 @@ func prompt-line(auth = bounded-auth-info()) {
 # rather than the `tput cols` fork this used to pay on every prompt. It is 0
 # when there is no terminal at all -- a redirected prompt, a test harness --
 # which is not a width, so 80 is this file's choice for that case.
-func terminal-width() {
+int func terminal-width() {
   return 80 if $sh.width == 0
   return $sh.width
 }
@@ -1366,7 +1387,7 @@ func bar(width) {
 }
 
 # a single line naming every live job, for the context block
-func job-info() {
+str func job-info() {
   return "" if $sh.jobs:len == 0
   out = ""
   for id, job in $sh.jobs {
@@ -1390,7 +1411,7 @@ func job-info() {
 # predictable per-uid path there lets a local user pre-create the leaf as a
 # symlink and have this shell truncate the target on every prompt.
 # $XDG_RUNTIME_DIR is per-user mode 0700 on modern Linux.
-func publish-jobs-file() {
+str func publish-jobs-file() {
   tty = $env:get(TTY, "")
   return "" unless starts-with($tty, "/dev/")
   xdg = $env:get(XDG_RUNTIME_DIR, "")
@@ -1470,7 +1491,7 @@ func unpublish-jobs(status = 0) {
 # it waits, `preexec` for what it is running while it is busy -- and mesh's own
 # titles are ordinary prelude functions registered on them (`puts $sh.prelude`
 # prints them). Registering over the `title` hook name replaces them.
-func title-text() {
+str func title-text() {
   parts = []
   if show-hostname-in-title() { parts += [short-hostname()] }
   session = prompt-session-name()
@@ -1546,7 +1567,7 @@ func preprompt() {
 # report a command that failed or took a noticeable while, the way shrc's
 # last_job_info does -- but from mesh's postexec hook, which is handed the
 # status and the elapsed milliseconds rather than having to recover them.
-func format-duration(ms) {
+str func format-duration(ms) {
   seconds = $ms / 1000
   return "" if $seconds < 2
   hours = $seconds / 3600
@@ -1786,7 +1807,7 @@ alias mtm = maketmux
 # in shpool switches in place and must stay.
 # The backend session-backend picked rides a `VAR=value cmd` prefix, so the
 # script sees it without an assignment in this shell outliving the call.
-func session-script-wanted() {
+bool func session-script-wanted() {
   return true if inside-tmux()
   return true if in-shpool()
   return session-backend() != ""
@@ -1859,7 +1880,7 @@ func rerc() {
 # an inline `source` in the section below, by the same rule as
 # apply-shpool-initial-pwd: nothing past the interactive gate is reachable from
 # a test, so anything with behavior worth asserting has to be defined up here.
-func read-local-rc() {
+bool func read-local-rc() {
   file = "$env.HOME/.config/mesh/rc.local.mesh"
   return unless $file:read
   source $file

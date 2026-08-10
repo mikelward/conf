@@ -98,10 +98,15 @@ with `MESH_VERSION` in `test-tool-versions.sh` like the rest. A `cargo install`
 build costs a few minutes per run, so cache it on that pin rather than
 rebuilding every job.
 
-Two things to check when it lands, because both are exercised by the current
-config and neither is old: `:bool` (mikelward/mesh#394) is what
-`config/mesh/env.mesh` reads `FAILSAFE` with, and the suite needs `mesh -c` to
-stay able to source a config non-interactively.
+Three things to check when it lands, because all three are exercised by the
+current config and none is old: `:bool` (mikelward/mesh#394) is what
+`config/mesh/env.mesh` reads `FAILSAFE` with; the suite needs `mesh -c` to stay
+able to source a config non-interactively; and **declared return types** have to
+be in the pinned mesh, since an undeclared `func` there has no value channel at
+all. That last one is the sharpest argument yet for pinning rather than skipping:
+the narrowing landed upstream and turned 190 of these 431 tests red in one
+commit, with nothing wrong in this repo — a pin would have named the mesh commit
+that did it, where the skip meant finding out by hand on the next local run.
 
 ## Up without atuin's search UI
 

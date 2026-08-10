@@ -75,7 +75,7 @@ _mesh_run_stdin() {
 # config asks through.
 _mesh_run() {
     _mesh_run_config '
-        func have-command(name) {
+        status func have-command(name) {
             match $name {
                 shpool | autoshpool | tmux | autotmux | brew | fnm => { return false }
                 _ => {
@@ -279,11 +279,11 @@ start_test "mesh preprompt rings the bell last"
 result="$(HOME="$_fakehome" TERM=xterm run_with_timeout 15 mesh -c "
     source $_env_mesh
     source $_rc_mesh
-    func terminal-width() { return 1 }
-    func auth-info() { return \"\" }
+    int func terminal-width() { return 1 }
+    str func auth-info() { return \"\" }
     func maybe-background-fetch(auth = \"\") { return }
     func publish-jobs() { return }
-    func dir-info() { return \"dir\" }
+    str func dir-info() { return \"dir\" }
     func unmerged() { return }
     preprompt
 " </dev/null 2>/dev/null | od -c | tail -3)"
@@ -595,9 +595,9 @@ assert_equal "[]" "$result"
 # cannot answer it. config.fish:2044 gates on stdin_is_tty for the same reason.
 start_test "mesh startup auth is gated on stdin being a tty"
 result="$(_mesh_run_config '
-    func stdin-is-tty() { return false }
-    func in-shpool() { return false }
-    func need-auth() { return true }
+    bool func stdin-is-tty() { return false }
+    bool func in-shpool() { return false }
+    bool func need-auth() { return true }
     func auth() { puts "PROMPTED" }
 ' '
     if stdin-is-tty() and not in-shpool() and need-auth() { auth }
@@ -607,9 +607,9 @@ assert_equal "done" "$result"
 
 start_test "mesh startup auth runs with a tty"
 result="$(_mesh_run_config '
-    func stdin-is-tty() { return true }
-    func in-shpool() { return false }
-    func need-auth() { return true }
+    bool func stdin-is-tty() { return true }
+    bool func in-shpool() { return false }
+    bool func need-auth() { return true }
     func auth() { puts "PROMPTED" }
 ' '
     if stdin-is-tty() and not in-shpool() and need-auth() { auth }
@@ -1479,13 +1479,13 @@ setsid: xbindkeys --poll-rc" "$result"
 
 start_test "mesh session-backend prefers shpool when both are available"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
+    bool func have-command(name) { return true }
 ' 'puts session-backend()')"
 assert_equal "shpool" "$result"
 
 start_test "mesh SESSION_BACKEND=tmux flips the preference"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
+    bool func have-command(name) { return true }
 ' '
     $env.SESSION_BACKEND = "tmux"
     puts session-backend()
@@ -1494,7 +1494,7 @@ assert_equal "tmux" "$result"
 
 start_test "mesh WANT_SHPOOL=0 falls back to tmux"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
+    bool func have-command(name) { return true }
 ' '
     $env.WANT_SHPOOL = "0"
     puts session-backend()
@@ -1503,7 +1503,7 @@ assert_equal "tmux" "$result"
 
 start_test "mesh SESSION_BACKEND=tmux with WANT_TMUX=0 falls back to shpool"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
+    bool func have-command(name) { return true }
 ' '
     $env.SESSION_BACKEND = "tmux"
     $env.WANT_TMUX = "0"
@@ -1517,7 +1517,7 @@ assert_equal "[]" "$result"
 
 start_test "mesh session-backend needs the autoshpool helper, not just shpool"
 result="$(_mesh_run_config '
-    func have-command(name) {
+    status func have-command(name) {
         match $name {
             shpool => { return true }
             _ => { return false }
@@ -1531,9 +1531,9 @@ assert_equal "[]" "$result"
 
 start_test "mesh maybe-start-session-and-exit keeps the shell when autoshpool fails"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
-    func stdin-is-tty() { return true }
-    func inside-project() { return true }
+    bool func have-command(name) { return true }
+    bool func stdin-is-tty() { return true }
+    bool func inside-project() { return true }
     func autoshpool(...args) {
         puts "autoshpool ran"
         fail
@@ -1547,9 +1547,9 @@ assert_contains "still here" "$result"
 
 start_test "mesh maybe-start-session-and-exit keeps the shell when autotmux fails"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
-    func stdin-is-tty() { return true }
-    func inside-project() { return true }
+    bool func have-command(name) { return true }
+    bool func stdin-is-tty() { return true }
+    bool func inside-project() { return true }
     func autotmux(...args) { fail }
 ' '
     $env.SESSION_BACKEND = "tmux"
@@ -1560,9 +1560,9 @@ assert_equal "still here" "$result"
 
 start_test "mesh maybe-start-session-and-exit exits when autoshpool succeeds"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
-    func stdin-is-tty() { return true }
-    func inside-project() { return true }
+    bool func have-command(name) { return true }
+    bool func stdin-is-tty() { return true }
+    bool func inside-project() { return true }
     func autoshpool(...args) { return true }
 ' '
     maybe-start-session-and-exit
@@ -1593,25 +1593,25 @@ assert_equal "" "$result"
 
 start_test "mesh want-shpool is false without a tty"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
-    func stdin-is-tty() { return false }
-    func inside-project() { return true }
+    bool func have-command(name) { return true }
+    bool func stdin-is-tty() { return false }
+    bool func inside-project() { return true }
 ' 'puts want-shpool()')"
 assert_equal "false" "$result"
 
 start_test "mesh want-shpool is true on a tty inside a project"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
-    func stdin-is-tty() { return true }
-    func inside-project() { return true }
+    bool func have-command(name) { return true }
+    bool func stdin-is-tty() { return true }
+    bool func inside-project() { return true }
 ' 'puts want-shpool()')"
 assert_equal "true" "$result"
 
 start_test "mesh want-shpool is false when already in shpool"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
-    func stdin-is-tty() { return true }
-    func inside-project() { return true }
+    bool func have-command(name) { return true }
+    bool func stdin-is-tty() { return true }
+    bool func inside-project() { return true }
 ' '
     $env.SHPOOL_SESSION_NAME = "already"
     puts want-shpool()
@@ -1620,9 +1620,9 @@ assert_equal "false" "$result"
 
 start_test "mesh want-shpool is true when connected remotely, outside a project"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
-    func stdin-is-tty() { return true }
-    func inside-project() { return false }
+    bool func have-command(name) { return true }
+    bool func stdin-is-tty() { return true }
+    bool func inside-project() { return false }
 ' '
     $env.SSH_CONNECTION = "10.0.0.1 1 10.0.0.2 22"
     puts want-shpool()
@@ -1631,9 +1631,9 @@ assert_equal "true" "$result"
 
 start_test "mesh WANT_SHPOOL=0 turns want-shpool off"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
-    func stdin-is-tty() { return true }
-    func inside-project() { return true }
+    bool func have-command(name) { return true }
+    bool func stdin-is-tty() { return true }
+    bool func inside-project() { return true }
 ' '
     $env.WANT_SHPOOL = "0"
     puts want-shpool()
@@ -1642,9 +1642,9 @@ assert_equal "false" "$result"
 
 start_test "mesh want-tmux is false inside tmux"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
-    func stdin-is-tty() { return true }
-    func inside-project() { return true }
+    bool func have-command(name) { return true }
+    bool func stdin-is-tty() { return true }
+    bool func inside-project() { return true }
 ' '
     $env.TMUX = "/tmp/tmux-0/default,1,0"
     puts want-tmux()
@@ -1694,9 +1694,9 @@ assert_equal "[]" "$result"
 
 start_test "mesh failed handoff passes SESSION_SHELL then restores it"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
-    func stdin-is-tty() { return true }
-    func inside-project() { return true }
+    bool func have-command(name) { return true }
+    bool func stdin-is-tty() { return true }
+    bool func inside-project() { return true }
     func autoshpool(...args) {
         v = $env:get(SESSION_SHELL, "")
         puts "launcher saw [$v]"
@@ -1777,7 +1777,7 @@ mkdir -p "$_bsd_ls_bin"
 chmod +x "$_bsd_ls_bin/ls"
 
 _no_l_stub='
-    func have-command(name) {
+    status func have-command(name) {
         match $name {
             l => { return false }
             _ => {
@@ -1931,7 +1931,7 @@ assert_equal "eth0 inet 10.0.0.5/24" "$result"
 
 start_test "mesh ssh-client-host reads the padded getent hostname"
 result="$(_mesh_run_config '
-    func have-command(name) {
+    status func have-command(name) {
         match $name {
             getent => { return true }
             _ => { return false }
@@ -1946,7 +1946,7 @@ assert_equal "host1" "$result"
 
 start_test "mesh ssh-client-host falls back to the raw IP with no lookup"
 result="$(_mesh_run_config '
-    func have-command(name) { return false }
+    bool func have-command(name) { return false }
 ' '
     $env.SSH_CONNECTION = "10.0.0.1 4321 10.0.0.2 22"
     puts ssh-client-host()
@@ -1958,7 +1958,7 @@ assert_equal "10.0.0.1" "$result"
 # `dig` fallback below it was never reached.
 start_test "mesh ssh-client-host falls back to dig when getent has no entry"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
+    bool func have-command(name) { return true }
     func getent(...args) { fail 2 }
     func dig(...args) { puts "host2.example.com." }
 ' '
@@ -1969,7 +1969,7 @@ assert_equal "host2" "$result"
 
 start_test "mesh ssh-client-host answers the raw IP when both lookups miss"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
+    bool func have-command(name) { return true }
     func getent(...args) { fail 2 }
     func dig(...args) { fail 9 }
 ' '
@@ -2028,6 +2028,39 @@ result="$(_mesh_run "
     if \$n < 60 { puts recent } else { puts \"stale: \$n\" }
 " 2>&1)"
 assert_equal "recent" "$result"
+
+###############
+# TEST: return types are declared where there is a value, and only there
+
+# mesh narrowed a func's value channel to the type it declares: an undeclared
+# `func` hands back its status whatever the body produced, so `str func` is what
+# makes tilde-pwd() a path rather than a `0`. That makes the declaration a
+# contract rather than documentation, and one an edit can silently drop -- the
+# function keeps parsing and starts answering `0` -- so it is asserted here.
+start_test "mesh a value function declares the type it answers with"
+result="$(_mesh_run 'type tilde-pwd' 2>&1)"
+assert_contains "str func tilde-pwd()" "$result"
+
+# The other half of the split, and the reason it isn't "declare one everywhere":
+# preprompt draws a prompt and answers nothing, so it declares nothing.
+start_test "mesh an effect-only function declares no return type"
+result="$(_mesh_run 'type preprompt' 2>&1)"
+assert_contains "    func preprompt()" "$result"
+
+# `any` where the two ends really are different types. shpool-available answers
+# with a bool on the lines that decide and with have-command's status on the
+# line that asks PATH; `bool` there would be a claim `type` repeats.
+start_test "mesh a mixed-answer function declares any"
+result="$(_mesh_run 'type shpool-available' 2>&1)"
+assert_contains "any func shpool-available()" "$result"
+
+# The value channel itself, asked of a `str func` through a binding rather than
+# a call in command position -- which is exactly what the narrowing changed.
+start_test "mesh binding a value function's call yields its value"
+result="$(_mesh_run 'cd $env.HOME
+    here = tilde-pwd()
+    puts $here')"
+assert_equal "~" "$result"
 
 start_test "mesh ips reads column-padded ip output"
 result="$(_mesh_run_config '
@@ -2358,7 +2391,7 @@ _session_wrapper_status() {
     local _leave="fail $_rc"
     test "$_rc" = 0 && _leave="return true"
     _mesh_run_config "
-        func have-command(name) { return true }
+        bool func have-command(name) { return true }
         # Wrappers, because the real ones are external scripts that take
         # whatever they are given -- a plain func would reject --list.
         # (No backticks here: this string is double-quoted in bash.)
@@ -2431,7 +2464,7 @@ done
 # settle on `shpool` deterministically.
 _session_backend_run() {
     PATH="$_fake_session_bin:$PATH" _mesh_run_config '
-        func have-command(name) {
+        status func have-command(name) {
             match $name {
                 shpool | autoshpool => { return true }
                 _                   => { return false }
@@ -2508,13 +2541,13 @@ assert_equal "true" "$(_mesh_run 'puts show-hostname-in-title()')"
 
 start_test "mesh inside-project follows projectroot"
 result="$(_mesh_run_config '
-    func projectroot() { return "/home/user/project" }
+    str func projectroot() { return "/home/user/project" }
 ' 'puts inside-project()')"
 assert_equal "true" "$result"
 
 start_test "mesh inside-project is false with no project root"
 result="$(_mesh_run_config '
-    func projectroot() { return "" }
+    str func projectroot() { return "" }
 ' 'puts inside-project()')"
 assert_equal "false" "$result"
 
@@ -2624,7 +2657,7 @@ assert_contains "myproject" "$result"
 
 start_test "mesh host-info warns with the backend name when not in a session"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
+    bool func have-command(name) { return true }
 ' '
     $env.HOSTNAME = "host1"
     puts host-info()
@@ -2641,7 +2674,7 @@ assert_contains "shpool" "$result"
 start_test "mesh prompt-line joins host and directory"
 result="$(_mesh_run '
     $env.HOSTNAME = "host1"
-    func auth-info() { return "" }
+    str func auth-info() { return "" }
     cd /etc
     puts prompt-line()
 ')"
@@ -2651,7 +2684,7 @@ assert_contains "/etc" "$result"
 start_test "mesh prompt-line appends the auth warning"
 result="$(_mesh_run '
     $env.HOSTNAME = "host1"
-    func auth-info() { return "SSH" }
+    str func auth-info() { return "SSH" }
     puts prompt-line()
 ')"
 assert_contains "SSH" "$result"
@@ -2673,7 +2706,7 @@ assert_equal "80" "$result"
 start_test "mesh title-text names host and project"
 result="$(_mesh_run '
     $env.HOSTNAME = "host1"
-    func projectname() { return "myproject" }
+    str func projectname() { return "myproject" }
     puts title-text()
 ')"
 assert_equal "host1 myproject" "$result"
@@ -2682,8 +2715,8 @@ start_test "mesh title-text drops the hostname inside tmux"
 result="$(_mesh_run '
     $env.HOSTNAME = "host1"
     $env.TMUX = "/tmp/tmux-0/default,1,0"
-    func session-name() { return "sess" }
-    func projectname() { return "myproject" }
+    str func session-name() { return "sess" }
+    str func projectname() { return "myproject" }
     puts title-text()
 ')"
 assert_equal "sess myproject" "$result"
@@ -2694,7 +2727,7 @@ assert_equal "sess myproject" "$result"
 # the context title and neither shows the command line.
 start_test "mesh title-idle and title-busy both go through title-text"
 result="$(_mesh_run '
-    func title-text() { puts asked; return "the title" }
+    str func title-text() { puts asked; return "the title" }
     title-idle
     title-busy "some command"
 ')"
@@ -2730,8 +2763,8 @@ chmod +x "$_fake_vcs_bin/vcs"
 _prompt_vcs_calls() {
     rm -f "$_testdir/vcs-calls"
     PATH="$_fake_vcs_bin:$PATH" _mesh_run_config '
-        func terminal-width() { return 1 }
-        func auth-info() { return "" }
+        int func terminal-width() { return 1 }
+        str func auth-info() { return "" }
         func maybe-background-fetch(auth = "") { return }
     ' 'preprompt' >/dev/null 2>&1
     sort "$_testdir/vcs-calls" 2>/dev/null | tr '\n' ' ' | sed 's/ $//'
@@ -2750,8 +2783,8 @@ assert_equal "prompt-info --color=always rootdir unmerged" "$result"
 # answers, and neither is asked twice in one render.
 start_test "mesh a render asks for the session and project names once each"
 result="$(_mesh_run '
-    func session-name() { puts asked-session >&2; return "sess" }
-    func projectname() { puts asked-project >&2; return "proj" }
+    str func session-name() { puts asked-session >&2; return "sess" }
+    str func projectname() { puts asked-project >&2; return "proj" }
     warm-prompt-cache
     host-info()
     title-text()
@@ -2763,7 +2796,7 @@ assert_equal "asked-project asked-session done" "$result"
 # than answering from a cache that was never filled.
 start_test "mesh prompt-session-name asks when the cache is cold"
 result="$(_mesh_run '
-    func session-name() { return "fresh" }
+    str func session-name() { return "fresh" }
     puts prompt-session-name()
 ')"
 assert_equal "fresh" "$result"
@@ -2775,8 +2808,8 @@ assert_equal "fresh" "$result"
 start_test "mesh cool-prompt-cache puts the accessors back on live answers"
 result="$(_mesh_run '
     project = "before"
-    func session-name() { return "sess" }
-    func projectname() { return $project }
+    str func session-name() { return "sess" }
+    str func projectname() { return $project }
     warm-prompt-cache
     global project = "after"
     puts prompt-project-name()
@@ -2948,8 +2981,8 @@ rm -rf "$_jobs_runtime"
 _mesh_run_config "
     \$env.TTY = \"/dev/pts/9\"
     \$env.XDG_RUNTIME_DIR = \"$_jobs_runtime\"
-    func terminal-width() { return 1 }
-    func auth-info() { return \"\" }
+    int func terminal-width() { return 1 }
+    str func auth-info() { return \"\" }
     func maybe-background-fetch(auth = \"\") { return }
 " 'sleep 30 &
 preprompt' >/dev/null 2>&1
@@ -3058,9 +3091,9 @@ chmod +x "$_fake_ssh_bin/ssh"
 # have-command is replaced so the branch is deterministic either way.
 _ssh_run() {
     PATH="$_fake_ssh_bin:$PATH" HOSTNAME=mybox _mesh_run_config '
-        func have-command(name) { return false if $name == "rw"
+        bool func have-command(name) { return false if $name == "rw"
             return true }
-        func short-hostname() { return "mybox" }
+        str func short-hostname() { return "mybox" }
     ' "$1"
 }
 
@@ -3123,8 +3156,8 @@ assert_equal "ssh: -t -oSendEnv=LC_CLIENT_HOST host1 uptime -l [mybox]" "$result
 
 start_test "mesh ssh-to uses rw for a bare host when it is installed"
 result="$(PATH="$_fake_ssh_bin:$PATH" _mesh_run_config '
-    func have-command(name) { return true }
-    func short-hostname() { return "mybox" }
+    bool func have-command(name) { return true }
+    str func short-hostname() { return "mybox" }
     wrapper func rw(...args) { puts rw: ...$args }
 ' 'ssh-to host1')"
 assert_equal "rw: -r host1" "$result"
@@ -3253,9 +3286,9 @@ result="$(PATH="$_fake_ssh_bin:$PATH" HOME="$_ssh_config_home" HOSTNAME=mybox \
     run_with_timeout 15 mesh -c "
     source $_env_mesh
     source $_rc_mesh
-    func have-command(name) { return false if \$name == \"rw\"
+    bool func have-command(name) { return false if \$name == \"rw\"
         return true }
-    func short-hostname() { return \"mybox\" }
+    str func short-hostname() { return \"mybox\" }
     set-up-ssh-aliases
     host1 --unknown-flag
 " </dev/null 2>&1)"
@@ -3340,7 +3373,7 @@ assert_equal "" "$result"
 
 start_test "mesh clone falls back to git when the user agrees"
 result="$(PATH="$_fake_clone_bin:$PATH" _mesh_run_config '
-    func have-command(name) { return false if $name == "jj"
+    bool func have-command(name) { return false if $name == "jj"
         return true }
     wrapper func confirm(...q) { return true }
 ' 'clone https://example.invalid/repo.git')"
@@ -3348,7 +3381,7 @@ assert_equal "git: clone https://example.invalid/repo.git" "$result"
 
 start_test "mesh clone does nothing when the user declines the git fallback"
 result="$(PATH="$_fake_clone_bin:$PATH" _mesh_run_config '
-    func have-command(name) { return false if $name == "jj"
+    bool func have-command(name) { return false if $name == "jj"
         return true }
     wrapper func confirm(...q) { return false }
 ' 'clone https://example.invalid/repo.git')"
@@ -3378,8 +3411,8 @@ assert_equal "/etc" "$result"
 start_test "mesh preprompt shows what unmerged prints"
 # shrc redirects only stderr; the warning itself belongs on the prompt block.
 result="$(PATH="$_fake_vcs_bin:$PATH" _mesh_run_config '
-    func terminal-width() { return 1 }
-    func auth-info() { return "" }
+    int func terminal-width() { return 1 }
+    str func auth-info() { return "" }
     func maybe-background-fetch(auth = "") { return }
     func unmerged() { puts "2 unmerged branches" }
 ' 'preprompt' 2>/dev/null)"
@@ -3521,7 +3554,7 @@ assert_equal "2" "$result"
 # that something took too long.
 start_test "mesh bounded-auth-info bounds an overridden auth-info hook"
 result="$(AUTH_TIMEOUT=0.3 _mesh_run_config '
-    func auth-info() { sleep 30; return "" }
+    str func auth-info() { sleep 30; return "" }
 ' 'a = bounded-auth-info()
 puts $a' 2>&1)"
 assert_equal "auth" "$result"
@@ -3538,14 +3571,14 @@ assert_equal "SSH" "$result"
 # Whatever the hook reports travels back out of the fork it ran in.
 start_test "mesh bounded-auth-info reports what the hook said"
 result="$(_mesh_run_config '
-    func auth-info() { return "KRB AWS" }
+    str func auth-info() { return "KRB AWS" }
 ' 'a = bounded-auth-info()
 puts $a' 2>&1)"
 assert_equal "KRB AWS" "$result"
 
 start_test "mesh bounded-auth-info is empty when the hook reports nothing"
 result="$(_mesh_run_config '
-    func auth-info() { return "" }
+    str func auth-info() { return "" }
 ' 'a = bounded-auth-info()
 puts "<$a>"' 2>&1)"
 assert_equal "<>" "$result"
@@ -3557,21 +3590,21 @@ assert_equal "<>" "$result"
 # fetch as though authenticated.
 start_test "mesh bounded-auth-info reports a hook that failed without answering"
 result="$(_mesh_run_config '
-    func auth-info() { return $env.DEFINITELY_NOT_SET }
+    str func auth-info() { return $env.DEFINITELY_NOT_SET }
 ' 'a = bounded-auth-info()
 puts $a' 2>/dev/null)"
 assert_equal "auth" "$result"
 
 start_test "mesh need-auth is true when the hook could not answer"
 result="$(_mesh_run_config '
-    func auth-info() { return $env.DEFINITELY_NOT_SET }
+    str func auth-info() { return $env.DEFINITELY_NOT_SET }
 ' 'if need-auth() { puts needed } else { puts fine }' 2>/dev/null)"
 assert_equal "needed" "$result"
 
 # The other direction: an authenticated session must not run `auth` at startup.
 start_test "mesh need-auth is false when the hook has nothing to report"
 result="$(_mesh_run_config '
-    func auth-info() { return "" }
+    str func auth-info() { return "" }
 ' 'if need-auth() { puts needed } else { puts fine }' 2>/dev/null)"
 assert_equal "fine" "$result"
 
@@ -3580,7 +3613,7 @@ assert_equal "fine" "$result"
 # shell before it drew anything.
 start_test "mesh need-auth goes through the limit"
 result="$(AUTH_TIMEOUT=0.3 _mesh_run_config '
-    func auth-info() { sleep 30; return "" }
+    str func auth-info() { sleep 30; return "" }
 ' 'if need-auth() { puts needed } else { puts fine }' 2>&1)"
 assert_equal "needed" "$result"
 
@@ -3595,8 +3628,8 @@ start_test "mesh preprompt asks auth-info once per render"
 _auth_calls="$_testdir/auth-calls"
 rm -f "$_auth_calls"
 PATH="$_fake_vcs_bin:$PATH" _mesh_run_config "
-    func terminal-width() { return 1 }
-    func auth-info() {
+    int func terminal-width() { return 1 }
+    str func auth-info() {
         puts asked >> $_auth_calls
         return \"\"
     }
@@ -3744,9 +3777,9 @@ assert_equal "(unset)" "$result"
 
 start_test "mesh rc.mesh starts no session when not interactive"
 result="$(_mesh_run_config '
-    func have-command(name) { return true }
-    func stdin-is-tty() { return true }
-    func inside-project() { return true }
+    bool func have-command(name) { return true }
+    bool func stdin-is-tty() { return true }
+    bool func inside-project() { return true }
     func autoshpool(...args) { puts "autoshpool ran" }
 ' 'puts done')"
 assert_equal "done" "$result"
@@ -3808,7 +3841,7 @@ assert_equal "emacs: --no-window-system file.txt" "$result"
 start_test "mesh prompt-line within ${_mesh_prompt_budget_ms:=${PROMPT_PERF_BUDGET_MS:-1000}}ms budget"
 result="$(_mesh_run '
     $env.HOSTNAME = "host1"
-    func auth-info() { return "" }
+    str func auth-info() { return "" }
     func prompt-info() { return "proj main" }
     # Warmup, so first-call variance stays out of the timed loop.
     prompt-line()
