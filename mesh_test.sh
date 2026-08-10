@@ -2072,6 +2072,154 @@ start_test "mesh an effect-only function declares no return type"
 result="$(_mesh_run 'type preprompt' 2>&1)"
 assert_contains "    func preprompt()" "$result"
 
+# read-local-rc reports whether the local file loaded, which is a status and not
+# the `bool` it briefly claimed: the success arm returned `true` only because
+# `fail 0` is refused, while the no-local-file path is a bare `return` and hands
+# back a status. `status(0)` for the success arm puts all three exits in one
+# type, which is what makes the declaration true rather than half true.
+start_test "mesh read-local-rc declares the status it reports"
+result="$(_mesh_run 'type read-local-rc' 2>&1)"
+assert_contains "status func read-local-rc()" "$result"
+
+# Each of the three exits, since the declaration is only as good as its worst
+# arm and the middle one is the arm that was wrong.
+start_test "mesh read-local-rc succeeds with no rc.local.mesh"
+rm -f "$_fakehome/.config/mesh/rc.local.mesh"
+result="$(_mesh_run 'if read-local-rc { puts ok } else { puts failed }' 2>&1)"
+assert_equal "ok" "$result"
+
+start_test "mesh read-local-rc succeeds on a clean rc.local.mesh"
+printf 'export RC_LOCAL_MARKER = "seen"\n' > "$_fakehome/.config/mesh/rc.local.mesh"
+result="$(_mesh_run 'if read-local-rc { puts ok } else { puts failed }' 2>&1)"
+assert_equal "ok" "$result"
+
+start_test "mesh read-local-rc fails on a broken rc.local.mesh"
+printf 'this is not( valid mesh\n' > "$_fakehome/.config/mesh/rc.local.mesh"
+result="$(_mesh_run 'if read-local-rc { puts ok } else { puts failed }' 2>&1 | tail -n 1)"
+assert_equal "failed" "$result"
+rm -f "$_fakehome/.config/mesh/rc.local.mesh"
+
+###############
+# TEST: no function answers with a type it did not declare
+
+# Built here rather than beside the is-ssh-valid tests that also use it: the
+# audit below is the first thing that needs an ssh-add which cannot block.
+_fake_ssh_add_bin="$_testdir/fakesshaddbin"
+mkdir -p "$_fake_ssh_add_bin"
+printf '#!/bin/sh\nexit "${FAKE_SSH_ADD_STATUS:-0}"\n' > "$_fake_ssh_add_bin/ssh-add"
+chmod +x "$_fake_ssh_add_bin/ssh-add"
+
+#
+# mesh warns when a call's value disagrees with its declaration, which turns
+# every declaration in the two config files into something checkable rather
+# than something asserted. This drives each value channel once and fails on any
+# such warning -- that is how read-local-rc's wrong `bool` was found.
+#
+# The name list is checked against the config below rather than trusted, so a
+# value function added later cannot quietly escape the sweep.
+_typed_audit='
+a = connected-remotely(); a = connected-via-ssh(); a = env-on("NOPE")
+a = i-am-root(); a = in-shpool(); a = inpath("/usr/bin"); a = inside-project()
+a = inside-tmux(); a = is-function("blue"); a = is-shell-name("puts")
+a = need-auth(); a = on-dev-host(); a = on-my-laptop(); a = on-my-machine()
+a = on-my-workstation(); a = on-production-host(); a = on-test-host()
+a = session-script-wanted(); a = show-hostname-in-title(); a = shpool-available()
+a = stdin-is-tty(); a = tmux-available(); a = want-failsafe(); a = want-shpool()
+a = want-tmux(); a = starts-with("abc", "a")
+b = terminal-width()
+c = shellenv-entry("export A=1"); c = drop-trailing-empty(["a" ""])
+c = without(["a" "b"], "a")
+d = have-command("sh"); d = have-command("no-such-program-xyz")
+d = is-runnable("sh"); d = is-runnable("no-such-program-xyz")
+d = quiet(true); d = is-ssh-valid()
+d = read-local-rc()
+e = auth-info(); e = blue("x"); e = bounded-auth-info(); e = builddir()
+e = buildroot(); e = check-limit("NOPE", "2"); e = dir-info()
+e = find-test-file("/etc/hostname"); e = find-up("hostname")
+e = format-duration(5000); e = green("x"); e = host-info(); e = job-info()
+e = one-line("a  b"); e = projectname(); e = projectroot(); e = prompt-line("")
+e = prompt-project-name(); e = prompt-session-name(); e = publish-jobs-file()
+e = red("x"); e = rootdir(); e = session-backend(); e = session-name()
+e = session-shell(); e = short-hostname(); e = ssh-client-host(); e = tilde-pwd()
+e = title-text(); e = unquoted-head("\"x\""); e = workstation(); e = yellow("x")
+f = age("/etc/hostname")
+'
+
+# trydiff stages its output *beside* the input (`${file}.trydiff.$pid`), so it
+# needs a fixture in a writable directory -- pointed at /etc/hostname it cannot
+# stage on any runner that isn't root, and warns about the `bool` it then does
+# not return. A read-only fixture is fine for the rest: `age` only stats, and
+# find-test-file is string work that never opens anything.
+_typed_audit="$_typed_audit
+a = trydiff(cat, \"$_testdir/audit-trydiff\")
+puts \"AUDIT COMPLETE\"
+"
+
+# The sentinel is what makes a green run mean something. Grepping a pipeline for
+# the *absence* of a warning passes just as happily when mesh died on the first
+# line and printed nothing at all, and `| grep -c` throws the status away that
+# would have said so. Asserting the last statement ran is the cheap version of
+# checking that: no completion line, no pass.
+#
+# `_mesh_run_config ''` rather than `_mesh_run`, deliberately: the latter
+# replaces have-command with a stub, so the sweep would audit the stub's
+# declaration instead of the one in env.mesh -- the single function whose type
+# every session helper is written against, and the one place this test would be
+# describing itself rather than the config. Nothing here needs the stub either;
+# it exists to make the *answers* deterministic, and a type sweep only cares
+# that no warning fires. Both directions are driven for the two lookups, since a
+# mismatch can hide on whichever path a given host does not take.
+#
+# `ssh-add` is faked on PATH for the one call that would otherwise reach the
+# real agent. is-ssh-valid is deliberately *unbounded* -- rc.mesh:118 puts the
+# limit in auth-info so an override of the hook inherits it -- so calling it
+# straight, as this does, is the one place in the suite with nothing between it
+# and a stale $SSH_AUTH_SOCK, which the harness does not clear. That is a socket
+# nobody answers, so the audit would sit there until run_with_timeout killed it
+# at 15s and report a type failure that was really a hang. The fake keeps the
+# production is-ssh-valid in the sweep, which is the whole point of not using
+# the stub above; it only stops ssh-add itself from blocking.
+start_test "mesh no function answers with a type it did not declare"
+touch "$_testdir/audit-trydiff"
+_audit_out="$(PATH="$_fake_ssh_add_bin:$PATH" _mesh_run_config '' "$_typed_audit" 2>&1)"
+assert_contains "AUDIT COMPLETE" "$_audit_out"
+assert_not_contains "declared " "$_audit_out"
+
+# confirm needs stdin, so it is driven separately rather than left out.
+start_test "mesh confirm answers the bool it declares"
+_audit_out="$(printf 'y\n' | _mesh_run_stdin '' 'r = confirm("ok")
+puts "CONFIRM COMPLETE"' 2>&1)"
+assert_contains "CONFIRM COMPLETE" "$_audit_out"
+assert_not_contains "declared " "$_audit_out"
+
+# The list above is only as good as its coverage, so every declared name in the
+# two config files has to appear in it. Adding `str func whatever()` without a
+# line in the audit fails here rather than going unswept.
+#
+# The alternation is mesh's whole return-type vocabulary, `regex`, `job` and
+# `func` included -- none of which this config declares yet. A scan that knew
+# only the words in use would let the first `regex func` past while still
+# claiming nothing can escape, which is the one way this test can lie. The
+# second literal `func` is what keeps a plain `func preprompt()` out and lets
+# `func func f()` in.
+#
+# The names exercised above are extracted and compared whole, rather than the
+# audit being searched for `$_name(` as a substring: a kebab-case vocabulary is
+# full of names that end in another one, so `str func info()` would have counted
+# `auth-info(` as its coverage and gone unswept -- the exact hole this test is
+# supposed to close.
+start_test "mesh the return-type audit covers every declared function"
+_audited="$(printf '%s' "$_typed_audit" | grep -o '[A-Za-z][A-Za-z0-9-]*(' | tr -d '(' | sort -u)"
+_missing=""
+for _name in $(sed -n 's/^\(status\|int\|str\|bool\|list\|map\|any\|regex\|job\|func\) \(wrapper \)\?func \([A-Za-z][A-Za-z0-9-]*\)(.*/\3/p' \
+        "$_env_mesh" "$_rc_mesh"); do
+    case "$_name" in
+        confirm) continue ;;  # driven by its own stdin test above
+    esac
+    printf '%s\n' "$_audited" | grep -qxF -- "$_name" || _missing="$_missing $_name"
+done
+assert_equal "" "$_missing"
+
 # A predicate answers `true`/`false`, including on the line that asks PATH:
 # `have-command` is a status, so shpool-available converts it rather than
 # passing it through and having to call itself `any`.
@@ -3527,12 +3675,8 @@ assert_equal "auto-fetch" "$result"
 # and a `quiet ssh-add -L` that stopped working went unnoticed: mesh reads no
 # int as a condition, and the version of this that yielded one drew the prompt
 # anyway while complaining to stderr. A fake ssh-add whose status the test picks
-# is what exercises the branch for real.
-
-_fake_ssh_add_bin="$_testdir/fakesshaddbin"
-mkdir -p "$_fake_ssh_add_bin"
-printf '#!/bin/sh\nexit "${FAKE_SSH_ADD_STATUS:-0}"\n' > "$_fake_ssh_add_bin/ssh-add"
-chmod +x "$_fake_ssh_add_bin/ssh-add"
+# is what exercises the branch for real. The fake itself is built further up,
+# where the return-type audit needs it first.
 
 start_test "mesh is-ssh-valid is true when ssh-add lists a key"
 result="$(PATH="$_fake_ssh_add_bin:$PATH" FAKE_SSH_ADD_STATUS=0 _mesh_run_config '' \

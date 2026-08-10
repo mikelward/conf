@@ -1925,7 +1925,11 @@ func rerc() {
 # an inline `source` in the section below, by the same rule as
 # apply-shpool-initial-pwd: nothing past the interactive gate is reachable from
 # a test, so anything with behavior worth asserting has to be defined up here.
-bool func read-local-rc() {
+#
+# `status`, because what it reports is whether the local file loaded, and every
+# caller reads it in command position. All three exits are one now: no file, a
+# clean source, and a broken one.
+status func read-local-rc() {
   file = "$env.HOME/.config/mesh/rc.local.mesh"
   return unless $file:read
   source $file
@@ -1934,11 +1938,12 @@ bool func read-local-rc() {
   # would overwrite this one and `rerc` would see success. Not fatal either,
   # and for the same reason -- a broken per-machine override shouldn't cost the
   # shell everything already set up before it.
-  # Split rather than one `fail $status`, because the success case has to stay
-  # on the `return` side: `fail 0` is refused, status being a channel that only
-  # carries failure.
+  # Split rather than one `fail $status`, and `status(0)` rather than `true`:
+  # `fail 0` is refused -- status being a channel that only carries failure --
+  # so the arm that succeeds has to say so on the `return` side, and it says it
+  # in the same type as the other two.
   status = $sh.status
-  return true if $status
+  return status(0) if $status
   warn "rc.local.mesh failed; the rest of the interactive setup still ran"
   fail $status
 }
