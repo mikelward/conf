@@ -2012,14 +2012,39 @@ result="$(_mesh_run_config '
 assert_equal "psc: -p 11,22 -w" "$result"
 
 ###############
-# TEST: age answers nothing for a file it cannot read
+# TEST: age answers a failing status for a file it cannot read
 
 # `stat` has already reported why. Without the guard its diagnostic was
 # followed by an unbound-variable error for the capture and another for the
 # subtraction -- three messages for one cause.
-start_test "mesh age is empty for a missing file"
-result="$(_mesh_run "puts \"[\$(puts age(\\\"$_testdir/no-such-file-xyz\\\"))]\"" 2>/dev/null)"
-assert_equal "[]" "$result"
+#
+# The miss is `stat`'s own status, which is what makes `if age($f)` the way to
+# ask. shrc:767 and config.fish:330 end up nonzero on the same file too, their
+# `expr` / `math` failing on the empty capture.
+start_test "mesh age is falsy for a missing file"
+result="$(_mesh_run "
+    if age(\"$_testdir/no-such-file-xyz\") { puts found } else { puts missing }
+" 2>/dev/null)"
+assert_equal "missing" "$result"
+
+# The code itself, not just its truthiness: it is stat's, forwarded rather than
+# replaced with a status of this function's own choosing.
+start_test "mesh age forwards stat's exit code on a miss"
+result="$(_mesh_run "puts age(\"$_testdir/no-such-file-xyz\")" 2>/dev/null)"
+assert_equal "1" "$result"
+
+# Why `fail` rather than a returned status, pinned in the one place the two
+# differ: in command position the *status* is the condition, so a hit reads as
+# true. A returned status would answer the miss and then raise "an int is not a
+# condition" on the hit, which is the shape this asserts against.
+start_test "mesh age reads as a condition on a hit and a miss alike"
+touch "$_testdir/aged-cond"
+result="$(_mesh_run "
+    if age $_testdir/aged-cond { puts hit } else { puts \"no hit\" }
+    if age $_testdir/no-such-file-xyz { puts \"no miss\" } else { puts miss }
+" 2>/dev/null)"
+assert_equal "hit
+miss" "$result"
 
 start_test "mesh age reports the seconds since a file changed"
 touch "$_testdir/aged"
