@@ -66,7 +66,7 @@ that attempt was in a path some suite didn't reach.
 
 ## Add mesh to CI once it stabilizes
 
-`make test` runs `mesh_test.sh` (410 tests over `config/mesh/env.mesh` and
+`make test` runs `mesh_test.sh` (448 tests over `config/mesh/env.mesh` and
 `config/mesh/rc.mesh`) only when `mesh` is on PATH, so on the CI runner it
 prints `SKIP: test-mesh (mesh not installed)` and the job still goes green.
 `install-ci-shells.sh` installs zsh, fish and nu but deliberately leaves mesh
@@ -86,6 +86,17 @@ readers — comparing one against a string, matching another with `~` — starte
 refusing calls that had worked. The suite caught it locally the next time it
 was run against a fresh mesh; pinned CI would have caught it on the commit that
 landed, and unpinned CI would have blamed this repo for it.
+
+The second instance is quieter and cuts the other way, so it is worth recording
+next to the first: mesh added `job`, `regex`, `glob`, `stream` and `func` to its
+return-type vocabulary over two days. Nothing here broke — this config declares
+none of them — but `mesh_test.sh`'s sweep for an undeclared value function knew
+the vocabulary by hand, so the two words that landed last left it able to miss a
+`stream func` while its comment still claimed nothing could escape. A drifting
+upstream weakens a test without ever turning it red, which no pin would have
+caught either; the sweep now probes each word against the installed mesh and
+fails loudly when it matches nothing, which is the half of the problem this repo
+can fix on its own. A word mesh *adds* still needs a manual update here.
 
 When it settles enough to pin — a tagged release, or a commit worth holding
 still — add it alongside the others:
