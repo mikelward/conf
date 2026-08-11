@@ -2196,13 +2196,22 @@ assert_not_contains "declared " "$_audit_out"
 # two config files has to appear in it. Adding `str func whatever()` without a
 # line in the audit fails here rather than going unswept.
 #
-# The alternation is mesh's whole return-type vocabulary, `regex`, `job` and
-# `func` included -- none of which this config declares yet. A scan that knew
-# only the words in use would let the first `regex func` past while still
-# claiming nothing can escape, which is the one way this test can lie. The
+# The word list is mesh's whole return-type vocabulary, `job`, `regex`, `glob`,
+# `stream` and `func` included -- none of which this config declares yet. A scan
+# that knew only the words in use would let the first `regex func` past while
+# still claiming nothing can escape, which is the one way this test can lie. The
 # second literal `func` is what keeps a plain `func preprompt()` out and lets
 # `func func f()` in.
 #
+# Held as a list rather than written straight into the pattern so the probe
+# below sweeps exactly the words the pattern matches, instead of a second copy
+# that can drift from it.
+_return_type_words="status int str bool list map job regex glob stream func any"
+# `\|` rather than a bare `|`: the pattern below is a BRE, where an unescaped
+# `|` is the literal character and the sweep would match nothing at all -- and
+# find nothing missing, so it would pass while checking nothing.
+_return_type_alt="$(printf '%s' "$_return_type_words" | sed 's/ /\\|/g')"
+
 # The names exercised above are extracted and compared whole, rather than the
 # audit being searched for `$_name(` as a substring: a kebab-case vocabulary is
 # full of names that end in another one, so `str func info()` would have counted
@@ -2210,8 +2219,17 @@ assert_not_contains "declared " "$_audit_out"
 # supposed to close.
 start_test "mesh the return-type audit covers every declared function"
 _audited="$(printf '%s' "$_typed_audit" | grep -o '[A-Za-z][A-Za-z0-9-]*(' | tr -d '(' | sort -u)"
+_declared="$(sed -n "s/^\\($_return_type_alt\\) \\(wrapper \\)\\?func \\([A-Za-z][A-Za-z0-9-]*\\)(.*/\\3/p" \
+        "$_env_mesh" "$_rc_mesh" | sort -u | wc -l)"
+# The sweep finds nothing missing when it finds nothing at all, so a pattern
+# that stopped matching -- a bad escape, a vocabulary word dropped -- would go
+# green while checking none of the config. Same reason the audit above ends in
+# a sentinel: assert it saw the declarations, not merely that it saw no gap.
+# The floor is well under the 70 declared today and only has to rule out a
+# pattern that broke, so ordinary edits never have to touch it.
+assert_true test "$_declared" -ge 40
 _missing=""
-for _name in $(sed -n 's/^\(status\|int\|str\|bool\|list\|map\|any\|regex\|job\|func\) \(wrapper \)\?func \([A-Za-z][A-Za-z0-9-]*\)(.*/\3/p' \
+for _name in $(sed -n "s/^\\($_return_type_alt\\) \\(wrapper \\)\\?func \\([A-Za-z][A-Za-z0-9-]*\\)(.*/\\3/p" \
         "$_env_mesh" "$_rc_mesh"); do
     case "$_name" in
         confirm) continue ;;  # driven by its own stdin test above
@@ -2219,6 +2237,37 @@ for _name in $(sed -n 's/^\(status\|int\|str\|bool\|list\|map\|any\|regex\|job\|
     printf '%s\n' "$_audited" | grep -qxF -- "$_name" || _missing="$_missing $_name"
 done
 assert_equal "" "$_missing"
+
+# The word list itself is asked of mesh rather than trusted. Its vocabulary is
+# still growing -- `job`, `regex`, `glob`, `stream` and `func` all joined within
+# a day of each other -- and a word mesh *drops* (its own TODO has `any` next to
+# go) would leave the sweep's pattern matching nothing for that word while the
+# comment above still claimed the set was whole. That is the same failure the
+# sweep exists to prevent, one level up.
+#
+# `<TYPE> wrapper func` rather than a bare `<TYPE> func`, because `wrapper` is
+# itself accepted in the leading slot: `wrapper func f()` parses, so a bare
+# probe would pass for a modifier as happily as for a type and prove nothing.
+# The doubled form only parses when the first word really is a return type.
+#
+# The other direction -- a word mesh *adds* -- cannot be seen from outside the
+# compiler, so it stays a manual update when mesh's vocabulary grows. This is
+# the half that can be automated, not the whole of it.
+start_test "mesh every word the return-type sweep knows is one mesh accepts"
+_unknown=""
+for _word in $_return_type_words; do
+    # stderr is dropped rather than checked: a word mesh does not know is a
+    # parse error whose wording is mesh's to change, so the assertion is the
+    # positive one -- `type` echoed the header back -- and the diagnostic that
+    # goes with a failure is noise on an otherwise green run.
+    _probe="$(HOME="$_fakehome" run_with_timeout 15 mesh -c "$_word wrapper func probe() { }
+type probe" 2>/dev/null | sed -n '2p')"
+    case "$_probe" in
+        *"$_word wrapper func probe()") ;;
+        *) _unknown="$_unknown $_word" ;;
+    esac
+done
+assert_equal "" "$_unknown"
 
 # A predicate answers `true`/`false`, including on the line that asks PATH:
 # `have-command` is a status, so shpool-available converts it rather than
