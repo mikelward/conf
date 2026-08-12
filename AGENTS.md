@@ -32,6 +32,7 @@ Keep this file as short as it can be and still work. Every session loads it whol
 
 - One question at a time. Never stack multiple questions in a single turn — ask the most important one, wait for the answer, then ask the next if you still need it. A wall of bundled questions is harder to answer than a short back-and-forth.
 - Don't interrupt. Never fire off a question while the user is still typing. Let them finish; a half-typed message is not an invitation to jump in.
+- Don't report your own caught-and-fixed mistakes. A wrong turn you noticed and corrected before it reached anything is not news — no "one thing worth flagging", no narration of the recovery. Say it only when it left something the user has to act on: work actually lost, a bad push someone may have pulled, a decision they would make differently knowing it.
 - Keep replies short — don't dump a full page. Lead with the single most important point and stop. If there is more, say the first point and ask whether they are ready for the next one rather than emptying everything at once.
 - End the turn by restating any pending decision. If you are waiting on an answer — a question you asked, or a guess autopilot recorded for review — the last line of the reply is that question, written out in about a sentence. A back-reference ("as asked above") is not actionable when the question is pages back or was never actually put into words; restate it every turn until it is answered. Nothing pending, no line.
 
