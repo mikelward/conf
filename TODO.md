@@ -27,6 +27,39 @@ Delete an entry once you have agreed with it or reversed it.
       *Reversible:* the hook registrations are two lines, and the builder can
       take any name.
 
+- [ ] **The fork-pull-request gap is documented upstream, not fixed here.**
+      The shared setup is taken as-is, with the limitation written into
+      `mikelward/codex-review`'s `docs/CONSUMER.md` rather than fixed. The
+      alternative was holding this conversion until the shared action
+      publishes its check result against `pull_request.head.sha`, so a fork
+      pull request could satisfy a required `codex-review-check`. External
+      fork pull requests are not a case these repositories take today, and the
+      premise is unproven — the head-associated check comes from the `push`
+      trigger, which same-repo pull requests always get. The three files here
+      are byte-identical template copies, so a local edit would fail the pin;
+      the fix belongs upstream once.
+      *Reversible:* entirely. When the remedy lands upstream this repository
+      re-copies `templates/` and gets it for free, and the remedy is written
+      out there in full — the scope to use, the trap to avoid.
+
+## Add the ruleset settings the Codex gate expects
+
+Three settings this repository's ruleset does not have yet, all explained in
+the shared `docs/CONSUMER.md`: require `codex` (not `sweep`), require
+`codex-review-check / codex-review-check`, and require branches to be up to
+date before merging. Deliberately a follow-up — requiring a check in the same
+change that installs it would block the change that installs it.
+
+Worth knowing for the next conversion in a sibling repository, since it looks
+like a broken gate and is not: until `codex-review.yml` is on the default
+branch, the two triggers that sweep unprompted — `schedule` and
+`pull_request_target` — resolve their definition *there* and so never fire for
+the pull request installing it. What does fire is
+`pull_request_review_comment`, which resolves against the merge ref, so a
+reply on a review thread runs the sweep and publishes the verdict for the
+current head. That is what got this pull request a real `codex: success`
+rather than a merge past a permanently `pending` status.
+
 ## Replace a broken nu rather than only reporting it
 
 `.claude/hooks/session-start.sh` now rebuilds over an `elvish` that is on
