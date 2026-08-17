@@ -83,8 +83,9 @@ Keep this file as short as it can be and still work. Every session loads it whol
   verdict (a reaction), or Codex never answering at all — so keep exactly one
   check armed for as long as the PR is open (each event and each check costs
   a model turn). Under drive, arm auto-merge at PR open too — but only where
-  the ruleset makes the Codex verdict a required check, since where CI is the
-  only requirement it merges before Codex has answered.
+  the ruleset makes the Codex verdict a required check AND requires
+  conversations resolved: where CI is the only requirement it merges before
+  Codex has answered, and an open review comment holds nothing back on its own.
   - Settle the fired trigger first thing in the turn, not last. It may have
     silently re-armed rather than retired — update the one that survived,
     replace the one that didn't, and end the turn with exactly one pending.
