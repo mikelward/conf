@@ -100,10 +100,12 @@ Keep this file as short as it can be and still work. Every session loads it whol
     force-push. Nothing reports a base advance, so only this check catches
     it. Fetch both refs by explicit refspec, unshallow a shallow clone, and
     rebase onto the fetched `origin/<base>` — not always `main`, never the
-    local branch a fetch leaves behind. Before force-pushing, confirm the
-    remote tip you are about to replace is one your branch already contains:
-    the push flags do not reliably refuse a rewind or someone else's commit,
-    and overwriting either loses work. If it isn't, or you can't tell, stop
+    local branch a fetch leaves behind. Confirm before you rebase that your
+    branch has every commit the remote head has, and before you push that
+    the head has not moved since the tip you noted before fetching: the
+    push flags do not reliably refuse a rewind, a commit you never
+    fetched, or one you fetched and did not rebase onto, and overwriting any
+    of them loses someone's work. If either fails, or you can't tell, stop
     and ask.
   - Name the PR, and say what to re-read rather than what you read. A SHA or
     a list of which PRs are open goes stale before it fires; one PR number
