@@ -98,8 +98,12 @@ Keep this file as short as it can be and still work. Every session loads it whol
   - Name the PR, and say what to re-read rather than what you read. A SHA or
     a list of which PRs are open goes stale before it fires; one PR number
     does not, and the trigger has to be matchable to it.
-  - Merged or closed, take one last reply-or-resolve pass — a review can
-    land after the merge — then cancel it and unsubscribe. `list_triggers`
+  - Merged or closed, take one last reply-and-resolve pass — a review can
+    land after the merge. Nothing is holding the PR now, so on a merged one
+    anything real goes to a follow-up PR, named on the thread, before you
+    resolve it; leaving it open records the work nowhere. A closed-unmerged
+    PR is a stop — the work was abandoned, so answer, resolve, and open
+    nothing. Then cancel the check and unsubscribe. `list_triggers`
     spans the account, so match this session and this PR before updating
     or deleting one; an update reschedules whatever it matches as surely
     as a delete cancels it.
@@ -115,7 +119,7 @@ Keep this file as short as it can be and still work. Every session loads it whol
 - "Drive to merge" is the PR stretch of *drive* (see Autonomy above): open the PR, wait for the automatic Codex review, address every review comment — fix it if you agree, reply on the thread saying why if you don't — and merge once CI is green and Codex's verdict for the current head is in.
 - Codex is the automated reviewer on this repo — not Copilot. Its reviews are triggered automatically; you don't request them. Address its comments without being asked, folding each fix into the commit it belongs to rather than tacking on an "address review" commit.
 - Judge every review comment on merit, whoever wrote it. Verify the claim before acting; if it doesn't hold up, reply saying why and decline.
-- Never leave a review comment thread silently dismissed. Either reply on the thread or resolve it. When you think a comment is a false positive, say why on the thread (one or two sentences). Acknowledgement noise is fine and preferred over silence. `resolve_review_thread` works — pass the `PRRT_*` thread node ID from `pull_request_read` / `get_review_comments` (`review_threads[].id`); a comment's `PRRC_*` ID fails. Push the fix first, then reply citing the new sha, then resolve.
+- Never leave a review comment thread silently dismissed. Answer on the thread — a disagreement is an answer, so say why — then resolve it once the fix is on the head or the point is rebutted; anything still to do stays open. When you think a comment is a false positive, say why on the thread (one or two sentences). Acknowledgement noise is fine and preferred over silence. `resolve_review_thread` works — pass the `PRRT_*` thread node ID from `pull_request_read` / `get_review_comments` (`review_threads[].id`); a comment's `PRRC_*` ID fails. Push the fix first, then reply citing the new sha, then resolve.
 - Read the Codex verdict, don't infer it. It reacts to the PR **body** — `issue_read` → `reactions` — not to a review thread, whose `Useful?` bar a page fetch finds instead and which reads true on any PR Codex has commented on. `eyes` while it reads, `+1` when it finds nothing, and the reaction is revoked as a new push lands, so what you can see belongs to the head you can see: `+1` on green CI is a merge, with nothing further to wait for. It starts within a couple of minutes, so no reaction five minutes after a push means it never picked the push up — comment `@codex review`, once. Findings arrive as review comments or as a top-level PR comment and decide the gate whatever the reaction says. Leave PR-body reactions to Codex; the count is anonymous, so one from anyone else is indistinguishable.
 - **A finding can arrive as a top-level PR comment.** `get_review_comments` returns only inline threads, so read `get_comments` too — a P1 sat unanswered for two hours because a sweep of the threads never saw it.
 - Skip echo events silently. Replies posted via the GitHub MCP come back moments later as webhook events authored by the same identity; if the body matches a comment you just posted, it's your own echo — continue without comment.
