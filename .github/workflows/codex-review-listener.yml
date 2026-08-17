@@ -1,0 +1,16 @@
+# Hears the one verdict delivery the sweep's own triggers cannot safely hear:
+# a review with no inline comments, which emits neither comment event and no
+# reaction. `pull_request_review` is a merge-ref event, so it must never
+# appear on a workflow that can write commit statuses; this one holds nothing
+# and relays through `workflow_run`. See docs/CONSUMER.md.
+name: codex-review-listener
+on:
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+permissions: {}
+jobs:
+  heard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: 'true'
