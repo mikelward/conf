@@ -224,3 +224,14 @@ different test for a shell that never sources `shrc` at all. And the re-exec
 runs `exec "$SHELL" -l`: Elvish accepts `-l` but treats it as a no-op, so a
 login Elvish would rely on `rc.elv` alone — which is fine today only because
 there is nothing an Elvish login shell reads that an interactive one doesn't.
+
+## Review and merge gates
+
+- [ ] Add a CI gate (`ci.yml`) running whatever checks this repository
+      supports, so the ruleset has a test gate to require — or record
+      here that there is deliberately nothing to run.
+- [ ] Verify the settings half of the fleet's bar — every repository
+      works the same: comprehensive automated review, required merge
+      gates, and auto-merge. A ruleset on the default branch requiring
+      the gates, the `codex` status, conversation resolution and
+      up-to-date branches, with the auto-merge setting enabled.
