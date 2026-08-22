@@ -227,6 +227,13 @@ there is nothing an Elvish login shell reads that an interactive one doesn't.
 
 ## Review and merge gates
 
+- [ ] **Add `zizmor` to the ruleset's required set** once it has reported
+      on a pull request: the new zizmor workflow runs unfiltered on every
+      PR precisely so it can be required (a paths-filtered workflow
+      creates no check run at all on a non-matching PR, which a ruleset
+      waits on forever) — the posture piloted in mikelward/lanes and
+      mikelward/ci-commit-artifact. `repo-rules mikelward/conf` with
+      no arguments applies the standard `lanes codex zizmor` set.
 - [ ] Add a CI gate (`ci.yml`) running whatever checks this repository
       supports, so the ruleset has a test gate to require — or record
       here that there is deliberately nothing to run.
