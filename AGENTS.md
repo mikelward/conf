@@ -126,7 +126,7 @@ Keep this file as short as it can be and still work. Every session loads it whol
 
 ## Pull requests
 
-- On every push, update the PR title and body so they describe the full, latest state of the branch — re-read the diff against `origin/main` and patch whatever drifted — and post the PR link in the chat reply for that push, not only at the end of the conversation.
+- Update the PR title and body with the push, not after it — same step, so they describe the full, latest state of the branch — re-read the diff against `origin/main` and patch whatever drifted — and post the PR link in the chat reply for that push, not only at the end of the conversation.
 - When a feature has multiple open PRs, list every open PR by URL, one per line — the "View PR" chip sticks to the first link and hides the rest (anthropics/claude-code#46625).
 - "Drive to merge" is the PR stretch of *drive* (see Autonomy above): open the PR, wait for the automatic Codex review, address every review comment — fix it if you agree, reply on the thread saying why if you don't — and merge once CI is green and Codex's verdict for the current head is in.
 - Codex is the automated reviewer on this repo — not Copilot. Its reviews are triggered automatically; you don't request them. Address its comments without being asked, folding each fix into the commit it belongs to rather than tacking on an "address review" commit.
