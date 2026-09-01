@@ -34,6 +34,44 @@
   future results. Add a new rule the first time something bites, not the third.
 - Let me know if we're getting close to the context window and should compact.
 
+# Talking to me
+
+- One question at a time, in plain chat — not a structured multiple-choice
+  picker (broken on some mobile clients). Wait for the answer before
+  proceeding on an assumed one, and don't interrupt while I'm still typing.
+- Respond to anything I send mid-task in your very next output, before
+  continuing other tool calls.
+- Keep replies short — lead with the one thing that matters, then ask
+  before unloading more.
+- Don't narrate routine machinery — a check run flipping, a re-run, a
+  scheduled check re-arming, a resolved thread, an echo of your own reply —
+  just act on it.
+- Don't report your own caught-and-fixed mistakes. Flag it only when it
+  cost me something, is still outstanding, or would change a decision I'd
+  make knowing about it.
+- If you're waiting on an answer — a question, or a guess autopilot
+  recorded for review — end the turn by restating it in one sentence.
+  Nothing pending, no line.
+
+# Autonomy
+
+- "Drive" = keep looping without stopping to ask each time: implement,
+  open the PR, address review, merge once green and reviewed, pick the
+  next task, repeat — until the work runs out or I say stop.
+- "Autopilot" = drive without blocking on me. Take the reversible,
+  cheapest-to-undo guess and keep going; log each one in TODO.md under a
+  "Decisions needing review" heading (what, the alternative, why it's
+  reversible) so nothing guessed becomes permanent silently. The loop's
+  own steps don't count as something to stop for — committing, pushing,
+  opening a PR, and merging a green PR are authorized here. What still
+  waits for a real answer, even under autopilot: destructive or
+  irreversible actions *outside* the normal loop (rewriting shared
+  history, deleting work, anything reaching a system beyond this repo)
+  and anything privacy-uncertain.
+- A red baseline (failing tests/lint) is the next task before picking up
+  anything else from TODO.md — fix it first rather than building on top,
+  unless it's genuinely unrelated and I confirm skipping it.
+
 # Branching and commits
 
 - **These rules assume an `origin` remote.** Without one you can't fetch,
@@ -84,7 +122,10 @@
 
 # Pull requests and reviews
 
-- Open PRs ready for review (not draft) unless I say otherwise.
+- Open PRs ready for review (not draft), without being asked, as soon as
+  a branch is ready — don't park a finished branch waiting to be told,
+  unless I've said otherwise ("just commit", "no PR yet"), which holds
+  until I lift it.
 - On every push, update the PR title and body so they describe the full,
   latest state of the branch — not the scope it had when it was opened.
   Re-read the diff against `origin/main` and patch whatever drifted, then
@@ -97,14 +138,41 @@
   on the feature by URL, one per line — the "View PR" chip sticks to the
   first link and hides the rest
   (anthropics/claude-code#46625).
-- Watch the review for automated findings and any comments, and proactively
-  address them.
 - **Judge every review comment on merit, whoever wrote it.** Verify the claim
   before acting; if it doesn't hold up, reply saying why and decline.
-- Never leave a review comment thread silently dismissed. Either reply on
-  the thread *or* resolve it. When you think a comment is a false positive,
-  say *why* on the thread (one or two sentences). Acknowledgement noise
+- Never leave a review comment thread silently dismissed. Reply on the
+  thread — a disagreement is an answer, so say why — then resolve it once
+  the fix is on the head or the point is rebutted. Acknowledgement noise
   ("good catch, will do") is fine and preferred over silence.
+- Where an automated reviewer (Codex or similar) is configured, it runs on
+  its own — don't request it manually unless nothing's come back after a
+  few minutes. Read its actual verdict for the *current* head (a reaction
+  or status tied to that commit — most such tools revoke it on every
+  push), not a stale one from before your last push and not a guess; a
+  finding blocks merge until fixed or rebutted with reasoning on the
+  thread. Findings can land as a top-level PR comment instead of an
+  inline thread — check both before merging, not just review threads.
+- Skip echoes of your own replies silently — a reply you just posted
+  coming back as a new "comment" a moment later isn't new feedback.
+
+# Privacy
+
+- Never put my personal data — a real path with my name in it, a
+  hostname, a token, a private remote URL — into anything that leaves
+  this machine: commits, PR text, branch names, fixtures, issues. Use
+  placeholders, and ask if you're not sure something is safe to include.
+- Output on my own terminal is fine to show in full; redact only secrets
+  (tokens, keys, passwords) there. Quoting that output into a commit, PR,
+  fixture, or reply republishes it — the bullet above governs again, so
+  paraphrase or use a placeholder rather than pasting it verbatim.
+
+# Error handling
+
+- Don't silently swallow errors. Report what failed with enough context
+  to identify it, clean up whatever the failed step acquired, and decide
+  explicitly what I see next (a re-raise, a default, a nonzero exit) —
+  don't let it fall through quietly. If you're deliberately ignoring one,
+  say why in a one-line comment.
 
 # CI
 
