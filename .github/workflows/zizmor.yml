@@ -31,7 +31,7 @@
 # the head -- and the green `zizmor` check already attached to it -- stays
 # put, so without `edited` the old target's scan would satisfy the new one
 # unexamined. Title and body edits re-run the scan too; redundant but
-# cheap, the same trade test.yml makes for the lane job.
+# cheap, the same trade ci.yml makes for the lane job.
 name: zizmor
 on:
   push:
