@@ -2874,11 +2874,6 @@ ssh_to() {
     fi
 }
 
-# joshuto, launched as `jo` -- it ships a single `joshuto` binary and no short
-# name, so jo is ours. TODO: cd into joshuto's final directory on quit
-# (joshuto --output-file + exit 101, Q by default).
-jo() { joshuto "$@"; }
-
 if test -z "${SHRC_LOAD_FUNCTIONS_ONLY:-}"; then
 
 set_up_ssh_aliases() {

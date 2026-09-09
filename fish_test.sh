@@ -2148,25 +2148,4 @@ start_test "fish separator is non-empty with no terminal"
 result="$(_fish_run_config '' 'set -e COLUMNS' 'bar (terminal_width) | string length')"
 assert_equal "80" "$result"
 
-###############
-# TEST: jo (joshuto launcher)
-# A mock joshuto records its arguments so the test can confirm jo forwards
-# them, without a real joshuto or a pty.
-_fish_jo_bin="$(mktemp -d)"
-_fish_jo_args="$_fish_jo_bin/args"
-cat > "$_fish_jo_bin/joshuto" <<MOCK
-#!/bin/sh
-printf '%s\n' "\$*" > "$_fish_jo_args"
-MOCK
-chmod +x "$_fish_jo_bin/joshuto"
-_fish_jo_savedpath="$PATH"
-
-start_test "fish jo runs joshuto, forwarding its arguments"
-PATH="$_fish_jo_bin:$_fish_jo_savedpath"
-_fish_run_config '' '' 'jo --help /tmp' >/dev/null
-assert_equal "--help /tmp" "$(cat "$_fish_jo_args")"
-
-PATH="$_fish_jo_savedpath"
-rm -rf "$_fish_jo_bin"
-
 test_summary "fish_test"
