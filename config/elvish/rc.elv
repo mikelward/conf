@@ -212,6 +212,11 @@ fn tmp-cd {|dir body|
     $body
 }
 
+# joshuto, launched as `jo` -- it ships only the `joshuto` binary and no short
+# name, so jo is ours. TODO: cd into joshuto's final directory on quit
+# (joshuto --output-file + exit 101, Q by default).
+fn jo {|@args| joshuto $@args }
+
 ##############
 # COLORS
 # Elvish renders color itself through `styled`, but a captured styled value

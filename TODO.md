@@ -42,6 +42,29 @@ Delete an entry once you have agreed with it or reversed it.
       re-copies `templates/` and gets it for free, and the remedy is written
       out there in full — the scope to use, the trap to avoid.
 
+## Teach `jo` to cd into joshuto's directory on quit
+
+`jo` is a bare launcher (`jo() { joshuto "$@"; }` and the per-shell
+equivalents) — quitting joshuto leaves the shell where it started. joshuto can
+report a final directory: run it as `joshuto --output-file <file>`, and it
+writes that directory to the file and exits 101 when asked to quit into it (`Q`
+by default; `q` and ctrl-c quit in place with exit 0, and 102 is a file
+selection). So `jo` could cd there when the exit code is 101.
+
+The wrapper this needs is not free across the shells, which is why it is
+deferred rather than shipped:
+- The launcher must normalize the 101 back to a 0 exit, or the prompt's
+  exit-code readout flags a successful `jo` as a failure.
+- nushell needs `def --env` (and to read the code from `$env.LAST_EXIT_CODE`,
+  since the TUI exit raises); the cd must be gated on 101 so 102/failures don't
+  move the directory, and the temp file removed before the cd so a failing cd
+  can't leak it.
+- mesh and Elvish likewise gate the cd on 101 and clean up the temp file on
+  every path.
+
+Keep parity across `shrc`, fish, nushell, mesh, and Elvish, with a test per
+shell driving the 101/0/102/not-installed paths through a mock joshuto.
+
 ## Add the ruleset settings the Codex gate expects
 
 Three settings this repository's ruleset does not have yet, all explained in

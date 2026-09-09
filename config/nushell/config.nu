@@ -786,6 +786,11 @@ def --env mtd [] {
     cd (^mktemp -d | str trim)
 }
 
+# joshuto, launched as `jo` -- it ships only the `joshuto` binary and no short
+# name, so jo is ours. TODO: cd into joshuto's final directory on quit
+# (joshuto --output-file + exit 101, Q by default; needs `def --env`).
+alias jo = ^joshuto
+
 # search for a file in parent directories, print the first one found
 def find-up [file: string] {
     mut dir = $env.PWD
