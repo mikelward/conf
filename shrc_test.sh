@@ -3524,4 +3524,24 @@ assert_true test -n "$result"
 
 if test -n "$_had_columns"; then COLUMNS=$_saved_columns; else unset COLUMNS; fi
 
+# --- jo (joshuto launcher) ---
+# A mock joshuto records the arguments it was given so the test can confirm
+# jo forwards them, without a real joshuto or a terminal.
+_jo_bindir="$(mktemp -d)"
+_jo_args="$_jo_bindir/args"
+cat > "$_jo_bindir/joshuto" <<MOCK
+#!/bin/sh
+printf '%s\n' "\$*" > "$_jo_args"
+MOCK
+chmod +x "$_jo_bindir/joshuto"
+_jo_savedpath="$PATH"
+PATH="$_jo_bindir:$PATH"
+
+start_test "jo runs joshuto, forwarding its arguments"
+jo --help /tmp
+assert_equal "--help /tmp" "$(cat "$_jo_args")"
+
+PATH="$_jo_savedpath"
+rm -rf "$_jo_bindir"
+
 test_summary "$_real_shell shrc_test"

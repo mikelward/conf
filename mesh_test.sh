@@ -4167,4 +4167,26 @@ case "$result" in
         ;;
 esac
 
+###############
+# TEST: jo (joshuto launcher)
+# A mock joshuto records the arguments it was handed so the test can confirm
+# jo forwards them (as a `wrapper func`, so --flags reach joshuto rather than
+# jo), without a real joshuto or a pty.
+_mesh_jo_bin="$(mktemp -d)"
+_mesh_jo_args="$_mesh_jo_bin/args"
+cat > "$_mesh_jo_bin/joshuto" <<MOCK
+#!/bin/sh
+printf '%s\n' "\$*" > "$_mesh_jo_args"
+MOCK
+chmod +x "$_mesh_jo_bin/joshuto"
+_mesh_jo_savedpath="$PATH"
+
+start_test "mesh jo runs joshuto, forwarding its arguments"
+PATH="$_mesh_jo_bin:$_mesh_jo_savedpath"
+_mesh_run 'jo --help /tmp' >/dev/null
+assert_equal "--help /tmp" "$(cat "$_mesh_jo_args")"
+
+PATH="$_mesh_jo_savedpath"
+rm -rf "$_mesh_jo_bin"
+
 test_summary "mesh_test"

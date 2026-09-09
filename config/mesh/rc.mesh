@@ -506,6 +506,11 @@ func mtd() { cd $(mktemp -d) }
 func realdir(file) { dirname $(readlink -f $file) }
 func cdfile(file) { cd $(realdir $file) }
 
+# joshuto, launched as `jo` -- it ships only the `joshuto` binary and no short
+# name, so jo is ours. TODO: cd into joshuto's final directory on quit
+# (joshuto --output-file + exit 101, Q by default).
+wrapper func jo(...args) { joshuto ...$args }
+
 # search for a file in parent directories, returning the first one found.
 #
 # The miss is an empty string rather than shrc's exit status 1: this returns a
