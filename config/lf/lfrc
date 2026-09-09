@@ -1,0 +1,5 @@
+# lf leaves the built-in `delete` command unbound by default so a stray
+# keypress can't wipe files; bind it to capital D. It removes the current
+# selection (or the file under the cursor when nothing is selected) and
+# prompts for confirmation first.
+map D delete
