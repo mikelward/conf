@@ -326,13 +326,6 @@ end
 # GENERAL FUNCTIONS
 # Useful things that could be commands if distributing them wasn't impractical.
 
-# joshuto, launched as `jo` -- it ships only the `joshuto` binary and no short
-# name, so jo is ours. TODO: cd into joshuto's final directory on quit
-# (joshuto --output-file + exit 101, Q by default).
-function jo --description joshuto
-    joshuto $argv
-end
-
 # print the age of a file in seconds
 function age
     set mtime (stat -c '%Y' $argv[1])

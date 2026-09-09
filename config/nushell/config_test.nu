@@ -3918,18 +3918,6 @@ echo '# second build'" | save --force $bin
         assert equal $positions ($positions | sort) $"expected ($want | str join ':') in that order; got ($out)"
     })
 
-    # jo (joshuto launcher). A mock joshuto records the arguments it was handed
-    # so the test can confirm jo forwards them, without a real joshuto or a
-    # terminal.
-    (run-test "jo runs joshuto, forwarding its arguments" {
-        let bin = (mktemp -d)
-        let args = ($bin | path join "args")
-        ("#!/bin/sh\nprintf '%s\\n' \"$*\" > \"" + $args + "\"\n") | save -f ($bin | path join "joshuto")
-        ^chmod +x ($bin | path join "joshuto")
-        $env.PATH = ([$bin] ++ $env.PATH)
-        jo --help /tmp
-        assert equal (open --raw $args | str trim) "--help /tmp" "jo should forward its arguments to joshuto"
-    })
 ]
 
 for r in $results { print $r }

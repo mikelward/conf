@@ -73,14 +73,8 @@ case "$1 $2" in
 *)             exit 1 ;;
 esac
 STUB
-# A mock joshuto for the `jo` launcher: it records the arguments it was handed
-# so the test can confirm jo forwards them, without a real joshuto or a pty.
-cat > "$_stubs/joshuto" <<'STUB'
-#!/bin/sh
-printf '%s\n' "$*" > "$(dirname "$0")/joshuto-args"
-STUB
 chmod +x "$_stubs/ssh" "$_stubs/failing-tool" "$_stubs/upper" "$_stubs/ssh-add" \
-         "$_stubs/atuin" "$_stubs/joshuto"
+         "$_stubs/atuin"
 
 # A `cat` that always fails, in a directory of its own so a test can put it in
 # front of the real one for the length of a single snippet. Stubbing the tool
@@ -260,13 +254,6 @@ start_test "elvish as-command resolves a name and passes a closure through"
 result="$(_elvish_run 'fn marker { echo from-closure }' \
     'echo (kind-of (as-command echo)) (kind-of (as-command $marker~))')"
 assert_equal "fn fn" "$result"
-
-###############
-# TEST: jo (joshuto launcher)
-
-start_test "elvish jo runs joshuto, forwarding its arguments"
-_elvish_run '' 'jo --help /tmp' >/dev/null
-assert_equal "--help /tmp" "$(cat "$_stubs/joshuto-args")"
 
 ###############
 # TEST: env-run
