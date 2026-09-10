@@ -149,4 +149,19 @@ result=$(HOME="$_ghosthome" run_interactive_with_timeout 10 zsh --no-rcs -i -c '
 assert_contains "probe:set" "$result"
 assert_not_contains "bad math expression" "$result"
 
+# Regression: kitty (and normal-keypad xterm) send Home/End as the CSI forms
+# \e[H / \e[F, which terminfo's khome/kend -- the SS3 or \e[1~/\e[4~ forms --
+# don't cover, and shrc doesn't switch the keypad into application mode. shrc
+# binds the literal forms so Home/End work there; in particular End then
+# accepts the zsh-autosuggestions ghost, whose accept fires from end-of-line.
+start_test "shrc binds the CSI Home/End forms under interactive zsh"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    print -r -- "end:$(bindkey "^[[F")"
+    print -r -- "home:$(bindkey "^[[H")"
+' </dev/null 2>/dev/null)
+assert_contains "end-of-line" "$result"
+assert_contains "beginning-of-line" "$result"
+assert_not_contains "undefined-key" "$result"
+
 test_summary "shrc_zsh_test"

@@ -36,10 +36,15 @@ $endif
 "\ep": history-search-backward
 "\ew": copy-region-as-kill
 "\e\C-?": unix-word-rubout
+# Home/End: the SS3 (\eOH/\eOF) and \e[1~/\e[4~ forms, plus the CSI forms
+# \e[H/\e[F that kitty and normal-keypad xterm send -- readline binds by raw
+# sequence, so a terminal emitting a form we didn't list leaves the key dead.
 "\eOH": beginning-of-line
 "\e[1~": beginning-of-line
+"\e[H": beginning-of-line
 "\eOF": end-of-line
 "\e[4~": end-of-line
+"\e[F": end-of-line
 "\e[3~": delete-char
 "\e[A": history-search-backward
 "\e[B": history-search-forward
@@ -72,8 +77,10 @@ $endif
 "\ey": yank-pop
 "\eOH": beginning-of-line
 "\e[1~": beginning-of-line
+"\e[H": beginning-of-line
 "\eOF": end-of-line
 "\e[4~": end-of-line
+"\e[F": end-of-line
 "\e[3~": delete-char
 set keymap vi-command
 "\C-a": beginning-of-line
@@ -102,8 +109,10 @@ $endif
 "\ey": yank-pop
 "\eOH": beginning-of-line
 "\e[1~": beginning-of-line
+"\e[H": beginning-of-line
 "\eOF": end-of-line
 "\e[4~": end-of-line
+"\e[F": end-of-line
 "\e[3~": delete-char
 "\e": vi-insertion-mode
 

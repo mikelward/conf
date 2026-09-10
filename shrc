@@ -3395,6 +3395,26 @@ if is_interactive; then
         _terminfo_bind khome beginning-of-line
         _terminfo_bind kend end-of-line
 
+        # Bind the literal Home/End sequences too, not just terminfo's
+        # khome/kend. Terminals disagree on what these keys emit: kitty and
+        # xterm in normal-keypad mode send the CSI forms \e[H / \e[F, others
+        # the SS3 \eOH / \eOF or the \e[1~ / \e[4~ forms. terminfo names only
+        # one, and shrc doesn't switch the keypad into application mode, so the
+        # key can emit a sequence khome/kend never matches -- leaving Home/End
+        # dead (kitty hits exactly this). Binding every form fixes it
+        # everywhere, and in particular lets End accept the zsh-autosuggestions
+        # ghost, whose accept fires from the end-of-line widget.
+        _bind_all_maps() {
+            local _map
+            for _map in emacs viins vicmd; do bindkey -M "$_map" "$1" "$2"; done
+        }
+        _bind_all_maps '^[[H'  beginning-of-line
+        _bind_all_maps '^[OH'  beginning-of-line
+        _bind_all_maps '^[[1~' beginning-of-line
+        _bind_all_maps '^[[F'  end-of-line
+        _bind_all_maps '^[OF'  end-of-line
+        _bind_all_maps '^[[4~' end-of-line
+
         # prevent PageUp and PageDown from inserting a bogus ~
         zle_noop() { :; }
         zle -N zle-noop zle_noop
