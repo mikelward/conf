@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# Tests for install-ci-shells.sh, the step that puts zsh, fish, nu and elvish
-# on the CI runner so `make test` covers more than bash and dash.
+# Tests for install-ci-shells.sh, the step that puts zsh, mksh, fish, nu and
+# elvish on the CI runner so `make test` covers more than bash and dash.
 #
 # The script downloads from the network, shells out to apt and go, and installs
 # into /usr/local/bin, so these tests never run it for real. Each case puts a
@@ -85,14 +85,16 @@ chmod +x "$_dir/\$_name"
 exit 0
 EOF
 
-    # apt-get is the zsh path. Reports success and leaves a runnable zsh, the
-    # same shape a real install has.
+    # apt-get is the zsh and mksh path. Reports success and leaves a runnable
+    # binary named after the requested package (the last argument), the same
+    # shape a real install has.
     cat >"$_dir/apt-get" <<EOF
 #!/bin/sh
 echo "apt-get \$*" >>"$_dir/calls"
 if test "\$1" = install; then
-    printf '#!/bin/sh\nprintf "9.9.9\\\\n"\n' >"$_dir/zsh"
-    chmod +x "$_dir/zsh"
+    for _pkg in "\$@"; do :; done
+    printf '#!/bin/sh\nprintf "9.9.9\\\\n"\n' >"$_dir/\$_pkg"
+    chmod +x "$_dir/\$_pkg"
 fi
 exit 0
 EOF
@@ -133,9 +135,9 @@ EOF
 
 # A runner image that already ships a shell is not ours to replace, and a
 # re-run must not re-download what is already there.
-start_test "skips every install when all four shells are present"
+start_test "skips every install when all five shells are present"
 _stubs=$(_stub_dir 0)
-for _present in zsh fish nu elvish; do
+for _present in zsh mksh fish nu elvish; do
     printf '#!/bin/sh\nprintf "9.9.9\\n"\n' >"$_stubs/$_present"
     chmod +x "$_stubs/$_present"
 done
@@ -155,7 +157,7 @@ rm -rf "$_stubs"
 # installer and something after the logging returned non-zero, and which one it
 # was could not be recovered from the job log. A flake nobody can read is a
 # flake nobody can fix.
-start_test "installs all four when none is present"
+start_test "installs all five when none is present"
 _stubs=$(_stub_dir 0)
 _err=$(PATH="$_stubs" "$_script" 2>&1 >/dev/null)
 _status=$?
@@ -171,6 +173,9 @@ start_test "fetches nu from its own release rather than apt"
 assert_contains "nushell/nushell/releases" "$_calls"
 start_test "installs zsh from apt, which is the only source that has it"
 assert_contains "apt-get install" "$_calls"
+# mksh has no upstream binary to pin either, so it comes from apt like zsh.
+start_test "installs mksh from apt too"
+assert_contains "no-install-recommends mksh" "$_calls"
 # elvish publishes no release asset to pin, so it is built from source at a
 # tagged version and verified by the Go checksum database instead.
 start_test "builds elvish from its module at a pinned version"
@@ -187,7 +192,7 @@ rm -rf "$_stubs"
 # only find out by losing elvish silently.
 start_test "finds go through GOROOT when it is not on PATH"
 _stubs=$(_stub_dir 0)
-for _present in zsh fish nu; do
+for _present in zsh mksh fish nu; do
     printf '#!/bin/sh\nprintf "9.9.9\\n"\n' >"$_stubs/$_present"
     chmod +x "$_stubs/$_present"
 done
@@ -291,7 +296,7 @@ rm -rf "$_stubs"
 # as "using the installed ...". `make test` then ran against it.
 start_test "refuses a present shell whose version probe fails"
 _stubs=$(_stub_dir 0)
-for _broken in zsh fish nu elvish; do
+for _broken in zsh mksh fish nu elvish; do
     printf '#!/bin/sh\nexit 1\n' >"$_stubs/$_broken"
     chmod +x "$_stubs/$_broken"
 done

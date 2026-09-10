@@ -42,10 +42,12 @@ is_sh() {
     case "$0" in */sh|sh) true;; *) false;; esac
 }
 
-# Failsafe for plain sh / dash: if a user (or a stray cron job) sources
-# shrc under a shell that can't run the bash/zsh-heavy code below, give
-# them a basic prompt and bail. The shrc functions aren't expected to
-# work under dash; this is purely about not crashing on source.
+# Failsafe for plain sh / dash / ksh: if a user (or a stray cron job)
+# sources shrc under a shell that isn't a feature target, give them a
+# basic prompt and bail. The shrc functions aren't expected to work
+# under dash or ksh; this is purely about not crashing on source. ksh
+# (mksh, OpenBSD ksh, ksh93) is bottom-tier alongside dash -- nothing
+# exercises the rich config under it, so we don't run it there.
 # FAILSAFE=1 (or FAILSAFE=true) forces the same bail-out under bash/zsh as
 # a cross-shell escape hatch when the full rc is misbehaving (e.g. autoshpool
 # loops).
@@ -68,7 +70,7 @@ failsafe_flag() {
            return 1 ;;
     esac
 }
-if is_sh || is_dash \
+if is_sh || is_dash || is_ksh \
     || failsafe_flag FAILSAFE "${FAILSAFE-0}" \
     || failsafe_flag LC_FAILSAFE "${LC_FAILSAFE-0}" \
     || test -e "$HOME/.failsafe"; then
@@ -82,9 +84,9 @@ if is_zsh; then
     shell=zsh
 elif is_bash; then
     shell=bash
-elif is_ksh; then
-    shell=ksh
 else
+    # ksh/sh/dash short-circuited into failsafe above, so only zsh and
+    # bash reach here; the catch-all stays for any other exotic shell.
     shell=sh
 fi
 
