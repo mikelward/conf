@@ -121,4 +121,32 @@ assert_contains "x=defined" "$result"
 assert_contains "xa=defined" "$result"
 assert_contains "f=defined" "$result"
 
+# Regression: zsh-autosuggestions is written for native zsh, but shrc runs the
+# shell under `emulate sh` (KSH_ARRAYS on). Under KSH_ARRAYS the plugin's
+# `(( $#POSTDISPLAY ))` parses as `$#` then `POSTDISPLAY`, so its highlight
+# widget floods the terminal with `bad math expression: operator expected at
+# POSTDISPLAY`. init_zsh_autosuggestions sources the plugin via `emulate zsh
+# -c`, giving its functions sticky zsh emulation so they run clean while the
+# shell keeps KSH_ARRAYS on. Drop a stub plugin using that exact construct on
+# the plugin search path, source shrc, and check the function both loaded and
+# ran without the math error. The `probe:set` assertion guards against a
+# vacuous pass where the plugin was never sourced at all.
+start_test "zsh-autosuggestions runs in native zsh despite shrc's emulate sh"
+_ghosthome="$_testdir/ghost-emulate-home"
+mkdir -p "$_ghosthome/.zsh/zsh-autosuggestions"
+cat >"$_ghosthome/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh" <<'PLUGIN'
+_ghost_math_probe() {
+    typeset -g _ghost_hl
+    if (( $#POSTDISPLAY )); then _ghost_hl="set"; fi
+    print -r "probe:${_ghost_hl:-unset}"
+}
+PLUGIN
+result=$(HOME="$_ghosthome" run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    POSTDISPLAY=hello
+    _ghost_math_probe
+' </dev/null 2>&1)
+assert_contains "probe:set" "$result"
+assert_not_contains "bad math expression" "$result"
+
 test_summary "shrc_zsh_test"
