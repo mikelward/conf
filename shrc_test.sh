@@ -3222,6 +3222,68 @@ assert_true grep -qx 'style = "compact"' "$_srcdir/config/atuin/config.toml"
 assert_true grep -qx 'show_preview = false' "$_srcdir/config/atuin/config.toml"
 assert_true grep -qx 'show_help = false' "$_srcdir/config/atuin/config.toml"
 
+# Ghost text (inline autosuggestions) comes from the zsh-autosuggestions
+# plugin, sourced from wherever the package installed it -- stubbed here,
+# like fzf and atuin, since CI installs shells but not their optional tools.
+# $ZSH_AUTOSUGGESTIONS_SYSROOT reroots the absolute system paths and
+# HOMEBREW_PREFIX is cleared, so a plugin installed on the dev box can't make
+# the absent cases load the real (zsh-only) script under this bash test leg.
+_zshauto_saved_home="$HOME"
+_zshauto_saved_hbp="${HOMEBREW_PREFIX-__unset__}"
+ZSH_AUTOSUGGESTIONS_SYSROOT="$_testdir/zshauto-noroot"
+unset HOMEBREW_PREFIX
+
+start_test "init_zsh_autosuggestions sources the plugin under zsh"
+shell=zsh
+HOME="$_testdir/zshautohome"
+mkdir -p "$HOME/.zsh/zsh-autosuggestions"
+printf 'AUTOSUGGEST_LOADED=yes\n' >"$HOME/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh"
+AUTOSUGGEST_LOADED=no
+init_zsh_autosuggestions
+assert_equal "yes" "$AUTOSUGGEST_LOADED"
+
+start_test "init_zsh_autosuggestions is a no-op under bash"
+# bash gets no ghost text here (it would need ble.sh); the function must
+# not source the zsh plugin into it.
+shell=bash
+AUTOSUGGEST_LOADED=no
+init_zsh_autosuggestions
+assert_equal "no" "$AUTOSUGGEST_LOADED"
+shell=zsh
+
+start_test "init_zsh_autosuggestions is silent when the plugin isn't installed"
+# Like fzf and atuin, absence is a supported setup: no ghost text, no warning.
+rm -f "$HOME/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh"
+_err="$(init_zsh_autosuggestions 2>&1)"
+assert_equal "" "$_err"
+
+start_test "init_zsh_autosuggestions warns when a present plugin fails to load"
+printf 'return 1\n' >"$HOME/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh"
+_err="$(init_zsh_autosuggestions 2>&1)"
+assert_contains "zsh-autosuggestions" "$_err"
+
+start_test "init_zsh_autosuggestions finds the plugin under HOMEBREW_PREFIX"
+# Covers Linuxbrew and any non-default Homebrew prefix: brew puts the script
+# under $HOMEBREW_PREFIX/share, which the macOS-only literals would miss.
+HOME="$_testdir/zshauto-nohome"
+mkdir -p "$HOME"
+HOMEBREW_PREFIX="$_testdir/zshauto-brew"
+mkdir -p "$HOMEBREW_PREFIX/share/zsh-autosuggestions"
+printf 'AUTOSUGGEST_LOADED=yes\n' >"$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+AUTOSUGGEST_LOADED=no
+init_zsh_autosuggestions
+assert_equal "yes" "$AUTOSUGGEST_LOADED"
+unset HOMEBREW_PREFIX
+
+HOME="$_zshauto_saved_home"
+unset ZSH_AUTOSUGGESTIONS_SYSROOT
+if test "$_zshauto_saved_hbp" = "__unset__"; then
+    unset HOMEBREW_PREFIX
+else
+    HOMEBREW_PREFIX="$_zshauto_saved_hbp"
+fi
+shell=bash
+
 ###############
 # atuin history recording. shrc drives `atuin history start/end` from its
 # own precommand/preprompt hooks: atuin's bash hooks are shaped for
@@ -3457,16 +3519,17 @@ dash|sh)
     ;;
 esac
 
-start_test "init_shell_tools runs atuin after fzf so Ctrl-R is atuin's"
+start_test "init_shell_tools runs atuin after fzf, then ghost text, before arming the trap"
 have_command() { return 0; }
 TOOL_ORDER=
 init_fzf() { TOOL_ORDER="$TOOL_ORDER fzf"; }
 init_zoxide() { TOOL_ORDER="$TOOL_ORDER zoxide"; }
 init_carapace() { TOOL_ORDER="$TOOL_ORDER carapace"; }
 init_atuin() { TOOL_ORDER="$TOOL_ORDER atuin"; }
+init_zsh_autosuggestions() { TOOL_ORDER="$TOOL_ORDER zsh-autosuggestions"; }
 arm_precommand_trap_last() { TOOL_ORDER="$TOOL_ORDER arm-last"; }
 init_shell_tools
-assert_equal " fzf zoxide carapace atuin arm-last" "$TOOL_ORDER"
+assert_equal " fzf zoxide carapace atuin zsh-autosuggestions arm-last" "$TOOL_ORDER"
 
 unset -f fzf zoxide carapace atuin
 unset ATUIN_SESSION ATUIN_HISTORY_ID
