@@ -202,23 +202,31 @@ Two design decisions to settle first, both of which outlast the code:
   already permits that gap. (This supersedes the old note here, written
   against the former flat "apply to every shell" rule.)
 
-## Ghost text: point the strategy at atuin, then fan out
+## Ghost text: fan out beyond zsh
 
-`init_zsh_autosuggestions` in `shrc` sources zsh-autosuggestions and takes
-its defaults: the ghost comes from zsh's own history, right-arrow/End
-accept the whole suggestion, Alt-F a word, Enter runs only the line. That
-matches the browser-autocomplete feel we settled on. Prototype, zsh only.
-Two follow-ups:
+`init_zsh_autosuggestions` in `shrc` sources zsh-autosuggestions and, when
+atuin is present, points its strategy at atuin's database via a local
+backend (`set_zsh_autosuggest_strategy`: `ZSH_AUTOSUGGEST_STRATEGY=(atuin_host
+history)` behind an `eval` so `dash -n shrc` doesn't choke on the array
+literal; `_zsh_autosuggest_strategy_atuin_host` runs `atuin search
+--search-mode prefix --filter-mode host`), so the ghost is deduped and
+host-scoped, falling back to zsh's own history when atuin is absent.
+right-arrow/End accept the whole suggestion, Alt-F a word, Enter runs only
+the line. zsh only. Remaining:
 
-* **Point the strategy at atuin.** `ZSH_AUTOSUGGEST_STRATEGY=(atuin)` (a
-  documented atuin integration) makes the ghost deduped, host-scoped, and
-  the same store Ctrl-R searches -- one history everywhere. The array
-  literal can't live in `shrc`: `dash -n shrc` parses the whole file
-  (guarding against `/bin/sh` becoming dash) and chokes on `name=(...)`,
-  so set it behind a zsh guard -- an `eval` around the assignment, or a
-  zsh-only sourced file. Cost: a fork + SQLite query per keystroke, async
-  so it doesn't block the prompt; the atuin-daemon removes the fork. Fall
-  back to the `history` strategy when atuin is absent.
+* **Decide: host or global scope for the ghost.** Currently host-scoped
+  (`--filter-mode host`), matching the Up-key binding and the local zsh
+  history it replaced, so it won't ghost commands from other machines on a
+  synced atuin (the Codex P2 on mikelward/conf#317 that prompted the current
+  code). The alternative is global -- a ghost that draws on everything ever
+  run anywhere, which may be what's wanted for cross-host recall. Reversible:
+  one flag in `_zsh_autosuggest_strategy_atuin_host` (drop or change
+  `--filter-mode`); the regression test in `shrc_test.sh` pins whichever is
+  chosen, so decide deliberately rather than by the default.
+* **Verify the atuin strategy on a real box.** Written where atuin wasn't
+  installed, so `_zsh_autosuggest_strategy_atuin_host`'s `atuin search` flags
+  follow atuin's documented CLI -- confirm the ghost actually comes from
+  atuin, host-scoped, on a machine that has it.
 * **Other shells (accepted disparity, not a blocker).** fish and nushell
   have native history autosuggestions, but from their own history, not
   atuin's, and not easily repointed; bash would need ble.sh; mesh and

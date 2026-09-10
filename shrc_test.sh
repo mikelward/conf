@@ -3275,6 +3275,57 @@ init_zsh_autosuggestions
 assert_equal "yes" "$AUTOSUGGEST_LOADED"
 unset HOMEBREW_PREFIX
 
+# With atuin present, init points the ghost at the host-scoped atuin backend
+# ahead of a history fallback. The preceding atuin tests already stub
+# have_command to report atuin present; set it explicitly so this block
+# doesn't lean on that. The array is read with [*], which both bash and zsh
+# (the only shells this runs under) join with a space.
+start_test "init_zsh_autosuggestions points the ghost at atuin when it's present"
+HOME="$_testdir/zshauto-atuin"
+mkdir -p "$HOME/.zsh/zsh-autosuggestions"
+printf 'AUTOSUGGEST_LOADED=yes\n' >"$HOME/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh"
+have_command() { test "$1" = atuin; }
+unset ZSH_AUTOSUGGEST_STRATEGY
+init_zsh_autosuggestions
+assert_equal "atuin_host history" "${ZSH_AUTOSUGGEST_STRATEGY[*]}"
+
+# Sourcing shrc sets the shell up fresh, so the strategy is set outright, not
+# merged onto whatever the plugin or an earlier config left in place -- a
+# pre-set list is replaced, not prepended onto. (~/.shrc.local, sourced after,
+# is the escape hatch for a different choice.) Keeping the list to strategies
+# we control also avoids carrying atuin's own global-scoped `atuin` backend in
+# as a fallback that would undo the host scoping.
+start_test "init_zsh_autosuggestions sets the strategy outright, replacing any pre-set one"
+ZSH_AUTOSUGGEST_STRATEGY=(atuin match_prev_cmd)
+init_zsh_autosuggestions
+assert_equal "atuin_host history" "${ZSH_AUTOSUGGEST_STRATEGY[*]}"
+
+# The ghost must stay on this host: a synced atuin defaults to a global scope
+# that would suggest commands from other machines, so the backend has to ask
+# for --filter-mode host explicitly (and prefix, like the Up key). Capture
+# the query atuin is invoked with -- the buffer goes after -- so a leading
+# dash can't be read as a flag.
+start_test "the atuin ghost backend queries this host with a prefix match"
+_atuin_query_log="$_testdir/atuin-ghost-query"
+atuin() { printf '%s\n' "$*" >"$_atuin_query_log"; }
+suggestion=
+_zsh_autosuggest_strategy_atuin_host "git comm"
+_ghost_query=$(cat "$_atuin_query_log")
+assert_contains "--filter-mode host" "$_ghost_query"
+assert_contains "--search-mode prefix" "$_ghost_query"
+assert_contains "-- git comm" "$_ghost_query"
+unset -f atuin
+
+# No atuin -> the plugin keeps its own default (history) and shrc sets
+# nothing.
+start_test "init_zsh_autosuggestions leaves the default strategy without atuin"
+have_command() { return 1; }
+unset ZSH_AUTOSUGGEST_STRATEGY
+init_zsh_autosuggestions
+assert_equal "" "${ZSH_AUTOSUGGEST_STRATEGY[*]}"
+# Restore the atuin-present stub the following atuin-history tests inherit.
+have_command() { test "$1" = atuin; }
+
 HOME="$_zshauto_saved_home"
 unset ZSH_AUTOSUGGESTIONS_SYSROOT
 if test "$_zshauto_saved_hbp" = "__unset__"; then
