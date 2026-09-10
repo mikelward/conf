@@ -199,6 +199,30 @@ Two design decisions to settle first, both of which outlast the code:
   carve-out for line-editor capability — otherwise nushell keeps atuin's
   pane while the other shells don't, and the rule says that isn't allowed.
 
+## Ghost text: point the strategy at atuin, then fan out
+
+`init_zsh_autosuggestions` in `shrc` sources zsh-autosuggestions and takes
+its defaults: the ghost comes from zsh's own history, right-arrow/End
+accept the whole suggestion, Alt-F a word, Enter runs only the line. That
+matches the browser-autocomplete feel we settled on. Prototype, zsh only.
+Two follow-ups:
+
+* **Point the strategy at atuin.** `ZSH_AUTOSUGGEST_STRATEGY=(atuin)` (a
+  documented atuin integration) makes the ghost deduped, host-scoped, and
+  the same store Ctrl-R searches -- one history everywhere. The array
+  literal can't live in `shrc`: `dash -n shrc` parses the whole file
+  (guarding against `/bin/sh` becoming dash) and chokes on `name=(...)`,
+  so set it behind a zsh guard -- an `eval` around the assignment, or a
+  zsh-only sourced file. Cost: a fork + SQLite query per keystroke, async
+  so it doesn't block the prompt; the atuin-daemon removes the fork. Fall
+  back to the `history` strategy when atuin is absent.
+* **Other shells (accepted disparity, not a blocker).** fish and nushell
+  have native history autosuggestions, but from their own history, not
+  atuin's, and not easily repointed; bash would need ble.sh; mesh and
+  elvish have nothing off the shelf -- mesh is the one wanted most and is
+  to be built by hand. Same mental model everywhere (ghost + right-arrow
+  accepts + Enter runs the line), different machinery, uneven coverage.
+
 ## Let `$SHELL` switch a login shell into Elvish
 
 `shrc`'s `want_reexec` re-execs into `$SHELL` when the login shell sshd started
