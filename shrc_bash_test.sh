@@ -110,6 +110,14 @@ assert_equal "on" "$result"
 start_test "inputrc sets colored-stats"
 assert_true grep -qx 'set colored-stats on' "$_srcdir/inputrc"
 
+# kitty and normal-keypad xterm send Home/End as the CSI forms \e[H / \e[F.
+# readline binds by raw sequence, so these must be listed or Home/End die
+# there for readline users. (zsh gets the same fix in shrc; see
+# shrc_zsh_test.sh.)
+start_test "inputrc binds the CSI Home/End forms kitty sends"
+assert_true grep -qF '"\e[H": beginning-of-line' "$_srcdir/inputrc"
+assert_true grep -qF '"\e[F": end-of-line' "$_srcdir/inputrc"
+
 # bash restores the DEBUG trap after the handler returns, so the trap's
 # own `trap - DEBUG` doesn't stick and it keeps firing for every command
 # the prompt hooks run. install_precommand_trap arms a flag as its last
