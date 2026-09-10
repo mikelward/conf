@@ -2607,22 +2607,25 @@ init_atuin() {
 # commit --amend` it happens to match. Up and Ctrl-R are untouched, still
 # atuin's.
 #
-# Cost and reliability: free -- a sourced shell plugin, no service and no
-# network. Startup adds one `source` of a small script; suggestions are
-# computed asynchronously off the prompt (the plugin forks a zpty), so
-# typing and the prompt aren't blocked. Absent -> no ghost text; a load
-# failure warns; nothing else in the shell depends on it.
+# Cost and reliability: the plugin is free -- a sourced script, no service
+# and no network. When atuin is present the ghost comes from atuin's
+# database (set_zsh_autosuggest_strategy below), spending one `atuin
+# search` -- a subprocess plus a SQLite read -- per keystroke; the plugin
+# runs it asynchronously in a zpty, so typing and the prompt never block,
+# and atuin's optional daemon keeps the read warm. Without atuin it falls
+# back to zsh's own history at no such cost. Absent the plugin -> no ghost
+# text; a load failure warns; nothing else depends on it.
 #
 # zsh only, and sourced from wherever the package landed it, like
 # init_fzf -- a host without it just has no ghost text, nothing else
 # changes. Absence is a supported setup, not a fault, so it's silent; a
 # plugin that IS present but fails to load is the real problem and warns.
 #
-# Prototype: the ghost comes from zsh's own history (the plugin's default
-# strategy). A follow-up points it at atuin's deduped, host-scoped
-# database so the ghost matches what Ctrl-R searches; no cross-shell
-# parity yet either (fish and nushell have it natively; bash needs
-# ble.sh) -- both are tracked in TODO.md.
+# The ghost is sourced from atuin's deduped database when atuin is present,
+# host-scoped and prefix-matched like the Up-key search, falling back to
+# zsh's own history otherwise. No cross-shell parity yet (fish and
+# nushell have inline autosuggestion natively; bash needs ble.sh) --
+# tracked in TODO.md.
 init_zsh_autosuggestions() {
     test "$shell" = zsh || return 0
     # $HOMEBREW_PREFIX/share covers every Homebrew layout at once -- macOS
@@ -2650,9 +2653,40 @@ init_zsh_autosuggestions() {
             warn "zsh-autosuggestions: ${_candidate##*/} failed while loading"
             return 1
         fi
+        set_zsh_autosuggest_strategy
         return 0
     done
     return 0
+}
+
+# A zsh-autosuggestions strategy backend that sources the ghost from atuin,
+# host-scoped. atuin's own `atuin init zsh` also defines a strategy, but its
+# plain `atuin search` runs at the configured default filter mode -- global
+# unless overridden -- so on a machine syncing history it would ghost
+# commands from other hosts, which may not have them installed. That is the
+# opposite of what config/atuin/config.toml does for the Up key (host), and
+# of the local zsh history this replaced, so query atuin the same way Up
+# does: prefix match, this host only. zsh-autosuggestions passes the current
+# buffer as $1 and reads back $suggestion; the query is positional after --
+# so a leading-dash buffer can't be read as a flag.
+_zsh_autosuggest_strategy_atuin_host() {
+    suggestion="$(atuin search --cmd-only --limit 1 --search-mode prefix --filter-mode host -- "$1")"
+}
+
+# Point the ghost at atuin's database when atuin is present, via the
+# host-scoped backend above, with zsh's own history as the fallback. Set the
+# strategy outright rather than prepending onto whatever's there: sourcing
+# shrc is meant to set the shell up fresh, so it owns this the way it owns the
+# rest of the environment. That also keeps the list to strategies we control
+# -- prepending could carry atuin's own global-scoped `atuin` backend in as a
+# fallback, undoing the host scoping on a miss. Anyone wanting a different
+# strategy sets it in ~/.shrc.local, which is sourced after this and wins. The
+# assignment goes through eval because `dash -n shrc` parses this file whole
+# -- function bodies included -- and would choke on the array literal even
+# though only zsh ever runs this.
+set_zsh_autosuggest_strategy() {
+    have_command atuin || return 0
+    eval 'ZSH_AUTOSUGGEST_STRATEGY=(atuin_host history)'
 }
 
 # Record the command about to run, via atuin's documented history CLI
