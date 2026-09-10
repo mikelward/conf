@@ -195,9 +195,12 @@ Two design decisions to settle first, both of which outlast the code:
 * A widget that takes Up outright loses moving up a line inside a
   multi-line buffer. zsh's `up-line-or-beginning-search` handles that and
   the widget would need the same guard.
-* If nushell can't do this, AGENTS.md's parity rule needs an explicit
-  carve-out for line-editor capability — otherwise nushell keeps atuin's
-  pane while the other shells don't, and the rule says that isn't allowed.
+* If nushell can't do this, no policy edit is needed: the shell-tier rule
+  in `AGENTS.md` makes nushell Tier 2 (fast-follow, not a merge gate), so a
+  feature Reedline can't implement simply doesn't reach it — nushell keeps
+  atuin's pane while the other shells get the widget, and the tier rule
+  already permits that gap. (This supersedes the old note here, written
+  against the former flat "apply to every shell" rule.)
 
 ## Ghost text: point the strategy at atuin, then fan out
 
@@ -266,3 +269,49 @@ there is nothing an Elvish login shell reads that an interactive one doesn't.
       gates, and auto-merge. A ruleset on the default branch requiring
       the gates, the `codex` status, conversation resolution and
       up-to-date branches, with the auto-merge setting enabled.
+
+## Ship `vcs` with dotfiles for ephemeral boxes
+
+The prompt shows git/hg/jj *state* via the `vcs` binary and degrades to a plain
+path prompt when it's absent — never re-growing the status logic `vcs` factors
+out (project-root *detection* by marker dirs is the allowed exception; see the
+shell-tier rule in `AGENTS.md`). So an ephemeral box that has the dotfiles but
+not `vcs` (SSH into a throwaway host where `setup` never ran) gets no git-state
+in the prompt.
+
+Lever: make the `vcs` binary travel with the dotfiles so "dotfiles present"
+implies "vcs present" — vendor the static Go binary, selected by OS *and* arch
+(linux-amd64/arm64, darwin-amd64/arm64 — the repo supports macOS, so arch alone
+would ship a Linux binary to a Mac), which keeps shell startup offline. A fetch-and-cache-on-first-start variant
+instead puts a network call on the startup hot path, so it needs the full
+cost/reliability treatment before it's chosen: latency and $ per fetch,
+rate-limit/outage behavior, a pinned checksum, and a guarantee that an offline
+or failed fetch silently keeps the plain prompt rather than blocking or
+erroring startup. Weigh all that against just accepting a plain prompt on hosts
+where `vcs` wasn't installed.
+
+## Fix the stale "mirroring shrc.vcs" comment in config.nu
+
+`config/nushell/config.nu:736` says its marker-dir project-root fallback mirrors
+"shrc.vcs's shell-only fallback", but `shrc.vcs`'s `rootdir`/`projectroot` only
+delegate to `command vcs rootdir` and return empty when the binary is absent —
+there is no shell-side marker walk to mirror. The comment predates the tier
+rewrite (mikelward/conf#315), which now correctly documents the nu walk as a
+nushell-specific exception. Correct the comment to match. Kept out of #315 to
+keep that PR docs-lane rather than touching a shell config.
+
+## Make ksh a tested Tier 3 (or state it unsupported)
+
+`shrc` detects ksh (`is_ksh` → `shell=ksh`) and configures it, and its header
+comment says "ksh should also work, with a simpler prompt" — but nothing
+exercises it: `shrc_test.sh` runs only under bash and zsh, there's no
+`test-ksh` target, and `install-ci-shells.sh` doesn't install ksh. So ksh is a
+tier with no floor test, which is why the tier doc (mikelward/conf#315)
+deliberately does *not* list it — a tier is only as real as its test.
+
+To make it a real Tier 3: install ksh in CI (apt, like zsh) and run
+`shrc_test.sh` under it, then document ksh as Tier 3 alongside bash. Unknown
+until attempted whether the harness and `shrc` are ksh-clean — running the
+suite under ksh may surface ksh-isms in either, so scope it as its own PR. If
+that turns up more than it's worth, the honest alternative is to state ksh
+unsupported and drop the detection.
