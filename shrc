@@ -2647,12 +2647,25 @@ init_zsh_autosuggestions() {
     do
         test -n "$_candidate" || continue
         test -r "$_candidate" || continue
-        # The basename only in any message: these paths live under $HOME
-        # on some hosts, which can carry a real name into a terminal log.
-        if ! . "$_candidate"; then
+        # Source in native-zsh mode. shrc runs the interactive shell under
+        # `emulate sh` (KSH_ARRAYS on, for 0-indexed arrays elsewhere), but the
+        # plugin is written for zsh: under KSH_ARRAYS `$#POSTDISPLAY` parses as
+        # `$#` then `POSTDISPLAY`, so its highlight widget floods the terminal
+        # with `bad math expression: operator expected at POSTDISPLAY`.
+        # `emulate zsh -c` gives every function the plugin defines sticky zsh
+        # emulation, so they run correctly whatever mode the shell is in, while
+        # the rest of shrc keeps its arrays. is_zsh, not $shell: the bash test
+        # leg drives this with shell=zsh but has no `emulate` builtin.
+        # The basename only in any message: these paths live under $HOME on some
+        # hosts, which can carry a real name into a terminal log.
+        if is_zsh; then
+            emulate zsh -c 'source "$_candidate"'
+        else
+            . "$_candidate"
+        fi || {
             warn "zsh-autosuggestions: ${_candidate##*/} failed while loading"
             return 1
-        fi
+        }
         set_zsh_autosuggest_strategy
         return 0
     done
