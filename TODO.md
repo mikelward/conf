@@ -299,19 +299,3 @@ there is no shell-side marker walk to mirror. The comment predates the tier
 rewrite (mikelward/conf#315), which now correctly documents the nu walk as a
 nushell-specific exception. Correct the comment to match. Kept out of #315 to
 keep that PR docs-lane rather than touching a shell config.
-
-## Make ksh a tested Tier 3 (or state it unsupported)
-
-`shrc` detects ksh (`is_ksh` → `shell=ksh`) and configures it, and its header
-comment says "ksh should also work, with a simpler prompt" — but nothing
-exercises it: `shrc_test.sh` runs only under bash and zsh, there's no
-`test-ksh` target, and `install-ci-shells.sh` doesn't install ksh. So ksh is a
-tier with no floor test, which is why the tier doc (mikelward/conf#315)
-deliberately does *not* list it — a tier is only as real as its test.
-
-To make it a real Tier 3: install ksh in CI (apt, like zsh) and run
-`shrc_test.sh` under it, then document ksh as Tier 3 alongside bash. Unknown
-until attempted whether the harness and `shrc` are ksh-clean — running the
-suite under ksh may surface ksh-isms in either, so scope it as its own PR. If
-that turns up more than it's worth, the honest alternative is to state ksh
-unsupported and drop the detection.

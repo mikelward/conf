@@ -11,6 +11,10 @@
 #
 #   zsh   apt. There is no upstream binary release to pin, and the distro
 #         package is a normal zsh.
+#   mksh  apt, same as zsh: no upstream binary release to pin. ksh is
+#         bottom-tier (shrc's failsafe routes it to a bare prompt), so the
+#         suite only needs *a* ksh present to parse-check shrc under; mksh is
+#         the most-shipped, most POSIX-strict one.
 #   fish  a pinned release binary. Ubuntu ships 3.x while config.fish is
 #         written against 4.x, so the distro copy would test the wrong shell.
 #   nu    a pinned release binary. Not packaged by Ubuntu at all, and the
@@ -120,6 +124,21 @@ install_zsh() {
     DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends zsh || return 1
 }
 
+install_mksh() {
+    DEBIAN_FRONTEND=noninteractive apt-get update -qq || return 1
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends mksh || return 1
+}
+
+# mksh has no --version flag (it errors on one); its version lives in
+# $KSH_VERSION, so probe it the way it actually reports. Every other shell
+# takes --version.
+_tool_version() {
+    case "$1" in
+        mksh) mksh -c 'echo $KSH_VERSION' ;;
+        *)    "$1" --version ;;
+    esac
+}
+
 # Anything already present is left alone: a runner image that grows its own zsh
 # is not ours to replace, and the version that ran is printed either way so a
 # result disagreeing with a local run has its explanation in the job log.
@@ -133,7 +152,7 @@ install_tool() {
     _name=$1
     _installer=$2
     if command -v "$_name" >/dev/null 2>&1; then
-        if ! _version=$("$_name" --version 2>/dev/null | head -1); then
+        if ! _version=$(_tool_version "$_name" 2>/dev/null | head -1); then
             echo "install-ci-shells: $_name is on PATH but will not run" >&2
             return 1
         fi
@@ -141,7 +160,7 @@ install_tool() {
         return 0
     fi
     if "$_installer"; then
-        if ! _version=$("$_name" --version 2>/dev/null | head -1); then
+        if ! _version=$(_tool_version "$_name" 2>/dev/null | head -1); then
             echo "install-ci-shells: the installed $_name will not run" >&2
             return 1
         fi
@@ -155,7 +174,7 @@ install_tool() {
 # -- it skips, and the job passes having tested less than it claims -- which is
 # exactly the silent hole this script was written to close.
 status=0
-for entry in "zsh install_zsh" "fish install_fish" "nu install_nu" "elvish install_elvish"; do
+for entry in "zsh install_zsh" "mksh install_mksh" "fish install_fish" "nu install_nu" "elvish install_elvish"; do
     # shellcheck disable=SC2086 # the pair is two fields on purpose
     set -- $entry
     if ! install_tool "$1" "$2"; then

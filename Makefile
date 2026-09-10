@@ -105,6 +105,7 @@ test-full:
 
 test-all: \
 	test-dash \
+	test-ksh \
 	test-bash \
 	test-zsh \
 	test-prompt \
@@ -146,6 +147,21 @@ $(CACHE)/test-dash.stamp: shrc shrc.vcs bashrc.fuzzycomplete shrc_test_lib.sh \
 	@dash shrc_dash_test.sh
 	@touch $@
 test-dash: $(CACHE)/test-dash.stamp
+
+# ksh is bottom-tier alongside dash: shrc's failsafe short-circuit routes
+# it to a bare prompt, so this only parse-checks shrc and confirms the
+# short-circuit fires. mksh is the proxy (most-shipped, most POSIX-strict
+# ksh) and optional -- skip when it isn't installed, mirroring the other
+# optional-shell targets; CI installs it via install-ci-shells.sh.
+$(CACHE)/test-ksh.stamp: shrc shrc.vcs shrc_test_lib.sh shrc_ksh_test.sh | $(CACHE)
+	@if command -v mksh >/dev/null 2>&1; then \
+		mksh -n shrc && \
+		mksh shrc_ksh_test.sh && \
+		touch $@; \
+	else \
+		echo "SKIP: test-ksh (mksh not installed)"; \
+	fi
+test-ksh: $(CACHE)/test-ksh.stamp
 
 # The suites also assert on files they don't source -- inputrc and the
 # atuin config -- so those are dependencies too: editing one has to
@@ -380,7 +396,7 @@ test-sway: $(CACHE)/test-sway.stamp
 .PHONY: all install install-dotfiles install-vcs bootstrap \
 	vcs-build vcs-sync vcs-fetch \
 	test test-verbose test-full test-all test-claude-settings test-session-start-hook \
-	test-dash test-bash test-zsh test-prompt test-vcs \
+	test-dash test-ksh test-bash test-zsh test-prompt test-vcs \
 	test-fish test-nu test-mesh test-elvish test-lint \
 	test-env test-gitconfig test-makefile test-amethyst test-karabiner \
 	test-hypr test-sway
