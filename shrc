@@ -3397,6 +3397,81 @@ if is_interactive; then
             unset _azhw
         '
 
+        # Opt-in history preview (WANT_HISTORY_PREVIEW=1): a line-pre-redraw
+        # hook that shows, below the prompt via zle -M, the newest $history
+        # command containing what you have typed -- a fuzzy peek at what
+        # Down/Ctrl-R would run, beside the prefix-only ghost. Reads zsh's own
+        # history, not atuin's (so no cross-host, which isn't wanted here). Off
+        # by default: zle -M shares zsh's completion-listing area.
+        #
+        # Called after ~/.shrc.local (see the init_history_preview call further
+        # down), like init_fuzzy_complete, so a flag set there -- its natural
+        # home -- is read before the decision. The else branch unregisters the
+        # hook, so WANT_HISTORY_PREVIEW=0 + rerc turns it off without a fresh
+        # shell.
+        init_history_preview() {
+        if test "${WANT_HISTORY_PREVIEW:-0}" != 0; then
+            emulate zsh -c '
+                typeset -a _azhw
+                _azhw=(${^fpath}/add-zle-hook-widget(N))
+                if (( $#_azhw )); then
+                    autoload -Uz add-zle-hook-widget
+                    typeset -g _shrc_preview_text
+                    _shrc_history_preview_pick() {
+                        local -i k bottom
+                        local cmd
+                        _shrc_preview_text=
+                        [[ -n $1 ]] || return
+                        # Read the newest 500 event numbers by direct index, not
+                        # ${(nOk)history} -- that sorts all HISTSIZE (100000)
+                        # keys every redraw. Measured on this path: ~0.02 ms/call
+                        # when a recent command matches, ~2 ms worst case (no
+                        # match, full window). An empty slot just skips.
+                        bottom=$(( HISTCMD - 500 ))
+                        (( bottom < 1 )) && bottom=1
+                        for (( k = HISTCMD; k >= bottom; k-- )); do
+                            cmd=${history[$k]}
+                            [[ -n $cmd ]] || continue
+                            if [[ $cmd == *"$1"* && $cmd != "$1" ]]; then
+                                # ${(V)} shows a newline as an escape, keeping a
+                                # multi-line match on one line (no real newline
+                                # into the zle -M area).
+                                _shrc_preview_text=${(V)cmd}
+                                return
+                            fi
+                        done
+                    }
+                    _shrc_history_preview() {
+                        _shrc_history_preview_pick "$BUFFER"
+                        # No -- : zle -M takes all it is given as the message, so
+                        # -- would show literally; a leading - is safe.
+                        zle -M "$_shrc_preview_text"
+                    }
+                    add-zle-hook-widget line-pre-redraw _shrc_history_preview
+                else
+                    # Opted in but the hook mechanism is missing (zsh < 5.3, the
+                    # floor the bold-input hook above also checks). No fallback
+                    # is possible -- the feature is the hook -- so say so rather
+                    # than skip in silence.
+                    warn "history preview: needs add-zle-hook-widget (zsh 5.3+); not enabled"
+                fi
+                unset _azhw
+            '
+        else
+            emulate zsh -c '
+                typeset -a _azhw
+                _azhw=(${^fpath}/add-zle-hook-widget(N))
+                if (( $#_azhw )) && (( ${+functions[_shrc_history_preview]} )); then
+                    autoload -Uz add-zle-hook-widget
+                    add-zle-hook-widget -d line-pre-redraw _shrc_history_preview
+                    unset -f _shrc_history_preview _shrc_history_preview_pick
+                    unset _shrc_preview_text
+                fi
+                unset _azhw
+            '
+        fi
+        }
+
         escape_start='%{'
         escape_end='%}'
 
@@ -3884,6 +3959,13 @@ test -f "${ZDOTDIR:-$HOME}/.shrc.local" && . "${ZDOTDIR:-$HOME}/.shrc.local"
 # before anything is installed.
 if is_interactive; then
     init_fuzzy_complete
+fi
+
+# Also after .shrc.local, so a WANT_HISTORY_PREVIEW set there is read before
+# the zsh history-preview hook is installed. init_history_preview is defined
+# only under zsh (in the interactive block above); guard on that.
+if is_interactive && is_function init_history_preview; then
+    init_history_preview
 fi
 
 # TODO: move to .profile?

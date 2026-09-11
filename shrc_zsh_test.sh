@@ -199,6 +199,152 @@ result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
 assert_contains "stale:clear" "$result"
 assert_not_contains "hook:absent" "$result"
 
+# Opt-in history preview: without WANT_HISTORY_PREVIEW the pick function isn't
+# even defined, so the line-pre-redraw hook and its per-keystroke history scan
+# stay off by default.
+start_test "the history preview is off (function undefined) without WANT_HISTORY_PREVIEW"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    if (( ${+functions[_shrc_history_preview_pick]} )); then
+        print -r -- "pick:defined"
+    else
+        print -r -- "pick:absent"
+    fi
+' </dev/null 2>/dev/null)
+assert_contains "pick:absent" "$result"
+
+# Opted in but the hook mechanism is unavailable (zsh < 5.3, no
+# add-zle-hook-widget): the feature can't install and there's no fallback, so it
+# must warn rather than skip silently. Simulate the missing widget by emptying
+# fpath, then re-run the deferred installer and check for the warning.
+start_test "the history preview warns when add-zle-hook-widget is unavailable"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    WANT_HISTORY_PREVIEW=1
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    fpath=()
+    init_history_preview 2>&1
+' </dev/null 2>&1)
+assert_contains "needs add-zle-hook-widget" "$result"
+
+# With WANT_HISTORY_PREVIEW=1 the pick function finds the newest history entry
+# that *contains* the buffer -- a substring anywhere, not just a prefix (the
+# ghost handles prefixes). A unique marker seeded newest is found first
+# regardless of the developer's real history, and the query lands mid-command
+# to prove it isn't prefix-only.
+# The cases below add fixture commands with `print -s`. shrc sets
+# HISTFILE=~/.zsh_history with SHARE_HISTORY/SAVEHIST, so an isolated HOME keeps
+# `make test` from writing those markers into the developer's real history.
+_hppollhome="$_testdir/hp-poll-home"
+mkdir -p "$_hppollhome"
+start_test "the history preview picks a mid-command substring match with WANT_HISTORY_PREVIEW"
+result=$(HOME="$_hppollhome" run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    WANT_HISTORY_PREVIEW=1
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    if (( ${+functions[_shrc_history_preview_pick]} )); then
+        print -s -- "qwrtp_marker echo hello world"
+        print -s -- "an unrelated newer line"
+        _shrc_history_preview_pick "marker echo"
+        print -r -- "match:$_shrc_preview_text"
+    else
+        print -r -- "pick:absent"
+    fi
+' </dev/null 2>/dev/null)
+assert_contains "match:qwrtp_marker echo hello world" "$result"
+assert_not_contains "pick:absent" "$result"
+
+# An entry equal to what is typed is skipped: once the command is fully typed
+# there is nothing to preview (and the ghost, not this, extends a prefix).
+start_test "the history preview skips an entry equal to the buffer"
+result=$(HOME="$_hppollhome" run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    WANT_HISTORY_PREVIEW=1
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    print -s -- "qwrtp_exact_marker"
+    _shrc_history_preview_pick "qwrtp_exact_marker"
+    print -r -- "match:[$_shrc_preview_text]"
+' </dev/null 2>/dev/null)
+assert_contains "match:[]" "$result"
+
+# A query that matches nothing leaves the preview empty rather than showing a
+# stale or unrelated command.
+start_test "the history preview is empty when nothing matches"
+result=$(HOME="$_hppollhome" run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    WANT_HISTORY_PREVIEW=1
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    print -s -- "qwrtp_marker echo hello world"
+    _shrc_history_preview_pick "no_such_zzq_sentinel"
+    print -r -- "match:[$_shrc_preview_text]"
+' </dev/null 2>/dev/null)
+assert_contains "match:[]" "$result"
+
+# Regression: zle -M takes everything after -M as its message, so `zle -M --
+# "$msg"` renders a literal "--" ahead of the text rather than treating -- as
+# an option terminator. The display widget must pass the message directly; a
+# message starting with - is already safe as the -M operand.
+start_test "the history preview passes its message to zle -M without a -- terminator"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    WANT_HISTORY_PREVIEW=1
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    print -r -- "${functions[_shrc_history_preview]}"
+' </dev/null 2>/dev/null)
+assert_contains 'zle -M "$_shrc_preview_text"' "$result"
+assert_not_contains "zle -M --" "$result"
+
+# A multi-line command is retrieved and collapsed to one preview line: ${(V)}
+# renders each embedded newline as a visible \n escape rather than injecting a
+# real newline into the zle -M area. (Direct event-number indexing surfaces
+# multi-line entries reliably; the earlier ${(nOk)history} scan did not.)
+start_test "the history preview collapses a multi-line command to one line"
+result=$(HOME="$_hppollhome" run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    WANT_HISTORY_PREVIEW=1
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    print -s -- $'\''grep foo\nbar baz\nqux'\''
+    _shrc_history_preview_pick "bar baz"
+    print -r -- "match:$_shrc_preview_text"
+' </dev/null 2>/dev/null)
+assert_contains 'match:grep foo\nbar baz\nqux' "$result"
+
+# Opt-out path: enabling the preview registers a line-pre-redraw hook, so
+# flipping WANT_HISTORY_PREVIEW off and re-sourcing (rerc) must unregister it --
+# otherwise the preview couldn't be turned off without a fresh shell. Enable,
+# re-source with it off, and assert the hook and its functions are gone while
+# the unrelated bold-input hook on the same line-pre-redraw survives.
+start_test "flipping WANT_HISTORY_PREVIEW off and re-sourcing removes the preview hook"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    WANT_HISTORY_PREVIEW=1
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    WANT_HISTORY_PREVIEW=0
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    typeset -a out; zstyle -g out zle-line-pre-redraw widgets 2>/dev/null
+    case "${out[*]}" in
+        *_shrc_history_preview*) print -r -- "hook:present" ;;
+        *)                       print -r -- "hook:removed" ;;
+    esac
+    case "${out[*]}" in
+        *_shrc_bold_input*) print -r -- "bold:present" ;;
+        *)                  print -r -- "bold:removed" ;;
+    esac
+    print -r -- "pickfn:${+functions[_shrc_history_preview_pick]}"
+' </dev/null 2>/dev/null)
+assert_contains "hook:removed" "$result"
+assert_contains "bold:present" "$result"
+assert_contains "pickfn:0" "$result"
+
+# Regression: WANT_HISTORY_PREVIEW's natural home is ~/.shrc.local, which shrc
+# sources late -- after the interactive zsh block. The install decision is
+# deferred (init_history_preview runs after .shrc.local), so a flag set only
+# there still installs the preview; deciding in the zsh block would miss it.
+# Drop a .shrc.local that sets the flag, source with it unset in the
+# environment, and assert the pick function got defined.
+start_test "WANT_HISTORY_PREVIEW set in .shrc.local installs the preview"
+_hplocal="$_testdir/hp-local-home"
+mkdir -p "$_hplocal"
+print -r -- "WANT_HISTORY_PREVIEW=1" > "$_hplocal/.shrc.local"
+result=$(HOME="$_hplocal" run_interactive_with_timeout 10 env -u ZDOTDIR zsh --no-rcs -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    print -r -- "pickfn:${+functions[_shrc_history_preview_pick]}"
+' </dev/null 2>/dev/null)
+assert_contains "pickfn:1" "$result"
+
 # Regression: kitty (and normal-keypad xterm) send Home/End as the CSI forms
 # \e[H / \e[F, which terminfo's khome/kend -- the SS3 or \e[1~/\e[4~ forms --
 # don't cover, and shrc doesn't switch the keypad into application mode. shrc
