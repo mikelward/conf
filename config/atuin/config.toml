@@ -40,6 +40,12 @@ show_tabs = false
 # top of the pane and matches run downward beneath it.
 invert = true
 
+# Run the selected command on Enter, rather than only pasting it onto the
+# prompt. Tab still pastes it for editing first. New atuin installs default to
+# this, but an upgraded install keeps the old paste-only Enter, so set it
+# explicitly.
+enter_accept = true
+
 # Show only the command in each result row -- drop the duration, age/time,
 # exit, directory and other columns atuin draws by default. Just the command.
 [ui]
@@ -55,3 +61,13 @@ columns = ["command"]
 # wrong and still open upstream: atuinsh/atuin#2663.
 [theme]
 name = "(none)"
+
+# Disable atuin's opt-in AI assistant. It generates/explains commands by
+# sending the query to an external LLM (needs an account/key, so unconfigured
+# it just prints "Atuin AI is not yet configured"). Off explicitly: it's a
+# third-party network call on the shell's hot path -- latency, cost, and the
+# command text leaving the box -- and it isn't wanted here. This file is
+# atuin's config (symlinked to ~/.config/atuin/config.toml); flip to true here
+# to re-enable -- atuin reads no separate local-override file.
+[ai]
+enabled = false

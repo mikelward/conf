@@ -295,3 +295,20 @@ rate-limit/outage behavior, a pinned checksum, and a guarantee that an offline
 or failed fetch silently keeps the plain prompt rather than blocking or
 erroring startup. Weigh all that against just accepting a plain prompt on hosts
 where `vcs` wasn't installed.
+
+## Handle atuin's enter_accept in Elvish's hand-rolled Ctrl-R
+
+`config/atuin/config.toml` sets `enter_accept = true` (shared by every shell).
+For the shells with a shipped `atuin init` integration (zsh, bash, fish) that
+makes Enter run the selection and Tab insert-for-edit. But Elvish's Ctrl-R is
+hand-rolled (`config/elvish/lib/interactive.elv`'s `-atuin-search`): it slurps
+`atuin search -i`'s stdout into the buffer and treats any nonzero exit as a
+cancel (the `catch`). It doesn't set `ATUIN_SHELL`, so it may receive atuin's
+accept signal (an `__atuin_accept__:` output prefix and/or a nonzero "execute"
+exit status) and either insert the literal prefix or discard the line.
+
+Verify on a box with atuin + elvish which signal atuin emits when `ATUIN_SHELL`
+is unset, then update the wrapper to handle it: strip an `__atuin_accept__:`
+prefix, and distinguish the execute status from a real cancel (run the line
+rather than dropping it). Tier 2 fast-follow, so it lags the zsh change rather
+than gating it.
