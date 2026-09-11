@@ -149,6 +149,56 @@ result=$(HOME="$_ghosthome" run_interactive_with_timeout 10 zsh --no-rcs -i -c '
 assert_contains "probe:set" "$result"
 assert_not_contains "bad math expression" "$result"
 
+# The ghost renders in a recessive, non-bold gray. shrc bolds only the typed
+# buffer (via the _shrc_bold_input region_highlight hook), not the whole zle
+# line, so the ghost -- drawn in POSTDISPLAY past $#BUFFER -- is never in the
+# bold span. fg=8 is the terminal's gray, readable on light and dark. Assert
+# the style is set regardless of whether the plugin itself is installed.
+start_test "the ghost's highlight style is set to a non-bold gray under zsh"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    print -r -- "ghost-style:${ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE:-unset}"
+' </dev/null 2>/dev/null)
+assert_contains "ghost-style:fg=8" "$result"
+
+# The typed-input bold is applied to just the buffer (0..$#BUFFER) via a
+# region_highlight hook, so the ghost in POSTDISPLAY stays unbolded. Drive the
+# hook with a set BUFFER and assert its span ends exactly at $#BUFFER -- never
+# reaching into the POSTDISPLAY (ghost) region beyond it.
+start_test "the bold-input hook bolds only the typed buffer, not the ghost"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    if (( ${+functions[_shrc_bold_input]} )); then
+        region_highlight=(); BUFFER="git commit"; POSTDISPLAY=" --amend"
+        _shrc_bold_input
+        print -rl -- "${region_highlight[@]}"
+    else
+        print -r -- "hook:absent"
+    fi
+' </dev/null 2>/dev/null)
+assert_contains "0 10 bold" "$result"          # 0..${#BUFFER}, ${#git commit}=10
+assert_not_contains "hook:absent" "$result"
+
+# Re-source path: an older shell had zle_highlight=(default:bold) from the
+# prior init; when rerc re-sources shrc, the hook branch must drop that stale
+# whole-line bold, or the ghost stays bolded until a fresh shell. Seed the
+# stale value, source, and assert it's cleared.
+start_test "re-sourcing shrc clears a stale whole-line default:bold"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    typeset -a zle_highlight; zle_highlight=(default:bold)
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    if (( ${+functions[_shrc_bold_input]} )); then
+        case "${zle_highlight[*]}" in
+            *default:bold*) print -r -- "stale:present" ;;
+            *)              print -r -- "stale:clear" ;;
+        esac
+    else
+        print -r -- "hook:absent"
+    fi
+' </dev/null 2>/dev/null)
+assert_contains "stale:clear" "$result"
+assert_not_contains "hook:absent" "$result"
+
 # Regression: kitty (and normal-keypad xterm) send Home/End as the CSI forms
 # \e[H / \e[F, which terminfo's khome/kend -- the SS3 or \e[1~/\e[4~ forms --
 # don't cover, and shrc doesn't switch the keypad into application mode. shrc
