@@ -295,13 +295,3 @@ rate-limit/outage behavior, a pinned checksum, and a guarantee that an offline
 or failed fetch silently keeps the plain prompt rather than blocking or
 erroring startup. Weigh all that against just accepting a plain prompt on hosts
 where `vcs` wasn't installed.
-
-## Fix the stale "mirroring shrc.vcs" comment in config.nu
-
-`config/nushell/config.nu:736` says its marker-dir project-root fallback mirrors
-"shrc.vcs's shell-only fallback", but `shrc.vcs`'s `rootdir`/`projectroot` only
-delegate to `command vcs rootdir` and return empty when the binary is absent —
-there is no shell-side marker walk to mirror. The comment predates the tier
-rewrite (mikelward/conf#315), which now correctly documents the nu walk as a
-nushell-specific exception. Correct the comment to match. Kept out of #315 to
-keep that PR docs-lane rather than touching a shell config.

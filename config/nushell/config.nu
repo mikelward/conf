@@ -732,11 +732,14 @@ def find-project-root [markers: list<string>] {
 # print the root directory of the current project. The default dispatches
 # to `^vcs rootdir` when the helper binary is on PATH, since it knows
 # about all the backends (jj, git, hg, citc, p4) and keeps its own
-# cache. When the binary is missing, fall back to walking parents for
-# the common VCS markers, mirroring shrc.vcs's shell-only fallback.
-# The .vcs_cache half of that fallback is intentionally not ported:
-# the parent walk is fast enough in nu and sidesteps cache-invalidation
-# bugs.
+# cache. When the binary is missing, fall back to walking parents for the
+# common VCS markers. That parent walk is a nushell-specific exception to
+# the "vcs owns VCS status" rule (see AGENTS.md): shrc.vcs has no shell-side
+# walk to mirror -- its rootdir/projectroot just delegate to `command vcs
+# rootdir` and return empty when vcs is absent -- but nu needs a working
+# project root for inside-project / session startup even without it. The
+# walk keeps no cache of its own: it's fast enough in nu and sidesteps
+# cache-invalidation bugs.
 #
 # Overridable: set $env.projectroot = {|| ... } in an autoload file to
 # plug in custom detection (workspace markers, monorepo layouts, ...).
