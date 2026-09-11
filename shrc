@@ -2595,12 +2595,13 @@ init_atuin() {
     _shrc_atuin_ready=
     have_command atuin || return 0
     case "$shell" in bash|zsh) ;; *) return 0 ;; esac
-    # --disable-up-arrow: don't let atuin bind Up to its own prefix/host
-    # up-search. shrc binds both arrows itself (up/down-or-atuin-search in the
-    # interactive block) to atuin's fuzzy, global search instead, seeded with
-    # the current line -- with a native prefix search as the fallback when
-    # atuin is absent. Ctrl-R still opens atuin. bash gets neither arrow widget
-    # (zle is zsh-only); its Up stays readline's, so the flag is a no-op there.
+    # --disable-up-arrow: don't let atuin bind Up to its own up-search. shrc
+    # binds both arrows itself (up/down-or-atuin-search in the interactive
+    # block): Up to atuin's prefix search, Down (like Ctrl-R) to its fuzzy
+    # search, seeded with the current line -- with a native prefix search as
+    # the fallback when atuin is absent. Ctrl-R still opens atuin. bash gets
+    # neither arrow widget (zle is zsh-only); its Up stays readline's, so the
+    # flag is a no-op there.
     eval_tool_init atuin atuin init "$shell" --disable-up-arrow || return 1
     # In bash, atuin records history by appending to bash-preexec's
     # preexec_functions/precmd_functions. bash-preexec drives those from
@@ -3476,15 +3477,17 @@ if is_interactive; then
         _terminfo_bind knp zle-noop
         _terminfo_bind kpp zle-noop
 
-        # Up and Down: with atuin present, both arrows open atuin's default
-        # fuzzy, global search -- the same match-anything search as Ctrl-R,
-        # reached with an arrow and seeded with whatever's on the line. atuin's
-        # own Up is off (init_atuin passes --disable-up-arrow), so we bind both
-        # arrows to its atuin-search widget ourselves. Each steps within a
-        # multiline buffer first, like atuin's own up-search: a single-line
-        # buffer opens the search, a multiline one just moves the cursor a
-        # line. The zsh ghost text stays prefix + host (set_zsh_autosuggest_
-        # strategy); only the pane the arrows open is fuzzy.
+        # Up and Down: with atuin present, both arrows open atuin's search
+        # pane, seeded with whatever's on the line. Up opens it in prefix mode
+        # (atuin's own up-search -- --shell-up-key-binding, which reads the
+        # *_shell_up_key_binding settings in config.toml); Down opens the
+        # default fuzzy search, the same as Ctrl-R. atuin's own Up is off
+        # (init_atuin passes --disable-up-arrow), so we bind both arrows to its
+        # widgets ourselves: atuin-up-search for Up, atuin-search for Down.
+        # Each steps within a multiline buffer first, like atuin's own
+        # up-search: a single-line buffer opens the search, a multiline one
+        # just moves the cursor a line. The zsh ghost text stays prefix + host
+        # (set_zsh_autosuggest_strategy).
         #
         # Without atuin, the arrows fall back to a native session-local prefix
         # search. history-beginning-search-{backward,forward} finds the
@@ -3523,8 +3526,11 @@ if is_interactive; then
             # emacs or viins map -- viins here, since $EDITOR is vi), which a
             # literal case would miss. Binding per keymap sidesteps that: `main`
             # resolves to whichever real map carries the binding. Each wrapper
-            # opens its keymap's atuin-search variant when that widget exists,
-            # falls back to the base atuin-search, and to the native prefix
+            # opens its keymap's search variant when that widget exists, falls
+            # back to its own base widget -- atuin-up-search (prefix) for Up,
+            # atuin-search (fuzzy) for Down, so a missing per-keymap variant
+            # keeps the split rather than making Up fuzzy like Down -- and to
+            # the native prefix
             # search when this run's atuin init did not succeed -- gated on
             # $_shrc_atuin_ready (set by init_atuin, which runs later in
             # init_shell_tools), not on widget presence, so a failed rerc reload
@@ -3542,7 +3548,7 @@ if is_interactive; then
                     zle up-line-or-local-history; return
                 fi
                 case $LBUFFER in *$'\n'*) zle up-line-or-history; return ;; esac
-                if test -n "${widgets[$1]:-}"; then zle "$1"; else zle atuin-search; fi
+                if test -n "${widgets[$1]:-}"; then zle "$1"; else zle atuin-up-search; fi
             }
             _shrc_atuin_down() {
                 if test -z "${_shrc_atuin_ready:-}"; then
@@ -3551,9 +3557,9 @@ if is_interactive; then
                 case $RBUFFER in *$'\n'*) zle down-line-or-history; return ;; esac
                 if test -n "${widgets[$1]:-}"; then zle "$1"; else zle atuin-search; fi
             }
-            up_or_atuin_search()         { _shrc_atuin_up atuin-search; }
-            up_or_atuin_search_viins()   { _shrc_atuin_up atuin-search-viins; }
-            up_or_atuin_search_vicmd()   { _shrc_atuin_up atuin-search-vicmd; }
+            up_or_atuin_search()         { _shrc_atuin_up atuin-up-search; }
+            up_or_atuin_search_viins()   { _shrc_atuin_up atuin-up-search-viins; }
+            up_or_atuin_search_vicmd()   { _shrc_atuin_up atuin-up-search-vicmd; }
             down_or_atuin_search()       { _shrc_atuin_down atuin-search; }
             down_or_atuin_search_viins() { _shrc_atuin_down atuin-search-viins; }
             down_or_atuin_search_vicmd() { _shrc_atuin_down atuin-search-vicmd; }
