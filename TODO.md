@@ -42,6 +42,51 @@ Delete an entry once you have agreed with it or reversed it.
       re-copies `templates/` and gets it for free, and the remedy is written
       out there in full — the scope to use, the trap to avoid.
 
+- [ ] **The zsh history preview ships off by default and reads zsh's own
+      history, not atuin.** New opt-in `WANT_HISTORY_PREVIEW` in `shrc`: a
+      `line-pre-redraw` hook shows, below the prompt via `zle -M`, the newest
+      `$history` command containing what you have typed — a peek at what
+      Down/Ctrl-R would run, beside the prefix-only ghost. Three choices made
+      without asking:
+      - *Off by default.* `zle -M` shares the area zsh draws completion
+        listings in, so Tab-complete and the preview take turns there, and the
+        look is still being tried. *Reversible:* flip the default, or drop it.
+      - *zsh-native, in-process* (a bounded `$history` loop) rather than an
+        `atuin search` subprocess per keystroke — no async plumbing, matching
+        the "nothing fragile" guardrail; the only thing atuin's DB adds here is
+        cross-host history, which isn't used. *Reversible:* the atuin route is a
+        separate hook if ever wanted.
+      - *Plain styling, no framing* — just the command text on one line.
+        *Reversible:* styling is one `zle -M` string.
+      - *Scan window 500.* The loop reads the newest 500 `$history` event
+        numbers by direct index (not `${(nOk)history}`, which sorts all 100k
+        `HISTSIZE` keys every redraw). Measured on the redraw path: ~0.02
+        ms/call when a recent command matches, ~2 ms worst case (no match, full
+        500-entry window). A larger window trades a longer reach for a higher
+        worst case. *Reversible:* one constant. That direct indexing also
+        surfaces multi-line entries reliably (the `${(nOk)}` scan did not), so
+        multi-line commands are collapsed with `${(V)}` and previewed.
+
+- [ ] **The history preview is zsh-only for now; mesh/Tier-2 parity deferred.**
+      It is built on `zle -M` and a `line-pre-redraw` hook, which have no direct
+      equivalent in mesh (the committed Tier 1 target) or in fish/nushell/Elvish
+      (Tier 2). Following the #314 zsh-only ghost-text precedent, the counterpart
+      is deferred rather than blocking this change: mesh owns its own line editor
+      and would grow a native preview alongside its ghost; the Tier-2 shells can
+      follow with their own inline-message mechanisms. *Reversible:* it's an
+      additive per-shell feature, and it's opt-in and off by default meanwhile.
+
+## Get perf stats, then settle on one history entry point: native or atuin
+
+The shell now has two history back ends in play — zsh's own in-memory
+`$history` (the new preview, the native Up/Down fallback) and atuin's SQLite
+(the ghost strategy, the fuzzy arrows/Ctrl-R pane). The preview scan is
+measured (see the decision entry above: ~0.02 ms/call typical, ~2 ms worst on
+the redraw path). Still to measure: the ghost lookup and the pane open latency,
+so the two back ends can be compared like-for-like and a single source of truth
+chosen rather than diverging between the ghost, the preview, and the pane.
+Record those numbers here before deciding.
+
 ## Add the ruleset settings the Codex gate expects
 
 Three settings this repository's ruleset does not have yet, all explained in
