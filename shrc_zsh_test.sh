@@ -238,13 +238,13 @@ result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
 assert_contains "up-line-or-local-history" "$result"
 assert_contains "down-line-or-local-history" "$result"
 
-# With atuin present, shrc binds BOTH arrows to atuin's fuzzy search
-# (up/down-or-atuin-search -> atuin-search) instead of the native fallback:
-# atuin's own Up stays off (--disable-up-arrow) and shrc drives the binding, so
-# Up and Down open the same atuin search. Stub `atuin` on PATH so `atuin init
-# zsh` defines the atuin-search widgets the arrow widgets call, then check the
-# arrows bind to them.
-start_test "shrc binds Up/Down to atuin's search when atuin is present"
+# With atuin present, shrc binds Up to atuin's prefix up-search
+# (up-or-atuin-search -> atuin-up-search) and Down to its fuzzy search
+# (down-or-atuin-search -> atuin-search), not the native fallback; atuin's own
+# Up stays off (--disable-up-arrow) and shrc drives both bindings. Stub `atuin`
+# on PATH so `atuin init zsh` defines the search widgets the arrow widgets call,
+# then check the arrows bind to them and each picks the right search mode.
+start_test "shrc binds Up to atuin's prefix search and Down to fuzzy when atuin is present"
 _atuinbin="$_testdir/atuin-arrows-bin"
 mkdir -p "$_atuinbin"
 cat >"$_atuinbin/atuin" <<'ATUIN'
@@ -261,6 +261,9 @@ _atuin_search_stub() { : }
 zle -N atuin-search _atuin_search_stub
 zle -N atuin-search-viins _atuin_search_stub
 zle -N atuin-search-vicmd _atuin_search_stub
+zle -N atuin-up-search _atuin_search_stub
+zle -N atuin-up-search-viins _atuin_search_stub
+zle -N atuin-up-search-vicmd _atuin_search_stub
 _atuin_up_search() { : }
 _atuin_down_search() { : }
 bindkey -M emacs '^r' atuin-search
@@ -276,11 +279,48 @@ result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     print -r -- "up:$(bindkey "^[[A")"
     print -r -- "down:$(bindkey "^[[B")"
     print -r -- "upfn:${functions[up_or_atuin_search]}"
+    case "${functions[up_or_atuin_search]}" in
+        *atuin-up-search*) print -r -- "up-mode:prefix" ;;
+        *)                 print -r -- "up-mode:other" ;;
+    esac
+    case "${functions[down_or_atuin_search]}" in
+        *atuin-up-search*) print -r -- "down-mode:prefix" ;;
+        *atuin-search*)    print -r -- "down-mode:fuzzy" ;;
+        *)                 print -r -- "down-mode:other" ;;
+    esac
 ' </dev/null 2>/dev/null)
 assert_contains "up-or-atuin-search" "$result"
 assert_contains "down-or-atuin-search" "$result"
 # The wrapper must call shrc's own namespaced helper, not atuin's internal
 # _atuin_up_search (which atuin defines and which would clobber a shared name).
 assert_contains "_shrc_atuin_up" "$result"
+# Up opens atuin's prefix up-search; Down opens the default fuzzy search.
+assert_contains "up-mode:prefix" "$result"
+assert_contains "down-mode:fuzzy" "$result"
+
+# Regression: when a keymap lacks its per-map variant (atuin-up-search-viins,
+# say), the Up wrapper must fall back to the base atuin-up-search (prefix), not
+# atuin-search (fuzzy) -- otherwise Up behaves like Down in that keymap. The
+# fallback widget is baked into _shrc_atuin_up's body, so assert it names the
+# prefix base and never the bare fuzzy widget. Down's fallback is the opposite:
+# atuin-search. ("atuin-up-search" does not contain "atuin-search", so the
+# not-contains check is exact.)
+start_test "the Up wrapper's missing-variant fallback is atuin's prefix search, not fuzzy"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    export PATH='"$_atuinbin"':$PATH
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    print -r -- "${functions[_shrc_atuin_up]}"
+' </dev/null 2>/dev/null)
+assert_contains "zle atuin-up-search" "$result"
+assert_not_contains "zle atuin-search" "$result"
+
+start_test "the Down wrapper's missing-variant fallback is atuin's fuzzy search"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    export PATH='"$_atuinbin"':$PATH
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    print -r -- "${functions[_shrc_atuin_down]}"
+' </dev/null 2>/dev/null)
+assert_contains "zle atuin-search" "$result"
+assert_not_contains "zle atuin-up-search" "$result"
 
 test_summary "shrc_zsh_test"
