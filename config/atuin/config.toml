@@ -1,16 +1,19 @@
-# zsh binds Up to a native prefix history search now (init_atuin passes
-# --disable-up-arrow; up-line-or-local-history in shrc), so atuin's Up pane
-# is gone there. fish and nushell still open atuin's Up search, and the two
-# settings below shape it to match what Up has always meant here, until they
-# move to native Up too (see TODO.md):
+# In zsh, both Up and Down open atuin's default search -- fuzzy and global,
+# the same match-anything search as Ctrl-R, just reached with an arrow (bound
+# in shrc). Whatever's already on the line seeds the search as its initial
+# query. So the two settings below do NOT apply to zsh's arrows; they shape
+# fish's and nushell's Up, which still uses atuin's own prefix/host up-search
+# (what Up has meant here) until those shells move to the fuzzy arrows too
+# (see TODO.md):
 #
 #   prefix  match on what's already typed, from the start of the line,
 #           rather than fuzzy-matching it anywhere in the command
 #   host    every session on this machine -- global would offer commands
 #           from other hosts, which may not have them installed
 #
-# Ctrl-R keeps the defaults everywhere, where the fuzzy, everywhere-search
-# belongs.
+# The zsh ghost text stays prefix + host regardless (set_zsh_autosuggest_
+# strategy in shrc): an inline completion can only extend what you typed.
+# Only the pane the arrows open is fuzzy and global.
 search_mode_shell_up_key_binding = "prefix"
 filter_mode_shell_up_key_binding = "host"
 

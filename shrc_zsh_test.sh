@@ -164,17 +164,73 @@ assert_contains "end-of-line" "$result"
 assert_contains "beginning-of-line" "$result"
 assert_not_contains "undefined-key" "$result"
 
-# Regression: Up/Down are a native prefix history search (atuin's own Up is
-# disabled via --disable-up-arrow in init_atuin), bound to the literal arrow
-# forms so kitty's \e[A / \e[B reach the widgets -- terminfo cuu1/kcuu1 alone
-# missed kitty, which is how atuin used to win the Up key.
-start_test "shrc binds Up/Down to the local prefix history search under interactive zsh"
+# Regression: without atuin (as in CI), Up/Down fall back to a native prefix
+# history search, bound to the literal arrow forms so kitty's \e[A / \e[B reach
+# the widgets -- terminfo cuu1/kcuu1 alone missed kitty, which is how atuin
+# used to win the Up key.
+start_test "shrc binds Up/Down to the local prefix history search without atuin"
+# Hide any real atuin from this subprocess. On a dev box where atuin is
+# installed the inherited PATH would make have_command atuin true and bind the
+# arrows to the atuin widgets, failing these native-fallback assertions (CI has
+# no atuin, so this only bit locally). Drop every PATH entry that holds an atuin
+# executable -- cargo/brew/local bin dirs, not the system dirs coreutils are in.
+_noatuin_path=""
+for _d in ${(s.:.)PATH}; do
+    test -x "$_d/atuin" && continue
+    _noatuin_path="${_noatuin_path:+$_noatuin_path:}$_d"
+done
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    export PATH='"$_noatuin_path"'
     source '"$_srcdir"'/shrc >/dev/null 2>&1
     print -r -- "up:$(bindkey "^[[A")"
     print -r -- "down:$(bindkey "^[[B")"
 ' </dev/null 2>/dev/null)
 assert_contains "up-line-or-local-history" "$result"
 assert_contains "down-line-or-local-history" "$result"
+
+# With atuin present, shrc binds BOTH arrows to atuin's fuzzy search
+# (up/down-or-atuin-search -> atuin-search) instead of the native fallback:
+# atuin's own Up stays off (--disable-up-arrow) and shrc drives the binding, so
+# Up and Down open the same atuin search. Stub `atuin` on PATH so `atuin init
+# zsh` defines the atuin-search widgets the arrow widgets call, then check the
+# arrows bind to them.
+start_test "shrc binds Up/Down to atuin's search when atuin is present"
+_atuinbin="$_testdir/atuin-arrows-bin"
+mkdir -p "$_atuinbin"
+cat >"$_atuinbin/atuin" <<'ATUIN'
+#!/bin/sh
+# Minimal stub of `atuin init zsh`: define the search widgets shrc's arrow
+# widgets call, bind only Ctrl-R (no up-arrow, mimicking --disable-up-arrow),
+# and -- like real atuin -- define internal _atuin_up_search/_atuin_down_search
+# functions, so a regression to those names would collide with shrc's helpers
+# (this init is eval'd after shrc's key bindings, so atuin's defs win).
+case "$1 $2" in
+"init zsh")
+    cat <<'ZSH'
+_atuin_search_stub() { : }
+zle -N atuin-search _atuin_search_stub
+zle -N atuin-search-viins _atuin_search_stub
+zle -N atuin-search-vicmd _atuin_search_stub
+_atuin_up_search() { : }
+_atuin_down_search() { : }
+bindkey -M emacs '^r' atuin-search
+ZSH
+    ;;
+esac
+exit 0
+ATUIN
+chmod +x "$_atuinbin/atuin"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    export PATH='"$_atuinbin"':$PATH
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    print -r -- "up:$(bindkey "^[[A")"
+    print -r -- "down:$(bindkey "^[[B")"
+    print -r -- "upfn:${functions[up_or_atuin_search]}"
+' </dev/null 2>/dev/null)
+assert_contains "up-or-atuin-search" "$result"
+assert_contains "down-or-atuin-search" "$result"
+# The wrapper must call shrc's own namespaced helper, not atuin's internal
+# _atuin_up_search (which atuin defines and which would clobber a shared name).
+assert_contains "_shrc_atuin_up" "$result"
 
 test_summary "shrc_zsh_test"

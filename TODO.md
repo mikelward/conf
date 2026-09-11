@@ -152,31 +152,53 @@ the narrowing landed upstream and turned 190 of these 431 tests red in one
 commit, with nothing wrong in this repo — a pin would have named the mesh commit
 that did it, where the skip meant finding out by hand on the next local run.
 
-## Up without atuin's search UI: fan out native history to fish and nushell
+## Fan out atuin's fuzzy arrows to fish and nushell
 
-Settled: Up uses the shell's own **native prefix history search**, not
-atuin's pane -- and not the once-planned widget that queried atuin's DB per
-keypress (more machinery than it earned; native history reads the same
-host-local commands). **zsh is done**: `--disable-up-arrow` in `init_atuin`,
-Up/Down bound (on the literal `\e[A`/`\e[B` forms, so kitty reaches them) to
-`history-beginning-search-{backward,forward}` via `up-line-or-local-history`,
-with `HIST_FIND_NO_DUPS` for the dedup atuin gave for free. Ctrl-R still opens
-atuin; the ghost text still reads atuin's DB. **bash** already had it
-(inputrc's `history-search-backward`; atuin never bound its Up there, no
-bash-preexec).
+Settled: in zsh, Up and Down both open atuin's default **fuzzy, global**
+search -- the same match-anything search as Ctrl-R, reached with an arrow and
+seeded with whatever's on the line. **zsh is done**: `--disable-up-arrow` in
+`init_atuin` keeps atuin from binding its own prefix Up, and shrc binds both
+arrows (on the literal `\e[A`/`\e[B` forms, so kitty reaches them) to
+`up-/down-or-atuin-search`, which open atuin's `atuin-search` widget. When
+atuin is absent -- or present but its init failed to define the widget -- they
+fall back to a native session-local prefix search
+(`history-beginning-search-{backward,forward}` via
+`up-/down-line-or-local-history`, with `HIST_FIND_NO_DUPS` for the dedup atuin
+gives for free). The ghost text still reads atuin's DB, prefix + host: an
+inline completion can only extend what you typed. **bash** keeps readline's Up
+(`--disable-up-arrow`; zle is zsh-only, so it gets no arrow widget).
 
-Remaining: **fish** and **nushell** still open atuin's Up pane, shaped by the
-`search_mode`/`filter_mode_shell_up_key_binding` settings in
-`config/atuin/config.toml`. Give them native prefix search on Up too:
+(This reverses the earlier plan of a native prefix search on Up. The pane,
+pared down to a plain command list (#321, #322) and opened with the typed text
+as its query, turned out to be what was wanted after all.)
 
-* **fish** — `atuin init fish | ...` with `--disable-up-arrow`, and bind Up to
-  fish's own `history-prefix-search-backward`. Clean.
-* **nushell** — disable atuin's Up in `atuin init nu` and use reedline's
-  history search; may be limited by what reedline exposes. Tier 2, so it can
-  lag (the tier rule permits the gap) or keep atuin's pane if reedline can't.
+Remaining: **fish**, **nushell**, and **Elvish** still bind atuin's own Up
+(fish/nu shaped by the `search_mode`/`filter_mode_shell_up_key_binding`
+settings in `config/atuin/config.toml`, still prefix + host); **mesh** has no
+atuin integration at all yet. Bring the atuin-using shells to the same fuzzy
+arrows as zsh, or record a scoped deferral:
 
-Once both are off atuin's Up, the two `*_shell_up_key_binding` settings in
-`config/atuin/config.toml` become dead and can be removed.
+* **fish** — bind both Up and Down to atuin's default (fuzzy) search, not just
+  atuin's prefix Up.
+* **nushell** — same, via reedline's atuin keybindings; may be limited by what
+  reedline exposes. Tier 2, so it can lag.
+* **Elvish** — currently binds only Ctrl-R to atuin (`config/elvish/lib/
+  interactive.elv`); add the fuzzy Up/Down arrows there too. Tier 2.
+* **mesh** — no atuin integration yet, so there's nothing to rebind; parity
+  waits on mesh's own history/keybinding story maturing (pre-1.0, built
+  toward per the tier rules). A scoped deferral, not immediate work.
+
+Once fish, nushell, and Elvish match zsh (arrows on atuin's default search),
+the two `*_shell_up_key_binding` settings in `config/atuin/config.toml` become
+dead and can be removed.
+
+### Follow-ups from the fuzzy-arrows review
+
+* **Exercise the arrow widgets, not just their bindings.** The zsh test asserts
+  which widget each arrow binds to, not that pressing the arrow dispatches to
+  the right atuin-search variant / native fallback. Real coverage needs a pty
+  or an instrumented `zle`, and multiline-buffer zle tests here have been
+  flaky, so it's deferred. Add it if a non-flaky harness is worked out.
 
 ## Ghost text: fan out beyond zsh
 

@@ -2587,12 +2587,20 @@ init_carapace() {
 #
 # Called last so its Ctrl-R binding wins over fzf's.
 init_atuin() {
+    # Cleared until this run's `atuin init` actually succeeds below. The zsh
+    # arrow wrappers gate dispatch on it, not on whether atuin-search widgets
+    # merely exist in $widgets -- so a failed reload (rerc re-sourcing shrc
+    # after atuin broke) falls back to the native search instead of invoking
+    # the stale widgets a prior successful init left behind.
+    _shrc_atuin_ready=
     have_command atuin || return 0
     case "$shell" in bash|zsh) ;; *) return 0 ;; esac
-    # --disable-up-arrow: leave Up to the shell (up-line-or-local-history
-    # below, a native zsh prefix history search) rather than atuin's inline
-    # search pane. Ctrl-R still opens atuin. bash never bound atuin's Up
-    # anyway (no bash-preexec), so the flag is a no-op there.
+    # --disable-up-arrow: don't let atuin bind Up to its own prefix/host
+    # up-search. shrc binds both arrows itself (up/down-or-atuin-search in the
+    # interactive block) to atuin's fuzzy, global search instead, seeded with
+    # the current line -- with a native prefix search as the fallback when
+    # atuin is absent. Ctrl-R still opens atuin. bash gets neither arrow widget
+    # (zle is zsh-only); its Up stays readline's, so the flag is a no-op there.
     eval_tool_init atuin atuin init "$shell" --disable-up-arrow || return 1
     # In bash, atuin records history by appending to bash-preexec's
     # preexec_functions/precmd_functions. bash-preexec drives those from
@@ -2606,6 +2614,9 @@ init_atuin() {
     if test "$shell" = bash && ! is_function __atuin_precmd; then
         warn "atuin: no __atuin_precmd hook after init; history won't be recorded"
     fi
+    # This run's init succeeded: atuin's widgets are freshly defined, so the
+    # arrow wrappers may use them (bash has no zle wrappers -- a no-op there).
+    _shrc_atuin_ready=1
 }
 
 # zsh-autosuggestions: a dim inline "ghost" of the best-matching history
@@ -3431,23 +3442,27 @@ if is_interactive; then
         _terminfo_bind knp zle-noop
         _terminfo_bind kpp zle-noop
 
-        # Up/Down walk this session's own history (set-local-history hides
-        # other sessions interleaved by SHARE_HISTORY) and prefix-filter once
-        # something's typed: history-beginning-search-{backward,forward} finds
-        # the previous/next history line starting with the text before the
-        # cursor, or steps through history when the line is empty -- the
-        # readline feel Up had before atuin. atuin's own Up is disabled
-        # (init_atuin passes --disable-up-arrow); Ctrl-R still opens its search.
-        # These are builtin widgets that continue from the current history
-        # position on repeated presses (unlike wrapping the autoload
-        # up-line-or-beginning-search, whose $LASTWIDGET check the wrapper
-        # would defeat) and stay correct under shrc's `emulate sh`.
+        # Up and Down: with atuin present, both arrows open atuin's default
+        # fuzzy, global search -- the same match-anything search as Ctrl-R,
+        # reached with an arrow and seeded with whatever's on the line. atuin's
+        # own Up is off (init_atuin passes --disable-up-arrow), so we bind both
+        # arrows to its atuin-search widget ourselves. Each steps within a
+        # multiline buffer first, like atuin's own up-search: a single-line
+        # buffer opens the search, a multiline one just moves the cursor a
+        # line. The zsh ghost text stays prefix + host (set_zsh_autosuggest_
+        # strategy); only the pane the arrows open is fuzzy.
         #
-        # First move within a multiline buffer, like up-line-or-history did:
-        # a newline left of the cursor means we're below the first line, so Up
-        # steps up a line instead of searching; likewise a newline to the right
-        # means Down steps down. Only at the buffer's top/bottom edge does the
-        # history search kick in. ($'\n' parses and matches under emulate sh.)
+        # Without atuin, the arrows fall back to a native session-local prefix
+        # search. history-beginning-search-{backward,forward} finds the
+        # previous/next history line starting with the text before the cursor,
+        # or steps through history when the line is empty, continuing from the
+        # current position on repeated presses (unlike wrapping the autoload
+        # up-line-or-beginning-search, whose $LASTWIDGET check the wrapper would
+        # defeat) and staying correct under shrc's `emulate sh`; set-local-
+        # history hides sessions SHARE_HISTORY interleaves. A newline left of
+        # the cursor means Up steps up a line rather than searching; a newline
+        # to the right, Down steps down. ($'\n' parses and matches under
+        # emulate sh.)
         up_line_or_local_history() {
             zle set-local-history 1
             case $LBUFFER in
@@ -3466,18 +3481,82 @@ if is_interactive; then
             zle set-local-history 0
         }
         zle -N down-line-or-local-history down_line_or_local_history
-        _terminfo_bind cuu1 up-line-or-local-history
-        _terminfo_bind kcuu1 up-line-or-local-history
-        _terminfo_bind cud1 down-line-or-local-history
-        _terminfo_bind kcud1 down-line-or-local-history
-        # Bind the literal arrow forms too, not just terminfo cuu1/kcuu1: kitty
-        # sends \e[A / \e[B (\eOA / \eOB in application-cursor mode), which the
-        # terminfo capability may not match -- the same gap Home/End hit, and
-        # how atuin used to win the Up key.
-        _bind_all_maps '^[[A' up-line-or-local-history
-        _bind_all_maps '^[OA' up-line-or-local-history
-        _bind_all_maps '^[[B' down-line-or-local-history
-        _bind_all_maps '^[OB' down-line-or-local-history
+        if have_command atuin; then
+            # Dispatch to the atuin-search variant for the active keymap, so
+            # its search box opens in the matching (emacs/vi) editing mode.
+            # Bind a guarded wrapper per keymap instead of inspecting $KEYMAP in
+            # one wrapper: $KEYMAP can read `main` (zsh's alias for the active
+            # emacs or viins map -- viins here, since $EDITOR is vi), which a
+            # literal case would miss. Binding per keymap sidesteps that: `main`
+            # resolves to whichever real map carries the binding. Each wrapper
+            # opens its keymap's atuin-search variant when that widget exists,
+            # falls back to the base atuin-search, and to the native prefix
+            # search when this run's atuin init did not succeed -- gated on
+            # $_shrc_atuin_ready (set by init_atuin, which runs later in
+            # init_shell_tools), not on widget presence, so a failed rerc reload
+            # falls back even though stale atuin-search widgets linger in
+            # $widgets from the prior good init. The multiline
+            # guard tests the cursor's own side (LBUFFER for Up, RBUFFER for
+            # Down, like the native widgets), so the search opens at the
+            # top/bottom line instead of a no-op line move.
+            # `_shrc_` prefix, not `_atuin_`: `atuin init zsh` defines its own
+            # `_atuin_up_search` even under --disable-up-arrow, and its init runs
+            # after this block, so a shared name would clobber ours -- leaving Up
+            # on atuin's prefix search while Down stayed fuzzy.
+            _shrc_atuin_up() {   # $1: preferred atuin-search widget for the map
+                if test -z "${_shrc_atuin_ready:-}"; then
+                    zle up-line-or-local-history; return
+                fi
+                case $LBUFFER in *$'\n'*) zle up-line-or-history; return ;; esac
+                if test -n "${widgets[$1]:-}"; then zle "$1"; else zle atuin-search; fi
+            }
+            _shrc_atuin_down() {
+                if test -z "${_shrc_atuin_ready:-}"; then
+                    zle down-line-or-local-history; return
+                fi
+                case $RBUFFER in *$'\n'*) zle down-line-or-history; return ;; esac
+                if test -n "${widgets[$1]:-}"; then zle "$1"; else zle atuin-search; fi
+            }
+            up_or_atuin_search()         { _shrc_atuin_up atuin-search; }
+            up_or_atuin_search_viins()   { _shrc_atuin_up atuin-search-viins; }
+            up_or_atuin_search_vicmd()   { _shrc_atuin_up atuin-search-vicmd; }
+            down_or_atuin_search()       { _shrc_atuin_down atuin-search; }
+            down_or_atuin_search_viins() { _shrc_atuin_down atuin-search-viins; }
+            down_or_atuin_search_vicmd() { _shrc_atuin_down atuin-search-vicmd; }
+            zle -N up-or-atuin-search up_or_atuin_search
+            zle -N up-or-atuin-search-viins up_or_atuin_search_viins
+            zle -N up-or-atuin-search-vicmd up_or_atuin_search_vicmd
+            zle -N down-or-atuin-search down_or_atuin_search
+            zle -N down-or-atuin-search-viins down_or_atuin_search_viins
+            zle -N down-or-atuin-search-vicmd down_or_atuin_search_vicmd
+            # Bind each arrow per keymap (emacs base, viins/vicmd variants), on
+            # the literal \e[A/\e[B and \eOA/\eOB forms kitty sends plus the
+            # terminfo cuu1/cud1 names, so the key reaches the widget everywhere.
+            _bind_arrow() {   # $1: sequence  $2: up-or-atuin-search|down-or-atuin-search
+                bindkey -M emacs "$1" "$2"
+                bindkey -M viins "$1" "$2-viins"
+                bindkey -M vicmd "$1" "$2-vicmd"
+            }
+            _bind_arrow '^[[A' up-or-atuin-search
+            _bind_arrow '^[OA' up-or-atuin-search
+            _bind_arrow '^[[B' down-or-atuin-search
+            _bind_arrow '^[OB' down-or-atuin-search
+            for _cap in cuu1 kcuu1; do
+                test -n "${terminfo[$_cap]:-}" && _bind_arrow "${terminfo[$_cap]}" up-or-atuin-search
+            done
+            for _cap in cud1 kcud1; do
+                test -n "${terminfo[$_cap]:-}" && _bind_arrow "${terminfo[$_cap]}" down-or-atuin-search
+            done
+        else
+            _terminfo_bind cuu1 up-line-or-local-history
+            _terminfo_bind kcuu1 up-line-or-local-history
+            _terminfo_bind cud1 down-line-or-local-history
+            _terminfo_bind kcud1 down-line-or-local-history
+            _bind_all_maps '^[[A' up-line-or-local-history
+            _bind_all_maps '^[OA' up-line-or-local-history
+            _bind_all_maps '^[[B' down-line-or-local-history
+            _bind_all_maps '^[OB' down-line-or-local-history
+        fi
 
         # make Shift+Tab do menu complete backwards
         _terminfo_bind cbt reverse-menu-complete
