@@ -3241,6 +3241,9 @@ assert_true grep -qx 'show_preview = false' "$_srcdir/config/atuin/config.toml"
 assert_true grep -qx 'show_help = false' "$_srcdir/config/atuin/config.toml"
 # No tab bar -- the Search/Inspect tabs are noise; Inspect stays on Ctrl-O.
 assert_true grep -qx 'show_tabs = false' "$_srcdir/config/atuin/config.toml"
+# Results run top-to-bottom below the input; atuin's default stacks them
+# upward, which reads bottom-to-top.
+assert_true grep -qx 'invert = true' "$_srcdir/config/atuin/config.toml"
 
 start_test "the atuin config selects the plain built-in (none) theme"
 # atuin's default theme colors the command green and the selected row red.
