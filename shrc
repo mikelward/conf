@@ -2649,6 +2649,12 @@ init_atuin() {
 # tracked in TODO.md.
 init_zsh_autosuggestions() {
     test "$shell" = zsh || return 0
+    # The ghost renders in a recessive gray, and non-bold. It's non-bold
+    # because shrc bolds only the typed buffer (via the _shrc_bold_input
+    # region_highlight hook below) rather than the whole zle line, so the ghost
+    # -- drawn in POSTDISPLAY, past $#BUFFER -- is never in the bold span. fg=8
+    # is the terminal's own gray, readable on both light and dark backgrounds.
+    ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE=fg=8
     # $HOMEBREW_PREFIX/share covers every Homebrew layout at once -- macOS
     # (/opt/homebrew, /usr/local) and Linuxbrew (/home/linuxbrew/.linuxbrew,
     # ~/.linuxbrew) -- when brew's shellenv has exported it; the literals
@@ -3358,9 +3364,37 @@ if is_interactive; then
         compinit
         bashcompinit
 
-        # user input appears in bold
-        declare -a zle_highlight
-        zle_highlight[0]="default:bold"
+        # User input appears in bold -- applied to just the typed buffer via
+        # region_highlight, not zle_highlight's `default:bold`. default:bold
+        # bolds the whole zle line, including zsh-autosuggestions' ghost (drawn
+        # in POSTDISPLAY, past $#BUFFER), and a region style can't subtract an
+        # attribute the default set, so the ghost couldn't be un-bolded. Bolding
+        # only 0..$#BUFFER leaves the ghost its own recessive, non-bold style.
+        # add-zle-hook-widget chains our hook alongside the plugin's own
+        # line-pre-redraw hook; where it's unavailable (pre-5.3 zsh) fall back
+        # to the whole-line bold. `emulate zsh -c` keeps the zsh-only
+        # region_highlight / ${(@)...} syntax away from dash's and mksh's
+        # parsers, and gives _shrc_bold_input sticky zsh emulation so it runs
+        # correctly under shrc's `emulate sh` -- like the plugin loader above.
+        emulate zsh -c '
+            typeset -a _azhw
+            _azhw=(${^fpath}/add-zle-hook-widget(N))
+            if (( $#_azhw )); then
+                autoload -Uz add-zle-hook-widget
+                # Drop any whole-line default:bold a prior init left in this
+                # global (an upgrade re-sourced by rerc), so it does not keep
+                # bolding the ghost now that the hook owns the input bold.
+                zle_highlight=(${zle_highlight:#default:bold})
+                _shrc_bold_input() {
+                    region_highlight=(${(@)region_highlight:#0 <-> bold})
+                    (( ${#BUFFER} )) && region_highlight+=("0 ${#BUFFER} bold")
+                }
+                add-zle-hook-widget line-pre-redraw _shrc_bold_input
+            else
+                zle_highlight=(default:bold)
+            fi
+            unset _azhw
+        '
 
         escape_start='%{'
         escape_end='%}'
