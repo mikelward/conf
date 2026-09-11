@@ -36,9 +36,13 @@ show_tabs = false
 [ui]
 columns = ["command"]
 
-# atuin colors the selected row (the one Enter runs) with AlertError -- red --
-# which is semantically wrong; still open upstream as atuinsh/atuin#2663. The
-# minimal theme rethemes AlertError to the terminal default so the selection
-# is just bold (atuin forces the bold in code regardless of the color).
+# Use atuin's built-in "(none)" theme: it forces every semantic color to the
+# terminal default, so results are plain -- no green command, no red selected
+# row. The selected row still stands out because atuin forces bold on it in
+# code, independent of the theme. A custom theme can't express "terminal
+# default": atuin's color parser takes only named colors and #hex, with no
+# reset/default token, so "plain" would mean hardcoding a foreground that
+# breaks on the other background. The red-selection default is semantically
+# wrong and still open upstream: atuinsh/atuin#2663.
 [theme]
-name = "minimal"
+name = "(none)"

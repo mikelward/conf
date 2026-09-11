@@ -3225,6 +3225,15 @@ assert_true grep -qx 'show_help = false' "$_srcdir/config/atuin/config.toml"
 # No tab bar -- the Search/Inspect tabs are noise; Inspect stays on Ctrl-O.
 assert_true grep -qx 'show_tabs = false' "$_srcdir/config/atuin/config.toml"
 
+start_test "the atuin config selects the plain built-in (none) theme"
+# atuin's default theme colors the command green and the selected row red.
+# Its color parser accepts only named colors and #hex -- there is no
+# "terminal default" token -- so a custom theme can't express "plain"
+# without hardcoding a foreground that breaks on the other background. The
+# built-in "(none)" theme forces every color to the terminal default; the
+# selected row still stands out because atuin sets bold on it in code.
+assert_true grep -qxF 'name = "(none)"' "$_srcdir/config/atuin/config.toml"
+
 # Ghost text (inline autosuggestions) comes from the zsh-autosuggestions
 # plugin, sourced from wherever the package installed it -- stubbed here,
 # like fzf and atuin, since CI installs shells but not their optional tools.
