@@ -3195,20 +3195,20 @@ assert_equal "zsh" "$ATUIN_SHELL"
 assert_equal "" "$(cat "$_tool_err")"
 shell=bash
 
-start_test "init_atuin leaves atuin bound to Up as well as Ctrl-R"
-# Up used to be kept on the inputrc prefix search with --disable-up-arrow.
-# atuin's own Up is prefix-matched and host-scoped via config/atuin, and
-# unlike readline's it searches from scratch each press rather than from
-# wherever the last one stopped.
+start_test "init_atuin disables atuin's Up so the shell's prefix search keeps it"
+# Up is a native zsh prefix history search (up-line-or-local-history in shrc);
+# --disable-up-arrow stops atuin binding its own inline-pane search over it.
+# Ctrl-R is untouched, so atuin still owns the fuzzy everywhere-search.
 atuin() { printf 'ATUIN_FLAGS=%s\n__atuin_precmd() { :; }\n' "$3"; }
 ATUIN_FLAGS=
 init_atuin
-assert_equal "" "$ATUIN_FLAGS"
+assert_equal "--disable-up-arrow" "$ATUIN_FLAGS"
 unset -f __atuin_precmd
 
-start_test "the atuin config keeps Up prefix-matched and host-scoped"
-# Without these, Up would fuzzy-match anywhere in the line and offer
-# commands from other machines -- not what Up has ever meant here.
+start_test "the atuin config keeps its Up prefix-matched and host-scoped for fish/nu"
+# fish and nushell still use atuin's Up; without these it would fuzzy-match
+# anywhere and offer other machines' commands -- not what Up has meant here.
+# (zsh no longer uses atuin's Up, but shares this config file.)
 assert_true grep -qx 'search_mode_shell_up_key_binding = "prefix"' "$_srcdir/config/atuin/config.toml"
 assert_true grep -qx 'filter_mode_shell_up_key_binding = "host"' "$_srcdir/config/atuin/config.toml"
 

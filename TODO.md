@@ -152,55 +152,31 @@ the narrowing landed upstream and turned 190 of these 431 tests red in one
 commit, with nothing wrong in this repo — a pin would have named the mesh commit
 that did it, where the skip meant finding out by hand on the next local run.
 
-## Up without atuin's search UI
+## Up without atuin's search UI: fan out native history to fish and nushell
 
-`config/atuin/config.toml` draws the history search in a nine-row inline
-pane rather than full-screen. Up still opens a search UI, just a small
-one. The alternative is a per-shell widget that queries atuin
-non-interactively and replaces the line in place, so Up behaves exactly
-like readline's prefix search while still reading atuin's database:
+Settled: Up uses the shell's own **native prefix history search**, not
+atuin's pane -- and not the once-planned widget that queried atuin's DB per
+keypress (more machinery than it earned; native history reads the same
+host-local commands). **zsh is done**: `--disable-up-arrow` in `init_atuin`,
+Up/Down bound (on the literal `\e[A`/`\e[B` forms, so kitty reaches them) to
+`history-beginning-search-{backward,forward}` via `up-line-or-local-history`,
+with `HIST_FIND_NO_DUPS` for the dedup atuin gave for free. Ctrl-R still opens
+atuin; the ghost text still reads atuin's DB. **bash** already had it
+(inputrc's `history-search-backward`; atuin never bound its Up there, no
+bash-preexec).
 
-```
-atuin search --cmd-only --search-mode prefix --filter-mode host \
-    --limit 1 --offset $n -- "$prefix"
-```
+Remaining: **fish** and **nushell** still open atuin's Up pane, shaped by the
+`search_mode`/`filter_mode_shell_up_key_binding` settings in
+`config/atuin/config.toml`. Give them native prefix search on Up too:
 
-Deferred until the inline pane has been lived with — it may be enough.
+* **fish** — `atuin init fish | ...` with `--disable-up-arrow`, and bind Up to
+  fish's own `history-prefix-search-backward`. Clean.
+* **nushell** — disable atuin's Up in `atuin init nu` and use reedline's
+  history search; may be limited by what reedline exposes. Tier 2, so it can
+  lag (the tier rule permits the gap) or keep atuin's pane if reedline can't.
 
-Cost if picked up: roughly 120 lines across the shells, plus a fork and a
-SQLite query per keypress (single-digit ms locally, no network) where
-readline's own search is in-memory and free.
-
-Per shell, in increasing order of pain:
-
-* **fish** — `commandline -r` and a `bind` on the up key. Clean.
-* **zsh** — ZLE supplies `$BUFFER`, `$CURSOR` and `$LASTWIDGET`, the last
-  being exactly the "is this a repeat press" state the walk back through
-  matches needs.
-* **bash** — `bind -x` with `READLINE_LINE` / `READLINE_POINT`, but
-  readline has no `$LASTWIDGET`, so repeat-press state has to be
-  reconstructed from the buffer. `bind -x` widgets already need care
-  around shrc's DEBUG trap.
-* **nushell** — may not be possible. reedline keybindings dispatch to a
-  fixed set of edit events or `executehostcommand`; feeding a command's
-  output back into the line buffer isn't exposed the way ZLE exposes it.
-
-Unverified, because atuin wasn't installed where this was written:
-whether `atuin search` takes `--offset` (fallback: `--limit $n | tail -1`,
-which re-queries n rows per press), and whether offset 0 is the most
-recent match.
-
-Two design decisions to settle first, both of which outlast the code:
-
-* A widget that takes Up outright loses moving up a line inside a
-  multi-line buffer. zsh's `up-line-or-beginning-search` handles that and
-  the widget would need the same guard.
-* If nushell can't do this, no policy edit is needed: the shell-tier rule
-  in `AGENTS.md` makes nushell Tier 2 (fast-follow, not a merge gate), so a
-  feature Reedline can't implement simply doesn't reach it — nushell keeps
-  atuin's pane while the other shells get the widget, and the tier rule
-  already permits that gap. (This supersedes the old note here, written
-  against the former flat "apply to every shell" rule.)
+Once both are off atuin's Up, the two `*_shell_up_key_binding` settings in
+`config/atuin/config.toml` become dead and can be removed.
 
 ## Ghost text: fan out beyond zsh
 
