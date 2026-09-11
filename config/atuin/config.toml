@@ -18,10 +18,27 @@ filter_mode_shell_up_key_binding = "host"
 # the alternate screen. The default (inline_height = 0) is full-screen,
 # which clears the terminal on a keystroke pressed dozens of times an
 # hour: the scrollback the search was meant to help you avoid re-typing
-# is exactly what disappears while you search it. compact drops the
-# framing that only earns its space at full height, and the preview and
-# help lines go with it -- at nine rows they're most of the pane.
-inline_height = 9
+# is exactly what disappears while you search it.
+#
+# Keep it minimal -- a short list, nothing else. compact drops the framing;
+# inline_height 6 shows ~5 entries with no blank padding; the preview line,
+# help line, and the Search/Inspect tab bar are all off (Inspect is still on
+# its Ctrl-O key, just not shown). The only chrome left is the one-line
+# filter/search indicator. Tune inline_height to taste (5-7).
+inline_height = 6
 style = "compact"
 show_preview = false
 show_help = false
+show_tabs = false
+
+# Show only the command in each result row -- drop the duration, age/time,
+# exit, directory and other columns atuin draws by default. Just the command.
+[ui]
+columns = ["command"]
+
+# atuin colors the selected row (the one Enter runs) with AlertError -- red --
+# which is semantically wrong; still open upstream as atuinsh/atuin#2663. The
+# minimal theme rethemes AlertError to the terminal default so the selection
+# is just bold (atuin forces the bold in code regardless of the color).
+[theme]
+name = "minimal"
