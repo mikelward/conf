@@ -3205,6 +3205,23 @@ init_atuin
 assert_equal "--disable-up-arrow" "$ATUIN_FLAGS"
 unset -f __atuin_precmd
 
+start_test "init_atuin marks readiness only when its init succeeds"
+# The zsh arrow wrappers gate on $_shrc_atuin_ready (set here on a successful
+# init, cleared up front each run), not on whether atuin-search widgets merely
+# exist -- so a failed reload that leaves stale widgets in $widgets still falls
+# back to the native search.
+atuin() { printf 'ATUIN_FLAGS=%s\n__atuin_precmd() { :; }\n' "$3"; }
+_shrc_atuin_ready=stale
+init_atuin
+assert_equal "1" "$_shrc_atuin_ready"
+unset -f __atuin_precmd
+# atuin absent -> readiness is cleared, not left stale from a prior good init.
+have_command() { false; }
+_shrc_atuin_ready=stale
+init_atuin
+assert_equal "" "$_shrc_atuin_ready"
+have_command() { test "$1" = atuin; }
+
 start_test "the atuin config keeps its Up prefix-matched and host-scoped for fish/nu"
 # fish and nushell still use atuin's Up; without these it would fuzzy-match
 # anywhere and offer other machines' commands -- not what Up has meant here.
