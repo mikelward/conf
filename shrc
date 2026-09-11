@@ -220,6 +220,12 @@ setup_shell_compat_interactive() {
         HISTSIZE=100000
         SAVEHIST=100000
 
+        # Up (up-line-or-local-history) is a prefix history search now that
+        # atuin no longer owns it; skip duplicate matches so pressing Up walks
+        # distinct commands instead of the same one repeated -- the dedup atuin
+        # gave for free.
+        setopt HIST_FIND_NO_DUPS
+
         # make tab completion do what it says
         # e.g. in conf/config, i3s<TAB> completes to i3status/, it should
         # autocd to i3status/, not strip the slash and run i3status
@@ -2583,7 +2589,11 @@ init_carapace() {
 init_atuin() {
     have_command atuin || return 0
     case "$shell" in bash|zsh) ;; *) return 0 ;; esac
-    eval_tool_init atuin atuin init "$shell" || return 1
+    # --disable-up-arrow: leave Up to the shell (up-line-or-local-history
+    # below, a native zsh prefix history search) rather than atuin's inline
+    # search pane. Ctrl-R still opens atuin. bash never bound atuin's Up
+    # anyway (no bash-preexec), so the flag is a no-op there.
+    eval_tool_init atuin atuin init "$shell" --disable-up-arrow || return 1
     # In bash, atuin records history by appending to bash-preexec's
     # preexec_functions/precmd_functions. bash-preexec drives those from
     # the DEBUG trap and PROMPT_COMMAND -- both of which shrc already
@@ -3421,16 +3431,38 @@ if is_interactive; then
         _terminfo_bind knp zle-noop
         _terminfo_bind kpp zle-noop
 
-        # ignore history from other sessions when using Up/Down arrow keys
+        # Up/Down walk this session's own history (set-local-history hides
+        # other sessions interleaved by SHARE_HISTORY) and prefix-filter once
+        # something's typed: history-beginning-search-{backward,forward} finds
+        # the previous/next history line starting with the text before the
+        # cursor, or steps through history when the line is empty -- the
+        # readline feel Up had before atuin. atuin's own Up is disabled
+        # (init_atuin passes --disable-up-arrow); Ctrl-R still opens its search.
+        # These are builtin widgets that continue from the current history
+        # position on repeated presses (unlike wrapping the autoload
+        # up-line-or-beginning-search, whose $LASTWIDGET check the wrapper
+        # would defeat) and stay correct under shrc's `emulate sh`.
+        #
+        # First move within a multiline buffer, like up-line-or-history did:
+        # a newline left of the cursor means we're below the first line, so Up
+        # steps up a line instead of searching; likewise a newline to the right
+        # means Down steps down. Only at the buffer's top/bottom edge does the
+        # history search kick in. ($'\n' parses and matches under emulate sh.)
         up_line_or_local_history() {
             zle set-local-history 1
-            zle up-line-or-history
+            case $LBUFFER in
+                *$'\n'*) zle up-line-or-history ;;
+                *)       zle history-beginning-search-backward ;;
+            esac
             zle set-local-history 0
         }
         zle -N up-line-or-local-history up_line_or_local_history
         down_line_or_local_history() {
             zle set-local-history 1
-            zle down-line-or-history
+            case $RBUFFER in
+                *$'\n'*) zle down-line-or-history ;;
+                *)       zle history-beginning-search-forward ;;
+            esac
             zle set-local-history 0
         }
         zle -N down-line-or-local-history down_line_or_local_history
@@ -3438,6 +3470,14 @@ if is_interactive; then
         _terminfo_bind kcuu1 up-line-or-local-history
         _terminfo_bind cud1 down-line-or-local-history
         _terminfo_bind kcud1 down-line-or-local-history
+        # Bind the literal arrow forms too, not just terminfo cuu1/kcuu1: kitty
+        # sends \e[A / \e[B (\eOA / \eOB in application-cursor mode), which the
+        # terminfo capability may not match -- the same gap Home/End hit, and
+        # how atuin used to win the Up key.
+        _bind_all_maps '^[[A' up-line-or-local-history
+        _bind_all_maps '^[OA' up-line-or-local-history
+        _bind_all_maps '^[[B' down-line-or-local-history
+        _bind_all_maps '^[OB' down-line-or-local-history
 
         # make Shift+Tab do menu complete backwards
         _terminfo_bind cbt reverse-menu-complete

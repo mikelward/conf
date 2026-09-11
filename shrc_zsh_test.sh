@@ -164,4 +164,17 @@ assert_contains "end-of-line" "$result"
 assert_contains "beginning-of-line" "$result"
 assert_not_contains "undefined-key" "$result"
 
+# Regression: Up/Down are a native prefix history search (atuin's own Up is
+# disabled via --disable-up-arrow in init_atuin), bound to the literal arrow
+# forms so kitty's \e[A / \e[B reach the widgets -- terminfo cuu1/kcuu1 alone
+# missed kitty, which is how atuin used to win the Up key.
+start_test "shrc binds Up/Down to the local prefix history search under interactive zsh"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    print -r -- "up:$(bindkey "^[[A")"
+    print -r -- "down:$(bindkey "^[[B")"
+' </dev/null 2>/dev/null)
+assert_contains "up-line-or-local-history" "$result"
+assert_contains "down-line-or-local-history" "$result"
+
 test_summary "shrc_zsh_test"
