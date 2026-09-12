@@ -384,6 +384,33 @@ result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
 assert_contains "up-line-or-local-history" "$result"
 assert_contains "down-line-or-local-history" "$result"
 
+# Opted into the history preview but atuin is absent: the preview hints at
+# atuin's fuzzy Down/Ctrl-R search, so it warns to install atuin. Reuse the
+# no-atuin PATH from above and re-run the deferred installer to capture the
+# warning (which warn writes to stderr).
+start_test "the history preview warns to install atuin when atuin is absent"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    export PATH='"$_noatuin_path"'
+    WANT_HISTORY_PREVIEW=1
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    init_history_preview 2>&1
+' </dev/null 2>&1)
+assert_contains "install atuin" "$result"
+
+# ...but the atuin nudge must be suppressed when the preview can't install at
+# all (no add-zle-hook-widget): installing atuin can't fix that, so only the
+# "needs add-zle-hook-widget" warning should show, never the atuin nudge.
+start_test "the atuin nudge is suppressed when the preview cannot install"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    export PATH='"$_noatuin_path"'
+    WANT_HISTORY_PREVIEW=1
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    fpath=()
+    init_history_preview 2>&1
+' </dev/null 2>&1)
+assert_contains "needs add-zle-hook-widget" "$result"
+assert_not_contains "install atuin" "$result"
+
 # With atuin present, shrc binds Up to atuin's prefix up-search
 # (up-or-atuin-search -> atuin-up-search) and Down to its fuzzy search
 # (down-or-atuin-search -> atuin-search), not the native fallback; atuin's own
