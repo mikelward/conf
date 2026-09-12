@@ -2618,6 +2618,18 @@ init_atuin() {
     # This run's init succeeded: atuin's widgets are freshly defined, so the
     # arrow wrappers may use them (bash has no zle wrappers -- a no-op there).
     _shrc_atuin_ready=1
+    # atuin's init just bound Ctrl-R (per keymap) to its own search widgets.
+    # Re-point each map at our ctrl-r-atuin-search wrapper so the opt-in history
+    # preview's zle -M line is cleared before atuin's inline pane opens --
+    # otherwise the pane's save/restore is offset by that line and the screen
+    # corrupts on close (Ctrl-R then Esc). The per-map wrappers keep atuin's
+    # keymap-specific pane. zsh-only, and a no-op without the wrappers or the
+    # preview (the wrapper just opens atuin then).
+    if test "$shell" = zsh && is_function _shrc_atuin_ctrlr; then
+        bindkey -M emacs '^r' ctrl-r-atuin-search
+        bindkey -M viins '^r' ctrl-r-atuin-search-viins
+        bindkey -M vicmd '^r' ctrl-r-atuin-search-vicmd
+    fi
 }
 
 # zsh-autosuggestions: a dim inline "ghost" of the best-matching history
@@ -3442,12 +3454,22 @@ if is_interactive; then
                         done
                     }
                     _shrc_history_preview() {
+                        # Suspended while atuin opens (the arrow wrappers set the
+                        # flag and clear the message first): atuin bypasses zle
+                        # redisplay and its inline pane save/restore is offset by
+                        # our zle -M line, corrupting the screen on close. Return
+                        # without re-adding so the redraw leaves the line clear.
+                        [[ -n ${_shrc_preview_suspend:-} ]] && return
                         _shrc_history_preview_pick "$BUFFER"
                         # No -- : zle -M takes all it is given as the message, so
                         # -- would show literally; a leading - is safe.
                         zle -M "$_shrc_preview_text"
                     }
                     add-zle-hook-widget line-pre-redraw _shrc_history_preview
+                    # Tell the atuin arrow wrappers the preview is live, so they
+                    # clear its zle -M line before opening atuin. A plain flag,
+                    # read from the wrappers'\'' emulate sh (KSH_ARRAYS) context.
+                    typeset -g _shrc_preview_active=1
                     # The preview hints at atuin fuzzy Down/Ctrl-R search;
                     # without atuin those keys fall back to a plain prefix
                     # search, so nudge to install it -- but only now that the
@@ -3471,7 +3493,7 @@ if is_interactive; then
                     autoload -Uz add-zle-hook-widget
                     add-zle-hook-widget -d line-pre-redraw _shrc_history_preview
                     unset -f _shrc_history_preview _shrc_history_preview_pick
-                    unset _shrc_preview_text
+                    unset _shrc_preview_text _shrc_preview_active _shrc_preview_suspend
                 fi
                 unset _azhw
             '
@@ -3624,20 +3646,60 @@ if is_interactive; then
             # `_atuin_up_search` even under --disable-up-arrow, and its init runs
             # after this block, so a shared name would clobber ours -- leaving Up
             # on atuin's prefix search while Down stayed fuzzy.
+            # Open an atuin search widget, clearing the opt-in history preview's
+            # zle -M line first if it is active: atuin bypasses zle's redisplay,
+            # so its inline pane save/restore is offset by that extra line and
+            # the screen corrupts when the pane closes (e.g. Down then Esc). The
+            # suspend flag stops the line-pre-redraw hook re-adding the line
+            # during the forced redraw; it is cleared once atuin returns.
+            _shrc_open_atuin() {   # $1: atuin search widget to open
+                if test -n "${_shrc_preview_active:-}"; then
+                    _shrc_preview_suspend=1
+                    zle -M ''
+                    zle -R
+                fi
+                zle "$1"
+                # Preserve the widget's exit status past the cleanup unset, so a
+                # failed search (e.g. atuin vanished mid-session) isn't reported
+                # as success.
+                local _ret=$?
+                unset _shrc_preview_suspend
+                return $_ret
+            }
             _shrc_atuin_up() {   # $1: preferred atuin-search widget for the map
                 if test -z "${_shrc_atuin_ready:-}"; then
                     zle up-line-or-local-history; return
                 fi
                 case $LBUFFER in *$'\n'*) zle up-line-or-history; return ;; esac
-                if test -n "${widgets[$1]:-}"; then zle "$1"; else zle atuin-up-search; fi
+                if test -n "${widgets[$1]:-}"; then _shrc_open_atuin "$1"; else _shrc_open_atuin atuin-up-search; fi
             }
             _shrc_atuin_down() {
                 if test -z "${_shrc_atuin_ready:-}"; then
                     zle down-line-or-local-history; return
                 fi
                 case $RBUFFER in *$'\n'*) zle down-line-or-history; return ;; esac
-                if test -n "${widgets[$1]:-}"; then zle "$1"; else zle atuin-search; fi
+                if test -n "${widgets[$1]:-}"; then _shrc_open_atuin "$1"; else _shrc_open_atuin atuin-search; fi
             }
+            # Ctrl-R opens atuin's fuzzy search too (no multiline/native guards:
+            # it always searches), but per keymap, so vi-mode gets atuin's
+            # atuin-search-viins/-vicmd pane rather than the emacs one -- same
+            # variant-or-base fallback as the Down wrappers. init_atuin binds
+            # these over atuin's own ^r once its widgets exist.
+            _shrc_atuin_ctrlr() {   # $1: preferred atuin-search widget for the map
+                # Gate on readiness like the arrows: a rerc after atuin broke or
+                # was removed leaves this ^r binding in place, so fall back to
+                # the native reverse search rather than invoke a stale widget.
+                if test -z "${_shrc_atuin_ready:-}"; then
+                    zle history-incremental-search-backward; return
+                fi
+                if test -n "${widgets[$1]:-}"; then _shrc_open_atuin "$1"; else _shrc_open_atuin atuin-search; fi
+            }
+            ctrl_r_atuin_search()       { _shrc_atuin_ctrlr atuin-search; }
+            ctrl_r_atuin_search_viins() { _shrc_atuin_ctrlr atuin-search-viins; }
+            ctrl_r_atuin_search_vicmd() { _shrc_atuin_ctrlr atuin-search-vicmd; }
+            zle -N ctrl-r-atuin-search       ctrl_r_atuin_search
+            zle -N ctrl-r-atuin-search-viins ctrl_r_atuin_search_viins
+            zle -N ctrl-r-atuin-search-vicmd ctrl_r_atuin_search_vicmd
             up_or_atuin_search()         { _shrc_atuin_up atuin-up-search; }
             up_or_atuin_search_viins()   { _shrc_atuin_up atuin-up-search-viins; }
             up_or_atuin_search_vicmd()   { _shrc_atuin_up atuin-up-search-vicmd; }
