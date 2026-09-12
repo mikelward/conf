@@ -46,6 +46,9 @@ enter_accept = true
 
 # Show only the command in each result row -- drop the duration, age/time,
 # exit, directory and other columns atuin draws by default. Just the command.
+# Needs atuin 18.12.0+ (custom columns, atuinsh/atuin#3089): older atuin
+# ignores this key and still shows its default duration/time/command layout, so
+# if those columns persist, upgrade atuin (`atuin --version` to check).
 [ui]
 columns = ["command"]
 

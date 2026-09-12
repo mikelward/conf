@@ -3448,6 +3448,12 @@ if is_interactive; then
                         zle -M "$_shrc_preview_text"
                     }
                     add-zle-hook-widget line-pre-redraw _shrc_history_preview
+                    # The preview hints at atuin fuzzy Down/Ctrl-R search;
+                    # without atuin those keys fall back to a plain prefix
+                    # search, so nudge to install it -- but only now that the
+                    # preview installed, since atuin can not fix a missing
+                    # add-zle-hook-widget.
+                    have_command atuin || warn "history preview: install atuin for the fuzzy Down/Ctrl-R search it previews (optional -- the preview and prefix search still work without it)"
                 else
                     # Opted in but the hook mechanism is missing (zsh < 5.3, the
                     # floor the bold-input hook above also checks). No fallback
