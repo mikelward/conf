@@ -451,6 +451,8 @@ result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     source '"$_srcdir"'/shrc >/dev/null 2>&1
     print -r -- "up:$(bindkey "^[[A")"
     print -r -- "down:$(bindkey "^[[B")"
+    print -r -- "ctrlr-emacs:$(bindkey -M emacs "^r")"
+    print -r -- "ctrlr-viins:$(bindkey -M viins "^r")"
     print -r -- "upfn:${functions[up_or_atuin_search]}"
     case "${functions[up_or_atuin_search]}" in
         *atuin-up-search*) print -r -- "up-mode:prefix" ;;
@@ -470,22 +472,28 @@ assert_contains "_shrc_atuin_up" "$result"
 # Up opens atuin's prefix up-search; Down opens the default fuzzy search.
 assert_contains "up-mode:prefix" "$result"
 assert_contains "down-mode:fuzzy" "$result"
+# Ctrl-R is re-pointed from atuin's own binding to our wrapper (so the history
+# preview line is cleared before atuin's pane opens there too), and per keymap
+# so vi-insert keeps atuin's viins pane rather than the emacs one.
+assert_contains "ctrlr-emacs:\"^R\" ctrl-r-atuin-search" "$result"
+assert_contains "ctrlr-viins:\"^R\" ctrl-r-atuin-search-viins" "$result"
 
 # Regression: when a keymap lacks its per-map variant (atuin-up-search-viins,
 # say), the Up wrapper must fall back to the base atuin-up-search (prefix), not
 # atuin-search (fuzzy) -- otherwise Up behaves like Down in that keymap. The
-# fallback widget is baked into _shrc_atuin_up's body, so assert it names the
-# prefix base and never the bare fuzzy widget. Down's fallback is the opposite:
-# atuin-search. ("atuin-up-search" does not contain "atuin-search", so the
-# not-contains check is exact.)
+# fallback widget is baked into _shrc_atuin_up's body (it opens atuin via the
+# _shrc_open_atuin helper), so assert it names the prefix base and never the
+# bare fuzzy widget. Down's fallback is the opposite: atuin-search.
+# ("atuin-up-search" does not contain "atuin-search", so the not-contains check
+# is exact.)
 start_test "the Up wrapper's missing-variant fallback is atuin's prefix search, not fuzzy"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     export PATH='"$_atuinbin"':$PATH
     source '"$_srcdir"'/shrc >/dev/null 2>&1
     print -r -- "${functions[_shrc_atuin_up]}"
 ' </dev/null 2>/dev/null)
-assert_contains "zle atuin-up-search" "$result"
-assert_not_contains "zle atuin-search" "$result"
+assert_contains "_shrc_open_atuin atuin-up-search" "$result"
+assert_not_contains "_shrc_open_atuin atuin-search" "$result"
 
 start_test "the Down wrapper's missing-variant fallback is atuin's fuzzy search"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
@@ -493,7 +501,35 @@ result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     source '"$_srcdir"'/shrc >/dev/null 2>&1
     print -r -- "${functions[_shrc_atuin_down]}"
 ' </dev/null 2>/dev/null)
-assert_contains "zle atuin-search" "$result"
-assert_not_contains "zle atuin-up-search" "$result"
+assert_contains "_shrc_open_atuin atuin-search" "$result"
+assert_not_contains "_shrc_open_atuin atuin-up-search" "$result"
+
+# Both arrow wrappers open atuin through _shrc_open_atuin, which clears the
+# history preview's zle -M line first (when active) so atuin's inline pane
+# isn't offset by it. Assert that clear-and-suspend logic is present.
+start_test "the atuin open helper clears the history preview before opening the pane"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    export PATH='"$_atuinbin"':$PATH
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    print -r -- "${functions[_shrc_open_atuin]}"
+' </dev/null 2>/dev/null)
+assert_contains "_shrc_preview_active" "$result"
+assert_contains "_shrc_preview_suspend" "$result"
+assert_contains "zle -R" "$result"
+# The helper must return the atuin widget's exit status, not the cleanup unset's
+# success, so a failed search isn't reported as success.
+assert_contains 'return $_ret' "$result"
+
+# Ctrl-R gates on _shrc_atuin_ready like the arrows: after a rerc where atuin
+# broke or was removed, the stale ^r binding must fall back to the native
+# reverse search rather than invoke a missing atuin widget.
+start_test "the Ctrl-R wrapper falls back to native search when atuin isn't ready"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    export PATH='"$_atuinbin"':$PATH
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    print -r -- "${functions[_shrc_atuin_ctrlr]}"
+' </dev/null 2>/dev/null)
+assert_contains "_shrc_atuin_ready" "$result"
+assert_contains "history-incremental-search-backward" "$result"
 
 test_summary "shrc_zsh_test"
