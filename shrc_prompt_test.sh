@@ -451,19 +451,26 @@ assert_equal "" "$result"
 ###############
 # job_info renders all background jobs on a single space-separated
 # line so the preprompt stays compact (one line for jobs rather than
-# one line per job). Stub `jobs` to feed deterministic shell-builtin
-# style output to the function's sed/grep pipeline. bash-only: under
-# zsh job_info reads $jobtexts (the `jobs` builtin prints nothing in
-# command substitutions there), so a `jobs` stub never reaches it;
-# the zsh path's filter is covered by the _job_info_keep tests below
-# and by the real-job tests in shrc_test.sh.
+# one line per job). The bash branch now sources its list from
+# `jobs -r` (running) then `jobs -s` (stopped) instead of plain `jobs`,
+# so bash's transient "Done"/"Exit" lines never reach the transform
+# (that exclusion is covered by the real finished-job test in
+# shrc_test.sh). These are unit tests of the sed/grep transform, so the
+# stub answers `-s` with deterministic builtin-style lines and `-r`
+# with nothing; the sed strips the status word, so the exact word is
+# immaterial to the transform under test. bash-only: under zsh
+# job_info reads $jobtexts, so a `jobs` stub never reaches it; the zsh
+# path's filter is covered by the _job_info_keep tests below and by the
+# real-job tests in shrc_test.sh.
 if test "$_real_shell" = bash; then
 
 start_test "job_info joins multiple jobs onto one line"
 
 jobs() {
-    printf '[1]+  Stopped                 vi\n'
-    printf '[2]-  Stopped                 cat\n'
+    case $1 in -s)
+        printf '[1]+  Stopped                 vi\n'
+        printf '[2]-  Stopped                 cat\n'
+    ;; esac
 }
 result="$(job_info)"
 assert_equal "%1 vi %2 cat" "$result"
@@ -472,7 +479,7 @@ assert_equal "%1 vi %2 cat" "$result"
 start_test "job_info renders a single job without a trailing space"
 
 jobs() {
-    printf '[1]+  Stopped                 vi\n'
+    case $1 in -s) printf '[1]+  Stopped                 vi\n' ;; esac
 }
 result="$(job_info)"
 assert_equal "%1 vi" "$result"
@@ -492,9 +499,11 @@ assert_equal "" "$result"
 start_test "job_info filters pwd-change noise"
 
 jobs() {
-    printf '[1]+  Stopped                 vi\n'
-    printf '[2]-  Done                    pushd /tmp  (pwd now: /tmp)\n'
-    printf '[3]+  Stopped                 cat\n'
+    case $1 in -s)
+        printf '[1]+  Stopped                 vi\n'
+        printf '[2]-  Done                    pushd /tmp  (pwd now: /tmp)\n'
+        printf '[3]+  Stopped                 cat\n'
+    ;; esac
 }
 result="$(job_info)"
 assert_equal "%1 vi %3 cat" "$result"
@@ -503,17 +512,20 @@ assert_equal "%1 vi %3 cat" "$result"
 # The preprompt shells out to the vcs binary via `command vcs`
 # (maybe_background_fetch's `command vcs auto-fetch`, and the vcs()
 # wrapper's `command vcs "$@"`). Under bash's job control those can
-# surface in `jobs` and leak the preprompt's own plumbing into the
-# job list it prints. job_info filters the `command vcs` prefix so
-# they don't show up. A user's deliberately backgrounded `vcs foo &`
-# renders as `vcs foo` (not `command vcs`) and must survive the filter.
+# surface as running jobs in `jobs -r` and leak the preprompt's own
+# plumbing into the job list it prints. job_info filters the
+# `command vcs` prefix so they don't show up. A user's deliberately
+# backgrounded `vcs foo &` renders as `vcs foo` (not `command vcs`)
+# and must survive the filter.
 start_test "job_info filters the preprompt's own command-vcs jobs"
 
 jobs() {
-    printf '[1]+  Running                 command vcs auto-fetch > /dev/null 2>&1 &\n'
-    printf '[2]-  Done                    command vcs "$@"\n'
-    printf '[3]+  Stopped                 vi\n'
-    printf '[4]-  Running                 vcs log &\n'
+    case $1 in -s)
+        printf '[1]+  Running                 command vcs auto-fetch > /dev/null 2>&1 &\n'
+        printf '[2]-  Done                    command vcs "$@"\n'
+        printf '[3]+  Stopped                 vi\n'
+        printf '[4]-  Running                 vcs log &\n'
+    ;; esac
 }
 result="$(job_info)"
 assert_equal "%3 vi %4 vcs log &" "$result"
@@ -526,9 +538,11 @@ assert_equal "%3 vi %4 vcs log &" "$result"
 start_test "job_info filters failed (Exit N) command-vcs jobs"
 
 jobs() {
-    printf '[1]+  Exit 1                  command vcs "$@"\n'
-    printf '[2]-  Exit 137                command vcs prompt-info\n'
-    printf '[3]+  Stopped                 vi\n'
+    case $1 in -s)
+        printf '[1]+  Exit 1                  command vcs "$@"\n'
+        printf '[2]-  Exit 137                command vcs prompt-info\n'
+        printf '[3]+  Stopped                 vi\n'
+    ;; esac
 }
 result="$(job_info)"
 assert_equal "%3 vi" "$result"
@@ -537,11 +551,36 @@ assert_equal "%3 vi" "$result"
 start_test "job_info returns nothing when only command-vcs jobs are present"
 
 jobs() {
-    printf '[1]+  Running                 command vcs auto-fetch > /dev/null 2>&1 &\n'
-    printf '[2]-  Done                    command vcs "$@"\n'
+    case $1 in -s)
+        printf '[1]+  Running                 command vcs auto-fetch > /dev/null 2>&1 &\n'
+        printf '[2]-  Done                    command vcs "$@"\n'
+    ;; esac
 }
 result="$(job_info)"
 assert_equal "" "$result"
+
+###############
+# Regression: bash re-reports a *finished* background job as "[N]+ Done
+# cmd" until a foreground `jobs` reaps it, and job_info never runs one,
+# so a completed `mkdir foo &` lingered as a phantom "%N mkdir" every
+# prompt. The branch now sources only running (`jobs -r`) and stopped
+# (`jobs -s`) jobs, never a bare `jobs`. This stub answers a *bare*
+# call with a Done line and -r/-s with live jobs: if job_info ever fell
+# back to bare `jobs`, the Done line would leak into the result. The
+# real-shell timing (when does the job reach "Done") is bash's, not
+# ours, so this drives it deterministically instead of racing a job.
+start_test "job_info sources jobs -r/-s and never a bare jobs (drops Done)"
+
+jobs() {
+    case $1 in
+    -r) printf '[1]+  Running                 sleep 5 &\n' ;;
+    -s) printf '[2]-  Stopped                 vi\n' ;;
+    *)  printf '[3]-  Done                    mkdir /tmp/x\n' ;;
+    esac
+}
+result="$(job_info)"
+assert_equal "%1 sleep 5 & %2 vi" "$result"
+assert_not_contains "mkdir" "$result"
 
 unset -f jobs
 
@@ -566,6 +605,18 @@ assert_false _job_info_keep "command vcs"
 
 start_test "_job_info_keep keeps commands merely mentioning command vcs"
 assert_true _job_info_keep "man command vcs"
+
+###############
+# _job_state_done is the zsh branch's finished-job guard (plain POSIX,
+# so test it under every shell): $jobtexts keeps a finished job until
+# zsh reaps it, and its $jobstates entry reads "done:..."; only that
+# leading state field decides. A running or suspended job is kept, and
+# an empty state (no such job) is not "done".
+start_test "_job_state_done matches only the done state"
+assert_true _job_state_done "done:+:101=done"
+assert_false _job_state_done "running:-:102=running"
+assert_false _job_state_done "suspended:+:100=suspended"
+assert_false _job_state_done ""
 
 ###############
 start_test "preprompt integrates components"

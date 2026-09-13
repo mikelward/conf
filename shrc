@@ -2062,6 +2062,18 @@ _job_info_keep() {
     return 0
 }
 
+# True when a zsh $jobstates entry marks the job finished, so the zsh
+# branch can drop it: $jobtexts keeps a finished job until zsh reaps
+# it, so a completed "mkdir foo &" would otherwise linger as a phantom
+# "%N mkdir". The overall job state is the field before the first ":"
+# (e.g. "done:+:101=done"). POSIX, so it's unit-testable under any
+# shell. The bash branch needs no equivalent: `jobs -r`/`jobs -s`
+# never list a finished job in the first place.
+_job_state_done() {
+    case ${1%%:*} in done) return 0;; esac
+    return 1
+}
+
 # Compute the single-line job summary into $_job_info_out (a shared
 # variable, not stdout) so callers never have to capture it via
 # $(...): in zsh the job table -- and even $jobtexts -- is empty
@@ -2084,13 +2096,29 @@ _job_info_compute() {
             eval '
                 emulate -L zsh
                 for _num in ${(kno)jobtexts}; do
+                    # Skip a finished job $jobtexts still holds (see
+                    # _job_state_done) so a completed job does not linger
+                    # as a phantom "%N mkdir".
+                    _job_state_done "${jobstates[$_num]}" && continue
                     _text=${jobtexts[$_num]}
                     _job_info_keep "$_text" || continue
                     _job_info_out="$_job_info_out%$_num $_text "
                 done
             '
         else
-            _job_info_out="$(jobs |
+            # `jobs -r` (running) and `jobs -s` (stopped) between them list
+            # every live job and never bash's transient "Done"/"Exit"
+            # lines. Plain `jobs` includes those, and since we never run a
+            # foreground `jobs` to reap them, a finished background job
+            # (e.g. `mkdir foo &`) got re-reported as a phantom `%N mkdir`
+            # on every prompt. -r/-s also sidestep locale-translated status
+            # words. Capture first, then transform: -r/-s re-evaluate job
+            # state and come back empty when piped (the pipe's extra
+            # subshell runs without job control), so the sed/grep have to
+            # operate on the captured text rather than a `jobs -r | ...` pipe.
+            local _raw
+            _raw="$(jobs -r; jobs -s)"
+            _job_info_out="$(printf '%s\n' "$_raw" |
                 sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /' |
                 grep -v '(pwd now:' |
                 grep -vE '^%[0-9][0-9]* ([0-9][0-9]* +)?command vcs( |$)' |
