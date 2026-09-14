@@ -528,4 +528,76 @@ start_test "a binary that will not run never reaches install"
 assert_false grep -q '^install ' "$_stubs/calls"
 rm -rf "$_stubs"
 
+# The unshallow pass runs above the remote-only guard, so it happens on a
+# local checkout too -- a shallow clone answers commit counts and blame with a
+# confident wrong number wherever it was made. Under the hermetic stub PATH
+# git is absent, so unshallow.sh takes its own "not shallow" branch and prints
+# "unshallow: already complete"; asserting that string proves the hook invoked
+# it. (unshallow.sh's own deepen/no-op behavior is unit-tested below.)
+start_test "the hook runs unshallow even outside a remote container"
+_stubs=$(_stub_dir 0)
+_out=$(CLAUDE_CODE_REMOTE='' PATH="$_stubs" "$_hook" 2>&1)
+assert_contains "unshallow:" "$_out"
+rm -rf "$_stubs"
+
+start_test "the hook runs unshallow in a remote container too"
+_stubs=$(_stub_dir 0)
+_present "$_stubs/shellcheck" "$_stubs/nu" "$_stubs/elvish"
+_out=$(CLAUDE_CODE_REMOTE=true PATH="$_stubs" "$_hook" 2>&1)
+assert_contains "unshallow:" "$_out"
+rm -rf "$_stubs"
+
+# Unit tests for scripts/unshallow.sh, run under the real PATH (git and a
+# process-bounding tool are present here, unlike the hermetic stub PATH above).
+_git() { git -c user.email=t@example.com -c user.name=test "$@"; }
+
+start_test "unshallow.sh reports already complete on a full clone"
+_full=$(mktemp -d)
+( cd "$_full" && git init -q && _git commit -q --allow-empty -m one \
+    && "$_srcdir/scripts/unshallow.sh" ) >"$_full/out" 2>&1
+assert_equal "0" "$?"
+assert_contains "already complete" "$(cat "$_full/out")"
+rm -rf "$_full"
+
+start_test "unshallow.sh deepens a shallow clone"
+_src=$(mktemp -d)
+_dst=$(mktemp -d)
+( cd "$_src" && git init -q \
+    && _git commit -q --allow-empty -m one \
+    && _git commit -q --allow-empty -m two )
+# file:// (not a plain path) so --depth is honored rather than ignored.
+git clone -q --depth 1 "file://$_src/.git" "$_dst/repo" 2>/dev/null
+start_test "the shallow clone starts shallow"
+assert_equal "true" "$(cd "$_dst/repo" && git rev-parse --is-shallow-repository)"
+start_test "unshallow.sh deepens the shallow clone"
+( cd "$_dst/repo" && "$_srcdir/scripts/unshallow.sh" ) >"$_dst/out" 2>&1
+assert_equal "false" "$(cd "$_dst/repo" && git rev-parse --is-shallow-repository)"
+assert_contains "deepened" "$(cat "$_dst/out")"
+rm -rf "$_src" "$_dst"
+
+# A repository it can't inspect (here: not a git repo at all) must not be
+# reported as a complete history -- callers rely on this before trusting
+# commit counts. It reports the failure and exits non-zero instead.
+start_test "unshallow.sh reports a repository it cannot inspect"
+_none=$(mktemp -d)
+( cd "$_none" && "$_srcdir/scripts/unshallow.sh" ) >"$_none/out" 2>&1
+_ustatus=$?
+assert_equal "1" "$_ustatus"
+assert_contains "cannot inspect" "$(cat "$_none/out")"
+assert_false grep -q "already complete" "$_none/out"
+rm -rf "$_none"
+
+# UNSHALLOW_TIMEOUT=0 would disable the fetch deadline (perl alarm(0) /
+# GNU timeout 0); the script must fall back to a real bound and still deepen.
+start_test "unshallow.sh keeps a bound when UNSHALLOW_TIMEOUT is 0"
+_src=$(mktemp -d)
+_dst=$(mktemp -d)
+( cd "$_src" && git init -q \
+    && _git commit -q --allow-empty -m one \
+    && _git commit -q --allow-empty -m two )
+git clone -q --depth 1 "file://$_src/.git" "$_dst/repo" 2>/dev/null
+( cd "$_dst/repo" && UNSHALLOW_TIMEOUT=0 "$_srcdir/scripts/unshallow.sh" ) >/dev/null 2>&1
+assert_equal "false" "$(cd "$_dst/repo" && git rev-parse --is-shallow-repository)"
+rm -rf "$_src" "$_dst"
+
 test_summary "session-start hook"
