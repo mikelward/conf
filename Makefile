@@ -267,9 +267,12 @@ test-elvish: $(CACHE)/test-elvish.stamp
 $(CACHE)/test-lint.stamp: shrc shrc.vcs bashrc.fuzzycomplete profile exitrc \
                           gittemplates/hooks/post-merge \
                           gittemplates/hooks/post-rewrite \
+                          scripts/unshallow.sh \
                           .claude/hooks/session-start.sh | $(CACHE)
 	@shellcheck -s bash -S error .claude/hooks/session-start.sh
 	@bash -n .claude/hooks/session-start.sh
+	@shellcheck -s sh -S error scripts/unshallow.sh
+	@dash -n scripts/unshallow.sh
 	@shellcheck -s bash -S error shrc
 	@shellcheck -s bash -S error shrc.vcs
 	@shellcheck -s bash -S error bashrc.fuzzycomplete
@@ -306,6 +309,7 @@ $(CACHE)/test-makefile.stamp: Makefile makefile_test.sh shrc_test_lib.sh \
 test-makefile: $(CACHE)/test-makefile.stamp
 
 $(CACHE)/test-session-start-hook.stamp: .claude/hooks/session-start.sh \
+                          scripts/unshallow.sh \
                           test-tool-versions.sh \
                           session_start_hook_test.sh shrc_test_lib.sh | $(CACHE)
 	@sh session_start_hook_test.sh

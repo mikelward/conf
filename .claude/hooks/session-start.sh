@@ -20,6 +20,16 @@
 # disagrees with CI has its explanation in the session log.
 set -euo pipefail
 
+# Deepen a shallow clone before anything reads git history -- see
+# scripts/unshallow.sh. Above the remote-only guard on purpose, unlike the
+# tool installs below: a shallow clone answers `git rev-list --count`, `git
+# log` past the boundary and blame with a confident wrong number and no
+# warning, and that is a property of the clone, not of the sandbox that made
+# it. On a complete clone it is a fast no-op that says so. Run directly rather
+# than through `sh` so it needs nothing on PATH, and best-effort: a clone it
+# could not deepen is never a reason to refuse to start the session.
+( cd "${0%/*}/../.." && ./scripts/unshallow.sh ) || true
+
 if test "${CLAUDE_CODE_REMOTE:-}" != "true"; then
     exit 0
 fi
