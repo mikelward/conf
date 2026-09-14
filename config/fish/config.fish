@@ -2159,13 +2159,24 @@ if is_interactive
         eval_tool_init carapace carapace _carapace fish
     end
 
-    # atuin's history search, on Ctrl-R and on Up. config/atuin/config.toml
-    # keeps the Up binding prefix-matched and host-scoped, so it still
-    # means what fish's own up-or-search does. Last, so its Ctrl-R wins
-    # over fzf's.
+    # atuin's history search, on Ctrl-R only -- not on Up, which stays fish's
+    # own inline prefix search. atuin's pane draws below the prompt
+    # (inline_height, config/atuin/config.toml) and Up is the key that rewrites
+    # the line in place; --disable-up-arrow is what keeps atuin off it. Same
+    # split zsh takes in shrc.
+    #
+    # Down stays fish's own too, so it walks back through the matches Up
+    # found. zsh additionally opens atuin's pane on Down *from a fresh
+    # prompt*, which fish cannot express: any custom binding on the arrows
+    # ends fish's history search instead of continuing it -- a wrapper that
+    # only delegates (`commandline -f down-line`, inline or in a function)
+    # leaves the walk stranded on its current match. So Ctrl-R is atuin's one
+    # entry point here, and the arrows are wholly fish's.
+    #
+    # Last, so its Ctrl-R wins over fzf's.
     function init_atuin
         is_runnable atuin; or return 0
-        eval_tool_init atuin atuin init fish
+        eval_tool_init atuin atuin init fish --disable-up-arrow
     end
 
     function init_shell_tools
