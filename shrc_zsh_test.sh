@@ -527,24 +527,29 @@ else
     # what _shrc_atuin_down branches on, plus the buffer to show the walk
     # moving. WANT_TMUX/WANT_SHPOOL are off: a real pty would otherwise hand
     # the session to tmux or shpool before any of this loads.
+    # Every interpolated path is quoted in the generated file: the heredoc
+    # expands them here, and a checkout under a path with spaces would
+    # otherwise write `source /path with spaces/shrc`, which the child reads
+    # as a one-word filename (Codex P2 on 3185a6a).
     cat >"$_ptydir/rc.zsh" <<PTYRC
 PS1='PTY%% '
-HISTFILE=$_ptydir/histfile
+HISTFILE="$_ptydir/histfile"
 HISTSIZE=200
 SAVEHIST=0
-print -r -- "STARTED" >>$_ptylog
-source $_srcdir/shrc >/dev/null 2>&1
-_pty_atuin() { print -r -- "ATUIN" >>$_ptylog }
+print -r -- "STARTED" >>"$_ptylog"
+source "$_srcdir/shrc" >"$_ptydir/shrc.out" 2>&1
+_shrc_status=\$?
+_pty_atuin() { print -r -- "ATUIN" >>"$_ptylog" }
 zle -N atuin-search _pty_atuin
 zle -N atuin-search-viins _pty_atuin
 zle -N atuin-search-vicmd _pty_atuin
-_pty_probe() { print -r -- "PROBE fresh=\$((HISTNO==HISTCMD)) buffer=[\$BUFFER]" >>$_ptylog }
+_pty_probe() { print -r -- "PROBE fresh=\$((HISTNO==HISTCMD)) buffer=[\$BUFFER]" >>"$_ptylog" }
 zle -N _pty_probe
 for _m in emacs viins vicmd; do bindkey -M \$_m '^P' _pty_probe; done
 print -s 'echo alpha one'
 print -s 'echo beta'
 print -s 'echo alpha two'
-print -r -- "READY" >>$_ptylog
+print -r -- "READY rc=\$_shrc_status" >>"$_ptylog"
 PTYRC
     # zpty runs its command in a forked copy of *this* shell, so the child
     # inherits shrc_test_lib's `trap 'rm -rf "$_testdir"' EXIT` and takes the
@@ -555,6 +560,15 @@ PTYRC
         export WANT_TMUX=0 WANT_SHPOOL=0 PATH=$_atuinbin:\$PATH
         export PS1='PTY-PROMPT '
         exec zsh --no-rcs -i"
+    # Whatever sourcing shrc had to say. Kept out of the assertions -- a
+    # missing ssh-add or a broken brew on the host writes here and is not this
+    # test's business -- but printed on any failure, so a load that went wrong
+    # is diagnosable rather than invisible.
+    _pty_show_shrc_output() {
+        if test -s "$_ptydir/shrc.out"; then
+            echo "  shrc: $(tr '\n' '|' <"$_ptydir/shrc.out")" >&2
+        fi
+    }
     # Wait for the log to reach $1 lines within $2 seconds. The line count is
     # the ordering signal -- each key is followed by a probe keypress, so a
     # step appends exactly one line and the wait is an ordering rather than a
@@ -572,6 +586,7 @@ PTYRC
                 echo "  log:  $(cat "$_ptylog" | tr '\n' '|')" >&2
                 zpty -r -t _zlepty _ptyout 2>/dev/null
                 echo "  pty:  $(printf '%s' "${_ptyout:-<nothing>}" | tr -d '\r' | tr '\n' '|')" >&2
+                _pty_show_shrc_output
                 failures=$((failures + 1))
                 return 1
             fi
@@ -607,10 +622,44 @@ PTYRC
     # The prompt proves zsh has the terminal and is reading; only then is it
     # safe to type. Then two logged phases, so a later timeout says which:
     # shrc loading, and the widgets it binds being in place.
+    # Sourcing shrc can stop and ask a question. Its compinit takes no -u, so
+    # an insecure completion directory -- or file -- anywhere in fpath makes it
+    # print "Ignore insecure ... and continue [y] or abort compinit [n]?" and
+    # wait on the terminal for a key. A pty has a terminal, so it waits
+    # forever: CI's runner has such an entry and this sandbox has none, which
+    # is the whole of why this passed here and hung there. Answer it the way a
+    # person would and let the load finish. Sanitizing fpath beforehand does
+    # not work -- compaudit names insecure *files* too, which no subtraction
+    # from a list of directories removes, and shrc's setup_brew evals `brew
+    # shellenv`, which can add to fpath after any such pass has run.
+    _pty_wait_load() {
+        local _deadline=$(( SECONDS + 90 )) _chunk=
+        _ptyseen=
+        while test "$(wc -l <"$_ptylog")" -lt 2; do
+            if zpty -r -t _zlepty _chunk 2>/dev/null; then
+                _ptyseen="$_ptyseen$_chunk"
+                case "$_ptyseen" in
+                *"Ignore insecure"*)
+                    zpty -w -n _zlepty y   # read -q takes one key, no Enter
+                    _ptyseen=              # so the same prompt isn't answered twice
+                    ;;
+                esac
+            fi
+            if test $SECONDS -ge $_deadline; then
+                echo "FAIL: $_current_test (waited 90s for shrc to load in the pty)" >&2
+                echo "  log:  $(cat "$_ptylog" | tr '\n' '|')" >&2
+                echo "  pty:  $(printf '%s' "${_ptyseen:-<nothing>}" | tr -d '\r' | tr '\n' '|')" >&2
+                _pty_show_shrc_output
+                failures=$((failures + 1))
+                return 1
+            fi
+            sleep 0.05
+        done
+    }
     if _pty_expect 'PTY-PROMPT' 30 "the pty shell's first prompt"; then
-        zpty -w -n _zlepty "source $_ptydir/rc.zsh"$'\n'
+        zpty -w -n _zlepty "source '$_ptydir/rc.zsh'"$'\n'
     fi
-    if _pty_wait 1 30 "the rc file to start" && _pty_wait 2 90 "shrc to load in it"; then
+    if _pty_wait 1 30 "the rc file to start" && _pty_wait_load; then
         _pty_step 'echo alpha' 3 'the typed prefix'
         _pty_step $'\e[A'      4 'Up onto the newest match'
         _pty_step $'\e[A'      5 'Up onto the older match'
@@ -620,6 +669,18 @@ PTYRC
     fi
     zpty -d _zlepty 2>/dev/null
     result=$(cat "$_ptylog")
+    # Sourcing shrc has to have succeeded, not merely have been followed by a
+    # READY line: the interaction assertions below could otherwise pass over a
+    # load that failed partway, as long as whatever broke left the arrow
+    # widgets bound.
+    case "$result" in
+    *"READY rc=0"*) passes=$((passes + 1)) ;;
+    *)  echo "FAIL: $_current_test (sourcing shrc in the pty did not succeed)" >&2
+        echo "  log:  $(printf '%s' "$result" | tr '\n' '|')" >&2
+        _pty_show_shrc_output
+        failures=$((failures + 1))
+        ;;
+    esac
     # The walk: Up moves onto recalled lines (fresh=0), Down moves back within
     # them rather than opening anything, and the last Down before the prompt is
     # restored leaves the line that started the walk (fresh=1).

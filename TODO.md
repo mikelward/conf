@@ -76,6 +76,24 @@ Delete an entry once you have agreed with it or reversed it.
       follow with their own inline-message mechanisms. *Reversible:* it's an
       additive per-shell feature, and it's opt-in and off by default meanwhile.
 
+## The test suite can't run from a checkout path containing spaces
+
+Found while checking a Codex P2 (mikelward/conf#342) that asked for the pty
+test's generated `rc.zsh` to quote its paths. That one was real and is fixed,
+and the new test passes from such a path -- but copying the repo to
+`.../with space/conf` and running `zsh shrc_zsh_test.sh` fails **50 of its 66
+tests**, all pre-existing. They interpolate `$_srcdir` into a single-quoted
+snippet (`source '"$_srcdir"'/shrc`), which reaches the child zsh unquoted, so
+the word splits and nothing loads. The same shape is in `shrc_test.sh` and the
+other `*_test.sh` files.
+
+Nobody has hit it -- CI checks out to `/home/runner/work/conf/conf` and the
+usual local clone has no spaces -- so this is a latent limitation, not a live
+bug. Fixing it means quoting the interpolation at every one of those sites
+(`source '"$_srcdir"'/shrc` -> `source "'"$_srcdir"'/shrc"`, or passing the
+path in the environment instead), which is a wide mechanical change and its own
+branch.
+
 ## Get perf stats, then settle on one history entry point: native or atuin
 
 The shell now has two history back ends in play — zsh's own in-memory
@@ -241,14 +259,21 @@ affect zsh.
   binding check proves nothing -- Down walking the prefix matches mid-walk
   versus opening atuin's pane from a fresh prompt. It waits on the probe log
   reaching a line count after each key rather than sleeping, so it isn't the
-  flaky kind; three things it needs are non-obvious and cost an afternoon each
-  if rediscovered: wait for the child's prompt before typing anything (zsh
-  flushes pending input as it takes the terminal, so a line written into a
-  fresh pty is swallowed -- it passed locally in under a second and lost the
-  whole session in CI), clear the inherited `EXIT` trap before `exec` in the
-  zpty command (the forked shell otherwise deletes `$_testdir` for the whole
-  suite), and turn `WANT_TMUX`/`WANT_SHPOOL` off (a real pty hands the
-  session to tmux or shpool before shrc's bindings ever load). Still uncovered
+  flaky kind; four things it needs are non-obvious and cost an afternoon each
+  if rediscovered: answer `compinit`'s insecure-completion question while
+  waiting for the load (shrc's `compinit` has no `-u`, so it asks "Ignore
+  insecure ... and continue?" and reads the answer from the terminal -- a pty
+  has one, so the source blocks forever, which is what CI did while a sandbox
+  with no such entry passed; sanitizing `fpath` first does not work, since
+  `compaudit` names insecure *files* too and `setup_brew` can add to `fpath`
+  mid-source), wait for the child's prompt before typing
+  anything (zsh flushes pending input as it takes the terminal, so a line
+  written into a fresh pty is swallowed), clear the inherited `EXIT` trap
+  before `exec` in the zpty command (the forked shell otherwise deletes
+  `$_testdir` for the whole suite), and turn `WANT_TMUX`/`WANT_SHPOOL` off (a
+  real pty hands the session to tmux or shpool before shrc's bindings ever
+  load). All four are failures the harness reports as a timeout, so the waits
+  name what they were waiting for and print the log and the pty's output. Still uncovered
   and now cheap to add: the multiline-buffer guards on both arrows, the
   per-keymap atuin variants, and the native fallback when `atuin init` failed.
 
