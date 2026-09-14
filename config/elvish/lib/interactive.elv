@@ -66,6 +66,27 @@ fn -atuin-search {
     set edit:current-command = $chosen
 }
 
+# Down opens atuin's search -- but only from a fresh prompt, matching zsh.
+#
+# Elvish gives that for free where zle could not: the history walk is its own
+# mode with its own binding table, so reaching the *insert* table already means
+# no walk is in progress. Up starts one, Down inside it steps forward, and
+# stepping past the newest match drops back here with the line that started the
+# walk restored. zsh needs an $HISTNO/$HISTCMD test for the same thing because
+# zle has no such mode.
+#
+# A newline to the right of the cursor means Down moves down a line instead,
+# which is what Elvish's own Down does in a multiline buffer -- Up is already
+# guarded that way by Elvish itself (it moves within the buffer rather than
+# starting a walk).
+fn -atuin-down {
+    if (str:contains $edit:current-command[$edit:-dot..] "\n") {
+        $edit:move-dot-down~
+        return
+    }
+    -atuin-search
+}
+
 # Wire the editor up to the callbacks rc.elv computed.
 #
 # &before-readline runs before each prompt is drawn (shrc's preprompt),
@@ -91,6 +112,7 @@ fn install {|&before-readline=$nop~ &after-readline=$nop~ &after-command=$nop~ ^
 
     if $atuin {
         set edit:insert:binding[Ctrl-R] = { -atuin-search }
+        set edit:insert:binding[Down] = { -atuin-down }
     }
 }
 
