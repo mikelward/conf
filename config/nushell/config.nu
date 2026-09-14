@@ -2014,11 +2014,20 @@ def sync-tool-init [tool: string, args: list<string>] {
     mv --force $staged $target
 }
 
-# atuin takes both Ctrl-R and Up; config/atuin/config.toml keeps the Up
-# binding prefix-matched and host-scoped, so it still means what
-# reedline's own prefix search does.
+# atuin takes Ctrl-R only -- not Up, which stays reedline's own inline
+# prefix walk (it recalls the newest entry starting with what is typed,
+# skipping the rest). atuin's pane draws below the prompt (inline_height,
+# config/atuin/config.toml) and Up is the key that rewrites the line in
+# place; --disable-up-arrow is what keeps atuin off it. Same split zsh
+# takes in shrc.
+#
+# Down stays reedline's too, so it walks back through the matches Up
+# found. zsh additionally opens atuin's pane on Down *from a fresh
+# prompt*, which reedline cannot express: its keybinding events are
+# declarative, and `until` stops at the first one that handles the key --
+# `Down` always does, so no atuin fallback after it ever fires.
 sync-tool-init zoxide [init nushell]
-sync-tool-init atuin [init nu]
+sync-tool-init atuin [init nu --disable-up-arrow]
 
 # carapace's completions. CARAPACE_BRIDGES is the fallback for commands
 # it has no spec of its own for: bash-completion (which scrapes

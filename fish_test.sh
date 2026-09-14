@@ -2105,17 +2105,26 @@ result="$(_fish_run '
 ')"
 assert_contains "survived" "$result"
 
-start_test "fish init_atuin leaves atuin bound to Up as well as Ctrl-R"
-# --disable-up-arrow used to keep Up on fish's own prefix search; atuin's
-# Up is prefix-matched and host-scoped via config/atuin instead. Asserted
-# per shell because each config invokes atuin itself -- the bash and zsh
-# assertion in shrc_test.sh can't see this one.
+start_test "fish init_atuin keeps atuin off Up, leaving fish's own prefix search"
+# atuin's pane draws below the prompt; Up is the key that rewrites the line in
+# place, so it stays fish's -- the same split shrc takes for zsh. Down stays
+# fish's too (it walks the matches Up found), which is why Ctrl-R is atuin's
+# only entry point here: a custom binding on either arrow ends fish's history
+# search rather than continuing it. Asserted per shell because each config
+# invokes atuin itself -- the bash and zsh assertion in shrc_test.sh can't see
+# this one.
 result="$(_fish_run "
     set -gx PATH $_fish_tool_dir \$PATH
     init_atuin
     atuin_init_args
 ")"
-assert_equal "init fish" "$result"
+assert_equal "init fish --disable-up-arrow" "$result"
+
+# The arrows must stay on fish's own bindings: the config binds neither, so a
+# future wrapper (which would silently break the walk) shows up here.
+start_test "fish binds neither arrow itself, leaving both to fish"
+assert_not_contains "bind -M \$mode up " "$(cat "$_srcdir/config/fish/config.fish")"
+assert_not_contains "bind -M \$mode down " "$(cat "$_srcdir/config/fish/config.fish")"
 
 start_test "fish init_carapace sets up the completer bridges"
 result="$(_fish_run "
