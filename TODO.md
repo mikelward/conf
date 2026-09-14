@@ -235,12 +235,19 @@ affect zsh.
 
 ### Follow-ups from the fuzzy-arrows review
 
-* **Exercise the arrow widgets, not just their bindings.** The zsh test asserts
-  which widget each arrow binds to, not that pressing the arrow dispatches to
-  the right atuin-search variant / native fallback -- nor that Up actually
-  rewrites the line rather than opening anything. Real coverage needs a pty
-  or an instrumented `zle`, and multiline-buffer zle tests here have been
-  flaky, so it's deferred. Add it if a non-flaky harness is worked out.
+* **Exercise the remaining arrow widgets, not just their bindings.** The pty
+  harness this asked for now exists: `shrc_zsh_test.sh` drives a live `zle`
+  through `zsh/zpty` and presses real arrow keys, for the one case where a
+  binding check proves nothing -- Down walking the prefix matches mid-walk
+  versus opening atuin's pane from a fresh prompt. It waits on the probe log
+  reaching a line count after each key rather than sleeping, so it isn't the
+  flaky kind; two things it needs are non-obvious and cost an afternoon each
+  if rediscovered: clear the inherited `EXIT` trap before `exec` in the zpty
+  command (the forked shell otherwise deletes `$_testdir` for the whole
+  suite), and turn `WANT_TMUX`/`WANT_SHPOOL` off (a real pty hands the
+  session to tmux or shpool before shrc's bindings ever load). Still uncovered
+  and now cheap to add: the multiline-buffer guards on both arrows, the
+  per-keymap atuin variants, and the native fallback when `atuin init` failed.
 
 ## Ghost text: fan out beyond zsh
 
