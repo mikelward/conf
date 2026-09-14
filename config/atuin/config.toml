@@ -1,21 +1,19 @@
-# In zsh, Down opens atuin's fuzzy search, seeded with whatever's on the line
-# (bound in shrc) -- but only from a fresh prompt; once Up has started a prefix
-# walk, Down walks back through those matches instead. Ctrl-R always opens it.
-# Up is never atuin's there: it stays the native inline prefix search, which
-# rewrites the line in place rather than opening the pane below the prompt. The
-# two settings below shape the prefix search atuin's own up-search does, which
-# is still what fish's and nushell's Up run:
+# Up is nobody's but the shell's. Every shell here passes --disable-up-arrow
+# (or, for Elvish, never binds it), because atuin's pane draws below the prompt
+# and Up is the key that rewrites the line in place -- so Up stays each shell's
+# own inline prefix search. That leaves atuin's `*_shell_up_key_binding`
+# settings with nothing to shape, which is why they are no longer here.
 #
-#   prefix  match on what's already typed, from the start of the line,
-#           rather than fuzzy-matching it anywhere in the command
-#   host    this machine's history; with no cross-host sync that's all of it
+# Down opens the pane in zsh and Elvish, seeded with whatever's on the line,
+# but only from a fresh prompt: once Up has started a prefix walk, Down walks
+# back through those matches instead. fish and nushell keep Down for the walk
+# alone -- neither line editor can make an arrow conditional without breaking
+# its own history search -- so there Ctrl-R is atuin's one entry point.
 #
-# Down and Ctrl-R use atuin's default search_mode (fuzzy) + filter_mode
+# Ctrl-R and Down use atuin's default search_mode (fuzzy) + filter_mode
 # (global). The zsh ghost text stays prefix + host regardless (set_zsh_
 # autosuggest_strategy in shrc): an inline completion can only extend what
 # you typed.
-search_mode_shell_up_key_binding = "prefix"
-filter_mode_shell_up_key_binding = "host"
 
 # Draw the search in a few lines below the prompt instead of switching to
 # the alternate screen. The default (inline_height = 0) is full-screen,
