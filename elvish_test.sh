@@ -70,6 +70,11 @@ case "$1 $2" in
 # ATUIN_EMPTY_ID reproduces a `history start` that succeeds but prints nothing.
 "history start") test -n "$ATUIN_EMPTY_ID" || echo test-history-id ;;
 "history end")   exit 0 ;;
+# The interactive search. Records that the pane was asked for -- which is the
+# whole of what the Down binding test needs to see -- and prints a command, the
+# way a real selection does.
+"search -i")     test -z "$ATUIN_SEARCH_LOG" || echo "SEARCH" >> "$ATUIN_SEARCH_LOG"
+                 echo "echo picked-from-atuin" ;;
 *)             exit 1 ;;
 esac
 STUB
@@ -1141,6 +1146,54 @@ else
         sed -e 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | tr -d '\r')"
     assert_contains '$ ' "$result"
     assert_contains '―' "$result"
+
+    # Down opens atuin's search, but only from a fresh prompt. Elvish's history
+    # walk is its own mode with its own bindings, so reaching the insert
+    # table -- where Down is bound -- already means no walk is in progress;
+    # zsh needs an $HISTNO/$HISTCMD test for the same distinction. Real arrow
+    # keys through the pty, with the stub recording each time the pane is asked
+    # for, so this observes the split rather than inferring it from a binding.
+    #
+    # One interaction per Elvish run, deliberately: the whole snippet is
+    # written into the pty at once, and once Elvish has run a command it stops
+    # reading the rest of the burst as key presses (a Ctrl-U in the same burst
+    # loses the interaction before it too). So history is seeded in its own
+    # run, and each arrow case gets a fresh one. ATUIN_SESSION is set because
+    # rc.elv installs the binding only when it sees atuin as wanted.
+    _elv_search_log="$_testdir/elvish-atuin-search.log"
+    _elvish_arrows() {   # $1: what to type
+        printf "$1" | \
+            HOME="$_fakehome" \
+            TERM=xterm \
+            NO_COLOR=1 \
+            XDG_CONFIG_HOME="$_srcdir/config" \
+            ATUIN_SESSION=test-session-id \
+            ATUIN_SEARCH_LOG="$_elv_search_log" \
+            WANT_SHPOOL=0 \
+            WANT_TMUX=0 \
+            PATH="$_stubs:$PATH" \
+            run_with_timeout 30 script -qec elvish /dev/null 2>&1 | \
+            sed -e 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | tr -d '\r'
+    }
+    : > "$_elv_search_log"
+    _elvish_arrows 'echo alpha-one\nexit\n' >/dev/null
+
+    # The walk itself, so the Down case below can't pass by simply never
+    # having started one.
+    start_test "elvish Up walks history inline, without opening atuin"
+    result="$(_elvish_arrows 'echo alpha\033[Aexit\n')"
+    assert_contains "alpha-one" "$result"
+    assert_equal "0" "$(wc -l < "$_elv_search_log" | tr -d ' ')"
+
+    start_test "elvish Down opens atuin from a fresh prompt"
+    : > "$_elv_search_log"
+    _elvish_arrows 'echo alpha\033[Bexit\n' >/dev/null
+    assert_equal "1" "$(wc -l < "$_elv_search_log" | tr -d ' ')"
+
+    start_test "elvish Down stays in the walk Up started, leaving atuin shut"
+    : > "$_elv_search_log"
+    _elvish_arrows 'echo alpha\033[A\033[Bexit\n' >/dev/null
+    assert_equal "0" "$(wc -l < "$_elv_search_log" | tr -d ' ')"
 fi
 
 test_summary "elvish_test"

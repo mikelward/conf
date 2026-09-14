@@ -3067,10 +3067,9 @@ except OSError: pass
     # this catches a flag creeping back into the real call -- the shell
     # configs each invoke atuin themselves, and bash/zsh and fish assert
     # their own.
-    (run-test "nu invokes atuin without disabling its Up binding" {
+    (run-test "nu keeps atuin off Up so reedline's inline prefix walk has it" {
         let content = (open --raw $CONFIG)
-        assert ($content | str contains "sync-tool-init atuin [init nu]")
-        assert (not ($content | str contains "--disable-up-arrow"))
+        assert ($content | str contains "sync-tool-init atuin [init nu --disable-up-arrow]")
     })
 
     ###############

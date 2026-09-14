@@ -3222,12 +3222,13 @@ init_atuin
 assert_equal "" "$_shrc_atuin_ready"
 have_command() { test "$1" = atuin; }
 
-start_test "the atuin config keeps its Up prefix-matched and host-scoped for fish/nu"
-# fish and nushell still use atuin's Up; without these it would fuzzy-match
-# anywhere and offer other machines' commands -- not what Up has meant here.
-# (zsh no longer uses atuin's Up, but shares this config file.)
-assert_true grep -qx 'search_mode_shell_up_key_binding = "prefix"' "$_srcdir/config/atuin/config.toml"
-assert_true grep -qx 'filter_mode_shell_up_key_binding = "host"' "$_srcdir/config/atuin/config.toml"
+start_test "the atuin config carries no settings for an Up binding nothing uses"
+# Every shell here keeps atuin off Up now, so atuin's own up-search never
+# runs and its *_shell_up_key_binding settings shape nothing. Left in place
+# they would read as live configuration for a binding that no longer exists.
+# Matched outside a comment, since the comment above them explains their
+# absence and names them.
+assert_false grep -qE '^[^#]*shell_up_key_binding' "$_srcdir/config/atuin/config.toml"
 
 start_test "the atuin config draws a short inline search, not full-screen"
 # atuin's default inline_height of 0 means full-screen, which clears the
