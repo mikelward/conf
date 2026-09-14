@@ -2604,14 +2604,11 @@ init_carapace() {
     eval_tool_init carapace carapace _carapace "$shell"
 }
 
-# atuin's history search, on Ctrl-R and on Up. config/atuin/config.toml
-# makes the Up binding prefix-matched and host-scoped, so Up still means
-# "the commands I ran on this machine that start like this" -- what the
-# readline/zsh prefix search bound in inputrc gives, minus its one wart:
-# that search runs backwards from wherever the last one stopped, so after
-# walking back a few entries a fresh prefix can't reach anything newer.
-# atuin queries from scratch on every press. Up falls back to the inputrc
-# binding on hosts without atuin.
+# atuin's history search, on Ctrl-R (and, in zsh, Down). Up is not atuin's
+# in zsh -- it stays the native inline prefix search, which rewrites the
+# line in place instead of opening a pane below the prompt (see the arrow
+# bindings in the interactive block). What atuin's database still reaches
+# inline there is the ghost text, prefix + host.
 #
 # Called last so its Ctrl-R binding wins over fzf's.
 init_atuin() {
@@ -2623,13 +2620,13 @@ init_atuin() {
     _shrc_atuin_ready=
     have_command atuin || return 0
     case "$shell" in bash|zsh) ;; *) return 0 ;; esac
-    # --disable-up-arrow: don't let atuin bind Up to its own up-search. shrc
-    # binds both arrows itself (up/down-or-atuin-search in the interactive
-    # block): Up to atuin's prefix search, Down (like Ctrl-R) to its fuzzy
-    # search, seeded with the current line -- with a native prefix search as
-    # the fallback when atuin is absent. Ctrl-R still opens atuin. bash gets
-    # neither arrow widget (zle is zsh-only); its Up stays readline's, so the
-    # flag is a no-op there.
+    # --disable-up-arrow: don't let atuin bind Up to its own up-search. In zsh
+    # Up is the native inline prefix search (up-line-or-local-history), and
+    # shrc binds Down itself (down-or-atuin-search in the interactive block) to
+    # atuin's fuzzy search, seeded with the current line -- native when atuin
+    # is absent. Ctrl-R still opens atuin. bash gets no arrow widget (zle is
+    # zsh-only); its Up stays readline's prefix search from inputrc, so the
+    # flag keeps that there too.
     eval_tool_init atuin atuin init "$shell" --disable-up-arrow || return 1
     # In bash, atuin records history by appending to bash-preexec's
     # preexec_functions/precmd_functions. bash-preexec drives those from
@@ -3608,20 +3605,24 @@ if is_interactive; then
         _terminfo_bind knp zle-noop
         _terminfo_bind kpp zle-noop
 
-        # Up and Down: with atuin present, both arrows open atuin's search
-        # pane, seeded with whatever's on the line. Up opens it in prefix mode
-        # (atuin's own up-search -- --shell-up-key-binding, which reads the
-        # *_shell_up_key_binding settings in config.toml); Down opens the
-        # default fuzzy search, the same as Ctrl-R. atuin's own Up is off
-        # (init_atuin passes --disable-up-arrow), so we bind both arrows to its
-        # widgets ourselves: atuin-up-search for Up, atuin-search for Down.
-        # Each steps within a multiline buffer first, like atuin's own
-        # up-search: a single-line buffer opens the search, a multiline one
-        # just moves the cursor a line. The zsh ghost text stays prefix + host
-        # (set_zsh_autosuggest_strategy).
+        # Up is always the native inline prefix search, atuin or not: it
+        # rewrites the line in place, the way zsh's own prefix history always
+        # has. atuin's pane cannot be that. It draws below the prompt
+        # (inline_height in config/atuin/config.toml puts it there rather than
+        # on the alternate screen), so a key pressed dozens of times an hour
+        # kept answering somewhere other than where the line is -- the reason
+        # #328's "Up opens atuin's prefix search" was reverted here. atuin
+        # still reaches the line inline through the ghost text, whose strategy
+        # reads atuin's database, prefix + host (set_zsh_autosuggest_strategy),
+        # and it still owns the pane on Ctrl-R and Down, where opening a pane
+        # is the point.
         #
-        # Without atuin, the arrows fall back to a native session-local prefix
-        # search. history-beginning-search-{backward,forward} finds the
+        # Down, with atuin present, opens that pane on the default fuzzy
+        # search, the same as Ctrl-R, seeded with whatever's on the line. It
+        # steps within a multiline buffer first: a single-line buffer opens the
+        # search, a multiline one just moves the cursor a line.
+        #
+        # The native widgets. history-beginning-search-{backward,forward} finds the
         # previous/next history line starting with the text before the cursor,
         # or steps through history when the line is empty, continuing from the
         # current position on repeated presses (unlike wrapping the autoload
@@ -3658,22 +3659,17 @@ if is_interactive; then
             # literal case would miss. Binding per keymap sidesteps that: `main`
             # resolves to whichever real map carries the binding. Each wrapper
             # opens its keymap's search variant when that widget exists, falls
-            # back to its own base widget -- atuin-up-search (prefix) for Up,
-            # atuin-search (fuzzy) for Down, so a missing per-keymap variant
-            # keeps the split rather than making Up fuzzy like Down -- and to
-            # the native prefix
-            # search when this run's atuin init did not succeed -- gated on
-            # $_shrc_atuin_ready (set by init_atuin, which runs later in
-            # init_shell_tools), not on widget presence, so a failed rerc reload
-            # falls back even though stale atuin-search widgets linger in
-            # $widgets from the prior good init. The multiline
-            # guard tests the cursor's own side (LBUFFER for Up, RBUFFER for
-            # Down, like the native widgets), so the search opens at the
-            # top/bottom line instead of a no-op line move.
+            # back to the base atuin-search, and to the native search when this
+            # run's atuin init did not succeed -- gated on $_shrc_atuin_ready
+            # (set by init_atuin, which runs later in init_shell_tools), not on
+            # widget presence, so a failed rerc reload falls back even though
+            # stale atuin-search widgets linger in $widgets from the prior good
+            # init. The multiline guard tests the cursor's own side (RBUFFER for
+            # Down, like the native widget), so the search opens at the bottom
+            # line instead of a no-op line move.
             # `_shrc_` prefix, not `_atuin_`: `atuin init zsh` defines its own
-            # `_atuin_up_search` even under --disable-up-arrow, and its init runs
-            # after this block, so a shared name would clobber ours -- leaving Up
-            # on atuin's prefix search while Down stayed fuzzy.
+            # `_atuin_down_search` even under --disable-up-arrow, and its init
+            # runs after this block, so a shared name would clobber ours.
             # Open an atuin search widget, clearing the opt-in history preview's
             # zle -M line first if it is active: atuin bypasses zle's redisplay,
             # so its inline pane save/restore is offset by that extra line and
@@ -3693,13 +3689,6 @@ if is_interactive; then
                 local _ret=$?
                 unset _shrc_preview_suspend
                 return $_ret
-            }
-            _shrc_atuin_up() {   # $1: preferred atuin-search widget for the map
-                if test -z "${_shrc_atuin_ready:-}"; then
-                    zle up-line-or-local-history; return
-                fi
-                case $LBUFFER in *$'\n'*) zle up-line-or-history; return ;; esac
-                if test -n "${widgets[$1]:-}"; then _shrc_open_atuin "$1"; else _shrc_open_atuin atuin-up-search; fi
             }
             _shrc_atuin_down() {
                 if test -z "${_shrc_atuin_ready:-}"; then
@@ -3728,46 +3717,39 @@ if is_interactive; then
             zle -N ctrl-r-atuin-search       ctrl_r_atuin_search
             zle -N ctrl-r-atuin-search-viins ctrl_r_atuin_search_viins
             zle -N ctrl-r-atuin-search-vicmd ctrl_r_atuin_search_vicmd
-            up_or_atuin_search()         { _shrc_atuin_up atuin-up-search; }
-            up_or_atuin_search_viins()   { _shrc_atuin_up atuin-up-search-viins; }
-            up_or_atuin_search_vicmd()   { _shrc_atuin_up atuin-up-search-vicmd; }
             down_or_atuin_search()       { _shrc_atuin_down atuin-search; }
             down_or_atuin_search_viins() { _shrc_atuin_down atuin-search-viins; }
             down_or_atuin_search_vicmd() { _shrc_atuin_down atuin-search-vicmd; }
-            zle -N up-or-atuin-search up_or_atuin_search
-            zle -N up-or-atuin-search-viins up_or_atuin_search_viins
-            zle -N up-or-atuin-search-vicmd up_or_atuin_search_vicmd
             zle -N down-or-atuin-search down_or_atuin_search
             zle -N down-or-atuin-search-viins down_or_atuin_search_viins
             zle -N down-or-atuin-search-vicmd down_or_atuin_search_vicmd
-            # Bind each arrow per keymap (emacs base, viins/vicmd variants), on
-            # the literal \e[A/\e[B and \eOA/\eOB forms kitty sends plus the
-            # terminfo cuu1/cud1 names, so the key reaches the widget everywhere.
-            _bind_arrow() {   # $1: sequence  $2: up-or-atuin-search|down-or-atuin-search
+            # Bind Down per keymap (emacs base, viins/vicmd variants), on the
+            # literal \e[B and \eOB forms kitty sends plus the terminfo
+            # cud1/kcud1 names, so the key reaches the widget everywhere.
+            _bind_arrow() {   # $1: sequence  $2: down-or-atuin-search
                 bindkey -M emacs "$1" "$2"
                 bindkey -M viins "$1" "$2-viins"
                 bindkey -M vicmd "$1" "$2-vicmd"
             }
-            _bind_arrow '^[[A' up-or-atuin-search
-            _bind_arrow '^[OA' up-or-atuin-search
             _bind_arrow '^[[B' down-or-atuin-search
             _bind_arrow '^[OB' down-or-atuin-search
-            for _cap in cuu1 kcuu1; do
-                test -n "${terminfo[$_cap]:-}" && _bind_arrow "${terminfo[$_cap]}" up-or-atuin-search
-            done
             for _cap in cud1 kcud1; do
                 test -n "${terminfo[$_cap]:-}" && _bind_arrow "${terminfo[$_cap]}" down-or-atuin-search
             done
         else
-            _terminfo_bind cuu1 up-line-or-local-history
-            _terminfo_bind kcuu1 up-line-or-local-history
             _terminfo_bind cud1 down-line-or-local-history
             _terminfo_bind kcud1 down-line-or-local-history
-            _bind_all_maps '^[[A' up-line-or-local-history
-            _bind_all_maps '^[OA' up-line-or-local-history
             _bind_all_maps '^[[B' down-line-or-local-history
             _bind_all_maps '^[OB' down-line-or-local-history
         fi
+        # Up is the native prefix search in every case -- bound after the
+        # branch so nothing in it can leave Up on a pane. The same widget
+        # serves all three keymaps: it edits the line rather than opening a
+        # search box, so there is no per-keymap variant to pick.
+        _terminfo_bind cuu1 up-line-or-local-history
+        _terminfo_bind kcuu1 up-line-or-local-history
+        _bind_all_maps '^[[A' up-line-or-local-history
+        _bind_all_maps '^[OA' up-line-or-local-history
 
         # make Shift+Tab do menu complete backwards
         _terminfo_bind cbt reverse-menu-complete
