@@ -411,13 +411,13 @@ result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
 assert_contains "needs add-zle-hook-widget" "$result"
 assert_not_contains "install atuin" "$result"
 
-# With atuin present, shrc binds Up to atuin's prefix up-search
-# (up-or-atuin-search -> atuin-up-search) and Down to its fuzzy search
-# (down-or-atuin-search -> atuin-search), not the native fallback; atuin's own
-# Up stays off (--disable-up-arrow) and shrc drives both bindings. Stub `atuin`
-# on PATH so `atuin init zsh` defines the search widgets the arrow widgets call,
-# then check the arrows bind to them and each picks the right search mode.
-start_test "shrc binds Up to atuin's prefix search and Down to fuzzy when atuin is present"
+# With atuin present, shrc binds Down to atuin's fuzzy search
+# (down-or-atuin-search -> atuin-search) but leaves Up on the native inline
+# prefix search: atuin's pane draws below the prompt, and Up rewrites the line
+# in place. atuin's own Up stays off (--disable-up-arrow) either way. Stub
+# `atuin` on PATH so `atuin init zsh` defines the search widgets the arrow
+# widget calls, then check where each arrow lands.
+start_test "with atuin present Up stays the native prefix search and Down opens atuin's fuzzy pane"
 _atuinbin="$_testdir/atuin-arrows-bin"
 mkdir -p "$_atuinbin"
 cat >"$_atuinbin/atuin" <<'ATUIN'
@@ -453,24 +453,22 @@ result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     print -r -- "down:$(bindkey "^[[B")"
     print -r -- "ctrlr-emacs:$(bindkey -M emacs "^r")"
     print -r -- "ctrlr-viins:$(bindkey -M viins "^r")"
-    print -r -- "upfn:${functions[up_or_atuin_search]}"
-    case "${functions[up_or_atuin_search]}" in
-        *atuin-up-search*) print -r -- "up-mode:prefix" ;;
-        *)                 print -r -- "up-mode:other" ;;
-    esac
+    print -r -- "downfn:${functions[down_or_atuin_search]}"
     case "${functions[down_or_atuin_search]}" in
         *atuin-up-search*) print -r -- "down-mode:prefix" ;;
         *atuin-search*)    print -r -- "down-mode:fuzzy" ;;
         *)                 print -r -- "down-mode:other" ;;
     esac
 ' </dev/null 2>/dev/null)
-assert_contains "up-or-atuin-search" "$result"
+# Up is the native widget, and no atuin Up wrapper is defined at all -- the
+# regression this guards is Up going back to any pane-opening widget.
+assert_contains "up:\"^[[A\" up-line-or-local-history" "$result"
+assert_not_contains "up:\"^[[A\" up-or-atuin-search" "$result"
 assert_contains "down-or-atuin-search" "$result"
 # The wrapper must call shrc's own namespaced helper, not atuin's internal
-# _atuin_up_search (which atuin defines and which would clobber a shared name).
-assert_contains "_shrc_atuin_up" "$result"
-# Up opens atuin's prefix up-search; Down opens the default fuzzy search.
-assert_contains "up-mode:prefix" "$result"
+# _atuin_down_search (which atuin defines and which would clobber a shared name).
+assert_contains "_shrc_atuin_down" "$result"
+# Down opens the default fuzzy search.
 assert_contains "down-mode:fuzzy" "$result"
 # Ctrl-R is re-pointed from atuin's own binding to our wrapper (so the history
 # preview line is cleared before atuin's pane opens there too), and per keymap
@@ -478,22 +476,24 @@ assert_contains "down-mode:fuzzy" "$result"
 assert_contains "ctrlr-emacs:\"^R\" ctrl-r-atuin-search" "$result"
 assert_contains "ctrlr-viins:\"^R\" ctrl-r-atuin-search-viins" "$result"
 
-# Regression: when a keymap lacks its per-map variant (atuin-up-search-viins,
-# say), the Up wrapper must fall back to the base atuin-up-search (prefix), not
-# atuin-search (fuzzy) -- otherwise Up behaves like Down in that keymap. The
-# fallback widget is baked into _shrc_atuin_up's body (it opens atuin via the
-# _shrc_open_atuin helper), so assert it names the prefix base and never the
-# bare fuzzy widget. Down's fallback is the opposite: atuin-search.
-# ("atuin-up-search" does not contain "atuin-search", so the not-contains check
-# is exact.)
-start_test "the Up wrapper's missing-variant fallback is atuin's prefix search, not fuzzy"
+# Up is native in *every* keymap, not just the emacs one the check above reads:
+# vi-insert and vi-command are where a per-keymap atuin variant used to be
+# bound, so a half-reverted Up would show up here first. Both \e[A and the SS3
+# \eOA form kitty sends must land on the same native widget.
+start_test "Up is the native prefix search in every keymap, with atuin present"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     export PATH='"$_atuinbin"':$PATH
     source '"$_srcdir"'/shrc >/dev/null 2>&1
-    print -r -- "${functions[_shrc_atuin_up]}"
+    for _map in emacs viins vicmd; do
+        print -r -- "$_map-csi:$(bindkey -M $_map "^[[A")"
+        print -r -- "$_map-ss3:$(bindkey -M $_map "^[OA")"
+    done
 ' </dev/null 2>/dev/null)
-assert_contains "_shrc_open_atuin atuin-up-search" "$result"
-assert_not_contains "_shrc_open_atuin atuin-search" "$result"
+for _map in emacs viins vicmd; do
+    assert_contains "$_map-csi:\"^[[A\" up-line-or-local-history" "$result"
+    assert_contains "$_map-ss3:\"^[OA\" up-line-or-local-history" "$result"
+done
+assert_not_contains "atuin" "$result"
 
 start_test "the Down wrapper's missing-variant fallback is atuin's fuzzy search"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '

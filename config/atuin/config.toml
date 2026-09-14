@@ -1,8 +1,8 @@
-# In zsh, Up opens atuin's prefix search and Down (like Ctrl-R) opens its
-# fuzzy search -- both the same pane, reached with an arrow (bound in shrc).
-# Whatever's on the line seeds the search as its initial query. The two
-# settings below shape the prefix search that Up opens (for zsh's Up, and for
-# fish's and nushell's Up, which use atuin's own up-search):
+# In zsh, Down (like Ctrl-R) opens atuin's fuzzy search, seeded with whatever's
+# on the line (bound in shrc). Up is not atuin's there: it stays the native
+# inline prefix search, which rewrites the line in place rather than opening
+# the pane below the prompt. The two settings below shape the prefix search
+# atuin's own up-search does, which is still what fish's and nushell's Up run:
 #
 #   prefix  match on what's already typed, from the start of the line,
 #           rather than fuzzy-matching it anywhere in the command
@@ -15,7 +15,7 @@
 search_mode_shell_up_key_binding = "prefix"
 filter_mode_shell_up_key_binding = "host"
 
-# Draw the search in a few lines above the prompt instead of switching to
+# Draw the search in a few lines below the prompt instead of switching to
 # the alternate screen. The default (inline_height = 0) is full-screen,
 # which clears the terminal on a keystroke pressed dozens of times an
 # hour: the scrollback the search was meant to help you avoid re-typing

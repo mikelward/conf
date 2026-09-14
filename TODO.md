@@ -197,46 +197,48 @@ the narrowing landed upstream and turned 190 of these 431 tests red in one
 commit, with nothing wrong in this repo — a pin would have named the mesh commit
 that did it, where the skip meant finding out by hand on the next local run.
 
-## Fan out atuin's fuzzy arrows to fish and nushell
+## Take Up off atuin's pane in fish, nushell and Elvish too
 
-Settled in zsh (#328): Up opens atuin's **prefix** search (its
-`atuin-up-search` widget, via `--shell-up-key-binding`, which reads
-`search_mode_shell_up_key_binding` = prefix and
-`filter_mode_shell_up_key_binding` = host); Down, like Ctrl-R, opens the
-**default fuzzy** search. Both open the atuin pane -- Tab inserts the selection
-to edit, Enter runs it. `--disable-up-arrow` in `init_atuin` keeps atuin from
-binding its own Up, and shrc binds both arrows (on the literal `\e[A`/`\e[B`
-forms, so kitty reaches them) to `up-/down-or-atuin-search`, which dispatch to
-`atuin-up-search` for Up and `atuin-search` for Down. When atuin is absent --
-or its init failed to define the widget -- they fall back to a native
-session-local prefix search (`history-beginning-search-{backward,forward}` via
-`up-/down-line-or-local-history`). The ghost text stays prefix + host: an
-inline completion can only extend what you typed. **bash** keeps readline's Up
-(`--disable-up-arrow`; zle is zsh-only, so it gets no arrow widget).
+Settled in zsh: **Up is the native inline prefix search**
+(`up-line-or-local-history` -> `history-beginning-search-backward`,
+session-local), atuin present or not. #328 had put Up on atuin's
+`atuin-up-search` pane; that was reverted because the pane draws *below* the
+prompt (`inline_height`), so the key pressed most often answered somewhere
+other than the line it edits. atuin still reaches the line inline through the
+ghost text, whose strategy reads atuin's database, prefix + host. **Down**,
+with atuin, opens the pane on atuin's **default fuzzy** search, the same as
+Ctrl-R, seeded with the line -- Tab inserts the selection to edit, Enter runs
+it; native `down-line-or-local-history` without atuin, or when its init failed
+to define the widget. `--disable-up-arrow` in `init_atuin` keeps atuin off Up
+in the first place. **bash** keeps readline's prefix Up from `inputrc` for the
+same reason.
 
-Remaining: **fish**, **nushell**, and **Elvish** bind atuin's own Up (prefix +
-host, via the `*_shell_up_key_binding` settings) but no fuzzy Down. Bring them
-to the same split as zsh -- Up = prefix, Down = fuzzy -- or record a scoped
-deferral:
+Remaining: **fish**, **nushell** and **Elvish** still hand Up to atuin's own
+up-search (prefix + host, via the `*_shell_up_key_binding` settings), which is
+the same pane-below-the-prompt zsh just moved away from. Bring each to zsh's
+split -- Up native and inline, Down fuzzy -- or record a scoped deferral:
 
-* **fish** — keep Up on atuin's prefix search; add Down bound to atuin's
-  default (fuzzy) search.
-* **nushell** — same, via reedline's atuin keybindings; may be limited by what
-  reedline exposes. Tier 2, so it can lag.
-* **Elvish** — currently binds only Ctrl-R to atuin (`config/elvish/lib/
-  interactive.elv`); add Up = prefix and Down = fuzzy there too. Tier 2.
+* **fish** — put Up back on fish's own `up-or-search` (its native inline prefix
+  history, what `my_vi_key_bindings.fish` already binds to Ctrl-P); add Down
+  bound to atuin's default (fuzzy) search.
+* **nushell** — same, via reedline's own history-prefix menu; may be limited by
+  what reedline's atuin keybindings expose. Tier 2, so it can lag.
+* **Elvish** — binds only Ctrl-R to atuin (`config/elvish/lib/interactive.elv`)
+  and leaves Up on its own history walk, so it is already closest; add Down =
+  fuzzy there. Tier 2.
 * **mesh** — a separate session owns mesh's own ghost + dropdown model;
   nothing to rebind from here.
 
-The `*_shell_up_key_binding` settings in `config/atuin/config.toml` are now
-live -- they shape zsh's prefix Up as well as fish's and nushell's -- so they
-stay.
+The `*_shell_up_key_binding` settings in `config/atuin/config.toml` still shape
+fish's and nushell's Up, so they stay until those two move -- they no longer
+affect zsh.
 
 ### Follow-ups from the fuzzy-arrows review
 
 * **Exercise the arrow widgets, not just their bindings.** The zsh test asserts
   which widget each arrow binds to, not that pressing the arrow dispatches to
-  the right atuin-search variant / native fallback. Real coverage needs a pty
+  the right atuin-search variant / native fallback -- nor that Up actually
+  rewrites the line rather than opening anything. Real coverage needs a pty
   or an instrumented `zle`, and multiline-buffer zle tests here have been
   flaky, so it's deferred. Add it if a non-flaky harness is worked out.
 
