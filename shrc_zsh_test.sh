@@ -495,6 +495,107 @@ for _map in emacs viins vicmd; do
 done
 assert_not_contains "atuin" "$result"
 
+# Down means two different things depending on where the line came from, and
+# no binding check can tell them apart: from a fresh prompt it opens atuin's
+# pane, but once Up has started a prefix walk it is the way back through those
+# same matches, so opening the pane there would strand the walk half-done.
+# _shrc_atuin_down reads $HISTNO against $HISTCMD to decide, which only means
+# anything inside a live zle -- so drive one, through zsh's own zsh/zpty.
+#
+# The TODO entry that deferred this ("Exercise the arrow widgets, not just
+# their bindings") asked for a harness that isn't flaky. This one waits on the
+# log file reaching a line count after every key rather than sleeping a guessed
+# interval, and fails loudly when it doesn't: every keystroke is followed by a
+# probe keypress, so each step appends exactly one line and the wait is an
+# ordering, not a race. The atuin stub's widgets are replaced after shrc loads
+# with ones that log instead, so "did Down open the pane?" is observable rather
+# than inferred.
+start_test "Down walks the prefix matches mid-walk and opens atuin only from a fresh prompt"
+if ! zmodload zsh/zpty 2>/dev/null; then
+    # zpty ships with zsh, so its absence is a broken build, not a reason to
+    # quietly cover less -- the whole point of install-ci-shells.sh.
+    echo "FAIL: $_current_test (zsh/zpty unavailable; cannot drive a live zle)" >&2
+    failures=$((failures + 1))
+else
+    _ptydir="$_testdir/zle-arrows"
+    mkdir -p "$_ptydir"
+    _ptylog="$_ptydir/log"
+    : >"$_ptylog"
+    # Seeds two commands sharing the prefix "echo alpha" (with one between
+    # them that doesn't) so a walk has somewhere to go in both directions.
+    # The probe reports whether the line is a recalled one, which is exactly
+    # what _shrc_atuin_down branches on, plus the buffer to show the walk
+    # moving. WANT_TMUX/WANT_SHPOOL are off: a real pty would otherwise hand
+    # the session to tmux or shpool before any of this loads.
+    cat >"$_ptydir/rc.zsh" <<PTYRC
+PS1='PTY%% '
+HISTFILE=$_ptydir/histfile
+HISTSIZE=200
+SAVEHIST=0
+source $_srcdir/shrc >/dev/null 2>&1
+_pty_atuin() { print -r -- "ATUIN" >>$_ptylog }
+zle -N atuin-search _pty_atuin
+zle -N atuin-search-viins _pty_atuin
+zle -N atuin-search-vicmd _pty_atuin
+_pty_probe() { print -r -- "PROBE fresh=\$((HISTNO==HISTCMD)) buffer=[\$BUFFER]" >>$_ptylog }
+zle -N _pty_probe
+for _m in emacs viins vicmd; do bindkey -M \$_m '^P' _pty_probe; done
+print -s 'echo alpha one'
+print -s 'echo beta'
+print -s 'echo alpha two'
+print -r -- "READY" >>$_ptylog
+PTYRC
+    # zpty runs its command in a forked copy of *this* shell, so the child
+    # inherits shrc_test_lib's `trap 'rm -rf "$_testdir"' EXIT` and takes the
+    # whole suite's temp directory down with it when the pty closes -- every
+    # later test then reads an empty result. Clearing the trap and exec'ing
+    # leaves no shell to run it.
+    zpty -b _zlepty "trap - EXIT
+        export WANT_TMUX=0 WANT_SHPOOL=0 PATH=$_atuinbin:\$PATH
+        exec zsh --no-rcs -i"
+    # Wait for the log to reach $1 lines, or give up after ~10s. Polling a
+    # file the shell under test appends to is the ordering signal; a fixed
+    # sleep would be the race this is avoiding.
+    _pty_wait() {
+        local _i=0
+        while test "$(wc -l <"$_ptylog")" -lt "$1"; do
+            _i=$((_i + 1))
+            if test $_i -gt 200; then
+                echo "FAIL: $_current_test (timed out waiting for $1 log lines)" >&2
+                failures=$((failures + 1))
+                return 1
+            fi
+            sleep 0.05
+        done
+    }
+    # A key, then the probe that records what it did.
+    _pty_step() { zpty -w -n _zlepty "$1"; zpty -w -n _zlepty $'\C-p'; _pty_wait "$2" }
+    zpty -w -n _zlepty "source $_ptydir/rc.zsh"$'\n'
+    if _pty_wait 1; then
+        _pty_step 'echo alpha' 2   # a fresh prompt, prefix typed
+        _pty_step $'\e[A'      3   # Up: newest match
+        _pty_step $'\e[A'      4   # Up: older match
+        _pty_step $'\e[B'      5   # Down: back to the newer one, still walking
+        _pty_step $'\e[B'      6   # Down: past the newest, original line restored
+        _pty_step $'\e[B'      8   # Down: fresh again, so the pane opens (2 lines)
+    fi
+    zpty -d _zlepty 2>/dev/null
+    result=$(cat "$_ptylog")
+    # The walk: Up moves onto recalled lines (fresh=0), Down moves back within
+    # them rather than opening anything, and the last Down before the prompt is
+    # restored leaves the line that started the walk (fresh=1).
+    assert_contains "PROBE fresh=1 buffer=[echo alpha]
+PROBE fresh=0 buffer=[echo alpha two]
+PROBE fresh=0 buffer=[echo alpha one]
+PROBE fresh=0 buffer=[echo alpha two]
+PROBE fresh=1 buffer=[echo alpha]" "$result"
+    # The pane stayed shut for every one of those Downs, and opened only on the
+    # one pressed from the restored prompt.
+    assert_contains "PROBE fresh=1 buffer=[echo alpha]
+ATUIN" "$result"
+    assert_equal "1" "$(grep -c '^ATUIN$' "$_ptylog")"
+fi
+
 start_test "the Down wrapper's missing-variant fallback is atuin's fuzzy search"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     export PATH='"$_atuinbin"':$PATH

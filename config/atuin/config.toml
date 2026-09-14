@@ -1,8 +1,10 @@
-# In zsh, Down (like Ctrl-R) opens atuin's fuzzy search, seeded with whatever's
-# on the line (bound in shrc). Up is not atuin's there: it stays the native
-# inline prefix search, which rewrites the line in place rather than opening
-# the pane below the prompt. The two settings below shape the prefix search
-# atuin's own up-search does, which is still what fish's and nushell's Up run:
+# In zsh, Down opens atuin's fuzzy search, seeded with whatever's on the line
+# (bound in shrc) -- but only from a fresh prompt; once Up has started a prefix
+# walk, Down walks back through those matches instead. Ctrl-R always opens it.
+# Up is never atuin's there: it stays the native inline prefix search, which
+# rewrites the line in place rather than opening the pane below the prompt. The
+# two settings below shape the prefix search atuin's own up-search does, which
+# is still what fish's and nushell's Up run:
 #
 #   prefix  match on what's already typed, from the start of the line,
 #           rather than fuzzy-matching it anywhere in the command

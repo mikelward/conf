@@ -3618,9 +3618,14 @@ if is_interactive; then
         # is the point.
         #
         # Down, with atuin present, opens that pane on the default fuzzy
-        # search, the same as Ctrl-R, seeded with whatever's on the line. It
-        # steps within a multiline buffer first: a single-line buffer opens the
-        # search, a multiline one just moves the cursor a line.
+        # search, the same as Ctrl-R, seeded with whatever's on the line --
+        # but only from a fresh prompt. Once Up has started a prefix walk,
+        # Down walks back through those same matches, because that is the
+        # other half of the walk rather than a second way to ask for a
+        # search; $HISTNO != $HISTCMD is what tells the two apart (see
+        # _shrc_atuin_down). It steps within a multiline buffer first: a
+        # single-line buffer opens the search, a multiline one just moves the
+        # cursor a line.
         #
         # The native widgets. history-beginning-search-{backward,forward} finds the
         # previous/next history line starting with the text before the cursor,
@@ -3692,6 +3697,21 @@ if is_interactive; then
             }
             _shrc_atuin_down() {
                 if test -z "${_shrc_atuin_ready:-}"; then
+                    zle down-line-or-local-history; return
+                fi
+                # Mid-walk, Down walks. Once Up has recalled a history line,
+                # Down is how you come back through those same prefix matches,
+                # so opening the pane there would strand the walk half-done --
+                # atuin is only what Down means from a fresh prompt. $HISTNO
+                # names the history line being edited and equals $HISTCMD (the
+                # number this command will get) exactly when nothing has been
+                # recalled, so it marks the walk without the widget having to
+                # track one: an intervening edit or cursor move keeps it, and
+                # Enter or Ctrl-C ends it with the prompt. The walk ends by
+                # itself too -- Down past the newest match restores the line
+                # that started it and puts $HISTNO back at $HISTCMD, so the
+                # next Down opens the pane, seeded with that restored line.
+                if test "$HISTNO" != "$HISTCMD"; then
                     zle down-line-or-local-history; return
                 fi
                 case $RBUFFER in *$'\n'*) zle down-line-or-history; return ;; esac
