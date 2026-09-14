@@ -241,9 +241,12 @@ affect zsh.
   binding check proves nothing -- Down walking the prefix matches mid-walk
   versus opening atuin's pane from a fresh prompt. It waits on the probe log
   reaching a line count after each key rather than sleeping, so it isn't the
-  flaky kind; two things it needs are non-obvious and cost an afternoon each
-  if rediscovered: clear the inherited `EXIT` trap before `exec` in the zpty
-  command (the forked shell otherwise deletes `$_testdir` for the whole
+  flaky kind; three things it needs are non-obvious and cost an afternoon each
+  if rediscovered: wait for the child's prompt before typing anything (zsh
+  flushes pending input as it takes the terminal, so a line written into a
+  fresh pty is swallowed -- it passed locally in under a second and lost the
+  whole session in CI), clear the inherited `EXIT` trap before `exec` in the
+  zpty command (the forked shell otherwise deletes `$_testdir` for the whole
   suite), and turn `WANT_TMUX`/`WANT_SHPOOL` off (a real pty hands the
   session to tmux or shpool before shrc's bindings ever load). Still uncovered
   and now cheap to add: the multiline-buffer guards on both arrows, the

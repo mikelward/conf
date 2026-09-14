@@ -532,6 +532,7 @@ PS1='PTY%% '
 HISTFILE=$_ptydir/histfile
 HISTSIZE=200
 SAVEHIST=0
+print -r -- "STARTED" >>$_ptylog
 source $_srcdir/shrc >/dev/null 2>&1
 _pty_atuin() { print -r -- "ATUIN" >>$_ptylog }
 zle -N atuin-search _pty_atuin
@@ -552,16 +553,25 @@ PTYRC
     # leaves no shell to run it.
     zpty -b _zlepty "trap - EXIT
         export WANT_TMUX=0 WANT_SHPOOL=0 PATH=$_atuinbin:\$PATH
+        export PS1='PTY-PROMPT '
         exec zsh --no-rcs -i"
-    # Wait for the log to reach $1 lines, or give up after ~10s. Polling a
-    # file the shell under test appends to is the ordering signal; a fixed
-    # sleep would be the race this is avoiding.
-    _pty_wait() {
-        local _i=0
+    # Wait for the log to reach $1 lines within $2 seconds. The line count is
+    # the ordering signal -- each key is followed by a probe keypress, so a
+    # step appends exactly one line and the wait is an ordering rather than a
+    # guessed interval. The seconds are only a deadline for giving up, so they
+    # are generous where the thing being waited on is one-off startup: a CI
+    # runner sourcing shrc under half a dozen parallel make jobs took longer
+    # than the 10s this first had, and reported nothing but the timeout. On
+    # timeout it prints the log and whatever the pty said, since a pty failure
+    # nobody can see from the outside is worse than no test.
+    _pty_wait() {   # $1: lines  $2: seconds  $3: what is being waited for
+        local _deadline=$(( SECONDS + $2 ))
         while test "$(wc -l <"$_ptylog")" -lt "$1"; do
-            _i=$((_i + 1))
-            if test $_i -gt 200; then
-                echo "FAIL: $_current_test (timed out waiting for $1 log lines)" >&2
+            if test $SECONDS -ge $_deadline; then
+                echo "FAIL: $_current_test (waited ${2}s for $3; log has $(wc -l <"$_ptylog") of $1 lines)" >&2
+                echo "  log:  $(cat "$_ptylog" | tr '\n' '|')" >&2
+                zpty -r -t _zlepty _ptyout 2>/dev/null
+                echo "  pty:  $(printf '%s' "${_ptyout:-<nothing>}" | tr -d '\r' | tr '\n' '|')" >&2
                 failures=$((failures + 1))
                 return 1
             fi
@@ -569,15 +579,44 @@ PTYRC
         done
     }
     # A key, then the probe that records what it did.
-    _pty_step() { zpty -w -n _zlepty "$1"; zpty -w -n _zlepty $'\C-p'; _pty_wait "$2" }
-    zpty -w -n _zlepty "source $_ptydir/rc.zsh"$'\n'
-    if _pty_wait 1; then
-        _pty_step 'echo alpha' 2   # a fresh prompt, prefix typed
-        _pty_step $'\e[A'      3   # Up: newest match
-        _pty_step $'\e[A'      4   # Up: older match
-        _pty_step $'\e[B'      5   # Down: back to the newer one, still walking
-        _pty_step $'\e[B'      6   # Down: past the newest, original line restored
-        _pty_step $'\e[B'      8   # Down: fresh again, so the pane opens (2 lines)
+    _pty_step() { zpty -w -n _zlepty "$1"; zpty -w -n _zlepty $'\C-p'; _pty_wait "$2" 15 "$3" }
+    # Read the pty until $1 shows up, or give up after $2 seconds. Nothing may
+    # be typed before zsh is reading: a new pty's line discipline is still
+    # being set up, and zsh flushes pending input as it takes the terminal, so
+    # a `source` line written too early is swallowed whole -- it left CI with
+    # an empty log and no clue, while locally the same shell was ready in
+    # under a second and the race never showed. Waiting for the prompt is the
+    # handshake that makes the ordering explicit rather than lucky.
+    _pty_expect() {   # $1: pattern  $2: seconds  $3: what is being waited for
+        local _deadline=$(( SECONDS + $2 )) _chunk=
+        _ptyseen=
+        while true; do
+            if zpty -r -t _zlepty _chunk 2>/dev/null; then
+                _ptyseen="$_ptyseen$_chunk"
+                case "$_ptyseen" in *$1*) return 0 ;; esac
+            fi
+            if test $SECONDS -ge $_deadline; then
+                echo "FAIL: $_current_test (waited ${2}s for $3)" >&2
+                echo "  pty:  $(printf '%s' "${_ptyseen:-<nothing>}" | tr -d '\r' | tr '\n' '|')" >&2
+                failures=$((failures + 1))
+                return 1
+            fi
+            sleep 0.05
+        done
+    }
+    # The prompt proves zsh has the terminal and is reading; only then is it
+    # safe to type. Then two logged phases, so a later timeout says which:
+    # shrc loading, and the widgets it binds being in place.
+    if _pty_expect 'PTY-PROMPT' 30 "the pty shell's first prompt"; then
+        zpty -w -n _zlepty "source $_ptydir/rc.zsh"$'\n'
+    fi
+    if _pty_wait 1 30 "the rc file to start" && _pty_wait 2 90 "shrc to load in it"; then
+        _pty_step 'echo alpha' 3 'the typed prefix'
+        _pty_step $'\e[A'      4 'Up onto the newest match'
+        _pty_step $'\e[A'      5 'Up onto the older match'
+        _pty_step $'\e[B'      6 'Down back to the newer match'
+        _pty_step $'\e[B'      7 'Down past the newest, restoring the line'
+        _pty_step $'\e[B'      9 'Down from the restored prompt opening the pane'
     fi
     zpty -d _zlepty 2>/dev/null
     result=$(cat "$_ptylog")
