@@ -135,6 +135,29 @@ assert_contains '[1;3D": vi-bWord' "$result"
 assert_contains '[1;5C": vi-fWord' "$result"
 assert_contains '[1;3C": vi-fWord' "$result"
 
+# Ctrl+Backspace (^H) deletes a whole shell word, quoted string included --
+# readline's shell-backward-kill-word, the backward twin of Alt+D.
+start_test "inputrc binds Ctrl+Backspace to shell-word deletion where text is typed"
+# emacs and vi-insert each carry their own copy. vi-command doesn't: its
+# cursor sits on the last character, which the kill would leave behind.
+assert_equal "2" "$(grep -cF '"\C-h": shell-backward-kill-word' "$_srcdir/inputrc")"
+start_test "shrc binds Ctrl+Backspace to shell-word deletion under interactive bash"
+result=$(run_interactive_with_timeout 10 bash --norc -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    for _map in emacs vi-insert vi-command; do
+        echo "map:$_map"
+        bind -p -m "$_map" | grep -F "\"\\C-h\":"
+    done
+' </dev/null 2>/dev/null)
+# One line per map, in order, so a map that lost the binding shows as a gap.
+assert_contains 'map:emacs
+"\C-h": shell-backward-kill-word
+map:vi-insert
+"\C-h": shell-backward-kill-word
+map:vi-command' "$result"
+assert_not_contains 'map:vi-command
+"\C-h": shell-backward-kill-word' "$result"
+
 # bash restores the DEBUG trap after the handler returns, so the trap's
 # own `trap - DEBUG` doesn't stick and it keeps firing for every command
 # the prompt hooks run. install_precommand_trap arms a flag as its last

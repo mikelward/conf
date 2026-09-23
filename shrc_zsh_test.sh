@@ -376,6 +376,23 @@ assert_contains 'viins:"^[[1;5C" vi-forward-blank-word "^[[1;3C" vi-forward-blan
 assert_contains 'vicmd:"^[[1;5D" vi-backward-blank-word' "$result"
 assert_not_contains "undefined-key" "$result"
 
+# Ctrl+Backspace (^H) deletes a whole shell word -- a quoted string with its
+# quotes -- not zle's default alphanumeric word. The zstyle is checked too:
+# the -match widget only parses shell words when the word-style reaches it.
+start_test "shrc binds Ctrl+Backspace to shell-word deletion"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    print -r -- "emacs-bs:$(bindkey -M emacs "^H")"
+    print -r -- "viins-bs:$(bindkey -M viins "^H")"
+    print -r -- "vicmd-bs:$(bindkey -M vicmd "^H")"
+    print -r -- "style:$(zstyle -L ":zle:shell-*")"
+' </dev/null 2>/dev/null)
+assert_contains 'emacs-bs:"^H" shell-backward-kill-word' "$result"
+assert_contains 'viins-bs:"^H" shell-backward-kill-word' "$result"
+# vicmd's cursor sits on the last character, which the kill would leave behind.
+assert_not_contains 'vicmd-bs:"^H" shell-backward-kill-word' "$result"
+assert_contains "word-style shell" "$result"
+
 # Regression: without atuin (as in CI), Up/Down fall back to a native prefix
 # history search, bound to the literal arrow forms so kitty's \e[A / \e[B reach
 # the widgets -- terminfo cuu1/kcuu1 alone missed kitty, which is how atuin

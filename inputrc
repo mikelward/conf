@@ -24,6 +24,9 @@ $if Bash
 "\eD": shell-kill-word
 "\ef": vi-fWord
 "\eF": vi-fword
+# Ctrl+Backspace (^H) deletes a whole shell word, quoted string included,
+# like Alt+D
+"\C-h": shell-backward-kill-word
 $else
 "\eb": backward-word
 "\eB": backward-word
@@ -31,6 +34,7 @@ $else
 "\eD": kill-word
 "\ef": forward-word
 "\eF": forward-word
+"\C-h": backward-kill-word
 $endif
 "\en": history-search-forward
 "\ep": history-search-backward
@@ -78,6 +82,7 @@ $if Bash
 "\eD": shell-kill-word
 "\ef": vi-fWord
 "\eF": vi-fword
+"\C-h": shell-backward-kill-word
 $else
 "\eb": backward-word
 "\eB": backward-word
@@ -85,6 +90,7 @@ $else
 "\eD": kill-word
 "\ef": forward-word
 "\eF": forward-word
+"\C-h": backward-kill-word
 $endif
 "\ey": yank-pop
 "\eOH": beginning-of-line
