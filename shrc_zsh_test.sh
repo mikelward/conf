@@ -393,6 +393,24 @@ assert_contains 'viins-bs:"^H" shell-backward-kill-word' "$result"
 assert_not_contains 'vicmd-bs:"^H" shell-backward-kill-word' "$result"
 assert_contains "word-style shell" "$result"
 
+# Alt+Backspace deletes the shell word before the cursor like Ctrl+Backspace,
+# and in the same maps; Ctrl+Delete deletes the one after it, in every map,
+# since a forward kill takes the cursor's own character with it.
+start_test "shrc binds Alt+Backspace and Ctrl+Delete to shell-word deletion"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    for _map in emacs viins vicmd; do
+        print -r -- "$_map-abs:$(bindkey -M $_map "^[^?")"
+        print -r -- "$_map-cdel:$(bindkey -M $_map "^[[3;5~")"
+    done
+' </dev/null 2>/dev/null)
+assert_contains 'emacs-abs:"^[^?" shell-backward-kill-word' "$result"
+assert_contains 'viins-abs:"^[^?" shell-backward-kill-word' "$result"
+assert_not_contains 'vicmd-abs:"^[^?" shell-backward-kill-word' "$result"
+assert_contains 'emacs-cdel:"^[[3;5~" shell-kill-word' "$result"
+assert_contains 'viins-cdel:"^[[3;5~" shell-kill-word' "$result"
+assert_contains 'vicmd-cdel:"^[[3;5~" shell-kill-word' "$result"
+
 # Regression: without atuin (as in CI), Up/Down fall back to a native prefix
 # history search, bound to the literal arrow forms so kitty's \e[A / \e[B reach
 # the widgets -- terminfo cuu1/kcuu1 alone missed kitty, which is how atuin

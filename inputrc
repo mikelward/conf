@@ -24,9 +24,12 @@ $if Bash
 "\eD": shell-kill-word
 "\ef": vi-fWord
 "\eF": vi-fword
-# Ctrl+Backspace (^H) deletes a whole shell word, quoted string included,
-# like Alt+D
+# Ctrl+Backspace (^H) and Alt+Backspace delete the whole shell word before
+# the cursor, quoted string included, and Ctrl+Delete the one after it, like
+# Alt+D
 "\C-h": shell-backward-kill-word
+"\e\C-?": shell-backward-kill-word
+"\e[3;5~": shell-kill-word
 $else
 "\eb": backward-word
 "\eB": backward-word
@@ -35,11 +38,12 @@ $else
 "\ef": forward-word
 "\eF": forward-word
 "\C-h": backward-kill-word
+"\e\C-?": unix-word-rubout
+"\e[3;5~": kill-word
 $endif
 "\en": history-search-forward
 "\ep": history-search-backward
 "\ew": copy-region-as-kill
-"\e\C-?": unix-word-rubout
 # Home/End: the SS3 (\eOH/\eOF) and \e[1~/\e[4~ forms, plus the CSI forms
 # \e[H/\e[F that kitty and normal-keypad xterm send -- readline binds by raw
 # sequence, so a terminal emitting a form we didn't list leaves the key dead.
@@ -83,6 +87,8 @@ $if Bash
 "\ef": vi-fWord
 "\eF": vi-fword
 "\C-h": shell-backward-kill-word
+"\e\C-?": shell-backward-kill-word
+"\e[3;5~": shell-kill-word
 $else
 "\eb": backward-word
 "\eB": backward-word
@@ -91,6 +97,8 @@ $else
 "\ef": forward-word
 "\eF": forward-word
 "\C-h": backward-kill-word
+"\e\C-?": unix-word-rubout
+"\e[3;5~": kill-word
 $endif
 "\ey": yank-pop
 "\eOH": beginning-of-line
@@ -127,6 +135,7 @@ $if Bash
 "\eD": shell-kill-word
 "\ef": vi-fWord
 "\eF": vi-fword
+"\e[3;5~": shell-kill-word
 $else
 "\eb": backward-word
 "\eB": backward-word
@@ -134,6 +143,7 @@ $else
 "\eD": kill-word
 "\ef": forward-word
 "\eF": forward-word
+"\e[3;5~": kill-word
 $endif
 "\ey": yank-pop
 "\eOH": beginning-of-line

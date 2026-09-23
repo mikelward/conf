@@ -3574,7 +3574,6 @@ if is_interactive; then
             fi
         }
         _terminfo_bind kdch1 delete-char
-        _terminfo_bind kDC5 delete-word
         _terminfo_bind khome beginning-of-line
         _terminfo_bind kend end-of-line
 
@@ -3607,16 +3606,24 @@ if is_interactive; then
         _bind_all_maps '^[[1;5C' vi-forward-blank-word
         _bind_all_maps '^[[1;3C' vi-forward-blank-word
 
-        # Ctrl+Backspace (^H in kitty and xterm) deletes a whole shell word --
-        # a quoted string with its quotes, else up to whitespace -- like
-        # bash's shell-backward-kill-word. Only where text is typed: in vicmd
-        # the cursor sits on the last character, so this would leave it (a
-        # closing quote, say) behind; ^H stays vi-backward-char there.
-        autoload -Uz backward-kill-word-match
+        # Ctrl+Backspace (^H in kitty and xterm) and Alt+Backspace delete a
+        # whole shell word -- a quoted string with its quotes, else up to
+        # whitespace -- like bash's shell-backward-kill-word. Only where text
+        # is typed: in vicmd the cursor sits on the last character, so this
+        # would leave it (a closing quote, say) behind; ^H stays
+        # vi-backward-char there.
+        autoload -Uz backward-kill-word-match kill-word-match
         zle -N shell-backward-kill-word backward-kill-word-match
+        zle -N shell-kill-word kill-word-match
         zstyle ':zle:shell-*' word-style shell
-        bindkey -M emacs '^H' shell-backward-kill-word
-        bindkey -M viins '^H' shell-backward-kill-word
+        for _map in emacs viins; do
+            bindkey -M "$_map" '^H' shell-backward-kill-word
+            bindkey -M "$_map" '^[^?' shell-backward-kill-word
+        done
+        # Ctrl+Delete deletes the shell word after the cursor. Forward, so the
+        # cursor's own character is part of it and vicmd gets it too.
+        _bind_all_maps '^[[3;5~' shell-kill-word
+        _terminfo_bind kDC5 shell-kill-word
 
         # prevent PageUp and PageDown from inserting a bogus ~
         zle_noop() { :; }
@@ -3838,7 +3845,11 @@ if is_interactive; then
         _bind_vi_esc 'F' vi-forward-word
         _bind_vi_esc 'y' yank-pop
         _bind_vi_esc '_' insert-last-word
-        _bind_vi '\e^?' backward-kill-word
+        # Alt+Backspace: a shell word in insert mode, as in emacs mode above;
+        # vicmd keeps the plain one, since its cursor sits on the last
+        # character and a shell-word kill would leave a closing quote.
+        bindkey -M viins '\e^?' shell-backward-kill-word
+        bindkey -M vicmd '\e^?' backward-kill-word
 
         zsh_sed_command() {
             emulate -LR zsh
@@ -3986,11 +3997,12 @@ if is_interactive; then
         _bind_emacs '"\ef": vi-fWord'
         _bind_emacs '"\ed": shell-kill-word'
         _bind_emacs '"\eD": shell-kill-word'
-        _bind_emacs '"\e\C-?": unix-word-rubout'
-        _bind_emacs '"\e[3;5~": kill-word'
-        # Ctrl+Backspace (^H) deletes a whole shell word, quoted string
-        # included, like Alt+D
+        # Ctrl+Backspace (^H) and Alt+Backspace delete the whole shell word
+        # before the cursor, quoted string included, and Ctrl+Delete the one
+        # after it, like Alt+D
         _bind_emacs '"\C-h": shell-backward-kill-word'
+        _bind_emacs '"\e\C-?": shell-backward-kill-word'
+        _bind_emacs '"\e[3;5~": shell-kill-word'
 
         # add motion commands that treat alpha<->non-alpha as the word boundary
         _bind_emacs '"\eB": vi-bword'
@@ -4028,10 +4040,12 @@ if is_interactive; then
         _bind_vi '"\ef": vi-fWord'
         _bind_vi '"\eF": vi-fword'
         _bind_vi '"\ey": yank-pop'
-        _bind_vi '"\e\C-?": unix-word-rubout'
-        # Insert mode only: vi-command's cursor sits on the last character,
-        # which the kill would leave behind.
+        _bind_vi '"\e[3;5~": shell-kill-word'
+        # Backward kills in insert mode only: vi-command's cursor sits on the
+        # last character, which the kill would leave behind.
+        bind -m vi-command '"\e\C-?": unix-word-rubout'
         bind -m vi-insert '"\C-h": shell-backward-kill-word'
+        bind -m vi-insert '"\e\C-?": shell-backward-kill-word'
 
         # Make Esc toggle between command and insert mode
         bind -m vi-command '"\e": vi-insertion-mode'
