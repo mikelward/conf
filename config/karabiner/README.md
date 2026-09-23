@@ -1,14 +1,18 @@
 # Karabiner-Elements
 
-One complex-modification rule, `assets/complex_modifications/pc-alt-tab.json`,
-which puts application switching back under the physical Alt key on a PC
-keyboard.
+Two complex-modification rules for a PC keyboard:
+
+- `assets/complex_modifications/pc-alt-tab.json` puts application switching
+  back under the physical Alt key.
+- `assets/complex_modifications/pc-arrows.json` makes physical Ctrl+Left/Right
+  move by word and Win+Left/Right switch Spaces; see
+  [Arrow keys](#arrow-keys).
 
 Only the asset file is kept here. Karabiner rewrites
 `~/.config/karabiner/karabiner.json` itself on every UI change, so that file is
 deliberately left out of the repo — `confinst` creates
 `~/.config/karabiner/assets/complex_modifications/` as a real directory and
-symlinks only the rule into it, which Karabiner reads but never rewrites.
+symlinks only the rules into it, which Karabiner reads but never rewrites.
 
 ## Why the rule exists
 
@@ -86,12 +90,46 @@ If you would rather back the whole thing out, disabling the rule in Karabiner
 restores the rotation's own behavior — application switching on physical
 Ctrl+Tab, next tab on physical Alt+Tab.
 
+## Arrow keys
+
+The rotation puts Command under the physical Ctrl key, and `Cmd+Left`/`Right`
+jump to the start or end of the line. macOS moves by word with
+`Option+Left`/`Right`, which lands on the physical Win key — where Linux
+switches desktops instead. This rule puts both back where KDE has them:
+
+| Physical keys | Emits | macOS sees | Does |
+| --- | --- | --- | --- |
+| Ctrl+Left/Right | `left_command`+arrow | `Option+arrow` | move by word |
+| Ctrl+Shift+Left/Right | `left_command`+`shift`+arrow | `Option+Shift+arrow` | select by word |
+| Win+Left/Right | `left_option`+`left_command`+arrow | `Control+Option+arrow` | switch Spaces |
+
+The outputs name the keys the rotation turns into what macOS should see, by
+the same layering as above: `left_command` becomes Option and `left_option`
+becomes Control.
+
+**Space switching can't live on `Option+arrow`.** Symbolic hotkeys see the
+event after Karabiner and can't tell a synthesized `Option+Left` from a
+physical one, so if Spaces were bound there, Ctrl+Left would switch Spaces
+rather than move by word. `setup-macos` binds "Move left/right a space" to
+`Control+Option+arrow` instead, and only Win+arrow produces that. Without this
+rule, Win+arrow is plain `Option+arrow` again — the stock word movement — and
+Ctrl+arrow jumps to the line ends.
+
+If Karabiner sees the rotated key rather than the physical one, the fix is the
+same one-step shift as above, applied as one substitution: `left_control` →
+`left_command`, `left_command` → `left_option`, `left_option` →
+`left_control`.
+
+Only left Ctrl and left Win are mapped, matching the Alt+Tab rule. Home and End
+still reach the line ends.
+
 ## Enabling it
 
 Karabiner does not enable assets automatically. In Karabiner-Elements
 Settings > Complex Modifications > Add rule, enable "Alt+Tab switches
-applications". `setup-macos` installs Karabiner and says this, but the enabling
-step is a GUI action that can't be scripted.
+applications" and "Ctrl+Left/Right moves by word, Win+Left/Right switches
+Spaces". `setup-macos` installs Karabiner and says this, but the enabling step
+is a GUI action that can't be scripted.
 
 Karabiner also needs its driver extension approved and Input Monitoring
 permission granted, both prompted for on first launch.
