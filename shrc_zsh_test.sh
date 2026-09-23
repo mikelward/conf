@@ -360,6 +360,22 @@ assert_contains "end-of-line" "$result"
 assert_contains "beginning-of-line" "$result"
 assert_not_contains "undefined-key" "$result"
 
+# Regression: kitty sends Ctrl+Left/Right as \e[1;5D / \e[1;5C, and the macOS
+# Karabiner rule turns them into Option+arrow, \e[1;3D / \e[1;3C. Unbound,
+# zsh inserts the sequence's tail ("5D") instead of moving by word.
+start_test "shrc binds Ctrl+Left/Right and Alt+Left/Right to word motion"
+result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    for _map in emacs viins vicmd; do
+        print -r -- "$_map:$(bindkey -M $_map "^[[1;5D") $(bindkey -M $_map "^[[1;3D")"
+        print -r -- "$_map:$(bindkey -M $_map "^[[1;5C") $(bindkey -M $_map "^[[1;3C")"
+    done
+' </dev/null 2>/dev/null)
+assert_contains 'emacs:"^[[1;5D" vi-backward-blank-word "^[[1;3D" vi-backward-blank-word' "$result"
+assert_contains 'viins:"^[[1;5C" vi-forward-blank-word "^[[1;3C" vi-forward-blank-word' "$result"
+assert_contains 'vicmd:"^[[1;5D" vi-backward-blank-word' "$result"
+assert_not_contains "undefined-key" "$result"
+
 # Regression: without atuin (as in CI), Up/Down fall back to a native prefix
 # history search, bound to the literal arrow forms so kitty's \e[A / \e[B reach
 # the widgets -- terminfo cuu1/kcuu1 alone missed kitty, which is how atuin

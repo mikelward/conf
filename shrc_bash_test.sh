@@ -118,6 +118,23 @@ start_test "inputrc binds the CSI Home/End forms kitty sends"
 assert_true grep -qF '"\e[H": beginning-of-line' "$_srcdir/inputrc"
 assert_true grep -qF '"\e[F": end-of-line' "$_srcdir/inputrc"
 
+# Ctrl+Left/Right (\e[1;5D / \e[1;5C) and the Alt forms the macOS Karabiner
+# rule sends (\e[1;3D / \e[1;3C) move by word in every keymap; readline
+# binds by raw sequence, so an unlisted form inserts "5D" instead.
+start_test "inputrc binds Ctrl/Alt+Left/Right to word motion in all keymaps"
+assert_equal "3" "$(grep -cF '"\e[1;5D": vi-bWord' "$_srcdir/inputrc")"
+assert_equal "3" "$(grep -cF '"\e[1;3C": vi-fWord' "$_srcdir/inputrc")"
+start_test "shrc binds Ctrl/Alt+Left/Right to word motion under interactive bash"
+result=$(run_interactive_with_timeout 10 bash --norc -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    bind -p -m emacs; bind -p -m vi-insert; bind -p -m vi-command
+' </dev/null 2>/dev/null)
+# Match from the "[": bash prints the ESC prefix as \e or \M- by version.
+assert_contains '[1;5D": vi-bWord' "$result"
+assert_contains '[1;3D": vi-bWord' "$result"
+assert_contains '[1;5C": vi-fWord' "$result"
+assert_contains '[1;3C": vi-fWord' "$result"
+
 # bash restores the DEBUG trap after the handler returns, so the trap's
 # own `trap - DEBUG` doesn't stick and it keeps firing for every command
 # the prompt hooks run. install_precommand_trap arms a flag as its last

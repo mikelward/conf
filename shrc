@@ -3599,6 +3599,15 @@ if is_interactive; then
         _bind_all_maps '^[OF'  end-of-line
         _bind_all_maps '^[[4~' end-of-line
 
+        # Ctrl+Left/Right move by word, like Alt+B/F. kitty and xterm send
+        # \e[1;5D / \e[1;5C, and \e[1;3D / \e[1;3C for Alt -- which is what
+        # the Karabiner rule turns Ctrl+arrow into on macOS. Unbound, zsh
+        # inserts the tail of the sequence ("5D").
+        _bind_all_maps '^[[1;5D' vi-backward-blank-word
+        _bind_all_maps '^[[1;3D' vi-backward-blank-word
+        _bind_all_maps '^[[1;5C' vi-forward-blank-word
+        _bind_all_maps '^[[1;3C' vi-forward-blank-word
+
         # prevent PageUp and PageDown from inserting a bogus ~
         zle_noop() { :; }
         zle -N zle-noop zle_noop
@@ -3974,6 +3983,13 @@ if is_interactive; then
         # add motion commands that treat alpha<->non-alpha as the word boundary
         _bind_emacs '"\eB": vi-bword'
         _bind_emacs '"\eF": vi-fword'
+
+        # Ctrl+Left/Right (and Alt, which the macOS Karabiner rule sends) move
+        # by word like Alt+B/F; see ~/.inputrc
+        _bind_all '"\e[1;5D": vi-bWord'
+        _bind_all '"\e[1;3D": vi-bWord'
+        _bind_all '"\e[1;5C": vi-fWord'
+        _bind_all '"\e[1;3C": vi-fWord'
 
         # prevent Page Up and Page Down from inserting a bogus ~
         # TODO: use terminfo
