@@ -46,6 +46,18 @@ $endif
 "\e[4~": end-of-line
 "\e[F": end-of-line
 "\e[3~": delete-char
+# Ctrl+Left/Right, and the Alt form the macOS Karabiner rule sends
+$if Bash
+"\e[1;5D": vi-bWord
+"\e[1;3D": vi-bWord
+"\e[1;5C": vi-fWord
+"\e[1;3C": vi-fWord
+$else
+"\e[1;5D": backward-word
+"\e[1;3D": backward-word
+"\e[1;5C": forward-word
+"\e[1;3C": forward-word
+$endif
 "\e[A": history-search-backward
 "\e[B": history-search-forward
 
@@ -82,6 +94,17 @@ $endif
 "\e[4~": end-of-line
 "\e[F": end-of-line
 "\e[3~": delete-char
+$if Bash
+"\e[1;5D": vi-bWord
+"\e[1;3D": vi-bWord
+"\e[1;5C": vi-fWord
+"\e[1;3C": vi-fWord
+$else
+"\e[1;5D": backward-word
+"\e[1;3D": backward-word
+"\e[1;5C": forward-word
+"\e[1;3C": forward-word
+$endif
 set keymap vi-command
 "\C-a": beginning-of-line
 "\C-e": end-of-line
@@ -114,6 +137,17 @@ $endif
 "\e[4~": end-of-line
 "\e[F": end-of-line
 "\e[3~": delete-char
+$if Bash
+"\e[1;5D": vi-bWord
+"\e[1;3D": vi-bWord
+"\e[1;5C": vi-fWord
+"\e[1;3C": vi-fWord
+$else
+"\e[1;5D": backward-word
+"\e[1;3D": backward-word
+"\e[1;5C": forward-word
+"\e[1;3C": forward-word
+$endif
 "\e": vi-insertion-mode
 
 # use emacs mode by default
