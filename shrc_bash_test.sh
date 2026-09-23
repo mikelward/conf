@@ -158,6 +158,31 @@ map:vi-command' "$result"
 assert_not_contains 'map:vi-command
 "\C-h": shell-backward-kill-word' "$result"
 
+# Alt+Backspace deletes the shell word before the cursor like Ctrl+Backspace,
+# where text is typed; Ctrl+Delete deletes the one after it, in every keymap,
+# since a forward kill takes the cursor's own character with it.
+start_test "inputrc binds Alt+Backspace and Ctrl+Delete to shell-word deletion"
+assert_equal "2" "$(grep -cF '"\e\C-?": shell-backward-kill-word' "$_srcdir/inputrc")"
+assert_equal "3" "$(grep -cF '"\e[3;5~": shell-kill-word' "$_srcdir/inputrc")"
+start_test "shrc binds Alt+Backspace and Ctrl+Delete to shell-word deletion under interactive bash"
+# bash prints the ESC prefix as \e or \M- by version, so each line is reduced
+# to the map, the key and its function.
+result=$(run_interactive_with_timeout 10 bash --norc -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    for _map in emacs vi-insert vi-command; do
+        bind -p -m "$_map" | awk -v map="$_map" '"'"'
+            /^"(\\e|\\M-)\\C-\?": / { print map "-abs:" $2 }
+            /^"(\\e|\\M-)\[3;5~": / { print map "-cdel:" $2 }
+        '"'"'
+    done
+' </dev/null 2>/dev/null)
+assert_contains 'emacs-abs:shell-backward-kill-word' "$result"
+assert_contains 'vi-insert-abs:shell-backward-kill-word' "$result"
+assert_contains 'vi-command-abs:unix-word-rubout' "$result"
+assert_contains 'emacs-cdel:shell-kill-word' "$result"
+assert_contains 'vi-insert-cdel:shell-kill-word' "$result"
+assert_contains 'vi-command-cdel:shell-kill-word' "$result"
+
 # bash restores the DEBUG trap after the handler returns, so the trap's
 # own `trap - DEBUG` doesn't stick and it keeps firing for every command
 # the prompt hooks run. install_precommand_trap arms a flag as its last
