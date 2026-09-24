@@ -1875,6 +1875,32 @@ $env.config = ($env.config | upsert show_banner false)
 $env.config = ($env.config | upsert history.file_format "plaintext")
 $env.config = ($env.config | upsert history.max_size 100000)
 
+# Word keys, as shrc sets them for bash and zsh: Ctrl-Left/Right move a
+# word, Ctrl-Backspace (^H, which is Ctrl-H without the kitty keyboard
+# protocol) and Alt-Backspace cut the word before the cursor, Ctrl-Delete
+# the one after. Reedline has no quote-aware word, so these are its big
+# (whitespace-separated) words, the nearest to a shell word: a quoted
+# string with a space in it takes two cuts, where bash, zsh and fish take
+# one. Nushell's defaults use its small words, which stop at punctuation.
+# The backward cuts stay out of vi normal mode, where the cursor sits on
+# the last character rather than after it.
+$env.config = ($env.config | upsert keybindings (
+    $env.config.keybindings? | default [] | append [
+        {name: word_left, modifier: control, keycode: left, mode: [emacs vi_insert vi_normal],
+         event: {edit: movebigwordleft}}
+        {name: word_right, modifier: control, keycode: right, mode: [emacs vi_insert vi_normal],
+         event: {until: [{send: historyhintwordcomplete} {edit: movebigwordrightstart}]}}
+        {name: cut_word_left, modifier: control, keycode: backspace, mode: [emacs vi_insert],
+         event: {edit: cutbigwordleft}}
+        {name: cut_word_left_ctrl_h, modifier: control, keycode: char_h, mode: [emacs vi_insert],
+         event: {edit: cutbigwordleft}}
+        {name: cut_word_left_alt, modifier: alt, keycode: backspace, mode: [emacs vi_insert],
+         event: {edit: cutbigwordleft}}
+        {name: cut_word_right, modifier: control, keycode: delete, mode: [emacs vi_insert vi_normal],
+         event: {edit: cutbigwordright}}
+    ]
+))
+
 # Tab matches a subsequence, so `mp<TAB>` offers "My Pictures". Parity
 # with the `r:|?=**` fallback in shrc's zsh matcher-list and with fish's
 # pager, which drops from prefix to substring to subsequence on its own.

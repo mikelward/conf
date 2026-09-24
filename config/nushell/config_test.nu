@@ -3890,6 +3890,25 @@ echo '# second build'" | save --force $bin
         assert equal (bar (-5)) ""
     })
 
+    (run-test "nu word keys move and cut whitespace words, as bash and zsh cut shell words" {
+        let bound = {|modifier, keycode|
+            $env.config.keybindings
+            | where modifier == $modifier and keycode == $keycode
+            | last
+            | get event
+            | to nuon
+        }
+        assert ((do $bound control left) =~ "movebigwordleft")
+        assert ((do $bound control right) =~ "movebigwordrightstart")
+        assert ((do $bound control backspace) =~ "cutbigwordleft")
+        assert ((do $bound control char_h) =~ "cutbigwordleft")
+        assert ((do $bound alt backspace) =~ "cutbigwordleft")
+        assert ((do $bound control delete) =~ "cutbigwordright")
+        # The backward cuts stay out of vi normal mode.
+        let modes = ($env.config.keybindings | where name == cut_word_left | get mode.0)
+        assert not ("vi_normal" in $modes)
+    })
+
     (run-test "nu puts home bins and /usr/local/bin before system PATH" {
         let home = (mktemp -d)
         mkdir ($home | path join ".cargo" "bin")
