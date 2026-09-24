@@ -58,6 +58,16 @@
 - "Drive" = keep looping without stopping to ask each time: implement,
   open the PR, address review, merge once green and reviewed, pick the
   next task, repeat — until the work runs out or I say stop.
+- "Merge in order" (or "drive in order") = drive for PRs in flight together,
+  each merged only once every lower-numbered active PR has. Waiting holds
+  only the merge: keep driving a queued PR — review comments, CI, rebases —
+  so it's green and approved the moment it's the lowest. Merge by hand,
+  never auto-merge (disarm any already armed), rechecking the lower PRs just
+  before. Each merge moves the base, so bring the next PR up to date and
+  merge on its fresh checks and approval. Active means open, not a draft,
+  and either green and approved and only waiting its turn, or opened,
+  reopened, pushed to, reviewed or commented on in the last 30 minutes; say
+  which lower PRs you skipped as stale.
 - "Autopilot" = drive without blocking on me. Take the reversible,
   cheapest-to-undo guess and keep going; log each one in TODO.md under a
   "Decisions needing review" heading (what, the alternative, why it's
