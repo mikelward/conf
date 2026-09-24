@@ -1130,6 +1130,25 @@ else
     assert_not_contains "compilation error" "$result"
     assert_not_contains "no such module" "$result"
 
+    start_test "elvish binds the word keys bash and zsh have"
+    # Asked of the binding table rather than typed: Esc-prefixed keys written
+    # into the pty in one burst can be split across reads, which Elvish then
+    # takes for a lone Esc.
+    _elvish_bound() {   # $1: key, $2: editor function name
+        printf '%s' "(to-string (eq \$edit:insert:binding[$1] \$edit:$2~))"
+    }
+    _elvish_keys="$(_elvish_bound Ctrl-Left move-dot-left-word)-$(_elvish_bound Ctrl-Right move-dot-right-word)-$(_elvish_bound Ctrl-H kill-word-left)-$(_elvish_bound "'Alt-Ctrl-?'" kill-word-left)-$(_elvish_bound Ctrl-Delete kill-word-right)"
+    result="$(printf 'echo KEYS-%s\nexit\n' "$_elvish_keys" | \
+        HOME="$_fakehome" \
+        TERM=dumb \
+        NO_COLOR=1 \
+        XDG_CONFIG_HOME="$_srcdir/config" \
+        WANT_SHPOOL=0 \
+        WANT_TMUX=0 \
+        PATH="$_stubs:$PATH" \
+        run_with_timeout 30 script -qec elvish /dev/null 2>&1 | tr -d '\r')"
+    assert_contains 'KEYS-$true-$true-$true-$true-$true' "$result"
+
     start_test "elvish the interactive half draws the configured prompt"
     # The editor redraws the line as each character arrives, so the raw pty
     # output is full of cursor motion; strip the escape sequences and look for
