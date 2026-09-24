@@ -19,11 +19,11 @@ function my_vi_key_bindings --description "Mikel's vi-like key bindings for fish
     # Undo weird Vi EOL behavior.
     bind -s -M default x delete-char
     bind -s -M default X backward-delete-char
-    bind -s -M insert -k dc delete-char
-    bind -s -M default -k dc delete-char
+    bind -s -M insert delete delete-char
+    bind -s -M default delete delete-char
 
     # Backspace deletes a char in normal/default mode too.
-    bind -s -M default -k backspace backward-delete-char
+    bind -s -M default backspace backward-delete-char
     bind -s -M default \ch backward-delete-char
     bind -s -M default \x7f backward-delete-char
 
@@ -51,14 +51,14 @@ function my_vi_key_bindings --description "Mikel's vi-like key bindings for fish
         bind -s -M $mode \e\x7f backward-kill-word
     end
 
-    # Home, End, and Delete keys via terminfo-style names.
+    # Home, End, and Delete by fish's key names.
     for mode in insert default
-        bind -s -M $mode -k home beginning-of-line
-        bind -s -M $mode -k end end-of-line
+        bind -s -M $mode home beginning-of-line
+        bind -s -M $mode end end-of-line
         # Prevent Page Up and Page Down from inserting a bogus ~.
-        bind -s -M $mode -k ppage ''
-        bind -s -M $mode -k npage ''
+        bind -s -M $mode pageup ''
+        bind -s -M $mode pagedown ''
         # Shift+Tab does a menu-complete backwards.
-        bind -s -M $mode -k btab complete-and-search
+        bind -s -M $mode shift-tab complete-and-search
     end
 end
