@@ -2171,6 +2171,24 @@ assert_contains "beginning-of-line" "$result"
 assert_contains "delete-char" "$result"
 assert_contains "complete-and-search" "$result"
 
+start_test "fish word keys move and cut whole tokens, as in bash and zsh"
+result="$(_fish_keys '
+bind -M insert ctrl-left; bind -M default ctrl-right
+bind -M insert ctrl-delete; bind -M default ctrl-delete
+bind -M insert ctrl-backspace; bind -M insert ctrl-h; bind -M insert alt-backspace
+')"
+assert_contains "bind -M insert ctrl-left backward-token" "$result"
+assert_contains "bind ctrl-right forward-token" "$result"
+assert_contains "bind -M insert ctrl-delete kill-token" "$result"
+assert_contains "bind ctrl-delete kill-token" "$result"
+assert_contains "bind -M insert ctrl-backspace backward-kill-token" "$result"
+assert_contains "bind -M insert ctrl-h backward-kill-token" "$result"
+assert_contains "bind -M insert alt-backspace backward-kill-token" "$result"
+
+start_test "fish backward token cuts stay out of normal mode"
+result="$(_fish_keys 'bind -M default ctrl-h')"
+assert_contains "backward-delete-char" "$result"
+
 start_test "fish separator is non-empty with no terminal"
 result="$(_fish_run_config '' 'set -e COLUMNS' 'bar (terminal_width) | string length')"
 assert_equal "80" "$result"

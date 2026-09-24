@@ -51,6 +51,21 @@ function my_vi_key_bindings --description "Mikel's vi-like key bindings for fish
         bind -s -M $mode \e\x7f backward-kill-word
     end
 
+    # Word keys, as shrc sets them for bash and zsh: Ctrl-Left/Right move a
+    # token, Ctrl-Backspace (^H without the kitty keyboard protocol) and
+    # Alt-Backspace cut the token before the cursor, Ctrl-Delete the one
+    # after. A token is fish's shell word, so a quoted string goes whole.
+    # The backward cuts stay out of normal mode, where the cursor sits on the
+    # last character rather than after it.
+    for mode in insert default
+        bind -s -M $mode ctrl-left backward-token
+        bind -s -M $mode ctrl-right forward-token
+        bind -s -M $mode ctrl-delete kill-token
+    end
+    bind -s -M insert ctrl-backspace backward-kill-token
+    bind -s -M insert ctrl-h backward-kill-token
+    bind -s -M insert alt-backspace backward-kill-token
+
     # Home, End, and Delete by fish's key names.
     for mode in insert default
         bind -s -M $mode home beginning-of-line
