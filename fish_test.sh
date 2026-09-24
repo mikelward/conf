@@ -2153,6 +2153,24 @@ start_test "fish terminal_width uses COLUMNS when it is a real width"
 result="$(_fish_run_config '' 'set -g COLUMNS 132' 'terminal_width')"
 assert_equal "132" "$result"
 
+# my_vi_key_bindings runs in every interactive fish. fish 4 dropped `bind -k`,
+# so a terminfo key name there errors on every start and leaves the key unbound.
+_fish_keys() {
+    fish --no-config -c "source $_srcdir/config/fish/functions/my_vi_key_bindings.fish
+my_vi_key_bindings
+$1"
+}
+
+start_test "fish my_vi_key_bindings loads without errors"
+_fish_keys '' >/dev/null 2>"$_testdir/keys.err"
+assert_equal "" "$(cat "$_testdir/keys.err")"
+
+start_test "fish binds Home, Delete and Shift-Tab by fish 4 key names"
+result="$(_fish_keys 'bind -M insert home; bind -M default delete; bind -M insert shift-tab')"
+assert_contains "beginning-of-line" "$result"
+assert_contains "delete-char" "$result"
+assert_contains "complete-and-search" "$result"
+
 start_test "fish separator is non-empty with no terminal"
 result="$(_fish_run_config '' 'set -e COLUMNS' 'bar (terminal_width) | string length')"
 assert_equal "80" "$result"
