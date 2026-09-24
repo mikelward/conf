@@ -110,16 +110,28 @@ fn install {|&before-readline=$nop~ &after-readline=$nop~ &after-command=$nop~ ^
     # (a serial console, a bare pty) makes stty exit non-zero.
     try { stty start undef stop undef 2>/dev/null } catch _ { }
 
+    # Word keys, as shrc sets them for bash and zsh: Ctrl-Left/Right move a
+    # word, Ctrl-Backspace (^H, which is Ctrl-H here) and Alt-Backspace cut
+    # the word before the cursor, Ctrl-Delete the one after. Elvish has no
+    # quote-aware word, so these are its whitespace-separated ones: a quoted
+    # string with a space in it takes two cuts, where bash and zsh take one.
+    set edit:insert:binding[Ctrl-Left] = $edit:move-dot-left-word~
+    set edit:insert:binding[Ctrl-Right] = $edit:move-dot-right-word~
+    set edit:insert:binding[Ctrl-H] = $edit:kill-word-left~
+    # Alt-Backspace arrives as Esc DEL, which Elvish reads as Alt-Ctrl-?.
+    set edit:insert:binding['Alt-Ctrl-?'] = $edit:kill-word-left~
+    set edit:insert:binding[Ctrl-Delete] = $edit:kill-word-right~
+
     if $atuin {
         set edit:insert:binding[Ctrl-R] = { -atuin-search }
         set edit:insert:binding[Down] = { -atuin-down }
     }
 }
 
-# TODO: no key-binding parity with shrc. Elvish's editor has one keymap rather
-# than readline's and zle's emacs/vi pair, and no `bindkey -M`; its own defaults
-# already cover most of what shrc rebinds (Ctrl-A/E/K/U/W/Y, Alt-B/F, word
-# motion), so nothing is rebound here beyond Ctrl-R above. shrc's vi-mode
+# TODO: only partial key-binding parity with shrc. Elvish's editor has one
+# keymap rather than readline's and zle's emacs/vi pair, and no `bindkey -M`;
+# its own defaults already cover most of what shrc rebinds (Ctrl-A/E/K/U/W/Y,
+# Alt-B/F), so beyond Ctrl-R only the word keys above are rebound. shrc's vi-mode
 # additions, its Page Up / Page Down suppression and its terminfo-driven
 # Home/End/Delete bindings have no Elvish equivalent -- Elvish reads those keys
 # itself.
