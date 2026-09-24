@@ -12,6 +12,15 @@ mod2:
   - option
   - control
 
+# Moving the window a Space left or right. Physical Win+Shift+Left/Right,
+# which the Karabiner arrow rule (config/karabiner) turns into
+# Control+Option+Shift+arrow -- a chord of its own, because the rotation would
+# otherwise deliver Option+Shift+arrow, which is select-by-word.
+mod3:
+  - option
+  - control
+  - shift
+
 layouts:
   - tall
   - 3column-left
@@ -101,3 +110,16 @@ throw-space-8:
 throw-space-9:
   mod: mod2
   key: "9"
+
+# Move the window a Space left or right (KDE: Meta+Shift+Left/Right, "Window
+# One Desktop to the Left/Right"). Bound explicitly because Amethyst's default
+# for these is mod2+arrow, which with mod2 above is Control+Option+arrow -- the
+# chord setup-macos gives macOS's own "Move left/right a space", so the default
+# would fight it for Win+Left/Right.
+throw-space-left:
+  mod: mod3
+  key: left
+
+throw-space-right:
+  mod: mod3
+  key: right

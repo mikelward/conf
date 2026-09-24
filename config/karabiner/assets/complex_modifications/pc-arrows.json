@@ -2,7 +2,7 @@
     "title": "PC keyboard arrows",
     "rules": [
         {
-            "description": "Ctrl+Left/Right moves by word, Win+Left/Right switches Spaces (PC muscle memory, alongside the setup-macos modifier rotation)",
+            "description": "Ctrl+Left/Right moves by word, Win+Left/Right switches Spaces, Win+Shift+Left/Right moves the window a Space (PC muscle memory, alongside the setup-macos modifier rotation)",
             "manipulators": [
                 {
                     "type": "basic",
@@ -69,6 +69,21 @@
                     "from": {
                         "key_code": "left_arrow",
                         "modifiers": {
+                            "mandatory": ["left_command", "shift"]
+                        }
+                    },
+                    "to": [
+                        {
+                            "key_code": "left_arrow",
+                            "modifiers": ["left_option", "left_command", "shift"]
+                        }
+                    ]
+                },
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "left_arrow",
+                        "modifiers": {
                             "mandatory": ["left_command"]
                         }
                     },
@@ -76,6 +91,21 @@
                         {
                             "key_code": "left_arrow",
                             "modifiers": ["left_option", "left_command"]
+                        }
+                    ]
+                },
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "right_arrow",
+                        "modifiers": {
+                            "mandatory": ["left_command", "shift"]
+                        }
+                    },
+                    "to": [
+                        {
+                            "key_code": "right_arrow",
+                            "modifiers": ["left_option", "left_command", "shift"]
                         }
                     ]
                 },

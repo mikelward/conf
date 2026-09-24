@@ -139,6 +139,13 @@ for rule in json.load(open(sys.argv[1]))["rules"]:
     assert_contains "left_arrow left_control+shift -> left_command+shift" "$_pairs"
     assert_contains "right_arrow left_control+shift -> left_command+shift" "$_pairs"
 
+    # Win+Shift+arrow moves the window a Space (Amethyst's throw-space-left/
+    # right, on mod3 in amethyst.yml). Its own chord, Control+Option+Shift:
+    # left to the rotation it would be Option+Shift+arrow, select-by-word.
+    start_test "Win+Shift+arrow emits Control+Option+Shift+arrow, Amethyst's throw"
+    assert_contains "left_arrow left_command+shift -> left_option+left_command+shift" "$_pairs"
+    assert_contains "right_arrow left_command+shift -> left_option+left_command+shift" "$_pairs"
+
     start_test "Win+arrow emits Control+Option+arrow, the Space shortcut"
     assert_contains "left_arrow left_command -> left_option+left_command" "$_pairs"
     assert_contains "right_arrow left_command -> left_option+left_command" "$_pairs"
@@ -151,7 +158,7 @@ for rule in json.load(open(sys.argv[1]))["rules"]:
     assert_not_contains "left_control -> left_option" "$_pairs"
 fi
 
-start_test "six manipulators: Ctrl and Ctrl+Shift and Win, per arrow"
-assert_equal "6" "$(grep -c '"type": "basic"' "$_arrow_file")"
+start_test "eight manipulators: Ctrl, Ctrl+Shift, Win and Win+Shift, per arrow"
+assert_equal "8" "$(grep -c '"type": "basic"' "$_arrow_file")"
 
 test_summary "karabiner_test"

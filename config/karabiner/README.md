@@ -5,7 +5,8 @@ Two complex-modification rules for a PC keyboard:
 - `assets/complex_modifications/pc-alt-tab.json` puts application switching
   back under the physical Alt key.
 - `assets/complex_modifications/pc-arrows.json` makes physical Ctrl+Left/Right
-  move by word and Win+Left/Right switch Spaces; see
+  move by word, Win+Left/Right switch Spaces and Win+Shift+Left/Right move the
+  window a Space; see
   [Arrow keys](#arrow-keys).
 
 Only the asset file is kept here. Karabiner rewrites
@@ -102,6 +103,7 @@ switches desktops instead. This rule puts both back where KDE has them:
 | Ctrl+Left/Right | `left_command`+arrow | `Option+arrow` | move by word |
 | Ctrl+Shift+Left/Right | `left_command`+`shift`+arrow | `Option+Shift+arrow` | select by word |
 | Win+Left/Right | `left_option`+`left_command`+arrow | `Control+Option+arrow` | switch Spaces |
+| Win+Shift+Left/Right | `left_option`+`left_command`+`shift`+arrow | `Control+Option+Shift+arrow` | move the window a Space |
 
 The outputs name the keys the rotation turns into what macOS should see, by
 the same layering as above: `left_command` becomes Option and `left_option`
@@ -111,7 +113,12 @@ becomes Control.
 event after Karabiner and can't tell a synthesized `Option+Left` from a
 physical one, so if Spaces were bound there, Ctrl+Left would switch Spaces
 rather than move by word. `setup-macos` binds "Move left/right a space" to
-`Control+Option+arrow` instead, and only Win+arrow produces that. Without this
+`Control+Option+arrow` instead, and only Win+arrow produces that.
+
+**Moving a window a Space is Amethyst's**, as `throw-space-left`/`right` on
+`mod3` in `amethyst.yml` — macOS has no shortcut of its own for it. It gets its
+own chord for the same reason: left to the rotation, Win+Shift+arrow would be
+`Option+Shift+arrow`, which is select-by-word. Without this
 rule, Win+arrow is plain `Option+arrow` again — the stock word movement — and
 Ctrl+arrow jumps to the line ends.
 
@@ -128,8 +135,13 @@ still reach the line ends.
 Karabiner does not enable assets automatically. In Karabiner-Elements
 Settings > Complex Modifications > Add rule, enable "Alt+Tab switches
 applications" and "Ctrl+Left/Right moves by word, Win+Left/Right switches
-Spaces". `setup-macos` installs Karabiner and says this, but the enabling step
-is a GUI action that can't be scripted.
+Spaces, Win+Shift+Left/Right moves the window a Space". `setup-macos` installs
+Karabiner and says this, but the enabling step is a GUI action that can't be
+scripted.
+
+Enabling a rule copies it into `karabiner.json`, and Karabiner runs that copy,
+so a change to an asset doesn't reach a rule that's already enabled. After
+pulling one, remove the rule under Complex Modifications and add it again.
 
 Karabiner also needs its driver extension approved and Input Monitoring
 permission granted, both prompted for on first launch.

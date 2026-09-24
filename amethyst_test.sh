@@ -106,4 +106,15 @@ for _n in 1 2 3 4 5 6 7 8 9; do
         "throw-space-$_n mod2 $_n" "$_bindings"
 done
 
+# Win+Shift+Left/Right, which the Karabiner arrow rule sends as
+# Control+Option+Shift+arrow, moves the window a Space, as Meta+Shift+arrow
+# does on KDE. mod3 has to be all three: without shift it would be mod2, the
+# chord that switches Spaces.
+start_test "mod3 is option, control and shift"
+_mod3=$(sed -n '/^mod3:/,/^[^ ]/{ /^  - /p; }' "$_amethyst" | sed 's/^  - //' | sort | tr '\n' ' ')
+assert_equal "control option shift " "$_mod3"
+start_test "throw-space-left/right bound to mod3 arrows"
+assert_contains "throw-space-left mod3 left" "$_bindings"
+assert_contains "throw-space-right mod3 right" "$_bindings"
+
 test_summary "amethyst_test"
