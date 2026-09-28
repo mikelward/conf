@@ -2451,9 +2451,238 @@ precommand() {
     log_history "$*"
     atuin_preexec "$*"
     current_command="$(expand_job "$*")"
+    quickspace_grant "$current_command"
     set_title "$(title)"
     set_color 'normal'
     SECONDS=0
+}
+
+# Sets command_program_name to the program a command line runs: its first
+# word, as the shell
+# reads it, that isn't a VAR=value assignment, a wrapper that runs the next
+# word (command, env, nohup...), or a wrapper's option. It reads quotes and
+# backslashes the way the shell does, so "/opt/My App/bin/editor" is one
+# word, and stops at that word, so a long command line costs little. zsh
+# uses its own lexer; bash, capped at what it can do (AGENTS.md tiers), uses
+# a scanner that handles quotes and backslashes but not $(...) or ${...}.
+# Returns false when there's no such word. It sets a variable rather than
+# printing, so the caller needn't fork a subshell for it on every command.
+# How command_program treats one unquoted word before the program:
+# returns 0 if it's the program, 1 to skip it, 2 to skip it and the word
+# after it (a redirection operator's target, or an option's value), or 3 if
+# the line runs no program (command -v only looks one up).
+# command_program_wrapper holds the last wrapper seen.
+command_program_word() {
+    case "$command_program_wrapper:$1" in
+    command:-*[vV]*) return 3 ;;
+    esac
+    case "$1" in
+    [A-Za-z_]*=*) return 1 ;; # an assignment
+    # Options that take the next word as their value: env's, and exec -a.
+    -a | -u | -C | --unset | --chdir) return 2 ;;
+    -*) return 1 ;;
+    \! | builtin | command | env | exec | nocorrect | noglob | nohup | setsid | time)
+        command_program_wrapper=$1
+        return 1
+        ;;
+    [0-9]*[\<\>]* | [\<\>]* | \&\>*)
+        # A redirection. The operator alone (>, 2>, &>>) takes the next word
+        # as its target; with the target attached (>/tmp/log) it's one word.
+        case "$1" in
+        *[\<\>]\&[0-9-]*) return 1 ;; # a descriptor duplication (2>&1)
+        *[!0-9\<\>\&\|-]*) return 1 ;;
+        *) return 2 ;;
+        esac
+        ;;
+    esac
+    return 0
+}
+
+command_program() {
+    local line="$1" i=0 n=${#1} c word="" inword="" quote="" skip=""
+    command_program_name= command_program_wrapper=
+    if is_zsh; then
+        # zsh's own lexer splits the line exactly as zsh will run it,
+        # including $(...), ${...} and nested quotes; (Q) then unquotes the
+        # program's word. eval keeps the zsh-only syntax away from other
+        # shells' parsers, and `emulate -L zsh` undoes shrc's `emulate sh`
+        # for the rest of this function only. bash keeps the scanner below.
+        eval '
+            emulate -L zsh
+            for word in ${(z)1}; do
+                if [[ -n $skip ]]; then
+                    skip=
+                    continue
+                fi
+                case $word in
+                (";" | "&" | "|" | "&&" | "||" | "(" | "{") break ;;
+                esac
+                command_program_word "${(Q)word}"
+                case $? in
+                (0)
+                    command_program_name=${(Q)word}
+                    break
+                    ;;
+                (2) skip=1 ;;
+                (3) break ;;
+                esac
+            done
+        '
+        test -n "$command_program_name"
+        return
+    fi
+    while :; do
+        if test "$i" -lt "$n"; then
+            c=${line:$i:1}
+            i=$((i + 1))
+        elif test -n "$quote" || test -z "$inword"; then
+            return 1 # no program, or an unterminated quote
+        else
+            c=" " # the end of the line ends the last word
+        fi
+        if test "$quote" = "'"; then
+            if test "$c" = "'"; then quote=""; else word=$word$c; fi
+            continue
+        fi
+        if test "$quote" = '"'; then
+            case "$c" in
+            '"') quote="" ;;
+            \\)
+                # Inside double quotes a backslash escapes only these.
+                case "${line:$i:1}" in
+                '$' | '`' | '"' | \\) word=$word${line:$i:1}; i=$((i + 1)) ;;
+                *) word=$word$c ;;
+                esac
+                ;;
+            *) word=$word$c ;;
+            esac
+            continue
+        fi
+        case "$c" in
+        "'" | '"') quote=$c; inword=1 ;;
+        \\) word=$word${line:$i:1}; i=$((i + 1)); inword=1 ;;
+        [[:space:]])
+            test -n "$inword" || continue
+            if test -n "$skip"; then
+                skip=""
+            else
+                command_program_word "$word"
+                case $? in
+                0)
+                    command_program_name=$word
+                    return 0
+                    ;;
+                2) skip=1 ;;
+                3) return 1 ;;
+                esac
+            fi
+            word=""
+            inword=""
+            test "$i" -lt "$n" || return 1
+            ;;
+        *) word=$word$c; inword=1 ;;
+        esac
+    done
+}
+
+# Expands the parameter references in the word $1 ($NAME, ${NAME},
+# ${NAME:-word} and ${NAME-word}, anywhere in it) into expanded_word, by
+# reading each variable by name, so nothing in the word runs. Returns 1 for
+# anything else ($(...), $1, other operators), which only the shell's own
+# expansion could expand, and that would run any $(...) in it.
+expand_word() {
+    local rest=$1 out="" i depth c inner name op default isset value
+    while :; do
+        case "$rest" in
+        *\$*) ;;
+        *) break ;;
+        esac
+        out=$out${rest%%\$*}
+        rest=${rest#*\$}
+        case "$rest" in
+        \{*)
+            # Find the matching }, past any nested ${...}.
+            i=1 depth=1
+            while test "$i" -lt "${#rest}"; do
+                c=${rest:$i:1}
+                case "$c" in
+                \{) depth=$((depth + 1)) ;;
+                \}) depth=$((depth - 1)); test "$depth" -gt 0 || break ;;
+                esac
+                i=$((i + 1))
+            done
+            test "$depth" -eq 0 || return 1
+            inner=${rest:1:$((i - 1))}
+            rest=${rest:$((i + 1))}
+            name=${inner%%[!A-Za-z0-9_]*}
+            op=${inner#"$name"}
+            ;;
+        *)
+            name=${rest%%[!A-Za-z0-9_]*}
+            rest=${rest#"$name"}
+            op=
+            ;;
+        esac
+        case "$name" in
+        '' | [0-9]*) return 1 ;;
+        esac
+        case "$op" in
+        '') default= ;;
+        :-* | -*) default=${op#:}; default=${default#-} ;;
+        *) return 1 ;;
+        esac
+        eval "value=\${$name-} isset=\${$name+set}"
+        # :- falls back for an unset or empty variable; plain - for unset only.
+        if test -n "$op" && { test -z "$isset" || { test -z "$value" && test "$op" != "${op#:}"; }; }; then
+            expand_word "$default" || return 1
+            value=$expanded_word
+        fi
+        out=$out$value
+    done
+    expanded_word=$out$rest
+}
+
+# In a quickspace session, records a one-shot focus grant for the command
+# with quickspace's focus guard (quickspace SPEC.md §14.3), so the first
+# window it opens may take focus. The grant names the command's program,
+# and this shell's pid, so a window from any descendant can use it too.
+# Outside quickspace this costs one `case`.
+quickspace_grant() {
+    case ":${XDG_CURRENT_DESKTOP:-}:" in
+    *:quickspace:*) ;;
+    *) return 0 ;;
+    esac
+    local app id reply
+    command_program "$1" || return 0
+    app=$command_program_name
+    case "$app" in
+    *\$*)
+        expand_word "$app" || return 0
+        # A variable holding a command line ("firefox --new-window", "env
+        # GTK_THEME=dark nautilus") runs that line's program, found the same
+        # way, unless the whole value is an executable path, which may hold
+        # spaces.
+        app=$expanded_word
+        if ! test -x "$app"; then
+            command_program "$app" || return 0
+            app=$command_program_name
+        fi
+        ;;
+    esac
+    # The Lua string can't hold a quote or backslash; no real program name
+    # has one.
+    app=${app//[\"\\]/}
+    test -n "$app" || return 0
+    if ! have_command hyprctl; then
+        warn "quickspace: no hyprctl, so $app gets no focus grant"
+        return 1
+    fi
+    id=${app##*/}
+    reply=$(hyprctl eval "quickspace_focus.grant(\"$id\", $$)" 2>&1)
+    if test "$reply" != ok; then
+        warn "quickspace: couldn't record a focus grant for $app: $reply"
+        return 1
+    fi
 }
 
 # set the xterm title to the supplied string
