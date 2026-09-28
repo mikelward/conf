@@ -72,6 +72,22 @@ Pick "Hyprland" at your display manager, or from a TTY:
 
     exec Hyprland
 
+### The quickspace session
+
+`setup --quickspace` (scripts repo) installs the quickspace session, which
+appears at the greeter as "quickspace". `hyprland.lua` recognizes it by
+`XDG_CURRENT_DESKTOP=quickspace:Hyprland` and changes two things there:
+
+- **Autostart is `uwsm finalize` alone.** quickspace's units run the rest:
+  the bar and notifications (through the theme daemon), the wallpaper, the
+  polkit agent, `apply-input.sh`, and hypridle. A plain Hyprland login keeps
+  the autostart list in `hyprland.lua`.
+- **App keys and the launcher go through `quickspace launch`**, so the app's
+  first window takes focus past quickspace's focus guard, and the app runs
+  outside the shell's unit. Keys bound to a `runenv` wrapper grant the
+  first window of any app (`--app '*'`), since their window class isn't
+  known here.
+
 ### Optional: uwsm (systemd-managed session)
 
 [uwsm](https://github.com/Vladimir-csp/uwsm) can instead launch Hyprland as a

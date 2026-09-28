@@ -20,6 +20,11 @@ local runenv = "~/scripts/runenv"
 local scripts = "~/.config/hypr/scripts"
 local mod = "SUPER"
 
+-- The quickspace session (uwsm sets XDG_CURRENT_DESKTOP=quickspace:Hyprland).
+-- Its units start the shell, wallpaper and idle daemon, and apps go through
+-- `quickspace launch`; a plain Hyprland login keeps doing both itself.
+local quickspace_session = (":" .. (os.getenv("XDG_CURRENT_DESKTOP") or "") .. ":"):find(":quickspace:", 1, true) ~= nil
+
 -- Hyprland shows its own overlay; used for problems found while loading.
 local function notify_error(text)
     hl.notification.create({ text = text, duration = 15000, icon = "error" })
@@ -77,9 +82,15 @@ hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" 
 --------------------------------------------------------------------------------
 -- AUTOSTART
 --------------------------------------------------------------------------------
--- Unchanged from the conf-format config. The quickspace session units replace
--- this list later (quickspace SPEC.md §5).
+-- In the quickspace session this starts nothing but `uwsm finalize` (quickspace
+-- SPEC.md §5.4): quickspace.service runs the bar, notifications, wallpaper,
+-- polkit agent and input setup, and hypridle.service the idle daemon, each
+-- once and only in that session. The list below is for a plain Hyprland login.
 hl.on("hyprland.start", function()
+    if quickspace_session then
+        hl.exec_cmd("uwsm finalize")
+        return
+    end
     hl.exec_cmd("swww-daemon")
     hl.exec_cmd("sleep 1 && swww img ~/.config/hypr/wallpaper.jpg")
     hl.exec_cmd("hypridle")
@@ -317,24 +328,37 @@ local function exec(cmd)
     return hl.dsp.exec_cmd(cmd)
 end
 
+-- Starts an app. In the quickspace session it goes through `quickspace
+-- launch`, which waits for the shell, grants the app's first window focus
+-- (the focus guard opens every other window unfocused) and runs it in
+-- app-graphical.slice. id names the app for that grant; the default, "*",
+-- is the first window of any app, for wrapper scripts whose window class
+-- isn't known here.
+local function app(cmd, id)
+    if not quickspace_session then
+        return exec(cmd)
+    end
+    return exec("quickspace launch --app '" .. (id or "*") .. "' -- " .. cmd)
+end
+
 -- Applications. The helper scripts live in the scripts repo, on the PATH
 -- runenv provides. Super+D and Super+S are left for hyprland.local.lua.
-hl.bind(key("T"), exec(terminal))
-hl.bind(key("W"), exec(runenv .. " terminal_on_workstation"))
-hl.bind(key("G"), exec(runenv .. " browser1"))
-hl.bind(key("SHIFT + G"), exec(runenv .. " browser3"))
-hl.bind(key("F"), exec(runenv .. " browser2"))
+hl.bind(key("T"), app(terminal, terminal))
+hl.bind(key("W"), app(runenv .. " terminal_on_workstation"))
+hl.bind(key("G"), app(runenv .. " browser1"))
+hl.bind(key("SHIFT + G"), app(runenv .. " browser3"))
+hl.bind(key("F"), app(runenv .. " browser2"))
 hl.bind(key("B"), exec(runenv .. " bluetooth-connect"))
 hl.bind(key("SHIFT + B"), exec(runenv .. " pulseprofile.py"))
-hl.bind(key("C"), exec(runenv .. " google-calendar"))
-hl.bind(key("SHIFT + C"), exec(runenv .. " google-chat"))
-hl.bind(key("H"), exec(runenv .. " home"))
-hl.bind(key("I"), exec(runenv .. " irc"))
-hl.bind(key("M"), exec(runenv .. " google-meet"))
-hl.bind(key("N"), exec(runenv .. " notepad"))
-hl.bind(key("R"), exec(runenv .. " remote-desktop"))
-hl.bind(key("Y"), exec(runenv .. " youtube-music"))
-hl.bind(key("E"), exec(terminal .. " -e yazi"))
+hl.bind(key("C"), app(runenv .. " google-calendar"))
+hl.bind(key("SHIFT + C"), app(runenv .. " google-chat"))
+hl.bind(key("H"), app(runenv .. " home"))
+hl.bind(key("I"), app(runenv .. " irc"))
+hl.bind(key("M"), app(runenv .. " google-meet"))
+hl.bind(key("N"), app(runenv .. " notepad"))
+hl.bind(key("R"), app(runenv .. " remote-desktop"))
+hl.bind(key("Y"), app(runenv .. " youtube-music"))
+hl.bind(key("E"), app(terminal .. " -e yazi", terminal))
 -- Through runenv so the launcher's app list sees the user's scripts.
 hl.bind(key("Space"), exec(runenv .. " " .. scripts .. "/launch-fuzzel.sh"))
 hl.bind(key("SHIFT + N"), exec("swaync-client -t -sw"))
@@ -471,7 +495,7 @@ hl.bind("XF86AudioPlay", exec("playerctl play-pause"), locked)
 hl.bind("XF86AudioPause", exec("playerctl play-pause"), locked)
 hl.bind("XF86AudioNext", exec("playerctl next"), locked)
 hl.bind("XF86AudioPrev", exec("playerctl previous"), locked)
-hl.bind("XF86Calculator", exec("gnome-calculator"))
+hl.bind("XF86Calculator", app("gnome-calculator", "org.gnome.Calculator"))
 
 --------------------------------------------------------------------------------
 -- LAPTOP LID

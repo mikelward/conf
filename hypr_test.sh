@@ -137,6 +137,29 @@ assert_equal 1 "$?"
 assert_contains "couldn't configure mouse 'logitech-usb-receiver'" "$(cat "$_fake/err")"
 rm -rf "$_fake"
 
+# launch-fuzzel.sh, against a fake fuzzel that logs its arguments.
+_fuzzel="$_srcdir/config/hypr/scripts/launch-fuzzel.sh"
+_ffake=$(mktemp -d)
+cat > "$_ffake/fuzzel" <<'FAKE'
+#!/bin/sh
+for a in "$@"; do printf '%s\n' "$a"; done > "$FAKE_LOG"
+FAKE
+chmod +x "$_ffake/fuzzel"
+echo dark > "$_ffake/theme-mode"
+run_fuzzel() {
+    : > "$_ffake/log"
+    env PATH="$_ffake:$PATH" FAKE_LOG="$_ffake/log" XDG_RUNTIME_DIR="$_ffake" "$@" sh "$_fuzzel"
+}
+
+start_test "launch-fuzzel launches through quickspace launch in the quickspace session"
+run_fuzzel XDG_CURRENT_DESKTOP=quickspace:Hyprland
+assert_contains "--launch-prefix=quickspace launch --app '*' --" "$(cat "$_ffake/log")"
+
+start_test "launch-fuzzel launches directly elsewhere"
+run_fuzzel XDG_CURRENT_DESKTOP=KDE
+assert_equal "" "$(cat "$_ffake/log")"
+rm -rf "$_ffake"
+
 start_test "apply-input parses as shell and is executable"
 assert_true sh -n "$_apply"
 assert_true test -x "$_apply"

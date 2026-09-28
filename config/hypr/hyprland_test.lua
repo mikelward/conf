@@ -245,7 +245,7 @@ local function load(setup)
     if setup and setup["local"] then
         write(LOCAL, setup["local"])
     end
-    env_overrides = { XDG_RUNTIME_DIR = tmp .. "/run", HYPRLAND_INSTANCE_SIGNATURE = "sig1" }
+    env_overrides = { XDG_RUNTIME_DIR = tmp .. "/run", HYPRLAND_INSTANCE_SIGNATURE = "sig1", XDG_CURRENT_DESKTOP = false }
     for k, v in pairs((setup and setup.env) or {}) do
         env_overrides[k] = v
     end
@@ -864,6 +864,28 @@ end)
 --------------------------------------------------------------------------------
 -- Autostart
 --------------------------------------------------------------------------------
+test("the quickspace session's autostart is uwsm finalize alone", function()
+    load({ env = { XDG_CURRENT_DESKTOP = "quickspace:Hyprland" } })
+    fire("hyprland.start")
+    eq(1, #S.execs, "one command")
+    eq("uwsm finalize", S.execs[1])
+end)
+
+test("in the quickspace session, app keys go through quickspace launch", function()
+    load({ env = { XDG_CURRENT_DESKTOP = "quickspace:Hyprland" } })
+    eq("quickspace launch --app 'kitty' -- kitty", bind("SUPER + T").target.args)
+    eq("quickspace launch --app '*' -- ~/scripts/runenv browser1", bind("SUPER + G").target.args)
+    eq("quickspace launch --app 'org.gnome.Calculator' -- gnome-calculator", bind("XF86Calculator").target.args)
+    -- Not apps: these stay plain commands.
+    eq("swaync-client -t -sw", bind("SUPER + SHIFT + N").target.args)
+end)
+
+test("outside the quickspace session, app keys run the command itself", function()
+    load({ env = { XDG_CURRENT_DESKTOP = "Hyprland" } })
+    eq("kitty", bind("SUPER + T").target.args)
+    eq("~/scripts/runenv browser1", bind("SUPER + G").target.args)
+end)
+
 test("autostart runs on hyprland.start, not at load", function()
     load()
     eq(0, #S.execs, "nothing runs while the config loads")

@@ -16,8 +16,14 @@ case "$mode" in
     *) mode=$("$HOME/.config/hypr/scripts/theme.sh" mode) ;;
 esac
 
+set --
 if test "$mode" = light; then
-    exec fuzzel --config "$HOME/.config/fuzzel/fuzzel-light.ini"
-else
-    exec fuzzel
+    set -- --config "$HOME/.config/fuzzel/fuzzel-light.ini"
 fi
+# In the quickspace session, apps start through `quickspace launch`, so the
+# focus guard lets the chosen app's first window take focus (its window
+# class isn't known here, hence the wildcard).
+case ":${XDG_CURRENT_DESKTOP:-}:" in
+    *:quickspace:*) set -- "$@" "--launch-prefix=quickspace launch --app '*' --" ;;
+esac
+exec fuzzel "$@"
