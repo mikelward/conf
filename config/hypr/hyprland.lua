@@ -372,6 +372,11 @@ hl.bind(key("SHIFT + F"), hl.dsp.window.float({ action = "toggle" }))
 hl.bind(key("Insert"), hl.dsp.window.float({ action = "toggle" }))
 hl.bind(key("mouse:272"), hl.dsp.window.drag(), { mouse = true })
 hl.bind(key("mouse:273"), hl.dsp.window.resize(), { mouse = true })
+-- There are no title bars to double-click, so Super+middle-click toggles
+-- maximize, and a second click puts the window back in its tile. It acts on
+-- the focused window, which focus-follows-mouse makes the one under the
+-- pointer.
+hl.bind(key("mouse:274"), hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))
 
 -- Resize mode, for floating windows: h/j/k/l or arrows, Esc or Return to leave.
 hl.bind(key("SHIFT + R"), hl.dsp.submap("resize"))

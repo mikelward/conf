@@ -177,6 +177,7 @@ shape) and `` ` `` maximizes the window.
 |--------|--------|
 | `SUPER + drag left button` | Move window |
 | `SUPER + drag right button` | Resize window |
+| `SUPER + middle click` | Maximize the window; click again to put it back in its tile |
 
 Focus follows the mouse when it crosses into a window, and never warps the
 pointer. An app that asks for focus is marked urgent instead of taking it
