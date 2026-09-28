@@ -108,8 +108,10 @@
   action on shared/merged branches: force-pushing `main`, dropping commits
   already on `main`, rewriting another author's branch.
 - Merge cue (`merged` / `I merged` / `landed` / merge webhook) runs hygiene
-  *before* engaging with the rest of the message: `git fetch origin`, cut a
-  fresh `<agent>/<short-topic>` branch off `origin/main`, announce the switch.
+  *before* engaging with the rest of the message: `git fetch origin
+  +refs/heads/main:refs/remotes/origin/main` (a bare fetch in a single-branch
+  clone leaves `origin/main` stale), cut a fresh `<agent>/<short-topic>`
+  branch off `origin/main`, announce the switch.
 - After a merge, take a fresh `<agent>/<short-topic>` — don't reset the merged
   name onto the new base. Its remote ref still points at the pre-merge tip, so
   `origin/<branch>..HEAD` keeps spanning the merged commits and unpushed-work
