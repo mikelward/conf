@@ -1,0 +1,36 @@
+-- Per-machine Hyprland overrides -- ~/.config/hypr/hyprland.local.lua
+--
+-- TEMPLATE: copy this to hyprland.local.lua (the same name plus .local, like
+-- .shrc.local) if you need per-machine settings. hyprland.lua loads it LAST,
+-- so its settings (hl.config values, monitor rules) override the shared
+-- defaults; the file itself is machine-local and never committed.
+-- Binds are the exception: Hyprland runs every bind on a key, so REBINDING an
+-- already-bound key needs hl.unbind first (example below). A missing file is
+-- fine. An error shows as a notification: a syntax error applies none of this
+-- file, and a runtime error stops it there, after the calls before it applied.
+--
+-- Everything below is commented out: most machines need nothing here.
+
+-- Pinned monitor arrangement (names: hyprctl monitors). Only needed for a
+-- SPECIFIC layout; the shared catch-all places every output left to right.
+-- hl.monitor({ output = "DP-1", mode = "2560x1440@144", position = "0x0", scale = 1 })
+-- hl.monitor({ output = "eDP-1", mode = "1920x1080", position = "2560x0", scale = 1 })
+
+-- Extra launchers. Super+D (code) and Super+S (secureshell) are left unbound
+-- in the shared config because those helper scripts aren't in the repo.
+-- runenv puts ~/scripts.local and the dirs named in ~/.env.local on PATH:
+-- hl.bind("SUPER + D", hl.dsp.exec_cmd("~/scripts/runenv code"))
+-- hl.bind("SUPER + S", hl.dsp.exec_cmd("~/scripts/runenv secureshell"))
+
+-- Rebinding an already-bound key: unbind the shared bind first, e.g. to
+-- change Super+E's file manager on this machine only:
+-- hl.unbind("SUPER + E")
+-- hl.bind("SUPER + E", hl.dsp.exec_cmd("nautilus"))
+
+-- Input tweaks on top of apply-input.sh's automatic classification
+-- (names: hyprctl devices):
+-- hl.device({ name = "logitech-mx-master-3", scroll_factor = 2.0 })
+-- hl.config({ input = { touchpad = { scroll_factor = 1.5 } } })
+
+-- A stronger focus cue, if 0.15 is too subtle on dark apps:
+-- hl.config({ decoration = { dim_strength = 0.25 } })

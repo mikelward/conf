@@ -75,6 +75,13 @@ jobs:
       # green having run a fraction of the suite.
       - name: install the shells the suite tests
         run: sudo ./install-ci-shells.sh
+      # hyprland.lua is tested under a stub of Hyprland's API. Hyprland
+      # embeds Lua 5.5, which Ubuntu doesn't package yet; the config also
+      # runs on 5.4. Lua publishes only source, so apt.
+      - name: install lua for the Hyprland config test
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends lua5.4
       - name: make test
         # Runners check out fresh, so there is no cache to invalidate;
         # `make test` is equivalent to `make test-full` in this context.

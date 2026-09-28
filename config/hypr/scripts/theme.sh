@@ -6,8 +6,7 @@
 #   - the freedesktop colour-scheme preference (kitty and GTK apps follow it)
 #   - waybar   (relaunched with -s style.css / style-light.css)
 #   - swaync   (relaunched with --style style.css / style-light.css)
-#   - window border colours, via whichever compositor is running
-#     (hyprctl under Hyprland, swaymsg under Sway)
+#   - window border colors under Sway (Hyprland draws none)
 #   - the wallpaper, when per-mode images exist (swww / swaybg)
 #   - a mode marker read by launch-fuzzel.sh
 #
@@ -89,18 +88,8 @@ apply() {
         swaync --style "$sstyle" >/dev/null 2>&1 &
     fi
 
-    # 4) Window border colours, via whichever compositor is running. Detect
-    #    by the compositor's IPC handle, not just the installed binary --
-    #    both compositors may be installed at once.
-    if test -n "$HYPRLAND_INSTANCE_SIGNATURE" && command -v hyprctl >/dev/null 2>&1; then
-        if test "$mode" = light; then
-            hyprctl keyword general:col.active_border "rgba(5e81acff)" >/dev/null 2>&1
-            hyprctl keyword general:col.inactive_border "rgba(d8dee9ff)" >/dev/null 2>&1
-        else
-            hyprctl keyword general:col.active_border "rgba(88c0d0ff)" >/dev/null 2>&1
-            hyprctl keyword general:col.inactive_border "rgba(3b4252ff)" >/dev/null 2>&1
-        fi
-    fi
+    # 4) Window border colors under Sway. Hyprland draws no borders (the
+    #    focus cue is the dim), so there is nothing to recolor there.
     if test -n "$SWAYSOCK" && command -v swaymsg >/dev/null 2>&1; then
         if test "$mode" = light; then
             active=5e81ac; active_text=eceff4
