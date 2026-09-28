@@ -220,9 +220,11 @@ start_test "lid.sh auto-detects the internal panel (eDP/LVDS/DSI), no placeholde
 assert_contains "eDP|LVDS|DSI" "$_lid_body"
 assert_not_contains "REPLACE-ME" "$_lid_body"
 
-start_test "lid.sh keeps the TODO about moving the policy to logind"
-assert_contains "TODO" "$_lid_body"
-assert_contains "HandleLidSwitch" "$_lid_body"
+# Hyprland now leaves suspend to logind, so the ignore drop-in sway's lid.sh
+# relies on stops an undocked Hyprland lid close from suspending.
+start_test "lid.sh documents that its logind drop-in isn't Hyprland's"
+assert_contains "HandleLidSwitch=ignore" "$_lid_body"
+assert_contains "HandleLidSwitchDocked=ignore" "$_lid_body"
 
 ################################################################################
 # Per-host overrides: config.local included AFTER the input blocks (so local
@@ -358,8 +360,9 @@ assert_contains "swaymsg \"client.focused" "$_theme_body"
 assert_contains "swaymsg \"client.unfocused" "$_theme_body"
 start_test "theme.sh detects sway by SWAYSOCK (not just the binary)"
 assert_contains "SWAYSOCK" "$_theme_body"
-start_test "theme.sh still drives hyprland borders (shared both ways)"
-assert_contains "hyprctl keyword general:col.active_border" "$_theme_body"
+# Hyprland draws no borders, and its Lua config has no `hyprctl keyword`.
+start_test "theme.sh leaves Hyprland's (absent) borders alone"
+assert_not_contains "hyprctl keyword" "$_theme_body"
 start_test "theme.sh swaps the wallpaper with swaybg under sway"
 assert_contains "swaybg -i" "$_theme_body"
 

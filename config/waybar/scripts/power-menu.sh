@@ -32,7 +32,8 @@ logout_session() {
     if command -v uwsm >/dev/null 2>&1 && uwsm check is-active >/dev/null 2>&1; then
         exec uwsm stop
     elif test -n "$HYPRLAND_INSTANCE_SIGNATURE" && command -v hyprctl >/dev/null 2>&1; then
-        exec hyprctl dispatch exit
+        # Hyprland's Lua config takes a Lua dispatcher here.
+        exec hyprctl dispatch 'hl.dsp.exit()'
     elif test -n "$SWAYSOCK" && command -v swaymsg >/dev/null 2>&1; then
         exec swaymsg exit
     fi

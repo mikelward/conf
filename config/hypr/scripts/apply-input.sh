@@ -6,12 +6,20 @@
 #
 # Devices are classified by name (touchpads report "touchpad"/"trackpad"/
 # "synaptics" in their libinput name, which is what Hyprland uses). Runs at
-# login via exec-once in hyprland.conf; re-run it after hotplugging a mouse.
+# login from hyprland.lua's autostart; re-run it after hotplugging a mouse.
 # Override the mouse scroll speed with HYPR_MOUSE_SCROLL_FACTOR (default 1.5).
 
 MOUSE_SCROLL="${HYPR_MOUSE_SCROLL_FACTOR:-1.5}"
 
 command -v hyprctl >/dev/null 2>&1 || exit 0
+
+# It is spliced into Lua below, so it must be a plain number.
+case "$MOUSE_SCROLL" in
+    ''|*[!0-9.]*|*.*.*|.)
+        echo "apply-input.sh: HYPR_MOUSE_SCROLL_FACTOR must be a number, not '$MOUSE_SCROLL'" >&2
+        exit 1
+        ;;
+esac
 
 # Pointer device names from the "mice" array. Prefer jq; fall back to a narrow
 # sed window so keyboard/tablet names in the same JSON aren't picked up.
@@ -26,6 +34,7 @@ fi
 
 # Iterate line by line -- device names contain spaces before Hyprland's
 # lowercasing/hyphenation on some setups, so don't split on spaces.
+status=0
 IFS='
 '
 for name in $names; do
@@ -35,9 +44,16 @@ for name in $names; do
             # Touchpad: keep the global defaults (left button primary).
             ;;
         *)
-            # Mouse: right button primary + faster wheel.
-            hyprctl keyword "device[$name]:left_handed" true >/dev/null 2>&1
-            hyprctl keyword "device[$name]:scroll_factor" "$MOUSE_SCROLL" >/dev/null 2>&1
+            # Mouse: right button primary + faster wheel. The Lua config has
+            # no keyword command, so this evaluates an hl.device() call
+            # with the name escaped for a Lua string.
+            lua_name=$(printf '%s' "$name" | sed 's/[\\"]/\\&/g')
+            result=$(hyprctl eval "hl.device({ name = \"$lua_name\", left_handed = true, scroll_factor = $MOUSE_SCROLL })" 2>&1)
+            if test "$result" != ok; then
+                echo "apply-input.sh: couldn't configure mouse '$name': $result" >&2
+                status=1
+            fi
             ;;
     esac
 done
+exit $status

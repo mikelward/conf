@@ -10,13 +10,10 @@
 #
 # For this to be the authoritative lid handler, systemd-logind must be told
 # to ignore the lid (HandleLidSwitch=ignore); setup-sway installs that
-# drop-in, shared with the Hyprland build (whose lid.sh implements the same
-# policy with hyprctl).
-#
-# TODO: consider moving the suspend policy to systemd-logind instead
-# (HandleLidSwitch=suspend + HandleLidSwitchDocked=ignore) and dropping the
-# conditional suspend below. That changes the SHARED logind drop-in, so the
-# Hyprland build's lid.sh would have to change with it -- do both together.
+# drop-in. The Hyprland build no longer shares it: it leaves suspend to
+# logind's defaults (HandleLidSwitch=suspend, HandleLidSwitchDocked=ignore),
+# so with this drop-in installed an undocked lid close under Hyprland won't
+# suspend. The sway config is due for removal, so this stays as it is.
 #
 # The internal panel is auto-detected as the first output whose connector is
 # an internal type (eDP/LVDS/DSI). `swaymsg -t get_outputs` includes disabled

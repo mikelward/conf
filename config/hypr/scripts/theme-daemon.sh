@@ -2,7 +2,7 @@
 #
 # Applies the time-based light/dark theme, then sleeps until the next
 # 07:00/19:00 boundary and re-applies. Runs for the life of the session --
-# started by exec-once in hyprland.conf, or by exec in config/sway/config
+# started by hyprland.lua's autostart, or by exec in config/sway/config
 # (theme.sh detects which compositor is running) -- so it always has the
 # session's Wayland/D-Bus environment. theme.sh launches waybar and swaync
 # with the matching style, so they are NOT started separately by the

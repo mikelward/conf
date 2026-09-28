@@ -344,16 +344,15 @@ $(CACHE)/test-karabiner.stamp: \
 	@touch $@
 test-karabiner: $(CACHE)/test-karabiner.stamp
 
-# Static presence/parse checks for the Hyprland Wayland desktop configs.
-# Depends on every config file it validates so editing any of them re-runs.
+# The Hyprland desktop: hyprland.lua under a stub of Hyprland's Lua API, plus
+# presence/parse and script checks. Depends on every file it validates so
+# editing any of them re-runs.
 $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
-                          config/hypr/hyprland.conf \
-                          config/hypr/hyprland.conf.local.template \
+                          config/hypr/hyprland.lua \
+                          config/hypr/hyprland_test.lua \
+                          config/hypr/hyprland.local.lua.template \
                           config/hypr/hypridle.conf \
                           config/hypr/hyprlock.conf \
-                          config/hypr/scripts/toggle-layout.sh \
-                          config/hypr/scripts/layout-cycle.sh \
-                          config/hypr/scripts/lid.sh \
                           config/hypr/scripts/apply-input.sh \
                           config/hypr/scripts/theme.sh \
                           config/hypr/scripts/theme-daemon.sh \
