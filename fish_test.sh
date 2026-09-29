@@ -2193,4 +2193,37 @@ start_test "fish separator is non-empty with no terminal"
 result="$(_fish_run_config '' 'set -e COLUMNS' 'bar (terminal_width) | string length')"
 assert_equal "80" "$result"
 
+###############
+# quickspace_grant hands the line to shrc.quickspace, linked into the fake
+# HOME, and a fake hyprctl logs what it's asked.
+
+_qs_bin="$_testdir/qs-bin"
+mkdir -p "$_qs_bin" "$_testdir/fakehome"
+cat > "$_qs_bin/hyprctl" <<'FAKE'
+#!/bin/sh
+printf '%s\n' "$*" >> "$FAKE_LOG"
+echo ok
+FAKE
+chmod +x "$_qs_bin/hyprctl"
+ln -sf "$_srcdir/shrc.quickspace" "$_testdir/fakehome/.shrc.quickspace"
+export FAKE_LOG="$_testdir/qs-log"
+
+start_test "fish quickspace_grant grants the command's program with fish's pid"
+: > "$FAKE_LOG"
+result="$(PATH="$_qs_bin:$PATH" XDG_CURRENT_DESKTOP=quickspace:Hyprland \
+    _fish_run 'quickspace_grant "env GTK_THEME=dark nautilus ."; echo $fish_pid')"
+assert_equal "eval quickspace_focus.grant(\"nautilus\", $result)" "$(cat "$FAKE_LOG")"
+
+start_test "fish grants from the fish_preexec event"
+: > "$FAKE_LOG"
+PATH="$_qs_bin:$PATH" XDG_CURRENT_DESKTOP=quickspace:Hyprland \
+    _fish_run 'emit fish_preexec "nohup /usr/bin/firefox --new-window"' >/dev/null
+assert_contains 'quickspace_focus.grant("firefox",' "$(cat "$FAKE_LOG")"
+
+start_test "fish quickspace_grant does nothing outside quickspace"
+: > "$FAKE_LOG"
+PATH="$_qs_bin:$PATH" XDG_CURRENT_DESKTOP=KDE _fish_run 'quickspace_grant "nautilus ."' >/dev/null
+assert_equal "" "$(cat "$FAKE_LOG")"
+rm -f "$_testdir/fakehome/.shrc.quickspace"
+
 test_summary "fish_test"

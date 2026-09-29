@@ -1463,8 +1463,28 @@ if is_interactive
 #        set_title (title | string collect)
 #    end
 #
+    # In a quickspace session, records a focus grant for the command line
+    # with quickspace's focus guard, so the first window it opens may take
+    # focus (quickspace SPEC.md §14.3). fish has no parser for it, so it
+    # hands the line to shrc's quickspace_grant, which reads it with zsh's
+    # lexer, and names this shell's pid. Outside quickspace this costs one
+    # string match.
+    function quickspace_grant --argument-names line
+        string match -q '*:quickspace:*' ":$XDG_CURRENT_DESKTOP:"; or return 0
+        if not test -f $HOME/.shrc.quickspace
+            return 0 # conf isn't installed here; there's nothing to call
+        end
+        if not command -q zsh
+            echo "quickspace: no zsh, so this command gets no focus grant" >&2
+            return 1
+        end
+        zsh -fc 'emulate sh; . "$HOME/.shrc.quickspace"; quickspace_grant "$1" "$2"' \
+            zsh $line $fish_pid
+    end
+
     function preexec --on-event fish_preexec
         log_history "$argv"
+        quickspace_grant "$argv"
         set --global last_job_status 0
         set --global current_command $argv
         #set_title (title | string collect)

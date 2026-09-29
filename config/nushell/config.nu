@@ -2088,9 +2088,34 @@ if (have-command carapace) {
 # Appended rather than assigned: atuin's generated init adds its own
 # hooks to these same lists (that's how it opens and closes history
 # entries), and a plain assignment would drop whichever side ran first.
+# In a quickspace session, records a focus grant for the command line with
+# quickspace's focus guard, so the first window it opens may take focus
+# (quickspace SPEC.md §14.3). nushell has no parser for it, so it hands the
+# line to shrc's quickspace_grant, which reads it with zsh's lexer, and
+# names this shell's pid. Outside quickspace this costs one string check.
+def quickspace-grant [line: string] {
+    if not ($":($env.XDG_CURRENT_DESKTOP? | default ''):" | str contains ":quickspace:") {
+        return
+    }
+    let lib = ($env.HOME | path join ".shrc.quickspace")
+    if not ($lib | path exists) {
+        return # conf isn't installed here; there's nothing to call
+    }
+    if (which zsh | is-empty) {
+        print --stderr "quickspace: no zsh, so this command gets no focus grant"
+        return
+    }
+    # quickspace_grant reports its own failures on stderr; the catch keeps
+    # its exit status from also failing the hook.
+    try {
+        ^zsh -fc 'emulate sh; . "$HOME/.shrc.quickspace"; quickspace_grant "$1" "$2"' zsh $line $nu.pid
+    } catch { }
+}
+
 $env.config = ($env.config | upsert hooks.pre_execution (
     $env.config.hooks? | get pre_execution? | default [] | append {||
     $env.CMD_START_TIME = (date now)
+    quickspace-grant (commandline)
 }))
 $env.config = ($env.config | upsert hooks.pre_prompt (
     $env.config.hooks? | get pre_prompt? | default [] | append {||
