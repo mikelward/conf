@@ -1824,8 +1824,27 @@ fn command-finished {|m|
 }
 
 # log every interactive command, the way shrc's precommand does
+# In a quickspace session, records a focus grant for each program the
+# command line runs, with quickspace's focus guard (quickspace SPEC.md
+# §14.3), so the first window it opens may take focus. quickspace-grant
+# parses the line and names this shell's pid. Outside quickspace this costs
+# one string check.
+fn quickspace-grant-line {|line|
+    if (not (str:contains ':'(env-or XDG_CURRENT_DESKTOP '')':' ':quickspace:')) {
+        return
+    }
+    if (not (has-external quickspace-grant)) {
+        echo 'quickspace: no quickspace-grant, so this command gets no focus grant; run make install-session in the quickspace checkout' >&2
+        return
+    }
+    # quickspace-grant reports its own failures on stderr; the try keeps its
+    # exit status from also failing the hook.
+    try { e:quickspace-grant --pid $pid -- $line } catch { }
+}
+
 fn command-started {|line|
     log-history $line
+    quickspace-grant-line $line
     set-title (title)
 }
 

@@ -87,12 +87,15 @@ appears at the greeter as "quickspace". `hyprland.lua` recognizes it by
   outside the shell's unit. Keys bound to a `runenv` wrapper grant the
   first window of any app (`--app '*'`), since their window class isn't
   known here.
-- **A command run from zsh or bash grants its first window focus too.**
-  `precommand` calls `quickspace_grant` (in `shrc`), which records a grant
-  for the command's first word with this shell's pid, so `nautilus .` from
-  kitty opens focused. A window from any descendant of the shell can use it,
-  even when its class doesn't match the command. It costs one `hyprctl`
-  round trip per command in a quickspace session, and nothing elsewhere.
+- **A command run from a terminal grants its first window focus too.**
+  bash and zsh (`precommand`), fish (`fish_preexec`), nushell
+  (`pre_execution`) and Elvish (`command-started`) hand each command line
+  to quickspace's `quickspace-grant` with the shell's pid, so
+  `nautilus .` from kitty opens focused. `quickspace-grant` parses the
+  line and grants each program it runs. A window from any descendant of
+  the shell can use the grant, even when its class doesn't match the
+  command. In a quickspace session it costs about 3 ms per command, plus a
+  `hyprctl` round trip per program; elsewhere it's never called.
 
 ### Optional: uwsm (systemd-managed session)
 

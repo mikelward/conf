@@ -283,32 +283,22 @@ without cancelling the search, or reedline gains a conditional event.
   and now cheap to add: the multiline-buffer guards on both arrows, the
   per-keymap atuin variants, and the native fallback when `atuin init` failed.
 
-## Grant the right program for chains and shell functions
+## Grant shell functions' and aliases' programs
 
-`quickspace_grant` (`shrc`) names the first program on the command line.
-These cases name the wrong one, so a window from an app that is already
-running or D-Bus-activated stays unfocused (a window the command's own
-processes open still takes the grant, through the shell's pid):
+`quickspace-grant` (quickspace repo) grants each program a command line
+runs, but it runs outside the shell, so a shell function or alias names
+nothing it can see: `s file` grants nothing for the `subl` it runs. A
+window the command's own processes open still takes the grant through the
+shell's pid; an already-running or D-Bus-activated app's doesn't. Expanding
+an alias before the call (zsh's `$aliases`) would cover aliases; a
+function means following its body, which is open-ended.
 
-- **Chains:** `cd /tmp && nautilus .` grants `cd`. Granting every
-  segment's program would cover it; each unused grant expires in 10 s.
-- **Shell functions and aliases:** `s file` grants `s`, not the `subl` it
-  runs. Resolving that means following the function's body, which is
-  open-ended; an alias could be expanded first (zsh's `$aliases`).
-- **`env -S`:** `env -S 'nautilus .'` (or `--split-string`) runs a
-  command line held in one word, but the parser treats `-S` as a plain
-  option and grants `nautilus .`, or nothing for `--split-string=…`.
-  Feeding that word back through `command_program`, as an expanded
-  variable's value already is, would cover it.
+## Port the quickspace focus grant to mesh
 
-## Port the quickspace focus grant to fish, nushell, Elvish and mesh
-
-`shrc`'s `precommand` records a quickspace focus grant for each command
-(`quickspace_grant`), so a window a terminal command opens takes focus in a
-quickspace session. fish (`fish_preexec`), nushell (`pre_execution`),
-Elvish (`$edit:after-readline`) and mesh (its `preexec` hook) each have a
-hook to hang it on. Until then, a GUI app started from those shells opens
-unfocused and waits for Super+U.
+bash, zsh, fish, nushell and Elvish hand each command line to
+`quickspace-grant` before running it. mesh has a `preexec` hook for the
+same call, once conf's tests run mesh (see `install-ci-shells.sh`). Until
+then, a GUI app started from mesh opens unfocused and waits for Super+U.
 
 ## Ghost text: fan out beyond zsh
 
