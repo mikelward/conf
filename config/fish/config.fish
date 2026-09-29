@@ -1463,8 +1463,23 @@ if is_interactive
 #        set_title (title | string collect)
 #    end
 #
+    # In a quickspace session, records a focus grant for each program the
+    # command line runs, with quickspace's focus guard (quickspace SPEC.md
+    # §14.3), so the first window it opens may take focus. quickspace-grant
+    # parses the line and names this shell's pid. Outside quickspace this
+    # costs one string match.
+    function quickspace_grant --argument-names line
+        string match -q '*:quickspace:*' ":$XDG_CURRENT_DESKTOP:"; or return 0
+        if not command -q quickspace-grant
+            echo "quickspace: no quickspace-grant, so this command gets no focus grant; run make install-session in the quickspace checkout" >&2
+            return 1
+        end
+        quickspace-grant --pid $fish_pid -- $line
+    end
+
     function preexec --on-event fish_preexec
         log_history "$argv"
+        quickspace_grant "$argv"
         set --global last_job_status 0
         set --global current_command $argv
         #set_title (title | string collect)

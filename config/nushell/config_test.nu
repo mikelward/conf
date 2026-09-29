@@ -1054,6 +1054,47 @@ except OSError: pass
 
     ###############
     # pre_execution / pre_prompt hooks
+    # quickspace-grant-line hands the line to quickspace-grant, faked here.
+    (run-test "nu quickspace-grant-line passes the line and nu's pid" {
+        let bin = (mktemp -d)
+        let log = (mktemp)
+        ("#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"" + $log + "\"\n") | save -f ($bin | path join "quickspace-grant")
+        ^chmod +x ($bin | path join "quickspace-grant")
+        $env.PATH = ($env.PATH | prepend $bin)
+        $env.XDG_CURRENT_DESKTOP = "quickspace:Hyprland"
+        quickspace-grant-line "env A=1 nautilus ."
+        assert equal (open --raw $log | str trim) $"--pid ($nu.pid) -- env A=1 nautilus ."
+    })
+    (run-test "nu quickspace-grant-line does nothing outside quickspace" {
+        let bin = (mktemp -d)
+        let log = (mktemp)
+        ("#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"" + $log + "\"\n") | save -f ($bin | path join "quickspace-grant")
+        ^chmod +x ($bin | path join "quickspace-grant")
+        $env.PATH = ($env.PATH | prepend $bin)
+        $env.XDG_CURRENT_DESKTOP = "KDE"
+        quickspace-grant-line "nautilus ."
+        assert equal (open --raw $log | str trim) ""
+    })
+    (run-test "nu quickspace-grant-line tolerates a failing quickspace-grant" {
+        let bin = (mktemp -d)
+        "#!/bin/sh\necho 'quickspace: rejected' >&2\nexit 1\n" | save -f ($bin | path join "quickspace-grant")
+        ^chmod +x ($bin | path join "quickspace-grant")
+        $env.PATH = ($env.PATH | prepend $bin)
+        $env.XDG_CURRENT_DESKTOP = "quickspace"
+        quickspace-grant-line "nautilus ."
+    })
+
+    (run-test "nu pre_execution keeps the last command's exit code past quickspace-grant" {
+        let bin = (mktemp -d)
+        "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "quickspace-grant")
+        ^chmod +x ($bin | path join "quickspace-grant")
+        $env.PATH = ($env.PATH | prepend $bin)
+        $env.XDG_CURRENT_DESKTOP = "quickspace"
+        try { ^sh -c "exit 3" } catch { }
+        do --env ($env.config.hooks.pre_execution | first)
+        assert equal $env.LAST_EXIT_CODE 3
+    })
+
     (run-test "nu pre_execution hook list has one entry" {
         assert equal ($env.config.hooks.pre_execution | length) 1
     })

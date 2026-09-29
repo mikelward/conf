@@ -1215,4 +1215,46 @@ else
     assert_equal "0" "$(wc -l < "$_elv_search_log" | tr -d ' ')"
 fi
 
+###############
+# quickspace-grant-line hands the line to quickspace-grant, faked here.
+
+_qs_stub="$_testdir/qs-stub"
+mkdir -p "$_qs_stub"
+cat > "$_qs_stub/quickspace-grant" <<'STUB'
+#!/bin/sh
+printf '%s\n' "$*" >> "$QS_LOG"
+STUB
+chmod +x "$_qs_stub/quickspace-grant"
+export QS_LOG="$_testdir/qs-log"
+
+start_test "elvish quickspace-grant-line passes the line and elvish's pid"
+: > "$QS_LOG"
+result="$(PATH="$_qs_stub:$PATH" XDG_CURRENT_DESKTOP=quickspace:Hyprland \
+    _elvish_run '' 'quickspace-grant-line "env A=1 nautilus ."; echo $pid')"
+assert_equal "--pid $result -- env A=1 nautilus ." "$(cat "$QS_LOG")"
+
+start_test "elvish command-started records the grant"
+: > "$QS_LOG"
+PATH="$_qs_stub:$PATH" XDG_CURRENT_DESKTOP=quickspace:Hyprland \
+    _elvish_run '' 'command-started firefox' >/dev/null
+assert_contains "-- firefox" "$(cat "$QS_LOG")"
+
+start_test "elvish quickspace-grant-line does nothing outside quickspace"
+: > "$QS_LOG"
+PATH="$_qs_stub:$PATH" XDG_CURRENT_DESKTOP=KDE _elvish_run '' 'quickspace-grant-line "nautilus ."' >/dev/null
+assert_equal "" "$(cat "$QS_LOG")"
+
+start_test "elvish command-started runs with XDG_CURRENT_DESKTOP unset"
+: > "$QS_LOG"
+_qs_saved_desktop=${XDG_CURRENT_DESKTOP-}
+unset XDG_CURRENT_DESKTOP
+result="$(PATH="$_qs_stub:$PATH" _elvish_run '' 'command-started firefox; echo ran')"
+export XDG_CURRENT_DESKTOP="$_qs_saved_desktop"
+assert_contains "ran" "$result"
+assert_equal "" "$(cat "$QS_LOG")"
+
+start_test "elvish quickspace-grant-line reports a missing quickspace-grant"
+result="$(XDG_CURRENT_DESKTOP=quickspace _elvish_run_all '' 'quickspace-grant-line "nautilus ."')"
+assert_contains "no quickspace-grant, so this command gets no focus grant" "$result"
+
 test_summary "elvish_test"

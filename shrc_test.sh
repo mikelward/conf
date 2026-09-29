@@ -3681,15 +3681,14 @@ assert_true test -n "$result"
 
 if test -n "$_had_columns"; then COLUMNS=$_saved_columns; else unset COLUMNS; fi
 
-# quickspace_grant: a fake hyprctl logs its arguments and answers
-# $FAKE_HYPRCTL_REPLY (ok by default).
+# quickspace_grant hands the line to quickspace-grant, faked here to log its
+# arguments; quickspace-grant's own tests (quickspace repo) cover parsing.
 _qs_dir=$(mktemp -d)
-cat > "$_qs_dir/hyprctl" <<'FAKE'
+cat > "$_qs_dir/quickspace-grant" <<'FAKE'
 #!/bin/sh
 printf '%s\n' "$*" >> "$FAKE_LOG"
-printf '%s\n' "${FAKE_HYPRCTL_REPLY:-ok}"
 FAKE
-chmod +x "$_qs_dir/hyprctl"
+chmod +x "$_qs_dir/quickspace-grant"
 _qs_saved_path=$PATH
 _qs_saved_desktop=${XDG_CURRENT_DESKTOP-}
 PATH="$_qs_dir:$PATH"
@@ -3702,167 +3701,23 @@ XDG_CURRENT_DESKTOP=KDE
 quickspace_grant "nautilus ."
 assert_equal "" "$(cat "$FAKE_LOG")"
 
-start_test "quickspace_grant grants the command's basename with this shell's pid"
+start_test "quickspace_grant passes the line and this shell's pid to quickspace-grant"
 XDG_CURRENT_DESKTOP=quickspace:Hyprland
 : > "$FAKE_LOG"
-quickspace_grant "/usr/bin/nautilus ."
-assert_equal "eval quickspace_focus.grant(\"nautilus\", $$)" "$(cat "$FAKE_LOG")"
-
-start_test "quickspace_grant skips VAR=value words"
-: > "$FAKE_LOG"
-quickspace_grant "GDK_BACKEND=x11  FOO=1 gimp photo.png"
-assert_equal "eval quickspace_focus.grant(\"gimp\", $$)" "$(cat "$FAKE_LOG")"
-
-start_test "quickspace_grant skips a quoted value with spaces"
-: > "$FAKE_LOG"
-quickspace_grant "GTK_THEME='Adwaita Dark' A=\"x y z\" B='' nautilus ."
-assert_equal "eval quickspace_focus.grant(\"nautilus\", $$)" "$(cat "$FAKE_LOG")"
-
-start_test "quickspace_grant skips wrappers and their options"
-: > "$FAKE_LOG"
-quickspace_grant "command exec env -i GTK_THEME=dark nohup setsid nautilus ."
-assert_equal "eval quickspace_focus.grant(\"nautilus\", $$)" "$(cat "$FAKE_LOG")"
-
-start_test "quickspace_grant splits on any whitespace"
-: > "$FAKE_LOG"
-quickspace_grant "$(printf 'GTK_THEME=dark\tnautilus .')"
-assert_equal "eval quickspace_focus.grant(\"nautilus\", $$)" "$(cat "$FAKE_LOG")"
-
-start_test "quickspace_grant unquotes the command name"
-: > "$FAKE_LOG"
-quickspace_grant '"/usr/bin/nautilus" .'
-assert_equal "eval quickspace_focus.grant(\"nautilus\", $$)" "$(cat "$FAKE_LOG")"
-: > "$FAKE_LOG"
-quickspace_grant "\\nautilus ."
-assert_equal "eval quickspace_focus.grant(\"nautilus\", $$)" "$(cat "$FAKE_LOG")"
-
-start_test "quickspace_grant leaves globbing as it was"
-set +f
-quickspace_grant "nautilus *" >/dev/null 2>&1
-case $- in *f*) result=off ;; *) result=on ;; esac
-assert_equal "on" "$result"
-
-start_test "quickspace_grant keeps a quoted or escaped path with spaces whole"
-: > "$FAKE_LOG"
-quickspace_grant '"/opt/My App/bin/editor" file'
-assert_equal "eval quickspace_focus.grant(\"editor\", $$)" "$(cat "$FAKE_LOG")"
-: > "$FAKE_LOG"
-quickspace_grant '/opt/My\ App/bin/editor file'
-assert_equal "eval quickspace_focus.grant(\"editor\", $$)" "$(cat "$FAKE_LOG")"
-
-start_test "command_program reads the program's word the way the shell does"
-command_program "FOO='a b' BAR=\"c \\\" d\" env -i 'nau'\"ti\"lus ."
-assert_equal "nautilus" "$command_program_name"
-command_program "vim"
-assert_equal "vim" "$command_program_name"
-for line in ">/tmp/log nautilus ." "2>/dev/null nautilus ." "> /tmp/log nautilus ." "2> /dev/null nautilus" \
-    "2>&1 nautilus ." ">&- nautilus" \
-    "env -u DISPLAY nautilus ." "env --chdir /tmp nautilus ." "env --chdir=/tmp nautilus" \
-    "exec -a gui-name nautilus ." "! nautilus ."; do
-    command_program "$line"
-    assert_equal "nautilus" "$command_program_name"
-done
-if is_zsh; then
-    # zsh's lexer keeps $(...) and ${...} whole; bash's scanner doesn't.
-    command_program "GTK_THEME=\$(printf '%s' 'a b') X=\${HOME:-/x y} nautilus ."
-    assert_equal "nautilus" "$command_program_name"
-    command_program "; ls"
-    assert_equal "" "$command_program_name"
-fi
-assert_false command_program "A=1 B=2"
-assert_false command_program "command -v firefox"
-assert_false command_program "command -p -V firefox"
-command_program "env -v nautilus ."
-assert_equal "nautilus" "$command_program_name"
-assert_false command_program "   "
-
-start_test "quickspace_grant ignores an unterminated quoted value"
-: > "$FAKE_LOG"
-quickspace_grant "A='x y"
-assert_equal "" "$(cat "$FAKE_LOG")"
-
-start_test "quickspace_grant keeps quotes and backslashes out of the Lua string"
-: > "$FAKE_LOG"
-quickspace_grant 'a\"b\\c x'
-assert_equal "eval quickspace_focus.grant(\"abc\", $$)" "$(cat "$FAKE_LOG")"
-
-start_test "quickspace_grant grants a variable's program by its value"
-QS_TEST_BROWSER="/usr/bin/firefox --new-window"
-: > "$FAKE_LOG"
-quickspace_grant '"$QS_TEST_BROWSER" https://example.com/'
-assert_equal "eval quickspace_focus.grant(\"firefox\", $$)" "$(cat "$FAKE_LOG")"
-QS_TEST_CMD="env GTK_THEME=dark nohup nautilus"
-: > "$FAKE_LOG"
-quickspace_grant '$QS_TEST_CMD .'
-assert_equal "eval quickspace_focus.grant(\"nautilus\", $$)" "$(cat "$FAKE_LOG")"
-unset QS_TEST_CMD
-: > "$FAKE_LOG"
-quickspace_grant '${QS_TEST_BROWSER} https://example.com/'
-assert_equal "eval quickspace_focus.grant(\"firefox\", $$)" "$(cat "$FAKE_LOG")"
-unset QS_TEST_BROWSER
-mkdir -p "$_qs_dir/My App/bin"
-: > "$_qs_dir/My App/bin/editor"
-chmod +x "$_qs_dir/My App/bin/editor"
-QS_TEST_APP="$_qs_dir/My App/bin/editor"
-: > "$FAKE_LOG"
-quickspace_grant '"$QS_TEST_APP" file'
-assert_equal "eval quickspace_focus.grant(\"editor\", $$)" "$(cat "$FAKE_LOG")"
-unset QS_TEST_APP
-: > "$FAKE_LOG"
-quickspace_grant '"${QS_TEST_UNSET_VAR:-firefox}" URL'
-assert_equal "eval quickspace_focus.grant(\"firefox\", $$)" "$(cat "$FAKE_LOG")"
-QS_TEST_BROWSER=chromium
-: > "$FAKE_LOG"
-quickspace_grant '"${QS_TEST_BROWSER-firefox}" URL'
-assert_equal "eval quickspace_focus.grant(\"chromium\", $$)" "$(cat "$FAKE_LOG")"
-unset QS_TEST_BROWSER
-: > "$FAKE_LOG"
-quickspace_grant '$QS_TEST_UNSET_VAR x'
-assert_equal "" "$(cat "$FAKE_LOG")"
-
-start_test "quickspace_grant expands a variable in the fallback word"
-QS_TEST_EDITOR="gedit --new-window"
-: > "$FAKE_LOG"
-quickspace_grant '"${QS_TEST_UNSET_VAR:-$QS_TEST_EDITOR}" file'
-assert_equal "eval quickspace_focus.grant(\"gedit\", $$)" "$(cat "$FAKE_LOG")"
-: > "$FAKE_LOG"
-quickspace_grant '"${QS_TEST_UNSET_VAR-${QS_TEST_UNSET_VAR2:-${QS_TEST_EDITOR}}}" file'
-assert_equal "eval quickspace_focus.grant(\"gedit\", $$)" "$(cat "$FAKE_LOG")"
-unset QS_TEST_EDITOR
-QS_TEST_DIR=/opt/tools
-: > "$FAKE_LOG"
-quickspace_grant '$QS_TEST_DIR/bin/viewer file'
-assert_equal "eval quickspace_focus.grant(\"viewer\", $$)" "$(cat "$FAKE_LOG")"
-for line in '"${QS_TEST_DIR}/bin/viewer" file' '"${QS_TEST_UNSET_VAR:-$QS_TEST_DIR}/bin/viewer" file' \
-    '/usr${QS_TEST_UNSET_VAR-}/bin/viewer file'; do
-    : > "$FAKE_LOG"
-    quickspace_grant "$line"
-    assert_equal "eval quickspace_focus.grant(\"viewer\", $$)" "$(cat "$FAKE_LOG")"
-done
-unset QS_TEST_DIR
-
-start_test "quickspace_grant grants nothing for a form it can't expand safely"
-for line in '"${QS_TEST_UNSET_VAR:-$(echo firefox)}" x' '"${QS_TEST_UNSET_VAR:+firefox}" x' \
-    '"${#QS_TEST_UNSET_VAR}" x' '"$1" x' '"${QS_TEST_DIR:=firefox}" x' '"${QS_TEST_DIR" x'; do
-    : > "$FAKE_LOG"
-    quickspace_grant "$line"
-    assert_equal "" "$(cat "$FAKE_LOG")"
-done
-
-start_test "quickspace_grant ignores an empty command"
-: > "$FAKE_LOG"
-quickspace_grant ""
-assert_equal "" "$(cat "$FAKE_LOG")"
-
-start_test "quickspace_grant reports a rejected grant"
-: > "$FAKE_LOG"
-result=$(FAKE_HYPRCTL_REPLY='error: attempt to index a nil value' quickspace_grant "kitty" 2>&1)
-assert_contains "couldn't record a focus grant for kitty: error: attempt to index a nil value" "$result"
+quickspace_grant "GTK_THEME='Adwaita Dark' nautilus ."
+assert_equal "--pid $$ -- GTK_THEME='Adwaita Dark' nautilus ." "$(cat "$FAKE_LOG")"
 
 start_test "precommand records the grant"
 : > "$FAKE_LOG"
 precommand "firefox" >/dev/null 2>&1
-assert_contains 'quickspace_focus.grant("firefox"' "$(cat "$FAKE_LOG")"
+assert_equal "--pid $$ -- firefox" "$(cat "$FAKE_LOG")"
+
+start_test "quickspace_grant reports a missing quickspace-grant"
+# have_command is stubbed to always succeed above, so stub it here too.
+have_command() { test "$1" != quickspace-grant; }
+result=$(quickspace_grant "nautilus ." 2>&1)
+assert_false quickspace_grant "nautilus ."
+assert_contains "no quickspace-grant, so this command gets no focus grant" "$result"
 
 PATH=$_qs_saved_path
 XDG_CURRENT_DESKTOP=$_qs_saved_desktop

@@ -2193,4 +2193,38 @@ start_test "fish separator is non-empty with no terminal"
 result="$(_fish_run_config '' 'set -e COLUMNS' 'bar (terminal_width) | string length')"
 assert_equal "80" "$result"
 
+###############
+# quickspace_grant hands the line to quickspace-grant, faked here.
+
+_qs_bin="$_testdir/qs-bin"
+mkdir -p "$_qs_bin"
+cat > "$_qs_bin/quickspace-grant" <<'FAKE'
+#!/bin/sh
+printf '%s\n' "$*" >> "$QS_LOG"
+FAKE
+chmod +x "$_qs_bin/quickspace-grant"
+export QS_LOG="$_testdir/qs-log"
+
+start_test "fish quickspace_grant passes the line and fish's pid"
+: > "$QS_LOG"
+result="$(PATH="$_qs_bin:$PATH" XDG_CURRENT_DESKTOP=quickspace:Hyprland \
+    _fish_run 'quickspace_grant "env A=1 nautilus ."; echo $fish_pid')"
+assert_equal "--pid $result -- env A=1 nautilus ." "$(cat "$QS_LOG")"
+
+start_test "fish grants from the fish_preexec event"
+: > "$QS_LOG"
+PATH="$_qs_bin:$PATH" XDG_CURRENT_DESKTOP=quickspace:Hyprland \
+    _fish_run 'emit fish_preexec "nohup firefox"' >/dev/null
+assert_contains "-- nohup firefox" "$(cat "$QS_LOG")"
+
+start_test "fish quickspace_grant does nothing outside quickspace"
+: > "$QS_LOG"
+PATH="$_qs_bin:$PATH" XDG_CURRENT_DESKTOP=KDE _fish_run 'quickspace_grant "nautilus ."' >/dev/null
+assert_equal "" "$(cat "$QS_LOG")"
+
+start_test "fish quickspace_grant reports a missing quickspace-grant"
+result="$(XDG_CURRENT_DESKTOP=quickspace _fish_run 'quickspace_grant "nautilus ."; echo status=$status' 2>&1)"
+assert_contains "no quickspace-grant, so this command gets no focus grant" "$result"
+assert_contains "status=1" "$result"
+
 test_summary "fish_test"
