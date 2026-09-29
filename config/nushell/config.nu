@@ -2088,11 +2088,11 @@ if (have-command carapace) {
 # Appended rather than assigned: atuin's generated init adds its own
 # hooks to these same lists (that's how it opens and closes history
 # entries), and a plain assignment would drop whichever side ran first.
-# In a quickspace session, records a focus grant for each program the
-# command line runs, with quickspace's focus guard (quickspace SPEC.md
-# §14.3), so the first window it opens may take focus. quickspace-grant
-# parses the line and names this shell's pid. Outside quickspace this costs
-# one string check.
+# In a quickspace session, records a focus grant for the command line with
+# quickspace's focus guard (quickspace SPEC.md §14.3), so the first window it
+# opens may take focus. quickspace-grant names this shell's pid, for a window
+# from any of its descendants, and the app of the line's first command.
+# Outside quickspace this costs one string check.
 def quickspace-grant-line [line: string] {
     if not ($":($env.XDG_CURRENT_DESKTOP? | default ''):" | str contains ":quickspace:") {
         return

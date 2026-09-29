@@ -2457,11 +2457,11 @@ precommand() {
     SECONDS=0
 }
 
-# In a quickspace session, records a one-shot focus grant for each program
-# the command line runs, with quickspace's focus guard (quickspace SPEC.md
-# §14.3), so the first window it opens may take focus. quickspace-grant
-# (from the quickspace repo) parses the line and names this shell's pid, so
-# a window from any descendant can use the grant too. Outside quickspace
+# In a quickspace session, records a one-shot focus grant for the command
+# line with quickspace's focus guard (quickspace SPEC.md §14.3), so the
+# first window it opens may take focus. quickspace-grant (from the
+# quickspace repo) names this shell's pid, for a window from any of its
+# descendants, and the app of the line's first command. Outside quickspace
 # this costs one `case`.
 quickspace_grant() {
     case ":${XDG_CURRENT_DESKTOP:-}:" in
