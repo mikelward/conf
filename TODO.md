@@ -285,9 +285,9 @@ without cancelling the search, or reedline gains a conditional event.
 
 ## Grant shell functions' and aliases' programs
 
-`quickspace-grant` (quickspace repo) grants each program a command line
-runs, but it runs outside the shell, so a shell function or alias names
-nothing it can see: `s file` grants nothing for the `subl` it runs. A
+`quickspace-grant` (quickspace repo) names the app a command line's first
+command runs, but it runs outside the shell, so a shell function or alias
+names nothing it can see: `s file` names `s`, not the `subl` it runs. A
 window the command's own processes open still takes the grant through the
 shell's pid; an already-running or D-Bus-activated app's doesn't. Expanding
 an alias before the call (zsh's `$aliases`) would cover aliases; a

@@ -91,11 +91,12 @@ appears at the greeter as "quickspace". `hyprland.lua` recognizes it by
   bash and zsh (`precommand`), fish (`fish_preexec`), nushell
   (`pre_execution`) and Elvish (`command-started`) hand each command line
   to quickspace's `quickspace-grant` with the shell's pid, so
-  `nautilus .` from kitty opens focused. `quickspace-grant` parses the
-  line and grants each program it runs. A window from any descendant of
-  the shell can use the grant, even when its class doesn't match the
-  command. In a quickspace session it costs about 3 ms per command, plus a
-  `hyprctl` round trip per program; elsewhere it's never called.
+  `nautilus .` from kitty opens focused. The grant names the shell's pid,
+  so a window from any of the shell's descendants can use it (the
+  command's own processes, or a background job it started earlier), and
+  the app of the line's first command, so an app that was already running
+  (`firefox URL`) can too. In a quickspace session it costs about 3 ms per
+  command, plus a `hyprctl` round trip; elsewhere it's never called.
 
 ### Optional: uwsm (systemd-managed session)
 

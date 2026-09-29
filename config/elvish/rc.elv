@@ -1824,11 +1824,11 @@ fn command-finished {|m|
 }
 
 # log every interactive command, the way shrc's precommand does
-# In a quickspace session, records a focus grant for each program the
-# command line runs, with quickspace's focus guard (quickspace SPEC.md
-# §14.3), so the first window it opens may take focus. quickspace-grant
-# parses the line and names this shell's pid. Outside quickspace this costs
-# one string check.
+# In a quickspace session, records a focus grant for the command line with
+# quickspace's focus guard (quickspace SPEC.md §14.3), so the first window it
+# opens may take focus. quickspace-grant names this shell's pid, for a window
+# from any of its descendants, and the app of the line's first command.
+# Outside quickspace this costs one string check.
 fn quickspace-grant-line {|line|
     if (not (str:contains ':'(env-or XDG_CURRENT_DESKTOP '')':' ':quickspace:')) {
         return
