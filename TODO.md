@@ -5,6 +5,17 @@
 Calls autopilot made without asking, each one chosen for being cheap to undo.
 Delete an entry once you have agreed with it or reversed it.
 
+- [ ] **Hyprland's missing-hyprland-guiutils warning is turned off.** The
+      quickspace source build of Hyprland 0.56 doesn't include
+      hyprland-guiutils, which draws Hyprland's own dialogs: "app not
+      responding", and permission prompts for things like screen capture by
+      unknown apps (Hyprland disables that permission control without it).
+      Hyprland warned about it at every login, so
+      `misc.disable_hyprland_guiutils_check` in `config/hypr/hyprland.lua`
+      silences it. The alternative is adding hyprland-guiutils, and the
+      toolkit it needs, to setup-quickspace's pinned build. Undo by deleting
+      the setting.
+
 - [ ] **The mesh config drops its `status` shortcut.** `status` became a mesh
       builtin (the status-value constructor) in mikelward/mesh#443, and a
       builtin's name is refused as a `func` or an `alias` — so `alias status =

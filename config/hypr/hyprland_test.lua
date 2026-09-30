@@ -334,6 +334,12 @@ test("focus cue is the dim alone: no gaps, no borders, dim 0.07", function()
     eq(0.07, c.decoration.dim_strength, "dim_strength")
 end)
 
+test("no startup warnings for what quickspace does on purpose", function()
+    load()
+    eq(true, S.config.misc.disable_xdg_env_checks, "misc.disable_xdg_env_checks")
+    eq(true, S.config.misc.disable_hyprland_guiutils_check, "misc.disable_hyprland_guiutils_check")
+end)
+
 test("nothing steals focus, and focus never warps the pointer", function()
     load()
     eq(false, S.config.misc.focus_on_activate, "misc.focus_on_activate")
