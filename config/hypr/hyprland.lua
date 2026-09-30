@@ -277,7 +277,8 @@ hl.config({
         -- Nothing steals focus: an app asking for it is marked urgent
         -- instead (Super+U goes there).
         focus_on_activate = false,
-        vfr = true,
+        -- uwsm sets XDG_CURRENT_DESKTOP to quickspace:Hyprland on purpose.
+        disable_xdg_env_checks = true,
     },
     -- Focus never drags the pointer along with it.
     cursor = { no_warps = true },
@@ -307,7 +308,7 @@ hl.config({
 
         touchpad = {
             natural_scroll = true,
-            ["tap-to-click"] = true,
+            tap_to_click = true,
             disable_while_typing = true,
             scroll_factor = 1.0,
         },

@@ -284,6 +284,44 @@ local function fire(event, ...)
 end
 
 --------------------------------------------------------------------------------
+-- Every key is one Hyprland knows
+--------------------------------------------------------------------------------
+local known_keys = {}
+for line in io.lines(here .. "/hyprland_keys.txt") do
+    if line ~= "" and not line:match("^#") then
+        known_keys[line] = true
+    end
+end
+
+-- A table is a section unless its own path is a key (a gradient, say).
+local function unknown_keys(t, prefix, out)
+    for k, v in pairs(t) do
+        local path = prefix and (prefix .. "." .. k) or k
+        if not known_keys[path] then
+            if type(v) == "table" then
+                unknown_keys(v, path, out)
+            else
+                table.insert(out, path)
+            end
+        end
+    end
+    return out
+end
+
+test("every hl.config key is one Hyprland 0.56 accepts", function()
+    load()
+    local config = {}
+    for k, v in pairs(S.config) do
+        if k ~= "env" then -- the stub files hl.env() here
+            config[k] = v
+        end
+    end
+    local unknown = unknown_keys(config, nil, {})
+    table.sort(unknown)
+    eq("", table.concat(unknown, ", "), "unknown keys")
+end)
+
+--------------------------------------------------------------------------------
 -- Spec settings (quickspace SPEC.md §6.2, §14)
 --------------------------------------------------------------------------------
 test("focus cue is the dim alone: no gaps, no borders, dim 0.15", function()
@@ -315,7 +353,7 @@ end)
 test("touchpads: natural scroll and tap to click; 3-finger workspace swipe", function()
     load()
     eq(true, S.config.input.touchpad.natural_scroll)
-    eq(true, S.config.input.touchpad["tap-to-click"])
+    eq(true, S.config.input.touchpad.tap_to_click)
     eq(3, S.gesture.fingers)
     eq("workspace", S.gesture.action)
 end)

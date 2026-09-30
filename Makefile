@@ -350,6 +350,7 @@ test-karabiner: $(CACHE)/test-karabiner.stamp
 $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
                           config/hypr/hyprland.lua \
                           config/hypr/hyprland_test.lua \
+                          config/hypr/hyprland_keys.txt \
                           config/hypr/hyprland.local.lua.template \
                           config/hypr/hypridle.conf \
                           config/hypr/hyprlock.conf \
