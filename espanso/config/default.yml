@@ -9,4 +9,4 @@ search_shortcut: "ALT+SPACE"
 keyboard_layout:
   layout: "us"
   variant: "dvorak"
-  options: "lv3:menu_switch,compose:caps"
+  options: "altwin:menu_win,compose:caps"

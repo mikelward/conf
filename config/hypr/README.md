@@ -211,10 +211,11 @@ pointer. An app that asks for focus is marked urgent instead of taking it
 
 ## Behaviour notes
 
-- **Keyboard: US Dvorak, Caps Lock as Compose** (`kb_variant = dvorak`,
-  `kb_options = compose:caps`) — matching `setup`'s `configure_keyboard`. Your
-  espanso config also uses `lv3:menu_switch` (Menu key as AltGr); append it to
-  `kb_options` if you want that too.
+- **Keyboard: US Dvorak, Caps Lock as Compose, Menu as Super**
+  (`kb_variant = dvorak`, `kb_options = compose:caps,altwin:menu_win`). Caps
+  Lock matches `setup`'s `configure_keyboard`; Menu as a second Super is what
+  `xmodmaprc` did under X11, on trial here. espanso's `keyboard_layout` names
+  the same options, since it types through them.
 - **The focus cue is the dim alone.** No gaps and no borders;
   `dim_inactive` with `dim_strength = 0.07`: Hyprland's dim looks stronger
   than KDE's "dim inactive" effect at the same number, so 0.15 was too much.

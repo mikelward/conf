@@ -355,11 +355,11 @@ test("the pointer is flat at sensitivity 0.9", function()
     eq(0.9, S.config.input.sensitivity, "sensitivity")
 end)
 
-test("keyboard is US Dvorak with Caps Lock as Compose", function()
+test("keyboard is US Dvorak with Caps Lock as Compose and Menu as Super", function()
     load()
     eq("us", S.config.input.kb_layout)
     eq("dvorak", S.config.input.kb_variant)
-    eq("compose:caps", S.config.input.kb_options)
+    eq("compose:caps,altwin:menu_win", S.config.input.kb_options)
 end)
 
 test("touchpads: natural scroll and tap to click; 3-finger workspace swipe", function()
