@@ -280,6 +280,9 @@ hl.config({
         focus_on_activate = false,
         -- uwsm sets XDG_CURRENT_DESKTOP to quickspace:Hyprland on purpose.
         disable_xdg_env_checks = true,
+        -- hyprland-guiutils (Hyprland's own dialogs) isn't in the source
+        -- build, so don't warn about it at every login. See TODO.md.
+        disable_hyprland_guiutils_check = true,
     },
     -- Focus never drags the pointer along with it.
     cursor = { no_warps = true },
