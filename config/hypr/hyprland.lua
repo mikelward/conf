@@ -303,8 +303,9 @@ hl.config({
     input = {
         kb_layout = "us",
         kb_variant = "dvorak",
-        -- Caps Lock is Compose, matching `setup`'s XKBOPTIONS.
-        kb_options = "compose:caps",
+        -- Caps Lock is Compose, matching `setup`'s XKBOPTIONS. Menu is a
+        -- second Super, as xmodmaprc made it under X11.
+        kb_options = "compose:caps,altwin:menu_win",
 
         -- Focus follows the mouse, but only when it crosses into a window,
         -- and closing a window focuses the one under the pointer.
