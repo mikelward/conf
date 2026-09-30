@@ -478,22 +478,15 @@ hl.bind(key("U"), function()
     hl.dispatch(hl.dsp.focus({ urgent_or_last = true }))
 end)
 
--- Screenshots to the clipboard, with an explicit PNG type so paste works
--- everywhere. Alt+Print takes the focused window.
-local copy_png = " - | wl-copy --type image/png"
-hl.bind("Print", exec("grim" .. copy_png))
-hl.bind("SHIFT + Print", exec("grim -g \"$(slurp)\"" .. copy_png))
-hl.bind(key("Print"), exec("grim -g \"$(slurp)\"" .. copy_png))
-hl.bind("ALT + Print", function()
-    local geometry = query("couldn't read the focused window", function()
-        local w = hl.get_active_window()
-        return w and string.format("%d,%d %dx%d", w.at.x, w.at.y, w.size.x, w.size.y)
-    end)
-    if not geometry then
-        return
-    end
-    hl.exec_cmd("grim -g '" .. geometry .. "'" .. copy_png)
-end)
+-- Screenshots to the clipboard as PNG, with a notification, through the
+-- scripts repo's screenshot: the screen, the focused window (Alt), or a
+-- region (Shift or Super). It reports its own failures, since a key binding
+-- has no terminal, and Esc on a region cancels quietly.
+local screenshot = runenv .. " screenshot"
+hl.bind("Print", exec(screenshot))
+hl.bind("ALT + Print", exec(screenshot .. " --window"))
+hl.bind("SHIFT + Print", exec(screenshot .. " --region"))
+hl.bind(key("Print"), exec(screenshot .. " --region"))
 
 -- Volume, microphone, brightness and playback keys. These work on the lock
 -- screen too; the calculator doesn't, since it opens a window.
