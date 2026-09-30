@@ -941,8 +941,19 @@ test("autostart runs on hyprland.start, not at load", function()
     eq(0, #S.execs, "nothing runs while the config loads")
     fire("hyprland.start")
     local all = table.concat(S.execs, "\n")
-    for _, cmd in ipairs({ "hypridle", "swww-daemon", "apply-input.sh", "theme-daemon.sh", "nm-applet" }) do
+    for _, cmd in ipairs({ "hypridle", "swww-daemon", "runenv ~/.config/hypr/scripts/apply-input.sh",
+        "theme-daemon.sh", "nm-applet" }) do
         truthy(all:find(cmd, 1, true), cmd)
+    end
+end)
+
+test("a config reload puts the mouse settings back, in either session", function()
+    for _, desktop in ipairs({ "quickspace:Hyprland", "Hyprland" }) do
+        load({ env = { XDG_CURRENT_DESKTOP = desktop } })
+        fire("config.reloaded")
+        eq(1, #S.execs, desktop .. ": one command")
+        truthy(S.execs[1]:find("runenv ~/.config/hypr/scripts/apply-input.sh", 1, true),
+            desktop .. ", with ~/.env.local: " .. S.execs[1])
     end
 end)
 

@@ -110,11 +110,11 @@ _apply_run() {
     PATH="$_fake:$PATH" FAKE_LOG="$_fake/log" sh "$_apply" 2>"$_fake/err"
 }
 
-start_test "apply-input configures each mouse, not the touchpad"
+start_test "apply-input configures each mouse (left-handed, wheel at 3), not the touchpad"
 _apply_run
 assert_equal 0 "$?"
 _apply_log=$(cat "$_fake/log")
-assert_contains 'hl.device({ name = "logitech-usb-receiver", left_handed = true, scroll_factor = 1.5 })' "$_apply_log"
+assert_contains 'hl.device({ name = "logitech-usb-receiver", left_handed = true, scroll_factor = 3 })' "$_apply_log"
 assert_not_contains "synaptics" "$_apply_log"
 assert_not_contains "at-keyboard" "$_apply_log"
 
