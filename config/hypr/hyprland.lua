@@ -94,12 +94,20 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("swww-daemon")
     hl.exec_cmd("sleep 1 && swww img ~/.config/hypr/wallpaper.jpg")
     hl.exec_cmd("hypridle")
-    -- Mice get the right button primary; touchpads keep the default.
-    hl.exec_cmd(scripts .. "/apply-input.sh")
+    -- Mice get the right button primary; touchpads keep the default. runenv
+    -- brings in ~/.env.local, where HYPR_MOUSE_SCROLL_FACTOR can be set.
+    hl.exec_cmd(runenv .. " " .. scripts .. "/apply-input.sh")
     -- Applies the light/dark theme and launches waybar and swaync with it.
     hl.exec_cmd(scripts .. "/theme-daemon.sh")
     hl.exec_cmd("nm-applet --indicator")
     hl.exec_cmd("blueman-applet")
+end)
+
+-- A config reload, say after pulling conf, resets every device to the
+-- defaults, which would leave mice right-handed with the slow wheel, so the
+-- per-device settings go back on after each one, in either session.
+hl.on("config.reloaded", function()
+    hl.exec_cmd(runenv .. " " .. scripts .. "/apply-input.sh")
 end)
 
 --------------------------------------------------------------------------------

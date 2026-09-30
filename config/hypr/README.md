@@ -229,9 +229,15 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   name, and flips **mice** to `left_handed` (right button primary) with a faster
   `scroll_factor` — no device names to hardcode, and the same config works on
   every machine. It configures each mouse with `hyprctl eval` and an
-  `hl.device()` call, since the Lua config has no `hyprctl keyword`. Re-run
-  it after hotplugging a mouse; override the mouse wheel speed with
-  `HYPR_MOUSE_SCROLL_FACTOR`.
+  `hl.device()` call, since the Lua config has no `hyprctl keyword`. A config
+  reload resets devices, so `hyprland.lua` runs it again after each one.
+  Re-run it after hotplugging a mouse; override the mouse wheel speed
+  (default 3) with `HYPR_MOUSE_SCROLL_FACTOR` in `~/.env.local`: `hyprland.lua`
+  runs it through `runenv`, which sources that file, and in the quickspace
+  session `quickspace.service`'s run at login sees it once `~/.env.local` is
+  linked into `environment.d` as `~/.env` describes. Since it runs after
+  `hyprland.local.lua`, an `hl.device()` there can't change a mouse's
+  handedness or wheel speed.
 - **Laptop lid.** logind owns suspend with its defaults
   (`HandleLidSwitch=suspend`, `HandleLidSwitchDocked=ignore`), and hypridle
   locks first. `hyprland.lua` handles only the docked case: closing the lid

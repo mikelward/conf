@@ -7,9 +7,9 @@
 # Devices are classified by name (touchpads report "touchpad"/"trackpad"/
 # "synaptics" in their libinput name, which is what Hyprland uses). Runs at
 # login from hyprland.lua's autostart; re-run it after hotplugging a mouse.
-# Override the mouse scroll speed with HYPR_MOUSE_SCROLL_FACTOR (default 1.5).
+# Override the mouse scroll speed with HYPR_MOUSE_SCROLL_FACTOR (default 3).
 
-MOUSE_SCROLL="${HYPR_MOUSE_SCROLL_FACTOR:-1.5}"
+MOUSE_SCROLL="${HYPR_MOUSE_SCROLL_FACTOR:-3}"
 
 command -v hyprctl >/dev/null 2>&1 || exit 0
 
