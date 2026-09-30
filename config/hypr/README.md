@@ -53,7 +53,8 @@ Debian/Ubuntu the hypr* tools may need a backport or manual build):
     power-profiles-daemon
     pipewire wireplumber pavucontrol      # volume/sound
     brightnessctl                         # backlight keys + hypridle dimming
-    grim slurp wl-clipboard               # screenshots (Print) → clipboard
+    grim slurp wl-clipboard jq            # screenshots (Print) → clipboard
+    libnotify (libnotify-bin on Debian)   # notify-send: "Screenshot copied"
     playerctl                             # media play/pause/next/prev keys
     gnome-calculator                      # XF86Calculator key
     yazi                                  # terminal file manager (SUPER+E)
@@ -62,6 +63,12 @@ Debian/Ubuntu the hypr* tools may need a backport or manual build):
     xdg-desktop-portal-gtk glib2          # gsettings + colour-scheme portal
                                           #   (light/dark theming; kitty + GTK)
     a JetBrains Mono Nerd Font            # glyphs in waybar/fuzzel/lock
+
+The screenshot tools are small local packages: no network, no cost, and no
+work until Print is pressed. Without `notify-send` a shot still reaches the
+clipboard, but its "Screenshot copied" and any error message go nowhere, so
+Print looks like it did nothing; without `jq`, Alt+Print reports a failure
+and takes no shot.
 
 `yazi` isn't in every distro's default repos; if the package is missing,
 `cargo install --locked yazi-fm yazi-cli` installs it.

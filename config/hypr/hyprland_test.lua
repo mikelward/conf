@@ -654,22 +654,14 @@ test("Super+U goes to the guard's waiting window first", function()
     _G.quickspace_focus = nil
 end)
 
-test("screenshots go to the clipboard as PNG; Alt+Print takes the window", function()
+test("Print takes the screen, Alt the window, Shift or Super a region", function()
     load()
-    truthy(bind("Print").target.args:find("wl-copy --type image/png", 1, true))
-    truthy(bind("SHIFT + Print").target.args:find("slurp", 1, true))
-    S.active_window = { at = { x = 10, y = 20 }, size = { x = 300, y = 400 } }
-    run("ALT + Print")
-    eq(1, #S.execs)
-    truthy(S.execs[1]:find("grim -g '10,20 300x400'", 1, true), S.execs[1])
-    S.active_window = nil
-    run("ALT + Print")
-    eq(0, #S.execs, "no window, no screenshot")
-    eq(0, #S.notifications, "no window is quiet")
-    S.active_window = "raise"
-    run("ALT + Print")
-    eq(0, #S.execs, "a failed lookup takes no screenshot")
-    eq(1, #S.notifications, "a failed lookup is reported")
+    for keys, args in pairs({
+        ["Print"] = "", ["ALT + Print"] = " --window",
+        ["SHIFT + Print"] = " --region", ["SUPER + Print"] = " --region",
+    }) do
+        eq("~/scripts/runenv screenshot" .. args, bind(keys).target.args, keys)
+    end
 end)
 
 test("mic mute is system-wide and works on the lock screen", function()
