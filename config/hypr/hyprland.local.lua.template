@@ -32,5 +32,5 @@
 -- hl.device({ name = "logitech-mx-master-3", scroll_factor = 2.0 })
 -- hl.config({ input = { touchpad = { scroll_factor = 1.5 } } })
 
--- A stronger focus cue, if 0.15 is too subtle on dark apps:
--- hl.config({ decoration = { dim_strength = 0.25 } })
+-- A stronger focus cue, if 0.07 is too subtle on dark apps:
+-- hl.config({ decoration = { dim_strength = 0.1 } })

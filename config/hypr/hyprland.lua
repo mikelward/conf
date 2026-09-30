@@ -254,10 +254,11 @@ hl.config({
         },
         active_opacity = 1.0,
         inactive_opacity = 1.0,
-        -- The same strength as the KDE setup's dim-inactive effect. If a
-        -- dark app next to a dark app is hard to tell apart, try 0.25.
+        -- Hyprland's dim looks stronger than KDE's dim-inactive effect at
+        -- the same number, so 0.07. If a dark app next to a dark app is hard
+        -- to tell apart, try 0.1.
         dim_inactive = true,
-        dim_strength = 0.15,
+        dim_strength = 0.07,
         dim_special = 0.2,
     },
     animations = { enabled = true },
@@ -300,7 +301,8 @@ hl.config({
         mouse_refocus = false,
         focus_on_close = 1,
 
-        sensitivity = 0,
+        -- No acceleration, at a speed tuned on a real session.
+        sensitivity = 0.9,
         accel_profile = "flat",
         -- Right-handed by default, which trackpads want; apply-input.sh
         -- flips mice to the right button primary.
