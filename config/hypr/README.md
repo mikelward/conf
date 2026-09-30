@@ -216,9 +216,9 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   espanso config also uses `lv3:menu_switch` (Menu key as AltGr); append it to
   `kb_options` if you want that too.
 - **The focus cue is the dim alone.** No gaps and no borders;
-  `dim_inactive` with `dim_strength = 0.15`, matching the KDE "dim inactive"
-  effect (Strength 15). A lone window, video and picture-in-picture never
-  dim.
+  `dim_inactive` with `dim_strength = 0.07`: Hyprland's dim looks stronger
+  than KDE's "dim inactive" effect at the same number, so 0.15 was too much.
+  A lone window, video and picture-in-picture never dim.
 - **Dialogs float, centered**: modal windows, pavucontrol,
   nm-connection-editor, blueman-manager, portal file choosers, and "Open
   File" / "Save File" / "Save As" titles. Picture-in-picture floats pinned in

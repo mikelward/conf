@@ -324,14 +324,14 @@ end)
 --------------------------------------------------------------------------------
 -- Spec settings (quickspace SPEC.md §6.2, §14)
 --------------------------------------------------------------------------------
-test("focus cue is the dim alone: no gaps, no borders, dim 0.15", function()
+test("focus cue is the dim alone: no gaps, no borders, dim 0.07", function()
     load()
     local c = S.config
     eq(0, c.general.gaps_in, "gaps_in")
     eq(0, c.general.gaps_out, "gaps_out")
     eq(0, c.general.border_size, "border_size")
     eq(true, c.decoration.dim_inactive, "dim_inactive")
-    eq(0.15, c.decoration.dim_strength, "dim_strength")
+    eq(0.07, c.decoration.dim_strength, "dim_strength")
 end)
 
 test("nothing steals focus, and focus never warps the pointer", function()
@@ -341,6 +341,12 @@ test("nothing steals focus, and focus never warps the pointer", function()
     eq(1, S.config.input.follow_mouse, "follow_mouse")
     eq(false, S.config.input.mouse_refocus, "mouse_refocus")
     eq(1, S.config.input.focus_on_close, "focus_on_close (1 = under the cursor)")
+end)
+
+test("the pointer is flat at sensitivity 0.9", function()
+    load()
+    eq("flat", S.config.input.accel_profile, "accel_profile")
+    eq(0.9, S.config.input.sensitivity, "sensitivity")
 end)
 
 test("keyboard is US Dvorak with Caps Lock as Compose", function()
@@ -951,7 +957,7 @@ test("a broken hyprland.local.lua is reported, and the shared config stands", fu
     load({ ["local"] = "this is not lua" })
     eq(1, #S.notifications)
     truthy(S.notifications[1].text:find("hyprland.local.lua (none of it applied)", 1, true))
-    eq(0.15, S.config.decoration.dim_strength)
+    eq(0.07, S.config.decoration.dim_strength)
 end)
 
 test("a hyprland.local.lua that fails partway says what applied", function()
@@ -967,7 +973,7 @@ test("an unreadable hyprland.local.lua is reported, not taken as absent", functi
     load({ keep_files = true })
     eq(1, #S.notifications)
     truthy(S.notifications[1].text:find("hyprland.local.lua: couldn't read", 1, true), S.notifications[1].text)
-    eq(0.15, S.config.decoration.dim_strength)
+    eq(0.07, S.config.decoration.dim_strength)
 end)
 
 test("an optional file whose close fails is reported and not used", function()
@@ -988,7 +994,7 @@ test("an optional file whose close fails is reported and not used", function()
     assert(ok, err)
     eq(1, #S.notifications)
     truthy(S.notifications[1].text:find("hyprland.local.lua: couldn't close", 1, true), S.notifications[1].text)
-    eq(0.15, S.config.decoration.dim_strength)
+    eq(0.07, S.config.decoration.dim_strength)
 end)
 
 test("the template is all comments, and loads cleanly as a local file", function()
