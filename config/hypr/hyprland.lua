@@ -313,9 +313,10 @@ hl.config({
         mouse_refocus = false,
         focus_on_close = 1,
 
-        -- No acceleration, at a speed tuned on a real session.
-        sensitivity = 0.9,
-        accel_profile = "flat",
+        -- libinput's adaptive acceleration at full speed, the KDE setup this
+        -- replaces; flat, and custom curves, felt wrong on a real session.
+        sensitivity = 1.0,
+        accel_profile = "adaptive",
         -- Right-handed by default, which trackpads want; apply-input.sh
         -- flips mice to the right button primary.
         left_handed = false,
