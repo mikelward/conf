@@ -349,10 +349,10 @@ test("nothing steals focus, and focus never warps the pointer", function()
     eq(1, S.config.input.focus_on_close, "focus_on_close (1 = under the cursor)")
 end)
 
-test("the pointer is flat at sensitivity 0.9", function()
+test("the pointer is adaptive at sensitivity 1", function()
     load()
-    eq("flat", S.config.input.accel_profile, "accel_profile")
-    eq(0.9, S.config.input.sensitivity, "sensitivity")
+    eq("adaptive", S.config.input.accel_profile, "accel_profile")
+    eq(1.0, S.config.input.sensitivity, "sensitivity")
 end)
 
 test("keyboard is US Dvorak with Caps Lock as Compose and Menu as Super", function()
