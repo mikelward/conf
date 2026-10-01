@@ -33,3 +33,6 @@
 GOPATH=$HOME
 PATH=$HOME/scripts.local:$HOME/scripts:$HOME/bin:$HOME/.cargo/bin:$HOME/.local/bin:$HOME/android-sdk-linux/platform-tools:$HOME/android-studio/bin:$HOME/Android/Sdk/platform-tools:$HOME/depot_tools:$HOME/google-cloud-sdk/bin:/usr/local/bin:$PATH
 PATH=$PATH:/sbin:/usr/sbin
+# No DrKonqi crash dialogs: KCrash installs no handler when KDE_DEBUG is set,
+# so a crashing KDE app just exits (and dumps core per ulimit/coredumpd).
+KDE_DEBUG=1
