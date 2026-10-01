@@ -160,6 +160,20 @@ run_fuzzel XDG_CURRENT_DESKTOP=KDE
 assert_equal "" "$(cat "$_ffake/log")"
 rm -rf "$_ffake"
 
+################################################################################
+# hyprlock shows the short hostname.
+################################################################################
+start_test "hyprlock shows the short hostname"
+_lock_host=$(sed -n 's/^ *text = cmd\[update:[0-9]*\] \(uname -n.*\)$/\1/p' "$_lock")
+assert_equal "uname -n | cut -d. -f1" "$_lock_host"
+
+start_test "the hostname command drops the domain"
+_fakebin=$(mktemp -d)
+printf '#!/bin/sh\necho host1.example.com\n' > "$_fakebin/uname"
+chmod +x "$_fakebin/uname"
+assert_equal "host1" "$(PATH="$_fakebin:$PATH" sh -c "$_lock_host")"
+rm -rf "$_fakebin"
+
 start_test "apply-input parses as shell and is executable"
 assert_true sh -n "$_apply"
 assert_true test -x "$_apply"
