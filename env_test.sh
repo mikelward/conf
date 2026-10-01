@@ -64,4 +64,8 @@ start_test "sourcing env exports GOPATH=\$HOME"
 _gopath=$(HOME="$_fakehome" PATH="$_before" sh -c 'set -a; . "$0"; env' "$_env" | grep '^GOPATH=')
 assert_equal "GOPATH=$_fakehome" "$_gopath"
 
+start_test "sourcing env exports KDE_DEBUG=1 (no DrKonqi crash dialogs)"
+_kdedebug=$(HOME="$_fakehome" PATH="$_before" sh -c 'set -a; . "$0"; env' "$_env" | grep '^KDE_DEBUG=')
+assert_equal "KDE_DEBUG=1" "$_kdedebug"
+
 test_summary "env_test"
