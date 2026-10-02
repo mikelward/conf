@@ -139,6 +139,140 @@ chmod +x "$_stub_bin/git"
 assert_false test -f "$_pull_log"
 rm -rf "$_fake_conf" "$_stub_bin" "$_pull_log"
 
+# After a pull or rebase that changed config/hypr, the hooks reload Hyprland
+# when it's running, so an autoreload that caught a file mid-rewrite clears.
+_fake_conf="$_testdir/fake_conf_reload"
+_stub_bin="$_testdir/reload_stub_bin"
+_reload_log="$_testdir/reload_called"
+rm -rf "$_fake_conf" "$_stub_bin"
+mkdir -p "$_fake_conf/config/hypr" "$_stub_bin"
+printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>"%s"\n' "$_reload_log" >"$_stub_bin/hyprctl"
+chmod +x "$_stub_bin/hyprctl"
+(
+    cd "$_fake_conf" &&
+        git init -q &&
+        git config user.email test@example.com && git config user.name test &&
+        echo one >config/hypr/hyprland.lua && echo a >README && git add . &&
+        git commit -qm one &&
+        echo two >config/hypr/hyprland.lua && git commit -qam two &&
+        echo b >README && git commit -qam three
+)
+# Hyprland reads its config from this checkout, through confinst's links.
+_saved_xdg_config_home=${XDG_CONFIG_HOME-unset}
+XDG_CONFIG_HOME="$_testdir/reload_xdg"
+export XDG_CONFIG_HOME
+mkdir -p "$XDG_CONFIG_HOME/hypr"
+ln -sf "$_fake_conf/config/hypr/hyprland.lua" "$XDG_CONFIG_HOME/hypr/hyprland.lua"
+# run_hook HOOK FROM [ENV...]: runs the hook as if HEAD had moved from FROM.
+run_hook() {
+    _hook=$1
+    _from=$2
+    shift 2
+    rm -f "$_reload_log"
+    (cd "$_fake_conf" && git update-ref ORIG_HEAD "$_from" &&
+        env PATH="$_stub_bin:$PATH" "$@" sh "$_srcdir/gittemplates/hooks/$_hook" rebase)
+}
+start_test "post-merge reloads Hyprland after a pull that changed config/hypr"
+run_hook post-merge HEAD~2 HYPRLAND_INSTANCE_SIGNATURE=x
+assert_equal "reload" "$(cat "$_reload_log" 2>/dev/null)"
+start_test "post-rewrite reloads Hyprland after a rebase that changed config/hypr"
+run_hook post-rewrite HEAD~2 HYPRLAND_INSTANCE_SIGNATURE=x
+assert_equal "reload" "$(cat "$_reload_log" 2>/dev/null)"
+start_test "post-merge reloads Hyprland after any pull in conf"
+run_hook post-merge HEAD~1 HYPRLAND_INSTANCE_SIGNATURE=x
+assert_equal "reload" "$(cat "$_reload_log" 2>/dev/null)"
+start_test "post-merge leaves Hyprland alone outside conf"
+rm -f "$_reload_log"
+(cd "$_testdir" && mkdir -p not_conf && cd not_conf && env PATH="$_stub_bin:$PATH" HYPRLAND_INSTANCE_SIGNATURE=x sh "$_srcdir/gittemplates/hooks/post-merge")
+assert_false test -f "$_reload_log"
+rmdir "$_testdir/not_conf"
+start_test "post-merge leaves Hyprland alone in a repo with its own config/hypr"
+rm -f "$_reload_log"
+(cd "$_testdir" && mkdir -p other/config/hypr && echo x >other/config/hypr/hyprland.lua && cd other &&
+    env PATH="$_stub_bin:$PATH" HYPRLAND_INSTANCE_SIGNATURE=x sh "$_srcdir/gittemplates/hooks/post-merge")
+assert_false test -f "$_reload_log"
+rm -rf "$_testdir/other"
+start_test "post-merge leaves Hyprland alone outside a Hyprland session"
+run_hook post-merge HEAD~2 HYPRLAND_INSTANCE_SIGNATURE=
+assert_false test -f "$_reload_log"
+# A rebase that replays a local config/hypr change onto an unrelated
+# upstream commit leaves the tips equal there, but rewrote the file.
+(
+    cd "$_fake_conf" &&
+        _upstream=$(git symbolic-ref --short HEAD) &&
+        git checkout -q -b local HEAD~1 &&
+        echo mine >config/hypr/hyprland.lua && git commit -qam mine &&
+        git branch -q before-rebase &&
+        git rebase -q "$_upstream"
+)
+start_test "the rebase left config/hypr the same at both tips"
+assert_true sh -c "cd '$_fake_conf' && git diff --quiet before-rebase HEAD -- config/hypr"
+start_test "post-rewrite reloads after a rebase replayed a config/hypr change"
+run_hook post-rewrite before-rebase HYPRLAND_INSTANCE_SIGNATURE=x
+assert_equal "reload" "$(cat "$_reload_log" 2>/dev/null)"
+# A rebase with nothing to replay only fast-forwards: git runs
+# post-checkout and no post-rewrite. Drive it through git itself.
+(
+    cd "$_fake_conf" &&
+        _upstream=$(git symbolic-ref --short HEAD) &&
+        git checkout -q -b behind "$_upstream~1" &&
+        git config core.hooksPath "$_srcdir/gittemplates/hooks"
+)
+start_test "a fast-forward rebase reloads Hyprland"
+rm -f "$_reload_log"
+(cd "$_fake_conf" && env PATH="$_stub_bin:$PATH" HYPRLAND_INSTANCE_SIGNATURE=x git rebase -q local)
+assert_true test -s "$_reload_log"
+start_test "post-checkout leaves Hyprland alone outside a Hyprland session"
+rm -f "$_reload_log"
+(cd "$_fake_conf" && env PATH="$_stub_bin:$PATH" HYPRLAND_INSTANCE_SIGNATURE= sh "$_srcdir/gittemplates/hooks/post-checkout" HEAD HEAD 1)
+assert_false test -f "$_reload_log"
+# A pull that stops on a conflict runs no post-merge; finishing it with
+# `git commit` runs post-commit, as a merge commit. The setup runs the
+# hooks too, so it keeps them away from a real Hyprland session.
+(
+    HYPRLAND_INSTANCE_SIGNATURE= && export HYPRLAND_INSTANCE_SIGNATURE &&
+        cd "$_fake_conf" &&
+        git checkout -q -b theirs behind &&
+        echo theirs >README && echo new >config/hypr/hyprland.lua &&
+        git commit -qam theirs &&
+        git checkout -q -b ours behind &&
+        echo ours >README && git commit -qam ours
+)
+(cd "$_fake_conf" && env PATH="$_stub_bin:$PATH" HYPRLAND_INSTANCE_SIGNATURE=x git merge -q theirs >/dev/null 2>&1)
+start_test "a conflicted merge stops before any reload"
+assert_false test -f "$_reload_log"
+rm -f "$_reload_log"
+(cd "$_fake_conf" && echo both >README && git add README &&
+    env PATH="$_stub_bin:$PATH" HYPRLAND_INSTANCE_SIGNATURE=x git commit -q --no-edit)
+start_test "committing the resolved merge reloads Hyprland"
+assert_true test -s "$_reload_log"
+start_test "a plain commit doesn't reload Hyprland"
+rm -f "$_reload_log"
+(cd "$_fake_conf" && echo more >README && env PATH="$_stub_bin:$PATH" HYPRLAND_INSTANCE_SIGNATURE=x git commit -qam more)
+assert_false test -f "$_reload_log"
+# A failed vcs pull still fails the hook, reload check or not.
+mkdir -p "$_fake_conf/vcs/.git"
+cat >"$_stub_bin/git" <<EOF
+#!/bin/sh
+if test "\$1" = -C && test "\$2" = vcs && test "\$3" = pull; then
+    exit 1
+fi
+exec "$(command -v git)" "\$@"
+EOF
+chmod +x "$_stub_bin/git"
+start_test "post-merge still fails when the vcs pull fails"
+run_hook post-merge HEAD~1 HYPRLAND_INSTANCE_SIGNATURE=
+assert_equal "1" "$?"
+start_test "post-rewrite still fails when the vcs pull fails"
+run_hook post-rewrite HEAD~1 HYPRLAND_INSTANCE_SIGNATURE=
+assert_equal "1" "$?"
+rm -rf "$_fake_conf" "$_stub_bin" "$_reload_log" "$XDG_CONFIG_HOME"
+if test "$_saved_xdg_config_home" = unset; then
+    unset XDG_CONFIG_HOME
+else
+    XDG_CONFIG_HOME=$_saved_xdg_config_home
+fi
+
 # Bare `make` (no target) must build, not install. Verify the default
 # target is `all`, that `all` depends on vcs-build, and that its recipe
 # does NOT invoke the install-* targets.
