@@ -1,0 +1,5 @@
+#!/bin/sh
+# Reload Hyprland after a checkout: a branch switch, or a rebase that only
+# fast-forwards, which runs no post-rewrite. See reload-hyprland.
+sh "$(dirname "$0")/reload-hyprland" post-checkout
+exit 0

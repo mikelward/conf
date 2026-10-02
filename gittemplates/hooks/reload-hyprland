@@ -1,0 +1,19 @@
+#!/bin/sh
+# reload-hyprland HOOK: reload Hyprland after git rewrote this checkout's
+# files. Git updates a file by deleting and recreating it, and Hyprland's
+# own autoreload can land in between and keep showing "no such file or
+# directory" for hyprland.lua; a reload once the files are whole clears it.
+# Run by the post-* hooks beside it, every time rather than only when
+# config/hypr changed: a rebase can rewrite it even when no before/after
+# comparison shows a change.
+#
+# Only when the running Hyprland reads its config from this checkout:
+# confinst links each file into ~/.config, so ~/.config/hypr/hyprland.lua
+# is then this checkout's file. That keeps out other repos, which get
+# these hooks through init.templateDir, and other conf checkouts.
+test -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" || exit 0
+test "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland.lua" -ef config/hypr/hyprland.lua || exit 0
+# A session without hyprctl has nothing to reload with.
+command -v hyprctl >/dev/null 2>&1 || exit 0
+hyprctl reload >/dev/null || echo "$1: hyprctl reload failed; run it by hand" >&2
+exit 0

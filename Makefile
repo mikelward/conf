@@ -265,8 +265,11 @@ test-elvish: $(CACHE)/test-elvish.stamp
 # required (no skip branch), so the stamp can be touched unconditionally
 # at the end and caches normally. Fish syntax check lives in test-fish.
 $(CACHE)/test-lint.stamp: shrc shrc.vcs bashrc.fuzzycomplete profile exitrc \
+                          gittemplates/hooks/post-checkout \
+                          gittemplates/hooks/post-commit \
                           gittemplates/hooks/post-merge \
                           gittemplates/hooks/post-rewrite \
+                          gittemplates/hooks/reload-hyprland \
                           scripts/unshallow.sh \
                           .claude/hooks/session-start.sh | $(CACHE)
 	@shellcheck -s bash -S error .claude/hooks/session-start.sh
@@ -279,8 +282,11 @@ $(CACHE)/test-lint.stamp: shrc shrc.vcs bashrc.fuzzycomplete profile exitrc \
 	@dash -n shrc
 	@dash -n profile
 	@dash -n exitrc
+	@dash -n gittemplates/hooks/post-checkout
+	@dash -n gittemplates/hooks/post-commit
 	@dash -n gittemplates/hooks/post-merge
 	@dash -n gittemplates/hooks/post-rewrite
+	@dash -n gittemplates/hooks/reload-hyprland
 	@bash -n shrc
 	@bash -n shrc.vcs
 	@bash -n bashrc.fuzzycomplete
@@ -303,6 +309,7 @@ test-gitconfig: $(CACHE)/test-gitconfig.stamp
 # would legitimately fail on a fresh checkout where vcs-build's
 # order-only path through vcs/Makefile is still the active recipe.
 $(CACHE)/test-makefile.stamp: Makefile makefile_test.sh shrc_test_lib.sh \
+                              $(wildcard gittemplates/hooks/*) \
                               | $(CACHE) vcs/Makefile
 	@bash makefile_test.sh
 	@touch $@

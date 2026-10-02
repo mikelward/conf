@@ -1,0 +1,8 @@
+#!/bin/sh
+# Reload Hyprland after committing a merge: a pull that stopped on a
+# conflict has already rewritten files, and finishing it with `git commit`
+# runs no post-merge. Plain commits change no files, so they don't reload.
+# See reload-hyprland.
+git rev-parse -q --verify HEAD^2 >/dev/null || exit 0
+sh "$(dirname "$0")/reload-hyprland" post-commit
+exit 0

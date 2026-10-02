@@ -5,6 +5,11 @@ test "$1" = rebase || exit 0
 # Test for vcs/.git rather than `git -C vcs rev-parse --git-dir`: the
 # latter walks up and finds the parent conf repo when vcs/ exists as a
 # plain directory, which would silently `pull` from conf.
+# Its failure is the hook's exit status, after the reload below.
+status=0
 if test -e vcs/.git; then
-    git -C vcs pull
+    git -C vcs pull || status=$?
 fi
+
+sh "$(dirname "$0")/reload-hyprland" post-rewrite
+exit "$status"
