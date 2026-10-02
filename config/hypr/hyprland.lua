@@ -522,8 +522,16 @@ hl.bind("XF86AudioLowerVolume", exec("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
 hl.bind("XF86AudioMute", exec("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), locked)
 hl.bind("XF86AudioMicMute", exec("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), locked)
 hl.bind(key("SHIFT + M"), exec("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), locked)
-hl.bind("XF86MonBrightnessUp", exec("brightnessctl set 5%+"), locked_repeating)
-hl.bind("XF86MonBrightnessDown", exec("brightnessctl set 5%-"), locked_repeating)
+-- quickspace's command shows the new level on the shell's OSD. Only a
+-- quickspace from before it (a usage error, 2) or none (127) falls back to
+-- brightnessctl alone: any other failure may have changed the level already,
+-- so it's passed on as the binding's status instead.
+local function brightness(step)
+    return exec("quickspace brightness " .. step .. "; s=$?; "
+        .. "if test $s -eq 2 || test $s -eq 127; then brightnessctl set " .. step .. "; else exit $s; fi")
+end
+hl.bind("XF86MonBrightnessUp", brightness("5%+"), locked_repeating)
+hl.bind("XF86MonBrightnessDown", brightness("5%-"), locked_repeating)
 hl.bind("XF86AudioPlay", exec("playerctl play-pause"), locked)
 hl.bind("XF86AudioPause", exec("playerctl play-pause"), locked)
 hl.bind("XF86AudioNext", exec("playerctl next"), locked)
