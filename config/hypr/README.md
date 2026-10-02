@@ -181,9 +181,9 @@ table is the quickspace spec's (SPEC.md §6.6).
 | Keys | Action |
 |------|--------|
 | `SUPER + 1..9` / `SUPER + Shift + 1..9` | Go to / send window to workspace 1–9 |
-| `SUPER + Left` / `SUPER + Right` | Previous / next workspace |
+| `SUPER + Left` / `SUPER + Right`, `SUPER + PgUp` / `SUPER + PgDn` | Previous / next workspace |
 | `SUPER + Shift + Left` / `SUPER + Shift + Right` | Move the window to the previous / next workspace |
-| `SUPER + U` | Focus the most recent urgent window |
+| `SUPER + Tab`, `SUPER + Home` | Focus the most recent urgent window, or the last one (both on trial) |
 
 ### Layouts and windows
 
@@ -214,7 +214,7 @@ shape) and `` ` `` maximizes the window.
 
 Focus follows the mouse when it crosses into a window, and never warps the
 pointer. An app that asks for focus is marked urgent instead of taking it
-(`SUPER + U` goes there).
+(`SUPER + Tab` goes there).
 
 ## Behaviour notes
 

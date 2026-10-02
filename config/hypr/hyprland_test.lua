@@ -483,12 +483,13 @@ test("every key in the spec is bound", function()
         "SUPER + H", "SUPER + I", "SUPER + M", "SUPER + N", "SUPER + R", "SUPER + Y",
         "SUPER + BackSpace", "SUPER + L",
         "SUPER + Left", "SUPER + Right", "SUPER + SHIFT + Left", "SUPER + SHIFT + Right",
+        "SUPER + Page_Up", "SUPER + Page_Down",
         "SUPER + J", "SUPER + K", "SUPER + SHIFT + J", "SUPER + SHIFT + K",
         "SUPER + Return", "SUPER + backslash", "SUPER + slash", "SUPER + equal", "SUPER + minus",
         "SUPER + period", "SUPER + comma", "SUPER + grave",
         "SUPER + Up", "SUPER + SHIFT + Up", "SUPER + Down",
         "SUPER + SHIFT + F", "SUPER + Insert", "SUPER + SHIFT + R",
-        "SUPER + U", "SUPER + SHIFT + N",
+        "SUPER + Tab", "SUPER + Home", "SUPER + SHIFT + N",
         "Print", "ALT + Print", "SHIFT + Print", "SUPER + Print",
         "XF86AudioMicMute", "SUPER + SHIFT + M",
         "XF86AudioRaiseVolume", "XF86AudioLowerVolume", "XF86AudioMute",
@@ -543,6 +544,10 @@ test("Super+Left/Right step through workspaces 1-9 and stop at the ends", functi
     eq(4, d[1].args.workspace)
     d = run("SUPER + Left")
     eq(2, d[1].args.workspace)
+    d = run("SUPER + Page_Down")
+    eq(4, d[1].args.workspace, "PgDn is next")
+    d = run("SUPER + Page_Up")
+    eq(2, d[1].args.workspace, "PgUp is previous")
     S.active_workspace = { id = 9 }
     eq(0, #run("SUPER + Right"), "past 9")
     S.active_workspace = { id = 1 }
@@ -620,15 +625,17 @@ test("the resize submap resizes and has a way out", function()
     eq("reset", bind("Return", "resize").target.args)
 end)
 
-test("Super+U focuses the urgent or last window without the guard", function()
+test("Super+Tab focuses the urgent or last window without the guard", function()
     load()
     _G.quickspace_focus = nil
-    local d = run("SUPER + U")
-    eq(1, #d)
-    eq(true, d[1].args.urgent_or_last)
+    for _, keys in ipairs({ "SUPER + Tab", "SUPER + Home" }) do
+        local d = run(keys)
+        eq(1, #d, keys)
+        eq(true, d[1].args.urgent_or_last, keys)
+    end
 end)
 
-test("Super+U goes to the guard's waiting window first", function()
+test("Super+Tab and Super+Home go to the guard's waiting window first", function()
     load()
     local waiting = 1
     _G.quickspace_focus = {
@@ -641,13 +648,13 @@ test("Super+U goes to the guard's waiting window first", function()
             return true
         end,
     }
-    local d = run("SUPER + U")
+    local d = run("SUPER + Tab")
     eq(1, #d)
     eq("guard-focus", d[1].name)
-    d = run("SUPER + U")
+    d = run("SUPER + Home")
     eq(true, d[1].args.urgent_or_last, "none waiting: falls back")
     _G.quickspace_focus = { focus_attention = function() error("boom") end }
-    d = run("SUPER + U")
+    d = run("SUPER + Tab")
     eq(1, #S.notifications)
     truthy(S.notifications[1].text:find("boom", 1, true))
     eq(true, d[1].args.urgent_or_last, "a failed guard falls back")
