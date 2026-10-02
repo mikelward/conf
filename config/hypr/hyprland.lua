@@ -742,6 +742,14 @@ hl.window_rule({
 hl.window_rule({ name = "no-dim-lone-window", match = { workspace = "w[tv1]" }, no_dim = true })
 hl.window_rule({ name = "no-dim-video", match = { content = "video" }, no_dim = true })
 
+-- quickspace's notification popups (SPEC.md §9) show black in a screen
+-- share, so one that appears while sharing doesn't show its text.
+hl.layer_rule({
+    name = "no-share-notifications",
+    match = { namespace = "^quickspace-notifications$" },
+    no_screen_share = true,
+})
+
 --------------------------------------------------------------------------------
 -- PER-MACHINE OVERRIDES
 --------------------------------------------------------------------------------
