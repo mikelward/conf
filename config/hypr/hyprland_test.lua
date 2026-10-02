@@ -661,6 +661,29 @@ test("Super+Tab and Super+Home go to the guard's waiting window first", function
     _G.quickspace_focus = nil
 end)
 
+test("releasing Super ends the guard's Super+Tab cycle, without consuming Super", function()
+    load()
+    local ended = 0
+    _G.quickspace_focus = { end_cycle = function() ended = ended + 1 return true end }
+    for _, keys in ipairs({ "SUPER + Super_L", "SUPER + Super_R" }) do
+        eq(true, bind(keys).opts.release, keys .. " on release")
+        eq(true, bind(keys).opts.non_consuming, keys .. " passes Super on")
+        run(keys)
+    end
+    eq(2, ended)
+    -- A guard from before cycling, or none, is left alone.
+    _G.quickspace_focus = { focus_attention = function() return false end }
+    run("SUPER + Super_L")
+    _G.quickspace_focus = nil
+    run("SUPER + Super_L")
+    eq(0, #S.notifications)
+    _G.quickspace_focus = { end_cycle = function() error("boom") end }
+    run("SUPER + Super_L")
+    eq(1, #S.notifications)
+    truthy(S.notifications[1].text:find("boom", 1, true))
+    _G.quickspace_focus = nil
+end)
+
 test("Print takes the screen, Alt the window, Shift or Super a region", function()
     load()
     for keys, args in pairs({
