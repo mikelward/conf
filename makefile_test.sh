@@ -397,6 +397,16 @@ assert_contains "-j" "$_test_recipe"
 start_test "test recipe targets test-all"
 assert_contains "test-all" "$_test_recipe"
 
+# The prompt timing runs alone, after the parallel suites, so their load
+# can't land on it.
+start_test "test recipe runs test-prompt-perf after test-all"
+_perf_line=$(printf '%s\n' "$_test_recipe" | grep -n 'test-prompt-perf' | head -n 1 | cut -d: -f1)
+_all_line=$(printf '%s\n' "$_test_recipe" | grep -n 'test-all' | head -n 1 | cut -d: -f1)
+assert_true test -n "$_perf_line"
+assert_true test "${_perf_line:-0}" -gt "${_all_line:-0}"
+start_test "test-all leaves out test-prompt-perf"
+assert_not_contains "test-prompt-perf" "$_test_all_deps"
+
 start_test "TEST_JOBS=1 uses -j 1"
 _recipe_j1=$(make -C "$_srcdir" -n test TEST_JOBS=1 2>/dev/null)
 assert_contains "-j 1" "$_recipe_j1"
