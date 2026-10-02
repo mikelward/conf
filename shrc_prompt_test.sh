@@ -1157,45 +1157,4 @@ current_command=
 HOSTNAME="testhost"
 
 ###############
-# PERFORMANCE
-# prompt_line runs on every prompt, so its cost matters. Time 50 calls
-# with `vcs prompt-info` stubbed to echo a fixed line — this measures
-# the shell-composition cost (host_info, dir_info, auth_info, color
-# wrapping, subshell captures) without forking the Go binary.
-
-        start_test "prompt_line within ${_prompt_perf_budget_ms}ms budget"
-inside_project() { true; }
-prompt_info() { echo "proj main"; }
-is_ssh_valid() { true; }
-# Warmup: exclude first-call disk/icache variance (module resolution,
-# readline setup, etc.) from the timed loop.
-prompt_line >/dev/null 2>&1
-_start=$(_now_ns)
-_i=0
-while test $_i -lt 50; do
-    prompt_line >/dev/null 2>&1
-    _i=$((_i + 1))
-done
-_end=$(_now_ns)
-# Budget: 50 prompt_line calls with prompt_info stubbed should stay
-# under 1s even on slow CI. The shell-composition path forks several
-# subshells per prompt, so it's noticeably slower than the old single
-# `vcs prompt-line` call. A regression past the budget fails the test
-# rather than silently slowing every prompt.
-# PROMPT_PERF_BUDGET_MS=0 disables the check for manual profiling.
-_prompt_perf_budget_ms="${PROMPT_PERF_BUDGET_MS:-1000}"
-if test "$_start" != "0" && test "$_end" != "0"; then
-    _elapsed_ms=$(( (_end - _start) / 1000000 ))
-    echo "  50 x prompt_line (shell compose): ${_elapsed_ms}ms (budget ${_prompt_perf_budget_ms}ms)"
-    if test "$_prompt_perf_budget_ms" -gt 0; then
-        assert_true test "$_elapsed_ms" -le "$_prompt_perf_budget_ms"
-    fi
-else
-    skip_block "prompt_line perf check: date +%s%N unavailable"
-fi
-
-# Reset
-inside_project() { false; }
-prompt_info() { :; }
-
 test_summary "$_real_shell shrc_prompt_test"

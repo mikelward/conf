@@ -84,8 +84,13 @@ CACHE := .test-cache
 # independent (each test script creates its own temp dir via mktemp).
 # --output-sync=target keeps each target's output grouped instead of
 # interleaved (requires GNU make >= 4.0; older versions will warn and ignore).
+#
+# test-prompt-perf times prompt_line, which only means something on an idle
+# machine, so it runs alone once the parallel suites are done rather than as
+# part of test-all.
 test:
 	@$(MAKE) --no-print-directory --output-sync=target -j $(TEST_JOBS) test-all
+	@$(MAKE) --no-print-directory test-prompt-perf
 
 # Same as `test`, with TEST_VERBOSE=1 exported so shrc_test_lib's
 # start_test / assert_* helpers print per-section banners and per-
@@ -190,6 +195,11 @@ $(CACHE)/test-prompt.stamp: shrc shrc_test_lib.sh shrc_prompt_test.sh | $(CACHE)
 	@bash shrc_prompt_test.sh
 	@touch $@
 test-prompt: $(CACHE)/test-prompt.stamp
+
+$(CACHE)/test-prompt-perf.stamp: shrc shrc_test_lib.sh shrc_prompt_perf_test.sh | $(CACHE)
+	@bash shrc_prompt_perf_test.sh
+	@touch $@
+test-prompt-perf: $(CACHE)/test-prompt-perf.stamp
 
 # test-vcs depends on vcs/vcs (the real binary, not the PHONY vcs-build)
 # so a binary rebuild invalidates the stamp and the tests re-run. No
@@ -408,7 +418,7 @@ test-sway: $(CACHE)/test-sway.stamp
 .PHONY: all install install-dotfiles install-vcs bootstrap \
 	vcs-build vcs-sync vcs-fetch \
 	test test-verbose test-full test-all test-claude-settings test-session-start-hook \
-	test-dash test-ksh test-bash test-zsh test-prompt test-vcs \
+	test-dash test-ksh test-bash test-zsh test-prompt test-prompt-perf test-vcs \
 	test-fish test-nu test-mesh test-elvish test-lint \
 	test-env test-gitconfig test-makefile test-amethyst test-karabiner \
 	test-hypr test-sway
