@@ -979,7 +979,26 @@ test("in the quickspace session, app keys go through quickspace launch", functio
     eq("quickspace launch --app '*' -- ~/scripts/runenv browser1", bind("SUPER + G").target.args)
     eq("quickspace launch --app 'org.gnome.Calculator' -- gnome-calculator", bind("XF86Calculator").target.args)
     -- Not apps: these stay plain commands.
-    eq("swaync-client -t -sw", bind("SUPER + SHIFT + N").target.args)
+    eq("qs -c quickspace ipc call notifications toggle || swaync-client -t -sw", bind("SUPER + SHIFT + N").target.args)
+end)
+
+test("Super+Shift+N opens quickspace's notification center, else swaync's", function()
+    load()
+    local cmd = bind("SUPER + SHIFT + N").target.args
+    -- Run the binding's shell with fakes: swaync's panel opens only when
+    -- the call to the shell fails.
+    for status, fallback in pairs({ [0] = false, [1] = true, [255] = true, [127] = true }) do
+        -- swaync-client isn't a name dash takes for a function, so it's a
+        -- script on PATH.
+        local script = "d=$(mktemp -d) || exit 1; printf '#!/bin/sh\\necho fallback\\n' >\"$d/swaync-client\"; "
+            .. "chmod +x \"$d/swaync-client\"; PATH=\"$d:$PATH\"; "
+            .. "qs() { echo \"$*\"; return " .. status .. "; }; " .. cmd .. "; rm -rf \"$d\""
+        local p = io.popen("sh -c '" .. script:gsub("'", "'\\''") .. "'")
+        local out = p:read("a")
+        p:close()
+        truthy(out:find("-c quickspace ipc call notifications toggle", 1, true), "qs called")
+        eq(fallback, out:find("fallback", 1, true) ~= nil, "fallback after exit " .. status)
+    end
 end)
 
 test("outside the quickspace session, app keys run the command itself", function()
