@@ -484,6 +484,24 @@ local function focus_attention()
 end
 hl.bind(key("Tab"), focus_attention)
 hl.bind(key("Home"), focus_attention)
+-- Pressed again while Super is held, Super+Tab steps to the next marked
+-- window, Alt+Tab style, and releasing Super clears only the one it landed
+-- on. Releasing Super ends the guard's cycle, and does nothing outside one,
+-- which is every other release. Non-consuming, so apps still see Super.
+local function end_cycle()
+    local guard = rawget(_G, "quickspace_focus")
+    -- A guard from before cycling has no end_cycle, and nothing to end.
+    if not (guard and guard.end_cycle) then
+        return
+    end
+    local ok, err = pcall(guard.end_cycle)
+    if not ok then
+        notify_error("Super+Tab: the focus guard failed to finish: " .. tostring(err))
+    end
+end
+for _, super in ipairs({ "Super_L", "Super_R" }) do
+    hl.bind(mod .. " + " .. super, end_cycle, { release = true, non_consuming = true })
+end
 
 -- Screenshots to the clipboard as PNG, with a notification, through the
 -- scripts repo's screenshot: the screen, the focused window (Alt), or a
