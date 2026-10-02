@@ -284,7 +284,7 @@ hl.config({
         disable_hyprland_logo = true,
         disable_splash_rendering = true,
         -- Nothing steals focus: an app asking for it is marked urgent
-        -- instead (Super+U goes there).
+        -- instead (Super+Tab goes there).
         focus_on_activate = false,
         -- uwsm sets XDG_CURRENT_DESKTOP to quickspace:Hyprland on purpose.
         disable_xdg_env_checks = true,
@@ -460,24 +460,30 @@ local function step_workspace(delta, carry_window)
 end
 hl.bind(key("Left"), step_workspace(-1, false))
 hl.bind(key("Right"), step_workspace(1, false))
+-- The same, where GNOME has them.
+hl.bind(key("Page_Up"), step_workspace(-1, false))
+hl.bind(key("Page_Down"), step_workspace(1, false))
 hl.bind(key("SHIFT + Left"), step_workspace(-1, true))
 hl.bind(key("SHIFT + Right"), step_workspace(1, true))
 
 -- The way to a window that wanted focus and didn't get it (§14). Lua can't
 -- mark a window urgent, so quickspace's focus guard keeps the ones it held
--- back; otherwise it's Hyprland's urgent window, or the last one.
-hl.bind(key("U"), function()
+-- back; otherwise it's Hyprland's urgent window, or the last one. Super+Tab
+-- and Super+Home both do it, on trial until one sticks.
+local function focus_attention()
     local guard = rawget(_G, "quickspace_focus")
     if guard and guard.focus_attention then
         local ok, went = pcall(guard.focus_attention)
         if not ok then
-            notify_error("Super+U: the focus guard failed: " .. tostring(went))
+            notify_error("Super+Tab: the focus guard failed: " .. tostring(went))
         elseif went then
             return
         end
     end
     hl.dispatch(hl.dsp.focus({ urgent_or_last = true }))
-end)
+end
+hl.bind(key("Tab"), focus_attention)
+hl.bind(key("Home"), focus_attention)
 
 -- Screenshots to the clipboard as PNG, with a notification, through the
 -- scripts repo's screenshot: the screen, the focused window (Alt), or a
