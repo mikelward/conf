@@ -208,6 +208,10 @@ rm -rf "$_ffake"
 ################################################################################
 # hyprlock shows the short hostname.
 ################################################################################
+start_test "hyprlock colors the password field white while checking, red when wrong"
+assert_contains "check_color = rgba(eceff4ff)" "$(cat "$_lock")"
+assert_contains "fail_color = rgba(bf616aff)" "$(cat "$_lock")"
+
 start_test "hyprlock shows the short hostname"
 _lock_host=$(sed -n 's/^ *text = cmd\[update:[0-9]*\] \(uname -n.*\)$/\1/p' "$_lock")
 assert_equal "uname -n | cut -d. -f1" "$_lock_host"
