@@ -137,6 +137,51 @@ assert_equal 1 "$?"
 assert_contains "couldn't configure mouse 'logitech-usb-receiver'" "$(cat "$_fake/err")"
 rm -rf "$_fake"
 
+# theme.sh against fakes that log what it starts; waybar only when it's the
+# bar.
+_tfake=$(mktemp -d)
+for _p in waybar swaync gsettings; do
+    printf '#!/bin/sh\nprintf "%%s %%s\\n" "%s" "$*" >> "$FAKE_LOG"\n' "$_p" > "$_tfake/$_p"
+    chmod +x "$_tfake/$_p"
+done
+# pkill finds a waybar only when $FAKE_WAYBAR_UP is set, and anything else
+# always, as the real one would after the launches above.
+cat > "$_tfake/pkill" <<'FAKE'
+#!/bin/sh
+printf 'pkill %s\n' "$*" >> "$FAKE_LOG"
+test "$2" != waybar || test -n "$FAKE_WAYBAR_UP"
+FAKE
+chmod +x "$_tfake/pkill"
+# run_theme ENV...: theme.sh starts its programs in the background. Each
+# inherits fd 9, the write end of a pipe that `cat` drains, so the pipeline
+# ends only once every one of them has logged and exited.
+run_theme() {
+    : > "$_tfake/log"
+    env -u SWAYSOCK -u QUICKSPACE_BAR PATH="$_tfake:$PATH" FAKE_LOG="$_tfake/log" XDG_RUNTIME_DIR="$_tfake" HOME="$_tfake" XDG_CURRENT_DESKTOP= \
+        "$@" sh "$_theme" dark 9>&1 >/dev/null 2>&1 | cat >/dev/null
+}
+
+start_test "theme.sh starts waybar by default"
+run_theme
+assert_contains "waybar -s" "$(cat "$_tfake/log")"
+
+start_test "theme.sh starts no waybar beside quickspace's Quickshell bar"
+run_theme QUICKSPACE_BAR=quickshell
+assert_not_contains "waybar" "$(cat "$_tfake/log")"
+assert_contains "swaync --style" "$(cat "$_tfake/log")"
+
+# Run by hand in quickspace there's no QUICKSPACE_BAR: only a waybar that's
+# already up is restarted. The fake pkill finds one when $FAKE_WAYBAR_UP is
+# set.
+start_test "theme.sh run by hand in quickspace starts no waybar when none is up"
+run_theme XDG_CURRENT_DESKTOP=quickspace:Hyprland
+assert_not_contains "waybar -s" "$(cat "$_tfake/log")"
+assert_contains "swaync --style" "$(cat "$_tfake/log")"
+
+start_test "theme.sh run by hand in quickspace restarts a waybar that's up"
+run_theme XDG_CURRENT_DESKTOP=quickspace:Hyprland FAKE_WAYBAR_UP=1
+assert_contains "waybar -s" "$(cat "$_tfake/log")"
+
 # launch-fuzzel.sh, against a fake fuzzel that logs its arguments.
 _fuzzel="$_srcdir/config/hypr/scripts/launch-fuzzel.sh"
 _ffake=$(mktemp -d)

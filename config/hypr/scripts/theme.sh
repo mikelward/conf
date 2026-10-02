@@ -4,7 +4,10 @@
 # (it lives under config/hypr/scripts for historical reasons).
 # Light from 07:00 to 18:59, dark otherwise. Drives:
 #   - the freedesktop colour-scheme preference (kitty and GTK apps follow it)
-#   - waybar   (relaunched with -s style.css / style-light.css)
+#   - waybar   (relaunched with -s style.css / style-light.css), unless
+#              quickspace's own bar is the bar (QUICKSPACE_BAR=quickshell,
+#              set by quickspace-shell), which themes itself; run by hand
+#              in quickspace, only a waybar that's already up
 #   - swaync   (relaunched with --style style.css / style-light.css)
 #   - window border colors under Sway (Hyprland draws none)
 #   - the wallpaper, when per-mode images exist (swww / swaybg)
@@ -72,9 +75,22 @@ apply() {
     else
         wstyle="$cfg/waybar/style.css"
     fi
-    if command -v waybar >/dev/null 2>&1; then
-        pkill -x waybar 2>/dev/null
-        waybar -s "$wstyle" >/dev/null 2>&1 &
+    # In quickspace, quickspace-shell says which bar it runs; its theme
+    # daemon gets QUICKSPACE_BAR. Run by hand there (no QUICKSPACE_BAR), only
+    # a waybar that's already up is restarted, so none starts beside the
+    # Quickshell bar.
+    want_waybar=yes
+    if test "${QUICKSPACE_BAR:-}" = quickshell; then
+        want_waybar=no
+    elif test -z "${QUICKSPACE_BAR:-}"; then
+        case ":${XDG_CURRENT_DESKTOP:-}:" in
+            *:quickspace:*) want_waybar=running ;;
+        esac
+    fi
+    if test "$want_waybar" != no && command -v waybar >/dev/null 2>&1; then
+        if pkill -x waybar 2>/dev/null || test "$want_waybar" = yes; then
+            waybar -s "$wstyle" >/dev/null 2>&1 &
+        fi
     fi
 
     # 3) swaync: relaunch with the matching style.
