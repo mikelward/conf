@@ -693,6 +693,27 @@ test("quickspace's notification popups are blacked out of screen shares", functi
     eq(true, r.no_screen_share)
 end)
 
+test("the brightness keys show the OSD through quickspace, else plain brightnessctl", function()
+    load()
+    for keys, step in pairs({ XF86MonBrightnessUp = "5%+", XF86MonBrightnessDown = "5%-" }) do
+        local cmd = bind(keys).target.args
+        truthy(cmd:find("quickspace brightness " .. step, 1, true), keys)
+        -- Run the binding's shell with fakes: brightnessctl runs again only
+        -- when quickspace lacks the command (2) or is missing (127).
+        -- Any other status is the binding's own.
+        for status, want in pairs({ [0] = { false, 0 }, [1] = { false, 1 }, [2] = { true, 0 }, [127] = { true, 0 } }) do
+            local script = "quickspace() { return " .. status .. "; }; brightnessctl() { echo fallback; }; " .. cmd
+            local p = io.popen("sh -c '" .. script:gsub("'", "'\\''") .. "'")
+            local out = p:read("a")
+            local _, _, code = p:close()
+            eq(want[1], out:find("fallback", 1, true) ~= nil, keys .. " fallback after exit " .. status)
+            eq(want[2], code, keys .. " status after exit " .. status)
+        end
+    end
+    eq(true, bind("XF86MonBrightnessUp").opts.locked)
+    eq(true, bind("XF86MonBrightnessUp").opts.repeating)
+end)
+
 test("Print takes the screen, Alt the window, Shift or Super a region", function()
     load()
     for keys, args in pairs({
