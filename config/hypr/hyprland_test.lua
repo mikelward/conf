@@ -148,7 +148,7 @@ local function new_hl()
         dispatched = {},
         notifications = {},
         monitors = {},
-        rules = {},
+        rules = {}, layer_rules = {},
         -- What the getters return; set per test.
         active_workspace = nil,
         active_window = nil,
@@ -168,6 +168,7 @@ local function new_hl()
         curve = function(n, t) record("curve", n) end,
         animation = function(t) record("animation", t) end,
         window_rule = function(t) record("window_rule", t); S.rules[t.name] = t end,
+        layer_rule = function(t) record("layer_rule", t); S.layer_rules[t.name] = t end,
         on = function(ev, fn)
             record("on", ev)
             S.handlers[ev] = S.handlers[ev] or {}
@@ -682,6 +683,14 @@ test("releasing Super ends the guard's Super+Tab cycle, without consuming Super"
     eq(1, #S.notifications)
     truthy(S.notifications[1].text:find("boom", 1, true))
     _G.quickspace_focus = nil
+end)
+
+test("quickspace's notification popups are blacked out of screen shares", function()
+    load()
+    local r = S.layer_rules["no-share-notifications"]
+    truthy(r, "the rule")
+    eq("^quickspace-notifications$", r.match.namespace)
+    eq(true, r.no_screen_share)
 end)
 
 test("Print takes the screen, Alt the window, Shift or Super a region", function()
