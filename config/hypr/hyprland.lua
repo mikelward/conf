@@ -377,7 +377,10 @@ hl.bind(key("Y"), app(runenv .. " youtube-music"))
 hl.bind(key("E"), app(terminal .. " -e yazi", terminal))
 -- Through runenv so the launcher's app list sees the user's scripts.
 hl.bind(key("Space"), exec(runenv .. " " .. scripts .. "/launch-fuzzel.sh"))
-hl.bind(key("SHIFT + N"), exec("swaync-client -t -sw"))
+-- quickspace's notification center (SPEC.md §9) while its shell is the
+-- notification server; the call fails otherwise (no shell, or the server not
+-- opted in), and swaync's panel opens instead.
+hl.bind(key("SHIFT + N"), exec("qs -c quickspace ipc call notifications toggle || swaync-client -t -sw"))
 
 -- Session.
 hl.bind(key("BackSpace"), hl.dsp.window.close())
