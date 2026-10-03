@@ -1216,32 +1216,32 @@ else
 fi
 
 ###############
-# quickspace-grant-line hands the line to quickspace-grant, faked here.
+# tide-grant-line hands the line to tide-grant, faked here.
 
 _qs_stub="$_testdir/qs-stub"
 mkdir -p "$_qs_stub"
-cat > "$_qs_stub/quickspace-grant" <<'STUB'
+cat > "$_qs_stub/tide-grant" <<'STUB'
 #!/bin/sh
 printf '%s\n' "$*" >> "$QS_LOG"
 STUB
-chmod +x "$_qs_stub/quickspace-grant"
+chmod +x "$_qs_stub/tide-grant"
 export QS_LOG="$_testdir/qs-log"
 
-start_test "elvish quickspace-grant-line passes the line and elvish's pid"
+start_test "elvish tide-grant-line passes the line and elvish's pid"
 : > "$QS_LOG"
-result="$(PATH="$_qs_stub:$PATH" XDG_CURRENT_DESKTOP=quickspace:Hyprland \
-    _elvish_run '' 'quickspace-grant-line "env A=1 nautilus ."; echo $pid')"
+result="$(PATH="$_qs_stub:$PATH" XDG_CURRENT_DESKTOP=tide:Hyprland \
+    _elvish_run '' 'tide-grant-line "env A=1 nautilus ."; echo $pid')"
 assert_equal "--pid $result -- env A=1 nautilus ." "$(cat "$QS_LOG")"
 
 start_test "elvish command-started records the grant"
 : > "$QS_LOG"
-PATH="$_qs_stub:$PATH" XDG_CURRENT_DESKTOP=quickspace:Hyprland \
+PATH="$_qs_stub:$PATH" XDG_CURRENT_DESKTOP=tide:Hyprland \
     _elvish_run '' 'command-started firefox' >/dev/null
 assert_contains "-- firefox" "$(cat "$QS_LOG")"
 
-start_test "elvish quickspace-grant-line does nothing outside quickspace"
+start_test "elvish tide-grant-line does nothing outside tide"
 : > "$QS_LOG"
-PATH="$_qs_stub:$PATH" XDG_CURRENT_DESKTOP=KDE _elvish_run '' 'quickspace-grant-line "nautilus ."' >/dev/null
+PATH="$_qs_stub:$PATH" XDG_CURRENT_DESKTOP=KDE _elvish_run '' 'tide-grant-line "nautilus ."' >/dev/null
 assert_equal "" "$(cat "$QS_LOG")"
 
 start_test "elvish command-started runs with XDG_CURRENT_DESKTOP unset"
@@ -1253,8 +1253,8 @@ export XDG_CURRENT_DESKTOP="$_qs_saved_desktop"
 assert_contains "ran" "$result"
 assert_equal "" "$(cat "$QS_LOG")"
 
-start_test "elvish quickspace-grant-line reports a missing quickspace-grant"
-result="$(XDG_CURRENT_DESKTOP=quickspace _elvish_run_all '' 'quickspace-grant-line "nautilus ."')"
-assert_contains "no quickspace-grant, so this command gets no focus grant" "$result"
+start_test "elvish tide-grant-line reports a missing tide-grant"
+result="$(XDG_CURRENT_DESKTOP=tide _elvish_run_all '' 'tide-grant-line "nautilus ."')"
+assert_contains "no tide-grant, so this command gets no focus grant" "$result"
 
 test_summary "elvish_test"

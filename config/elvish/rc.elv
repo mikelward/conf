@@ -1824,27 +1824,27 @@ fn command-finished {|m|
 }
 
 # log every interactive command, the way shrc's precommand does
-# In a quickspace session, records a focus grant for the command line with
-# quickspace's focus guard (quickspace SPEC.md §14.3), so the first window it
-# opens may take focus. quickspace-grant names this shell's pid, for a window
+# In a tide session, records a focus grant for the command line with
+# tide's focus guard (tide SPEC.md §14.3), so the first window it
+# opens may take focus. tide-grant names this shell's pid, for a window
 # from any of its descendants, and the app of the line's first command.
-# Outside quickspace this costs one string check.
-fn quickspace-grant-line {|line|
-    if (not (str:contains ':'(env-or XDG_CURRENT_DESKTOP '')':' ':quickspace:')) {
+# Outside tide this costs one string check.
+fn tide-grant-line {|line|
+    if (not (str:contains ':'(env-or XDG_CURRENT_DESKTOP '')':' ':tide:')) {
         return
     }
-    if (not (has-external quickspace-grant)) {
-        echo 'quickspace: no quickspace-grant, so this command gets no focus grant; run make install-session in the quickspace checkout' >&2
+    if (not (has-external tide-grant)) {
+        echo 'tide: no tide-grant, so this command gets no focus grant; run make install-session in the tide checkout' >&2
         return
     }
-    # quickspace-grant reports its own failures on stderr; the try keeps its
+    # tide-grant reports its own failures on stderr; the try keeps its
     # exit status from also failing the hook.
-    try { e:quickspace-grant --pid $pid -- $line } catch { }
+    try { e:tide-grant --pid $pid -- $line } catch { }
 }
 
 fn command-started {|line|
     log-history $line
-    quickspace-grant-line $line
+    tide-grant-line $line
     set-title (title)
 }
 

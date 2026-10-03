@@ -157,7 +157,7 @@ chmod +x "$_tfake/pkill"
 # ends only once every one of them has logged and exited.
 run_theme() {
     : > "$_tfake/log"
-    env -u SWAYSOCK -u QUICKSPACE_BAR PATH="$_tfake:$PATH" FAKE_LOG="$_tfake/log" XDG_RUNTIME_DIR="$_tfake" HOME="$_tfake" XDG_CURRENT_DESKTOP= \
+    env -u SWAYSOCK -u TIDE_BAR PATH="$_tfake:$PATH" FAKE_LOG="$_tfake/log" XDG_RUNTIME_DIR="$_tfake" HOME="$_tfake" XDG_CURRENT_DESKTOP= \
         "$@" sh "$_theme" dark 9>&1 >/dev/null 2>&1 | cat >/dev/null
 }
 
@@ -165,21 +165,21 @@ start_test "theme.sh starts waybar by default"
 run_theme
 assert_contains "waybar -s" "$(cat "$_tfake/log")"
 
-start_test "theme.sh starts no waybar beside quickspace's Quickshell bar"
-run_theme QUICKSPACE_BAR=quickshell
+start_test "theme.sh starts no waybar beside tide's Quickshell bar"
+run_theme TIDE_BAR=quickshell
 assert_not_contains "waybar" "$(cat "$_tfake/log")"
 assert_contains "swaync --style" "$(cat "$_tfake/log")"
 
-# Run by hand in quickspace there's no QUICKSPACE_BAR: only a waybar that's
+# Run by hand in tide there's no TIDE_BAR: only a waybar that's
 # already up is restarted. The fake pkill finds one when $FAKE_WAYBAR_UP is
 # set.
-start_test "theme.sh run by hand in quickspace starts no waybar when none is up"
-run_theme XDG_CURRENT_DESKTOP=quickspace:Hyprland
+start_test "theme.sh run by hand in tide starts no waybar when none is up"
+run_theme XDG_CURRENT_DESKTOP=tide:Hyprland
 assert_not_contains "waybar -s" "$(cat "$_tfake/log")"
 assert_contains "swaync --style" "$(cat "$_tfake/log")"
 
-start_test "theme.sh run by hand in quickspace restarts a waybar that's up"
-run_theme XDG_CURRENT_DESKTOP=quickspace:Hyprland FAKE_WAYBAR_UP=1
+start_test "theme.sh run by hand in tide restarts a waybar that's up"
+run_theme XDG_CURRENT_DESKTOP=tide:Hyprland FAKE_WAYBAR_UP=1
 assert_contains "waybar -s" "$(cat "$_tfake/log")"
 
 # launch-fuzzel.sh, against a fake fuzzel that logs its arguments.
@@ -196,9 +196,9 @@ run_fuzzel() {
     env PATH="$_ffake:$PATH" FAKE_LOG="$_ffake/log" XDG_RUNTIME_DIR="$_ffake" "$@" sh "$_fuzzel"
 }
 
-start_test "launch-fuzzel launches through quickspace launch in the quickspace session"
-run_fuzzel XDG_CURRENT_DESKTOP=quickspace:Hyprland
-assert_contains "--launch-prefix=quickspace launch --app '*' --" "$(cat "$_ffake/log")"
+start_test "launch-fuzzel launches through tide launch in the tide session"
+run_fuzzel XDG_CURRENT_DESKTOP=tide:Hyprland
+assert_contains "--launch-prefix=tide launch --app '*' --" "$(cat "$_ffake/log")"
 
 start_test "launch-fuzzel launches directly elsewhere"
 run_fuzzel XDG_CURRENT_DESKTOP=KDE

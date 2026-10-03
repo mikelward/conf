@@ -3681,30 +3681,30 @@ assert_true test -n "$result"
 
 if test -n "$_had_columns"; then COLUMNS=$_saved_columns; else unset COLUMNS; fi
 
-# quickspace_grant hands the line to quickspace-grant, faked here to log its
-# arguments; quickspace-grant's own tests (quickspace repo) cover parsing.
+# tide_grant hands the line to tide-grant, faked here to log its
+# arguments; tide-grant's own tests (tide repo) cover parsing.
 _qs_dir=$(mktemp -d)
-cat > "$_qs_dir/quickspace-grant" <<'FAKE'
+cat > "$_qs_dir/tide-grant" <<'FAKE'
 #!/bin/sh
 printf '%s\n' "$*" >> "$FAKE_LOG"
 FAKE
-chmod +x "$_qs_dir/quickspace-grant"
+chmod +x "$_qs_dir/tide-grant"
 _qs_saved_path=$PATH
 _qs_saved_desktop=${XDG_CURRENT_DESKTOP-}
 PATH="$_qs_dir:$PATH"
 FAKE_LOG="$_qs_dir/log"
 export FAKE_LOG
 
-start_test "quickspace_grant does nothing outside quickspace"
+start_test "tide_grant does nothing outside tide"
 XDG_CURRENT_DESKTOP=KDE
 : > "$FAKE_LOG"
-quickspace_grant "nautilus ."
+tide_grant "nautilus ."
 assert_equal "" "$(cat "$FAKE_LOG")"
 
-start_test "quickspace_grant passes the line and this shell's pid to quickspace-grant"
-XDG_CURRENT_DESKTOP=quickspace:Hyprland
+start_test "tide_grant passes the line and this shell's pid to tide-grant"
+XDG_CURRENT_DESKTOP=tide:Hyprland
 : > "$FAKE_LOG"
-quickspace_grant "GTK_THEME='Adwaita Dark' nautilus ."
+tide_grant "GTK_THEME='Adwaita Dark' nautilus ."
 assert_equal "--pid $$ -- GTK_THEME='Adwaita Dark' nautilus ." "$(cat "$FAKE_LOG")"
 
 start_test "precommand records the grant"
@@ -3712,12 +3712,12 @@ start_test "precommand records the grant"
 precommand "firefox" >/dev/null 2>&1
 assert_equal "--pid $$ -- firefox" "$(cat "$FAKE_LOG")"
 
-start_test "quickspace_grant reports a missing quickspace-grant"
+start_test "tide_grant reports a missing tide-grant"
 # have_command is stubbed to always succeed above, so stub it here too.
-have_command() { test "$1" != quickspace-grant; }
-result=$(quickspace_grant "nautilus ." 2>&1)
-assert_false quickspace_grant "nautilus ."
-assert_contains "no quickspace-grant, so this command gets no focus grant" "$result"
+have_command() { test "$1" != tide-grant; }
+result=$(tide_grant "nautilus ." 2>&1)
+assert_false tide_grant "nautilus ."
+assert_contains "no tide-grant, so this command gets no focus grant" "$result"
 
 PATH=$_qs_saved_path
 XDG_CURRENT_DESKTOP=$_qs_saved_desktop

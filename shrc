@@ -2451,28 +2451,28 @@ precommand() {
     log_history "$*"
     atuin_preexec "$*"
     current_command="$(expand_job "$*")"
-    quickspace_grant "$current_command"
+    tide_grant "$current_command"
     set_title "$(title)"
     set_color 'normal'
     SECONDS=0
 }
 
-# In a quickspace session, records a one-shot focus grant for the command
-# line with quickspace's focus guard (quickspace SPEC.md §14.3), so the
-# first window it opens may take focus. quickspace-grant (from the
-# quickspace repo) names this shell's pid, for a window from any of its
-# descendants, and the app of the line's first command. Outside quickspace
+# In a tide session, records a one-shot focus grant for the command
+# line with tide's focus guard (tide SPEC.md §14.3), so the
+# first window it opens may take focus. tide-grant (from the
+# tide repo) names this shell's pid, for a window from any of its
+# descendants, and the app of the line's first command. Outside tide
 # this costs one `case`.
-quickspace_grant() {
+tide_grant() {
     case ":${XDG_CURRENT_DESKTOP:-}:" in
-    *:quickspace:*) ;;
+    *:tide:*) ;;
     *) return 0 ;;
     esac
-    if ! have_command quickspace-grant; then
-        warn "quickspace: no quickspace-grant, so this command gets no focus grant; run make install-session in the quickspace checkout"
+    if ! have_command tide-grant; then
+        warn "tide: no tide-grant, so this command gets no focus grant; run make install-session in the tide checkout"
         return 1
     fi
-    quickspace-grant --pid "$$" -- "$1"
+    tide-grant --pid "$$" -- "$1"
 }
 
 # set the xterm title to the supplied string

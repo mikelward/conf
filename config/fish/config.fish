@@ -1463,23 +1463,23 @@ if is_interactive
 #        set_title (title | string collect)
 #    end
 #
-    # In a quickspace session, records a focus grant for the command line
-    # with quickspace's focus guard (quickspace SPEC.md §14.3), so the first
-    # window it opens may take focus. quickspace-grant names this shell's
+    # In a tide session, records a focus grant for the command line
+    # with tide's focus guard (tide SPEC.md §14.3), so the first
+    # window it opens may take focus. tide-grant names this shell's
     # pid, for a window from any of its descendants, and the app of the
-    # line's first command. Outside quickspace this costs one string match.
-    function quickspace_grant --argument-names line
-        string match -q '*:quickspace:*' ":$XDG_CURRENT_DESKTOP:"; or return 0
-        if not command -q quickspace-grant
-            echo "quickspace: no quickspace-grant, so this command gets no focus grant; run make install-session in the quickspace checkout" >&2
+    # line's first command. Outside tide this costs one string match.
+    function tide_grant --argument-names line
+        string match -q '*:tide:*' ":$XDG_CURRENT_DESKTOP:"; or return 0
+        if not command -q tide-grant
+            echo "tide: no tide-grant, so this command gets no focus grant; run make install-session in the tide checkout" >&2
             return 1
         end
-        quickspace-grant --pid $fish_pid -- $line
+        tide-grant --pid $fish_pid -- $line
     end
 
     function preexec --on-event fish_preexec
         log_history "$argv"
-        quickspace_grant "$argv"
+        tide_grant "$argv"
         set --global last_job_status 0
         set --global current_command $argv
         #set_title (title | string collect)

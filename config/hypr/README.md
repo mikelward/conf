@@ -2,10 +2,10 @@
 
 A dynamic-tiling Wayland desktop for **Hyprland 0.56+**, configured in Lua
 (`hyprland.lua`; Hyprland no longer reads `hyprland.conf`). Tiling comes from
-the [quickspace](https://github.com/mikelward/quickspace) layout when it is
+the [tide](https://github.com/mikelward/quickspace) layout when it is
 installed (tile, three-column, two columns + stack and monocle, per
 workspace), and from Hyprland's master layout otherwise. The keys, look and
-focus rules follow the quickspace spec (SPEC.md §6 and §14). Intended as a
+focus rules follow the tide spec (SPEC.md §6 and §14). Intended as a
 KDE replacement that works across laptops and workstations; KDE Plasma stays
 installed as the fallback.
 
@@ -40,8 +40,8 @@ login-shell PATH (a display-manager or uwsm session never runs
 ## Installing
 
 The dotfiles here are installed by this repo's `make install`, and the
-packages by `setup` (scripts repo). The quickspace layout is optional: its
-repo's `make install` puts it in `~/.config/hypr/quickspace/`, and
+packages by `setup` (scripts repo). The tide layout is optional: its
+repo's `make install` puts it in `~/.config/hypr/tide/`, and
 `hyprland.lua` picks it up on the next reload.
 
 The packages `setup` installs (names vary by distro; Hyprland is first-class on
@@ -79,30 +79,30 @@ Pick "Hyprland" at your display manager, or from a TTY:
 
     exec Hyprland
 
-### The quickspace session
+### The tide session
 
-`setup --quickspace` (scripts repo) installs the quickspace session, which
-appears at the greeter as "quickspace". `hyprland.lua` recognizes it by
-`XDG_CURRENT_DESKTOP=quickspace:Hyprland` and changes two things there:
+`setup --tide` (scripts repo) installs the tide session, which
+appears at the greeter as "tide". `hyprland.lua` recognizes it by
+`XDG_CURRENT_DESKTOP=tide:Hyprland` and changes two things there:
 
-- **Autostart is `uwsm finalize` alone.** quickspace's units run the rest:
+- **Autostart is `uwsm finalize` alone.** tide's units run the rest:
   the bar and notifications (through the theme daemon), the wallpaper, the
   polkit agent, `apply-input.sh`, and hypridle. A plain Hyprland login keeps
   the autostart list in `hyprland.lua`.
-- **App keys and the launcher go through `quickspace launch`**, so the app's
-  first window takes focus past quickspace's focus guard, and the app runs
+- **App keys and the launcher go through `tide launch`**, so the app's
+  first window takes focus past tide's focus guard, and the app runs
   outside the shell's unit. Keys bound to a `runenv` wrapper grant the
   first window of any app (`--app '*'`), since their window class isn't
   known here.
 - **A command run from a terminal grants its first window focus too.**
   bash and zsh (`precommand`), fish (`fish_preexec`), nushell
   (`pre_execution`) and Elvish (`command-started`) hand each command line
-  to quickspace's `quickspace-grant` with the shell's pid, so
+  to tide's `tide-grant` with the shell's pid, so
   `nautilus .` from kitty opens focused. The grant names the shell's pid,
   so a window from any of the shell's descendants can use it (the
   command's own processes, or a background job it started earlier), and
   the app of the line's first command, so an app that was already running
-  (`firefox URL`) can too. In a quickspace session it costs about 3 ms per
+  (`firefox URL`) can too. In a tide session it costs about 3 ms per
   command, plus a `hyprctl` round trip; elsewhere it's never called.
 
 ### Optional: uwsm (systemd-managed session)
@@ -143,7 +143,7 @@ launch paths get the same environment (edit both if you change a var).
 
 `SUPER` is the modifier. `SUPER+<letter>` launchers mirror your `xbindkeysrc`;
 the tiling controls sit on symbol keys so they don't take the letters. The
-table is the quickspace spec's (SPEC.md §6.6).
+table is the tide spec's (SPEC.md §6.6).
 
 ### Apps / session
 
@@ -200,7 +200,7 @@ table is the quickspace spec's (SPEC.md §6.6).
 | `SUPER + Shift + F` / `SUPER + Insert` | Toggle floating |
 | `SUPER + Shift + R` | **Resize** mode (h/j/k/l or arrows; Esc/Enter to exit) |
 
-Without the quickspace layout, the layout keys drive Hyprland's master layout
+Without the tide layout, the layout keys drive Hyprland's master layout
 instead: `.` / `,` rotate the master orientation (center is the three-column
 shape) and `` ` `` maximizes the window.
 
@@ -241,8 +241,8 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   reload resets devices, so `hyprland.lua` runs it again after each one.
   Re-run it after hotplugging a mouse; override the mouse wheel speed
   (default 3) with `HYPR_MOUSE_SCROLL_FACTOR` in `~/.env.local`: `hyprland.lua`
-  runs it through `runenv`, which sources that file, and in the quickspace
-  session `quickspace.service`'s run at login sees it once `~/.env.local` is
+  runs it through `runenv`, which sources that file, and in the tide
+  session `tide.service`'s run at login sees it once `~/.env.local` is
   linked into `environment.d` as `~/.env` describes. Since it runs after
   `hyprland.local.lua`, an `hl.device()` there can't change a mouse's
   handedness or wheel speed.

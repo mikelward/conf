@@ -5,20 +5,20 @@
 Calls autopilot made without asking, each one chosen for being cheap to undo.
 Delete an entry once you have agreed with it or reversed it.
 
-- [ ] **The mouse wheel's default speed is 3.** On the first quickspace
+- [ ] **The mouse wheel's default speed is 3.** On the first tide
       session, 1.5 was too slow; 2.5 was "a lot closer, maybe a bit more", so
       `apply-input.sh` now defaults to 3. A different number is a one-line
       change there, or `HYPR_MOUSE_SCROLL_FACTOR` per machine.
 
 - [ ] **Hyprland's missing-hyprland-guiutils warning is turned off.** The
-      quickspace source build of Hyprland 0.56 doesn't include
+      tide source build of Hyprland 0.56 doesn't include
       hyprland-guiutils, which draws Hyprland's own dialogs: "app not
       responding", and permission prompts for things like screen capture by
       unknown apps (Hyprland disables that permission control without it).
       Hyprland warned about it at every login, so
       `misc.disable_hyprland_guiutils_check` in `config/hypr/hyprland.lua`
       silences it. The alternative is adding hyprland-guiutils, and the
-      toolkit it needs, to setup-quickspace's pinned build. Undo by deleting
+      toolkit it needs, to setup-tide's pinned build. Undo by deleting
       the setting.
 
 - [ ] **The mesh config drops its `status` shortcut.** `status` became a mesh
@@ -312,7 +312,7 @@ without cancelling the search, or reedline gains a conditional event.
 
 ## Grant shell functions' and aliases' programs
 
-`quickspace-grant` (quickspace repo) names the app a command line's first
+`tide-grant` (tide repo) names the app a command line's first
 command runs, but it runs outside the shell, so a shell function or alias
 names nothing it can see: `s file` names `s`, not the `subl` it runs. A
 window the command's own processes open still takes the grant through the
@@ -320,10 +320,10 @@ shell's pid; an already-running or D-Bus-activated app's doesn't. Expanding
 an alias before the call (zsh's `$aliases`) would cover aliases; a
 function means following its body, which is open-ended.
 
-## Port the quickspace focus grant to mesh
+## Port the tide focus grant to mesh
 
 bash, zsh, fish, nushell and Elvish hand each command line to
-`quickspace-grant` before running it. mesh has a `preexec` hook for the
+`tide-grant` before running it. mesh has a `preexec` hook for the
 same call, once conf's tests run mesh (see `install-ci-shells.sh`). Until
 then, a GUI app started from mesh opens unfocused and waits for Super+U.
 

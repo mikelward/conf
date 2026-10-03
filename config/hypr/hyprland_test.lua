@@ -3,7 +3,7 @@
 -- Usage: lua hyprland_test.lua [path/to/hyprland.lua]
 --
 -- Each case loads the config fresh under a fake $HOME, so the optional
--- quickspace layout and hyprland.local.lua can be present, missing or broken.
+-- tide layout and hyprland.local.lua can be present, missing or broken.
 -- The stub records every call; bound functions are then called against
 -- stubbed getters to check what they dispatch.
 
@@ -45,7 +45,7 @@ end
 --------------------------------------------------------------------------------
 local tmp = os.tmpname()
 os.remove(tmp)
-assert(os.execute("mkdir -p '" .. tmp .. "/.config/hypr/quickspace' '" .. tmp .. "/run/hypr/sig1' '" .. tmp .. "/run/hypr/sig2'"))
+assert(os.execute("mkdir -p '" .. tmp .. "/.config/hypr/tide' '" .. tmp .. "/run/hypr/sig1' '" .. tmp .. "/run/hypr/sig2'"))
 
 local function write(rel, text)
     local f = assert(io.open(tmp .. "/" .. rel, "w"))
@@ -57,10 +57,10 @@ local function remove(rel)
     os.remove(tmp .. "/" .. rel)
 end
 
-local LAYOUT = ".config/hypr/quickspace/layout.lua"
-local FOCUS = ".config/hypr/quickspace/focus.lua"
+local LAYOUT = ".config/hypr/tide/layout.lua"
+local FOCUS = ".config/hypr/tide/focus.lua"
 local LOCAL = ".config/hypr/hyprland.local.lua"
-local LID_FILE = "run/hypr/sig1/quickspace-lid"
+local LID_FILE = "run/hypr/sig1/tide-lid"
 
 local function exists(rel)
     local f = io.open(tmp .. "/" .. rel)
@@ -70,7 +70,7 @@ local function exists(rel)
     return f ~= nil
 end
 
--- A stand-in for the quickspace layout: every helper is a function that
+-- A stand-in for the tide layout: every helper is a function that
 -- records its own name when called.
 local FAKE_LAYOUT = [[
 local M = { calls = {} }
@@ -86,7 +86,7 @@ _G.fake_layout = M
 return M
 ]]
 
--- A stand-in for the quickspace focus guard, recording its setup().
+-- A stand-in for the tide focus guard, recording its setup().
 local FAKE_FOCUS = [[
 local M = {}
 function M.setup(opts) _G.fake_focus_opts = opts end
@@ -323,7 +323,7 @@ test("every hl.config key is one Hyprland 0.56 accepts", function()
 end)
 
 --------------------------------------------------------------------------------
--- Spec settings (quickspace SPEC.md §6.2, §14)
+-- Spec settings (tide SPEC.md §6.2, §14)
 --------------------------------------------------------------------------------
 test("focus cue is the dim alone: no gaps, no borders, dim 0.07", function()
     load()
@@ -335,7 +335,7 @@ test("focus cue is the dim alone: no gaps, no borders, dim 0.07", function()
     eq(0.07, c.decoration.dim_strength, "dim_strength")
 end)
 
-test("no startup warnings for what quickspace does on purpose", function()
+test("no startup warnings for what tide does on purpose", function()
     load()
     eq(true, S.config.misc.disable_xdg_env_checks, "misc.disable_xdg_env_checks")
     eq(true, S.config.misc.disable_hyprland_guiutils_check, "misc.disable_hyprland_guiutils_check")
@@ -384,9 +384,9 @@ test("PATH is never set by the config (runenv owns it)", function()
 end)
 
 --------------------------------------------------------------------------------
--- Layout: quickspace when installed, master otherwise
+-- Layout: tide when installed, master otherwise
 --------------------------------------------------------------------------------
-test("without the quickspace layout: master, with no error shown", function()
+test("without the tide layout: master, with no error shown", function()
     load()
     eq("master", S.config.general.layout)
     eq(0, #S.notifications, "notifications")
@@ -397,9 +397,9 @@ test("without the quickspace layout: master, with no error shown", function()
     eq("swapwithmaster master", bind("SUPER + Return").target.args)
 end)
 
-test("with the quickspace layout: lua:quickspace and its helpers", function()
+test("with the tide layout: lua:tide and its helpers", function()
     load({ layout = FAKE_LAYOUT })
-    eq("lua:quickspace", S.config.general.layout)
+    eq("lua:tide", S.config.general.layout)
     eq(0, #S.notifications, "notifications")
     truthy(_G.fake_layout.setup_opts, "setup() was called")
     local qs = _G.fake_layout
@@ -417,14 +417,14 @@ test("with the quickspace layout: lua:quickspace and its helpers", function()
     eq(-1, qs.calls[2][2])
 end)
 
-test("a broken quickspace layout falls back to master and says so", function()
+test("a broken tide layout falls back to master and says so", function()
     load({ layout = "error('boom')" })
     eq("master", S.config.general.layout)
     eq(1, #S.notifications, "notifications")
     truthy(S.notifications[1].text:find("boom", 1, true), "the error is in the notification")
 end)
 
-test("a quickspace layout missing a helper the keys use falls back too", function()
+test("a tide layout missing a helper the keys use falls back too", function()
     load({ layout = FAKE_LAYOUT:gsub("\"cycle_prev\", ", "") })
     eq("master", S.config.general.layout)
     eq(1, #S.notifications, "notifications")
@@ -435,7 +435,7 @@ test("a quickspace layout missing a helper the keys use falls back too", functio
     eq(1, #S.notifications, "a non-table module")
 end)
 
-test("an unreadable quickspace layout is reported, not taken as absent", function()
+test("an unreadable tide layout is reported, not taken as absent", function()
     load()
     -- A directory opens but fails to read, like an I/O error.
     assert(os.execute("mkdir -p '" .. tmp .. "/" .. LAYOUT .. "'"))
@@ -467,7 +467,7 @@ test("a broken focus guard is reported, and the rest of the config loads", funct
     eq(1, #S.notifications, "a module with no setup() is reported too")
 end)
 
-test("a quickspace layout whose setup() rejects options falls back too", function()
+test("a tide layout whose setup() rejects options falls back too", function()
     load({ layout = "return { setup = function() error('bad option') end }" })
     eq("master", S.config.general.layout)
     eq(1, #S.notifications, "notifications")
@@ -628,7 +628,7 @@ end)
 
 test("Super+Tab focuses the urgent or last window without the guard", function()
     load()
-    _G.quickspace_focus = nil
+    _G.tide_focus = nil
     for _, keys in ipairs({ "SUPER + Tab", "SUPER + Home" }) do
         local d = run(keys)
         eq(1, #d, keys)
@@ -639,7 +639,7 @@ end)
 test("Super+Tab and Super+Home go to the guard's waiting window first", function()
     load()
     local waiting = 1
-    _G.quickspace_focus = {
+    _G.tide_focus = {
         focus_attention = function()
             if waiting == 0 then
                 return false
@@ -654,18 +654,18 @@ test("Super+Tab and Super+Home go to the guard's waiting window first", function
     eq("guard-focus", d[1].name)
     d = run("SUPER + Home")
     eq(true, d[1].args.urgent_or_last, "none waiting: falls back")
-    _G.quickspace_focus = { focus_attention = function() error("boom") end }
+    _G.tide_focus = { focus_attention = function() error("boom") end }
     d = run("SUPER + Tab")
     eq(1, #S.notifications)
     truthy(S.notifications[1].text:find("boom", 1, true))
     eq(true, d[1].args.urgent_or_last, "a failed guard falls back")
-    _G.quickspace_focus = nil
+    _G.tide_focus = nil
 end)
 
 test("releasing Super ends the guard's Super+Tab cycle, without consuming Super", function()
     load()
     local ended = 0
-    _G.quickspace_focus = { end_cycle = function() ended = ended + 1 return true end }
+    _G.tide_focus = { end_cycle = function() ended = ended + 1 return true end }
     for _, keys in ipairs({ "SUPER + Super_L", "SUPER + Super_R" }) do
         eq(true, bind(keys).opts.release, keys .. " on release")
         eq(true, bind(keys).opts.non_consuming, keys .. " passes Super on")
@@ -673,36 +673,36 @@ test("releasing Super ends the guard's Super+Tab cycle, without consuming Super"
     end
     eq(2, ended)
     -- A guard from before cycling, or none, is left alone.
-    _G.quickspace_focus = { focus_attention = function() return false end }
+    _G.tide_focus = { focus_attention = function() return false end }
     run("SUPER + Super_L")
-    _G.quickspace_focus = nil
+    _G.tide_focus = nil
     run("SUPER + Super_L")
     eq(0, #S.notifications)
-    _G.quickspace_focus = { end_cycle = function() error("boom") end }
+    _G.tide_focus = { end_cycle = function() error("boom") end }
     run("SUPER + Super_L")
     eq(1, #S.notifications)
     truthy(S.notifications[1].text:find("boom", 1, true))
-    _G.quickspace_focus = nil
+    _G.tide_focus = nil
 end)
 
-test("quickspace's notification popups are blacked out of screen shares", function()
+test("tide's notification popups are blacked out of screen shares", function()
     load()
     local r = S.layer_rules["no-share-notifications"]
     truthy(r, "the rule")
-    eq("^quickspace-notifications$", r.match.namespace)
+    eq("^tide-notifications$", r.match.namespace)
     eq(true, r.no_screen_share)
 end)
 
-test("the brightness keys show the OSD through quickspace, else plain brightnessctl", function()
+test("the brightness keys show the OSD through tide, else plain brightnessctl", function()
     load()
     for keys, step in pairs({ XF86MonBrightnessUp = "5%+", XF86MonBrightnessDown = "5%-" }) do
         local cmd = bind(keys).target.args
-        truthy(cmd:find("quickspace brightness " .. step, 1, true), keys)
+        truthy(cmd:find("tide brightness " .. step, 1, true), keys)
         -- Run the binding's shell with fakes: brightnessctl runs again only
-        -- when quickspace lacks the command (2) or is missing (127).
+        -- when tide lacks the command (2) or is missing (127).
         -- Any other status is the binding's own.
         for status, want in pairs({ [0] = { false, 0 }, [1] = { false, 1 }, [2] = { true, 0 }, [127] = { true, 0 } }) do
-            local script = "quickspace() { return " .. status .. "; }; brightnessctl() { echo fallback; }; " .. cmd
+            local script = "tide() { return " .. status .. "; }; brightnessctl() { echo fallback; }; " .. cmd
             local p = io.popen("sh -c '" .. script:gsub("'", "'\\''") .. "'")
             local out = p:read("a")
             local _, _, code = p:close()
@@ -816,13 +816,13 @@ test("a lid state that can't be written is reported and not left behind", functi
     devfull:close()
     load({ env = { HYPRLAND_INSTANCE_SIGNATURE = "sigfull" } })
     -- The state is written to a temporary file and renamed into place.
-    assert(os.execute("mkdir -p '" .. tmp .. "/run/hypr/sigfull' && ln -sf /dev/full '" .. tmp .. "/run/hypr/sigfull/quickspace-lid.tmp'"))
+    assert(os.execute("mkdir -p '" .. tmp .. "/run/hypr/sigfull' && ln -sf /dev/full '" .. tmp .. "/run/hypr/sigfull/tide-lid.tmp'"))
     docked()
     lid("on")
     eq(1, #S.notifications, "notifications")
     truthy(S.notifications[1].text:find("closed-lid state", 1, true), S.notifications[1].text)
-    eq(false, exists("run/hypr/sigfull/quickspace-lid"), "no state file appears")
-    eq(false, exists("run/hypr/sigfull/quickspace-lid.tmp"), "the temporary file is cleaned up")
+    eq(false, exists("run/hypr/sigfull/tide-lid"), "no state file appears")
+    eq(false, exists("run/hypr/sigfull/tide-lid.tmp"), "the temporary file is cleaned up")
     eq(true, S.monitors[1].disabled, "the panel still turns off")
 end)
 
@@ -966,23 +966,23 @@ end)
 --------------------------------------------------------------------------------
 -- Autostart
 --------------------------------------------------------------------------------
-test("the quickspace session's autostart is uwsm finalize alone", function()
-    load({ env = { XDG_CURRENT_DESKTOP = "quickspace:Hyprland" } })
+test("the tide session's autostart is uwsm finalize alone", function()
+    load({ env = { XDG_CURRENT_DESKTOP = "tide:Hyprland" } })
     fire("hyprland.start")
     eq(1, #S.execs, "one command")
     eq("uwsm finalize", S.execs[1])
 end)
 
-test("in the quickspace session, app keys go through quickspace launch", function()
-    load({ env = { XDG_CURRENT_DESKTOP = "quickspace:Hyprland" } })
-    eq("quickspace launch --app 'kitty' -- kitty", bind("SUPER + T").target.args)
-    eq("quickspace launch --app '*' -- ~/scripts/runenv browser1", bind("SUPER + G").target.args)
-    eq("quickspace launch --app 'org.gnome.Calculator' -- gnome-calculator", bind("XF86Calculator").target.args)
+test("in the tide session, app keys go through tide launch", function()
+    load({ env = { XDG_CURRENT_DESKTOP = "tide:Hyprland" } })
+    eq("tide launch --app 'kitty' -- kitty", bind("SUPER + T").target.args)
+    eq("tide launch --app '*' -- ~/scripts/runenv browser1", bind("SUPER + G").target.args)
+    eq("tide launch --app 'org.gnome.Calculator' -- gnome-calculator", bind("XF86Calculator").target.args)
     -- Not apps: these stay plain commands.
-    eq("qs -c quickspace ipc call notifications toggle || swaync-client -t -sw", bind("SUPER + SHIFT + N").target.args)
+    eq("qs -c tide ipc call notifications toggle || swaync-client -t -sw", bind("SUPER + SHIFT + N").target.args)
 end)
 
-test("Super+Shift+N opens quickspace's notification center, else swaync's", function()
+test("Super+Shift+N opens tide's notification center, else swaync's", function()
     load()
     local cmd = bind("SUPER + SHIFT + N").target.args
     -- Run the binding's shell with fakes: swaync's panel opens only when
@@ -996,12 +996,12 @@ test("Super+Shift+N opens quickspace's notification center, else swaync's", func
         local p = io.popen("sh -c '" .. script:gsub("'", "'\\''") .. "'")
         local out = p:read("a")
         p:close()
-        truthy(out:find("-c quickspace ipc call notifications toggle", 1, true), "qs called")
+        truthy(out:find("-c tide ipc call notifications toggle", 1, true), "qs called")
         eq(fallback, out:find("fallback", 1, true) ~= nil, "fallback after exit " .. status)
     end
 end)
 
-test("outside the quickspace session, app keys run the command itself", function()
+test("outside the tide session, app keys run the command itself", function()
     load({ env = { XDG_CURRENT_DESKTOP = "Hyprland" } })
     eq("kitty", bind("SUPER + T").target.args)
     eq("~/scripts/runenv browser1", bind("SUPER + G").target.args)
@@ -1019,7 +1019,7 @@ test("autostart runs on hyprland.start, not at load", function()
 end)
 
 test("a config reload puts the mouse settings back, in either session", function()
-    for _, desktop in ipairs({ "quickspace:Hyprland", "Hyprland" }) do
+    for _, desktop in ipairs({ "tide:Hyprland", "Hyprland" }) do
         load({ env = { XDG_CURRENT_DESKTOP = desktop } })
         fire("config.reloaded")
         eq(1, #S.execs, desktop .. ": one command")
