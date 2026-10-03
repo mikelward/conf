@@ -5,9 +5,9 @@
 # Light from 07:00 to 18:59, dark otherwise. Drives:
 #   - the freedesktop colour-scheme preference (kitty and GTK apps follow it)
 #   - waybar   (relaunched with -s style.css / style-light.css), unless
-#              quickspace's own bar is the bar (QUICKSPACE_BAR=quickshell,
-#              set by quickspace-shell), which themes itself; run by hand
-#              in quickspace, only a waybar that's already up
+#              tide's own bar is the bar (TIDE_BAR=quickshell,
+#              set by tide-shell), which themes itself; run by hand
+#              in tide, only a waybar that's already up
 #   - swaync   (relaunched with --style style.css / style-light.css)
 #   - window border colors under Sway (Hyprland draws none)
 #   - the wallpaper, when per-mode images exist (swww / swaybg)
@@ -75,16 +75,16 @@ apply() {
     else
         wstyle="$cfg/waybar/style.css"
     fi
-    # In quickspace, quickspace-shell says which bar it runs; its theme
-    # daemon gets QUICKSPACE_BAR. Run by hand there (no QUICKSPACE_BAR), only
+    # In tide, tide-shell says which bar it runs; its theme
+    # daemon gets TIDE_BAR. Run by hand there (no TIDE_BAR), only
     # a waybar that's already up is restarted, so none starts beside the
     # Quickshell bar.
     want_waybar=yes
-    if test "${QUICKSPACE_BAR:-}" = quickshell; then
+    if test "${TIDE_BAR:-}" = quickshell; then
         want_waybar=no
-    elif test -z "${QUICKSPACE_BAR:-}"; then
+    elif test -z "${TIDE_BAR:-}"; then
         case ":${XDG_CURRENT_DESKTOP:-}:" in
-            *:quickspace:*) want_waybar=running ;;
+            *:tide:*) want_waybar=running ;;
         esac
     fi
     if test "$want_waybar" != no && command -v waybar >/dev/null 2>&1; then

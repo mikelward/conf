@@ -2,9 +2,9 @@
 -- ~/.config/hypr/hyprland.lua
 --
 -- A dynamic-tiling Wayland desktop for Hyprland 0.56+, which reads only this
--- Lua file (hyprland.conf is gone). Tiling comes from the quickspace layout
+-- Lua file (hyprland.conf is gone). Tiling comes from the tide layout
 -- when it is installed and from Hyprland's master layout otherwise. The keys,
--- look and focus rules follow the quickspace spec (SPEC.md §6 and §14 in
+-- look and focus rules follow the tide spec (SPEC.md §6 and §14 in
 -- github.com/mikelward/quickspace). See README.md in this directory for the
 -- package list and how to start the session.
 
@@ -20,10 +20,10 @@ local runenv = "~/scripts/runenv"
 local scripts = "~/.config/hypr/scripts"
 local mod = "SUPER"
 
--- The quickspace session (uwsm sets XDG_CURRENT_DESKTOP=quickspace:Hyprland).
+-- The tide session (uwsm sets XDG_CURRENT_DESKTOP=tide:Hyprland).
 -- Its units start the shell, wallpaper and idle daemon, and apps go through
--- `quickspace launch`; a plain Hyprland login keeps doing both itself.
-local quickspace_session = (":" .. (os.getenv("XDG_CURRENT_DESKTOP") or "") .. ":"):find(":quickspace:", 1, true) ~= nil
+-- `tide launch`; a plain Hyprland login keeps doing both itself.
+local tide_session = (":" .. (os.getenv("XDG_CURRENT_DESKTOP") or "") .. ":"):find(":tide:", 1, true) ~= nil
 
 -- Hyprland shows its own overlay; used for problems found while loading.
 local function notify_error(text)
@@ -82,12 +82,12 @@ hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" 
 --------------------------------------------------------------------------------
 -- AUTOSTART
 --------------------------------------------------------------------------------
--- In the quickspace session this starts nothing but `uwsm finalize` (quickspace
--- SPEC.md §5.4): quickspace.service runs the bar, notifications, wallpaper,
+-- In the tide session this starts nothing but `uwsm finalize` (tide
+-- SPEC.md §5.4): tide.service runs the bar, notifications, wallpaper,
 -- polkit agent and input setup, and hypridle.service the idle daemon, each
 -- once and only in that session. The list below is for a plain Hyprland login.
 hl.on("hyprland.start", function()
-    if quickspace_session then
+    if tide_session then
         hl.exec_cmd("uwsm finalize")
         return
     end
@@ -129,14 +129,14 @@ hl.env("GTK_OVERLAY_SCROLLING", "0")
 --------------------------------------------------------------------------------
 -- LAYOUT
 --------------------------------------------------------------------------------
--- The quickspace layout (tile, three-column, two columns + stack, monocle, per
--- workspace) is installed by `make install` in the quickspace repo. Without
+-- The tide layout (tile, three-column, two columns + stack, monocle, per
+-- workspace) is installed by `make install` in the tide repo. Without
 -- it this falls back to Hyprland's master layout, the same shape as tile.
 local qs
 do
-    local path = home .. "/.config/hypr/quickspace/layout.lua"
+    local path = home .. "/.config/hypr/tide/layout.lua"
     -- Missing is fine: the layout just isn't installed here.
-    local text = read_optional(path, "quickspace layout", 1024 * 1024)
+    local text = read_optional(path, "tide layout", 1024 * 1024)
     if text then
         local ok, result = pcall(function()
             -- "@" names the chunk by its path, as dofile does, so the layout
@@ -160,17 +160,17 @@ do
         if ok then
             qs = result
         else
-            notify_error("quickspace layout failed to load, using master: " .. tostring(result))
+            notify_error("tide layout failed to load, using master: " .. tostring(result))
         end
     end
 end
 
--- The quickspace focus guard (SPEC.md §14): nothing steals the keyboard.
+-- The tide focus guard (SPEC.md §14): nothing steals the keyboard.
 -- It's installed beside the layout; without it, Hyprland's own focus rules
 -- apply (misc:focus_on_activate is off below either way).
 do
-    local path = home .. "/.config/hypr/quickspace/focus.lua"
-    local text = read_optional(path, "quickspace focus guard", 1024 * 1024)
+    local path = home .. "/.config/hypr/tide/focus.lua"
+    local text = read_optional(path, "tide focus guard", 1024 * 1024)
     if text then
         local ok, err = pcall(function()
             local m = assert(load(text, "@" .. path))()
@@ -180,12 +180,12 @@ do
             m.setup({})
         end)
         if not ok then
-            notify_error("quickspace focus guard failed to load: " .. tostring(err))
+            notify_error("tide focus guard failed to load: " .. tostring(err))
         end
     end
 end
 
--- Each layout action as a bind target, from quickspace or from master.
+-- Each layout action as a bind target, from tide or from master.
 local act
 if qs then
     act = {
@@ -222,7 +222,7 @@ end
 
 hl.config({
     general = {
-        layout = qs and "lua:quickspace" or "master",
+        layout = qs and "lua:tide" or "master",
         -- The focus cue is the dim alone: no gaps, no borders.
         gaps_in = 0,
         gaps_out = 0,
@@ -286,7 +286,7 @@ hl.config({
         -- Nothing steals focus: an app asking for it is marked urgent
         -- instead (Super+Tab goes there).
         focus_on_activate = false,
-        -- uwsm sets XDG_CURRENT_DESKTOP to quickspace:Hyprland on purpose.
+        -- uwsm sets XDG_CURRENT_DESKTOP to tide:Hyprland on purpose.
         disable_xdg_env_checks = true,
         -- hyprland-guiutils (Hyprland's own dialogs) isn't in the source
         -- build, so don't warn about it at every login. See TODO.md.
@@ -334,7 +334,7 @@ hl.config({
 hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
 
 --------------------------------------------------------------------------------
--- KEYS (quickspace SPEC.md §6.6)
+-- KEYS (tide SPEC.md §6.6)
 --------------------------------------------------------------------------------
 local function key(k)
     return mod .. " + " .. k
@@ -344,17 +344,17 @@ local function exec(cmd)
     return hl.dsp.exec_cmd(cmd)
 end
 
--- Starts an app. In the quickspace session it goes through `quickspace
+-- Starts an app. In the tide session it goes through `tide
 -- launch`, which waits for the shell, grants the app's first window focus
 -- (the focus guard opens every other window unfocused) and runs it in
 -- app-graphical.slice. id names the app for that grant; the default, "*",
 -- is the first window of any app, for wrapper scripts whose window class
 -- isn't known here.
 local function app(cmd, id)
-    if not quickspace_session then
+    if not tide_session then
         return exec(cmd)
     end
-    return exec("quickspace launch --app '" .. (id or "*") .. "' -- " .. cmd)
+    return exec("tide launch --app '" .. (id or "*") .. "' -- " .. cmd)
 end
 
 -- Applications. The helper scripts live in the scripts repo, on the PATH
@@ -377,10 +377,10 @@ hl.bind(key("Y"), app(runenv .. " youtube-music"))
 hl.bind(key("E"), app(terminal .. " -e yazi", terminal))
 -- Through runenv so the launcher's app list sees the user's scripts.
 hl.bind(key("Space"), exec(runenv .. " " .. scripts .. "/launch-fuzzel.sh"))
--- quickspace's notification center (SPEC.md §9) while its shell is the
+-- tide's notification center (SPEC.md §9) while its shell is the
 -- notification server; the call fails otherwise (no shell, or the server not
 -- opted in), and swaync's panel opens instead.
-hl.bind(key("SHIFT + N"), exec("qs -c quickspace ipc call notifications toggle || swaync-client -t -sw"))
+hl.bind(key("SHIFT + N"), exec("qs -c tide ipc call notifications toggle || swaync-client -t -sw"))
 
 -- Session.
 hl.bind(key("BackSpace"), hl.dsp.window.close())
@@ -470,11 +470,11 @@ hl.bind(key("SHIFT + Left"), step_workspace(-1, true))
 hl.bind(key("SHIFT + Right"), step_workspace(1, true))
 
 -- The way to a window that wanted focus and didn't get it (§14). Lua can't
--- mark a window urgent, so quickspace's focus guard keeps the ones it held
+-- mark a window urgent, so tide's focus guard keeps the ones it held
 -- back; otherwise it's Hyprland's urgent window, or the last one. Super+Tab
 -- and Super+Home both do it, on trial until one sticks.
 local function focus_attention()
-    local guard = rawget(_G, "quickspace_focus")
+    local guard = rawget(_G, "tide_focus")
     if guard and guard.focus_attention then
         local ok, went = pcall(guard.focus_attention)
         if not ok then
@@ -492,7 +492,7 @@ hl.bind(key("Home"), focus_attention)
 -- on. Releasing Super ends the guard's cycle, and does nothing outside one,
 -- which is every other release. Non-consuming, so apps still see Super.
 local function end_cycle()
-    local guard = rawget(_G, "quickspace_focus")
+    local guard = rawget(_G, "tide_focus")
     -- A guard from before cycling has no end_cycle, and nothing to end.
     if not (guard and guard.end_cycle) then
         return
@@ -525,12 +525,12 @@ hl.bind("XF86AudioLowerVolume", exec("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
 hl.bind("XF86AudioMute", exec("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), locked)
 hl.bind("XF86AudioMicMute", exec("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), locked)
 hl.bind(key("SHIFT + M"), exec("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), locked)
--- quickspace's command shows the new level on the shell's OSD. Only a
--- quickspace from before it (a usage error, 2) or none (127) falls back to
+-- tide's command shows the new level on the shell's OSD. Only a
+-- tide from before it (a usage error, 2) or none (127) falls back to
 -- brightnessctl alone: any other failure may have changed the level already,
 -- so it's passed on as the binding's status instead.
 local function brightness(step)
-    return exec("quickspace brightness " .. step .. "; s=$?; "
+    return exec("tide brightness " .. step .. "; s=$?; "
         .. "if test $s -eq 2 || test $s -eq 127; then brightnessctl set " .. step .. "; else exit $s; fi")
 end
 hl.bind("XF86MonBrightnessUp", brightness("5%+"), locked_repeating)
@@ -558,7 +558,7 @@ do
     local dir = os.getenv("XDG_RUNTIME_DIR")
     local sig = os.getenv("HYPRLAND_INSTANCE_SIGNATURE")
     if dir and dir ~= "" and sig and sig ~= "" then
-        lid_file = dir .. "/hypr/" .. sig .. "/quickspace-lid"
+        lid_file = dir .. "/hypr/" .. sig .. "/tide-lid"
     end
 end
 
@@ -572,7 +572,7 @@ local function save_lid()
     end
     -- Written beside the real file and renamed over it, so a reload only ever
     -- reads a complete state: a failed write leaves the temporary file, which
-    -- nothing reads, never a truncated quickspace-lid.
+    -- nothing reads, never a truncated tide-lid.
     local tmp = lid_file .. ".tmp"
     local f, err = io.open(tmp, "w")
     local ok = f ~= nil
@@ -719,7 +719,7 @@ hl.bind("switch:on:Lid Switch", lid_close, locked)
 hl.bind("switch:off:Lid Switch", lid_open, locked)
 
 --------------------------------------------------------------------------------
--- WINDOW RULES (quickspace SPEC.md §6.2 and §6.4)
+-- WINDOW RULES (tide SPEC.md §6.2 and §6.4)
 --------------------------------------------------------------------------------
 -- Dialogs float, centered. Hyprland floats most on its own (parented, fixed
 -- size); these catch the rest.
@@ -753,11 +753,11 @@ hl.window_rule({
 hl.window_rule({ name = "no-dim-lone-window", match = { workspace = "w[tv1]" }, no_dim = true })
 hl.window_rule({ name = "no-dim-video", match = { content = "video" }, no_dim = true })
 
--- quickspace's notification popups (SPEC.md §9) show black in a screen
+-- tide's notification popups (SPEC.md §9) show black in a screen
 -- share, so one that appears while sharing doesn't show its text.
 hl.layer_rule({
     name = "no-share-notifications",
-    match = { namespace = "^quickspace-notifications$" },
+    match = { namespace = "^tide-notifications$" },
     no_screen_share = true,
 })
 

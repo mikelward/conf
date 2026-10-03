@@ -20,10 +20,10 @@ set --
 if test "$mode" = light; then
     set -- --config "$HOME/.config/fuzzel/fuzzel-light.ini"
 fi
-# In the quickspace session, apps start through `quickspace launch`, so the
+# In the tide session, apps start through `tide launch`, so the
 # focus guard lets the chosen app's first window take focus (its window
 # class isn't known here, hence the wildcard).
 case ":${XDG_CURRENT_DESKTOP:-}:" in
-    *:quickspace:*) set -- "$@" "--launch-prefix=quickspace launch --app '*' --" ;;
+    *:tide:*) set -- "$@" "--launch-prefix=tide launch --app '*' --" ;;
 esac
 exec fuzzel "$@"

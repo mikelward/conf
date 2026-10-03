@@ -2088,28 +2088,28 @@ if (have-command carapace) {
 # Appended rather than assigned: atuin's generated init adds its own
 # hooks to these same lists (that's how it opens and closes history
 # entries), and a plain assignment would drop whichever side ran first.
-# In a quickspace session, records a focus grant for the command line with
-# quickspace's focus guard (quickspace SPEC.md §14.3), so the first window it
-# opens may take focus. quickspace-grant names this shell's pid, for a window
+# In a tide session, records a focus grant for the command line with
+# tide's focus guard (tide SPEC.md §14.3), so the first window it
+# opens may take focus. tide-grant names this shell's pid, for a window
 # from any of its descendants, and the app of the line's first command.
-# Outside quickspace this costs one string check.
-def quickspace-grant-line [line: string] {
-    if not ($":($env.XDG_CURRENT_DESKTOP? | default ''):" | str contains ":quickspace:") {
+# Outside tide this costs one string check.
+def tide-grant-line [line: string] {
+    if not ($":($env.XDG_CURRENT_DESKTOP? | default ''):" | str contains ":tide:") {
         return
     }
-    if (which quickspace-grant | is-empty) {
-        print --stderr "quickspace: no quickspace-grant, so this command gets no focus grant; run make install-session in the quickspace checkout"
+    if (which tide-grant | is-empty) {
+        print --stderr "tide: no tide-grant, so this command gets no focus grant; run make install-session in the tide checkout"
         return
     }
-    # quickspace-grant reports its own failures on stderr; the catch keeps
+    # tide-grant reports its own failures on stderr; the catch keeps
     # its exit status from also failing the hook.
-    try { ^quickspace-grant --pid $nu.pid -- $line } catch { }
+    try { ^tide-grant --pid $nu.pid -- $line } catch { }
 }
 
 $env.config = ($env.config | upsert hooks.pre_execution (
     $env.config.hooks? | get pre_execution? | default [] | append {||
     $env.CMD_START_TIME = (date now)
-    quickspace-grant-line (commandline)
+    tide-grant-line (commandline)
 }))
 $env.config = ($env.config | upsert hooks.pre_prompt (
     $env.config.hooks? | get pre_prompt? | default [] | append {||
