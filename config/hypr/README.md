@@ -2,7 +2,7 @@
 
 A dynamic-tiling Wayland desktop for **Hyprland 0.56+**, configured in Lua
 (`hyprland.lua`; Hyprland no longer reads `hyprland.conf`). Tiling comes from
-the [tide](https://github.com/mikelward/quickspace) layout when it is
+the [tide](https://github.com/mikelward/tide) layout when it is
 installed (tile, three-column, two columns + stack and monocle, per
 workspace), and from Hyprland's master layout otherwise. The keys, look and
 focus rules follow the tide spec (SPEC.md §6 and §14). Intended as a
