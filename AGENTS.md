@@ -1,6 +1,14 @@
+---
+trigger: always_on
+alwaysApply: true
+last_modified: 2026-10-04
+---
+
 # Project Instructions
 
 Keep this file as short as it can be and still work. Every session loads it whole, so each rule costs context on every turn: add one the first time something bites, say it once in the fewest words that carry the *why*, rewrite or trim an existing rule rather than appending beside it, and delete one that has stopped biting.
+
+**At the start of every session, print the path of the `AGENTS.md` you loaded and its `last_modified` date** (front matter), so a stale or wrong copy is caught before it steers the work. Bump `last_modified` whenever you edit this file.
 
 ## Style
 
