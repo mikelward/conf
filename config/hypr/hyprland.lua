@@ -5,7 +5,7 @@
 -- Lua file (hyprland.conf is gone). Tiling comes from the tide layout
 -- when it is installed and from Hyprland's master layout otherwise. The keys,
 -- look and focus rules follow the tide spec (SPEC.md §6 and §14 in
--- github.com/mikelward/quickspace). See README.md in this directory for the
+-- github.com/mikelward/tide). See README.md in this directory for the
 -- package list and how to start the session.
 
 local home = os.getenv("HOME")
