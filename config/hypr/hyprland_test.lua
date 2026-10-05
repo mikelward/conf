@@ -966,6 +966,13 @@ end)
 --------------------------------------------------------------------------------
 -- Autostart
 --------------------------------------------------------------------------------
+test("Super+L locks through logind in the tide session, with hyprlock outside it", function()
+    load({ env = { XDG_CURRENT_DESKTOP = "tide:Hyprland" } })
+    eq("loginctl lock-session", bind("SUPER + L").target.args)
+    load()
+    eq("hyprlock", bind("SUPER + L").target.args)
+end)
+
 test("the tide session's autostart is uwsm finalize alone", function()
     load({ env = { XDG_CURRENT_DESKTOP = "tide:Hyprland" } })
     fire("hyprland.start")
