@@ -258,6 +258,40 @@ assert_contains "loginctl lock-session" "$_idle_body"
 start_test "hypridle turns the display off (DPMS)"
 assert_contains "hl.dsp.dpms({ action = \"off\" })" "$_idle_body"
 
+# The lock command and the five-minute idle step, run as hypridle runs them
+# (/bin/sh -c) against fake tools that log their arguments: the tide session
+# goes to tide-lock, a plain Hyprland login to hyprlock.
+_idle_lock_cmd=$(sed -n 's/^ *lock_cmd = //p' "$_idle")
+_idle_lock_step=$(sed -n '/^listener {/,/^}/{/timeout = 300$/,/^}/s/^ *on-timeout = //p}' "$_idle")
+start_test "hypridle's lock command and idle lock step are found"
+assert_contains "esac" "$_idle_lock_cmd"
+assert_contains "esac" "$_idle_lock_step"
+
+_ifake=$(mktemp -d)
+for _t in systemctl hyprlock tide loginctl; do
+    printf '#!/bin/sh\necho "%s $*" >> "%s/log"\n' "$_t" "$_ifake" > "$_ifake/$_t"
+    chmod +x "$_ifake/$_t"
+done
+# No lock running, so pidof finds nothing.
+printf '#!/bin/sh\nexit 1\n' > "$_ifake/pidof"
+chmod +x "$_ifake/pidof"
+_idle_run() {
+    : > "$_ifake/log"
+    XDG_CURRENT_DESKTOP="$1" PATH="$_ifake:$PATH" sh -c "$2"
+    cat "$_ifake/log"
+}
+start_test "in the tide session, a lock starts tide-lock.service"
+assert_equal "systemctl --user start tide-lock.service" "$(_idle_run tide:Hyprland "$_idle_lock_cmd")"
+start_test "in the tide session, the idle step runs tide idle-lock"
+assert_equal "tide idle-lock" "$(_idle_run tide:Hyprland "$_idle_lock_step")"
+start_test "in a plain Hyprland login, a lock runs hyprlock"
+assert_equal "hyprlock " "$(_idle_run Hyprland "$_idle_lock_cmd")"
+start_test "in a plain Hyprland login, the idle step locks through logind"
+assert_equal "loginctl lock-session" "$(_idle_run Hyprland "$_idle_lock_step")"
+start_test "with no desktop set, a lock runs hyprlock"
+assert_equal "hyprlock " "$(_idle_run "" "$_idle_lock_cmd")"
+rm -rf "$_ifake"
+
 ################################################################################
 # Waybar: window title centred; clocks (SFO, LON, local), tray, and battery
 # on the right.

@@ -11,7 +11,6 @@
 local home = os.getenv("HOME")
 
 local terminal = "kitty"
-local lock = "hyprlock"
 -- Wrapper (scripts repo) that sources ~/.env (the canonical user PATH dirs,
 -- including ~/scripts.local) and ~/.env.local before exec'ing, so binds that
 -- run helper scripts get the login-shell PATH. A display-manager or uwsm
@@ -24,6 +23,12 @@ local mod = "SUPER"
 -- Its units start the shell, wallpaper and idle daemon, and apps go through
 -- `tide launch`; a plain Hyprland login keeps doing both itself.
 local tide_session = (":" .. (os.getenv("XDG_CURRENT_DESKTOP") or "") .. ":"):find(":tide:", 1, true) ~= nil
+
+-- The tide session locks with tide-lock (tide SPEC.md §10), and every lock
+-- goes through logind: `loginctl lock-session` raises its Lock signal, and
+-- hypridle's lock_cmd starts tide-lock.service. A plain Hyprland login keeps
+-- hyprlock.
+local lock = tide_session and "loginctl lock-session" or "hyprlock"
 
 -- Hyprland shows its own overlay; used for problems found while loading.
 local function notify_error(text)

@@ -17,7 +17,7 @@ Files (all live under this repo's `config/` and map to `~/.config/`):
 | `config/hypr/hyprland_test.lua` | Tests for `hyprland.lua` against a stub of Hyprland's Lua API |
 | `config/hypr/hyprland.local.lua.template` | Per-machine override template (copy to `~/.config/hypr/hyprland.local.lua`) |
 | `config/hypr/hypridle.conf` | Idle: dim → lock → DPMS off → suspend |
-| `config/hypr/hyprlock.conf` | Lock screen |
+| `config/hypr/hyprlock.conf` | Lock screen outside the tide session |
 | `config/hypr/scripts/apply-input.sh` | Auto-classify pointers (mice → right-handed) |
 | `config/hypr/scripts/theme.sh` | Apply light/dark theme by time of day |
 | `config/hypr/scripts/theme-daemon.sh` | Re-apply theme at each 07:00/19:00 boundary |
@@ -165,7 +165,7 @@ table is the tide spec's (SPEC.md §6.6).
 | `SUPER + Space` | Launcher (tide's, or fuzzel without the tide shell) |
 | `SUPER + Shift + N` | Notification center (swaync) |
 | `SUPER + Backspace` | Close the current window |
-| `SUPER + L` | Lock (hyprlock) |
+| `SUPER + L` | Lock (tide-lock in the tide session, hyprlock otherwise) |
 | `SUPER + Shift + E` | Exit Hyprland (log out) |
 | `Print` / `Alt + Print` / `Shift + Print`, `SUPER + Print` | Screenshot: screen / window / region → clipboard |
 | `XF86AudioMicMute`, `SUPER + Shift + M` | Toggle microphone mute |
