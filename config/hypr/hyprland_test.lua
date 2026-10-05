@@ -341,6 +341,11 @@ test("no startup warnings for what tide does on purpose", function()
     eq(true, S.config.misc.disable_hyprland_guiutils_check, "misc.disable_hyprland_guiutils_check")
 end)
 
+test("a new lock client can take back a lock whose client died", function()
+    load()
+    eq(true, S.config.misc.allow_session_lock_restore, "misc.allow_session_lock_restore")
+end)
+
 test("nothing steals focus, and focus never warps the pointer", function()
     load()
     eq(false, S.config.misc.focus_on_activate, "misc.focus_on_activate")

@@ -296,6 +296,11 @@ hl.config({
         -- hyprland-guiutils (Hyprland's own dialogs) isn't in the source
         -- build, so don't warn about it at every login. See TODO.md.
         disable_hyprland_guiutils_check = true,
+        -- A lock client that dies leaves the session locked; this lets a new
+        -- one take the lock back, so systemd's restart of tide-lock.service
+        -- (or a hyprlock run from a TTY) brings back a password prompt
+        -- rather than Hyprland's dead-lock screen (tide SPEC.md §10).
+        allow_session_lock_restore = true,
     },
     -- Focus never drags the pointer along with it.
     cursor = { no_warps = true },
