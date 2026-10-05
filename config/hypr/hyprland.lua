@@ -375,8 +375,10 @@ hl.bind(key("N"), app(runenv .. " notepad"))
 hl.bind(key("R"), app(runenv .. " remote-desktop"))
 hl.bind(key("Y"), app(runenv .. " youtube-music"))
 hl.bind(key("E"), app(terminal .. " -e yazi", terminal))
--- Through runenv so the launcher's app list sees the user's scripts.
-hl.bind(key("Space"), exec(runenv .. " " .. scripts .. "/launch-fuzzel.sh"))
+-- tide's launcher (SPEC.md §8) while its shell runs; the call fails
+-- otherwise (no shell), and fuzzel opens instead, through runenv so its app
+-- list sees the user's scripts.
+hl.bind(key("Space"), exec("qs -c tide ipc call launcher toggle || " .. runenv .. " " .. scripts .. "/launch-fuzzel.sh"))
 -- tide's notification center (SPEC.md §9) while its shell is the
 -- notification server; the call fails otherwise (no shell, or the server not
 -- opted in), and swaync's panel opens instead.
