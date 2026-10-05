@@ -162,7 +162,7 @@ table is the tide spec's (SPEC.md §6.6).
 | `SUPER + N` | Notepad |
 | `SUPER + R` | Remote desktop |
 | `SUPER + Y` | YouTube Music |
-| `SUPER + Space` | Launcher (fuzzel) |
+| `SUPER + Space` | Launcher (tide's, or fuzzel without the tide shell) |
 | `SUPER + Shift + N` | Notification center (swaync) |
 | `SUPER + Backspace` | Close the current window |
 | `SUPER + L` | Lock (hyprlock) |

@@ -1001,6 +1001,27 @@ test("Super+Shift+N opens tide's notification center, else swaync's", function()
     end
 end)
 
+test("Super+Space opens tide's launcher, else fuzzel", function()
+    load()
+    local cmd = bind("SUPER + Space").target.args
+    -- Run the binding's shell with fakes: fuzzel's script runs only when the
+    -- call to the shell fails. HOME points ~/scripts/runenv at a fake.
+    for status, fallback in pairs({ [0] = false, [1] = true, [255] = true, [127] = true }) do
+        local script = "d=$(mktemp -d) || exit 1; mkdir \"$d/scripts\"; "
+            .. "printf '#!/bin/sh\\necho fallback \"$@\"\\n' >\"$d/scripts/runenv\"; "
+            .. "chmod +x \"$d/scripts/runenv\"; HOME=\"$d\"; "
+            .. "qs() { echo \"$*\"; return " .. status .. "; }; " .. cmd .. "; rm -rf \"$d\""
+        local p = io.popen("sh -c '" .. script:gsub("'", "'\\''") .. "'")
+        local out = p:read("a")
+        p:close()
+        truthy(out:find("-c tide ipc call launcher toggle", 1, true), "qs called")
+        eq(fallback, out:find("fallback", 1, true) ~= nil, "fallback after exit " .. status)
+        if fallback then
+            truthy(out:find("launch-fuzzel.sh", 1, true), "fallback is fuzzel")
+        end
+    end
+end)
+
 test("outside the tide session, app keys run the command itself", function()
     load({ env = { XDG_CURRENT_DESKTOP = "Hyprland" } })
     eq("kitty", bind("SUPER + T").target.args)
