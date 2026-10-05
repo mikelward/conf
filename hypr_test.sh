@@ -212,6 +212,10 @@ start_test "hyprlock colors the password field white while checking, red when wr
 assert_contains "check_color = rgba(eceff4ff)" "$(cat "$_lock")"
 assert_contains "fail_color = rgba(bf616aff)" "$(cat "$_lock")"
 
+start_test "hyprlock draws each keystroke at once, with no animations"
+_lock_anim=$(sed -n '/^animations {/,/^}/s/^ *enabled = \(.*\)$/\1/p' "$_lock")
+assert_equal "false" "$_lock_anim"
+
 start_test "hyprlock shows the short hostname"
 _lock_host=$(sed -n 's/^ *text = cmd\[update:[0-9]*\] \(uname -n.*\)$/\1/p' "$_lock")
 assert_equal "uname -n | cut -d. -f1" "$_lock_host"
