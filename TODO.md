@@ -346,7 +346,7 @@ function means following its body, which is open-ended.
 bash, zsh, fish, nushell and Elvish hand each command line to
 `tide-grant` before running it. mesh has a `preexec` hook for the
 same call, once conf's tests run mesh (see `install-ci-shells.sh`). Until
-then, a GUI app started from mesh opens unfocused and waits for Super+U.
+then, a GUI app started from mesh opens unfocused and waits for Super+Tab.
 
 ## Ghost text: fan out beyond zsh
 
