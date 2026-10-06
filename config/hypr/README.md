@@ -83,12 +83,17 @@ Pick "Hyprland" at your display manager, or from a TTY:
 
 `setup --tide` (scripts repo) installs the tide session, which
 appears at the greeter as "tide". `hyprland.lua` recognizes it by
-`XDG_CURRENT_DESKTOP=tide:Hyprland` and changes two things there:
+`XDG_CURRENT_DESKTOP=tide:Hyprland` and changes these things there:
 
 - **Autostart is `uwsm finalize` alone.** tide's units run the rest:
   the bar and notifications (through the theme daemon), the wallpaper, the
   polkit agent, `apply-input.sh`, and hypridle. A plain Hyprland login keeps
   the autostart list in `hyprland.lua`.
+- **tide's focus guard loads.** It opens every window unfocused until a
+  grant lets one through, and only this session grants (below), so a
+  plain login leaves it out. There new windows take focus as they open,
+  and an app asking for focus is still only marked urgent
+  (`misc:focus_on_activate` is off in both).
 - **App keys and the launcher go through `tide launch`**, so the app's
   first window takes focus past tide's focus guard, and the app runs
   outside the shell's unit. Keys bound to a `runenv` wrapper grant the
