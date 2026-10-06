@@ -2451,7 +2451,15 @@ precommand() {
     log_history "$*"
     atuin_preexec "$*"
     current_command="$(expand_job "$*")"
-    tide_grant "$current_command"
+    # tide-grant runs outside the shell, so an alias is a name it can't
+    # resolve: it gets the line as it runs, aliases expanded. zsh's preexec
+    # leaves that in _precommand_ran; bash's DEBUG trap passes it already.
+    if test -n "${_precommand_ran:-}" && test "$_precommand_ran" != "$*"; then
+        tide_grant "$(expand_job "$_precommand_ran")"
+    else
+        tide_grant "$current_command"
+    fi
+    _precommand_ran=
     set_title "$(title)"
     set_color 'normal'
     SECONDS=0
@@ -3553,6 +3561,9 @@ if is_interactive; then
                 preprompt
             }
             preexec() {
+                # $3 is the line as it runs, aliases expanded, for the
+                # focus grant; the rest of precommand wants what was typed.
+                _precommand_ran=$3
                 precommand "$1"
             }
         }

@@ -42,6 +42,27 @@ result=$(zsh --no-rcs -c '
 ' </dev/null 2>/dev/null | grep -E '^(ON|OFF)$' | tail -1)
 assert_equal "OFF" "$result"
 
+# zsh hands preexec the line as typed ($1) and as it runs, aliases expanded
+# ($3). tide-grant runs outside the shell, so it can't resolve an alias: the
+# grant has to name the program the alias runs, from $3.
+start_test "zsh's preexec grants the program an alias runs"
+_grantdir="$_testdir/tide-grant-bin"
+mkdir -p "$_grantdir"
+cat >"$_grantdir/tide-grant" <<'FAKE'
+#!/bin/sh
+printf '%s\n' "$*" >>"$FAKE_LOG"
+FAKE
+chmod +x "$_grantdir/tide-grant"
+: >"$_grantdir/log"
+run_interactive_with_timeout 10 env WANT_TMUX=0 WANT_SHPOOL=0 FAKE_LOG="$_grantdir/log" \
+    zsh --no-rcs -i -c '
+    source '"'$_srcdir'"'/shrc >/dev/null 2>&1
+    PATH='"'$_grantdir'"':$PATH
+    XDG_CURRENT_DESKTOP=tide:Hyprland
+    preexec "s notes.txt" "subl --wait notes.txt" "subl --wait notes.txt" >/dev/null 2>&1
+' </dev/null >/dev/null 2>&1
+assert_equal "-- subl --wait notes.txt" "$(sed 's/^--pid [0-9]* //' "$_grantdir/log")"
+
 # Regression: x, xa and f all run `command fg`. `emulate sh` turns on
 # POSIX_BUILTINS, under which `command` finds builtins; without it `command`
 # searches only for an external binary, `fg` becomes "command not found",

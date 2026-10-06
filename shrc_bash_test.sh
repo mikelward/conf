@@ -204,6 +204,21 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
 ' </dev/null 2>/dev/null | grep '^SAW\[')
 assert_equal "SAW[echo the-user-command > /dev/null]" "$result"
 
+# bash expands aliases as it parses, so the DEBUG trap already hands
+# precommand the program an alias runs, which tide's focus grant needs:
+# tide-grant runs outside the shell and can't resolve an alias (zsh gets
+# the same from preexec's third argument).
+start_test "the DEBUG trap passes an alias's expansion to precommand"
+result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
+    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    precommand() { printf "SAW[%s]\n" "$*"; }
+    subl() { :; }
+    alias s="subl --wait"
+    install_precommand_trap
+    s notes.txt
+' </dev/null 2>/dev/null | grep '^SAW\[')
+assert_equal "SAW[subl --wait notes.txt]" "$result"
+
 # A `bind -x` widget -- atuin's and fzf's Ctrl-R handlers, zoxide's zi --
 # runs as a command and would otherwise consume the armed flag, so the
 # command the user then accepts would go unrecorded and the widget's own

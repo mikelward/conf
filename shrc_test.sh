@@ -3712,6 +3712,19 @@ start_test "precommand records the grant"
 precommand "firefox" >/dev/null 2>&1
 assert_equal "--pid $$ -- firefox" "$(cat "$FAKE_LOG")"
 
+# zsh's preexec leaves the line as it runs, aliases expanded, in
+# _precommand_ran: tide-grant can't resolve an alias itself.
+start_test "precommand grants the line as it runs, with aliases expanded"
+: > "$FAKE_LOG"
+_precommand_ran="subl --wait notes.txt"
+precommand "s notes.txt" >/dev/null 2>&1
+assert_equal "--pid $$ -- subl --wait notes.txt" "$(cat "$FAKE_LOG")"
+
+start_test "precommand uses the expanded line once"
+: > "$FAKE_LOG"
+precommand "firefox" >/dev/null 2>&1
+assert_equal "--pid $$ -- firefox" "$(cat "$FAKE_LOG")"
+
 start_test "tide_grant reports a missing tide-grant"
 # have_command is stubbed to always succeed above, so stub it here too.
 have_command() { test "$1" != tide-grant; }
