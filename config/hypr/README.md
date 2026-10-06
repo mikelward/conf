@@ -16,7 +16,7 @@ Files (all live under this repo's `config/` and map to `~/.config/`):
 | `config/hypr/hyprland.lua` | Compositor: layout, input, keybinds, look, lid, window rules |
 | `config/hypr/hyprland_test.lua` | Tests for `hyprland.lua` against a stub of Hyprland's Lua API |
 | `config/hypr/hyprland.local.lua.template` | Per-machine override template (copy to `~/.config/hypr/hyprland.local.lua`) |
-| `config/hypr/hypridle.conf` | Idle: dim → lock → DPMS off → suspend |
+| `config/hypr/hypridle.conf` | Idle: dim → lock → DPMS off → suspend (in tide, on battery only) |
 | `config/hypr/hyprlock.conf` | Lock screen outside the tide session |
 | `config/hypr/scripts/apply-input.sh` | Auto-classify pointers (mice → right-handed) |
 | `config/hypr/scripts/theme.sh` | Apply light/dark theme by time of day |
@@ -278,9 +278,11 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   then styles swaync and the wallpaper once at startup, and the shell runs
   `config/tide/appearance-hook` after each change it makes, which restyles
   them again.
-- **Power management is identical on laptops and desktops** — one shared
+- **Power management is shared by laptops and desktops** — one
   `hypridle.conf` (dim → lock → DPMS off → suspend). On a desktop with no
-  backlight the dim step is simply a no-op.
+  backlight the dim step is simply a no-op. In tide, the suspend step runs
+  `tide idle-suspend`, which suspends only on battery: a desktop, or a
+  laptop on AC, just keeps its displays off.
 - **Multi-machine.** The same configs run everywhere unchanged — input
   handedness and the laptop's internal panel are auto-detected, and Hyprland
   auto-places monitors. Nothing is machine-specific. When a machine *does*
