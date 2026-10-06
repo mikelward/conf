@@ -368,12 +368,26 @@ assert_contains "loginctl lock-session" "$_idle_body"
 start_test "hypridle turns the display off (DPMS)"
 assert_contains "hl.dsp.dpms({ action = \"off\" })" "$_idle_body"
 
+# The timeouts are tide's settings: tide writes them to tide-idle.conf, which
+# this sources after its own defaults, tide's SPEC.md §10 timeline, so a
+# missing file keeps that timeline; and every listener times out on one.
+_idle_vars=$(sed -n 's/^\$\(tide_idle_[a-z_]*\) = \([0-9]*\)$/\1=\2/p' "$_idle" | tr '\n' ' ')
+start_test "hypridle's default timeouts are tide's timeline"
+assert_equal "tide_idle_dim=150 tide_idle_lock=300 tide_idle_displays_off=330 tide_idle_suspend=1800 " "$_idle_vars"
+_idle_source_line=$(grep -n '^source = tide-idle.conf$' "$_idle" | cut -d: -f1)
+_idle_last_default=$(grep -n '^\$tide_idle_' "$_idle" | tail -n 1 | cut -d: -f1)
+_idle_first_listener=$(grep -n '^listener {' "$_idle" | head -n 1 | cut -d: -f1)
+start_test "hypridle sources tide's timeouts after its defaults and before any listener"
+assert_equal "yes" "$(test -n "$_idle_source_line" && test "$_idle_source_line" -gt "${_idle_last_default:-0}" && test "$_idle_source_line" -lt "${_idle_first_listener:-0}" && echo yes)"
+start_test "every hypridle listener times out on one of tide's settings"
+assert_equal "\$tide_idle_dim \$tide_idle_lock \$tide_idle_displays_off \$tide_idle_suspend " "$(sed -n 's/^ *timeout = //p' "$_idle" | tr '\n' ' ')"
+
 # The lock command and the five-minute idle step, run as hypridle runs them
 # (/bin/sh -c) against fake tools that log their arguments: the tide session
 # goes to tide-lock, a plain Hyprland login to hyprlock.
 _idle_lock_cmd=$(sed -n 's/^ *lock_cmd = //p' "$_idle")
-_idle_lock_step=$(sed -n '/^listener {/,/^}/{/timeout = 300$/,/^}/s/^ *on-timeout = //p}' "$_idle")
-_idle_suspend_step=$(sed -n '/^listener {/,/^}/{/timeout = 1800$/,/^}/s/^ *on-timeout = //p}' "$_idle")
+_idle_lock_step=$(sed -n '/^listener {/,/^}/{/timeout = \$tide_idle_lock$/,/^}/s/^ *on-timeout = //p}' "$_idle")
+_idle_suspend_step=$(sed -n '/^listener {/,/^}/{/timeout = \$tide_idle_suspend$/,/^}/s/^ *on-timeout = //p}' "$_idle")
 start_test "hypridle's lock command and idle lock and suspend steps are found"
 assert_contains "esac" "$_idle_lock_cmd"
 assert_contains "esac" "$_idle_lock_step"
