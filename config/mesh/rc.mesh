@@ -1852,6 +1852,8 @@ alias mtm = maketmux
 # in shpool switches in place and must stay.
 # The backend session-backend picked rides a `VAR=value cmd` prefix, so the
 # script sees it without an assignment in this shell outliving the call.
+# A failed script's status is bound and failed with, as age's is: a
+# `return unless $sh.status` leaves the guard's success instead.
 bool func session-script-wanted() {
   return true if inside-tmux()
   return true if in-shpool()
@@ -1862,14 +1864,16 @@ wrapper func cs(...args) {
   return unless session-script-wanted()
   backend = session-backend()
   SESSION_BACKEND=$backend changesession ...$args
-  return unless $sh.status
+  produced = $sh.status
+  fail $produced if not $produced
   return unless $args:len == 0
   return if inside-tmux()
   exit if in-shpool()
 }
 wrapper func csp(...args) {
   changeshpool ...$args
-  return unless $sh.status
+  produced = $sh.status
+  fail $produced if not $produced
   return unless $args:len == 0
   exit if in-shpool()
 }
@@ -1882,13 +1886,15 @@ wrapper func ms(...args) {
   return unless session-script-wanted()
   backend = session-backend()
   SESSION_BACKEND=$backend makesession ...$args
-  return unless $sh.status
+  produced = $sh.status
+  fail $produced if not $produced
   return if inside-tmux()
   exit if in-shpool()
 }
 wrapper func msp(...args) {
   makeshpool ...$args
-  return unless $sh.status
+  produced = $sh.status
+  fail $produced if not $produced
   exit if in-shpool()
 }
 
