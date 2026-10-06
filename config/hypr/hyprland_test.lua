@@ -1118,6 +1118,56 @@ test("a hyprland.local.lua that fails partway says what applied", function()
     truthy(S.notifications[1].text:find("late", 1, true))
 end)
 
+-- The hl.device() calls since the last mark, as their tables.
+local function devices()
+    local out = {}
+    for _, c in ipairs(S.calls) do
+        if c[1] == "device" then
+            table.insert(out, c[2])
+        end
+    end
+    return out
+end
+
+test("apply-input's conf_input.mouse makes a mouse left-handed with its wheel speed", function()
+    load()
+    S.calls = {}
+    conf_input.mouse("logitech-usb-receiver", 3)
+    local d = devices()
+    eq(1, #d)
+    eq("logitech-usb-receiver", d[1].name)
+    eq(true, d[1].left_handed)
+    eq(3, d[1].scroll_factor)
+end)
+
+test("conf_input.mouse leaves alone what hyprland.local.lua set for that mouse", function()
+    load({ ["local"] = 'hl.device({ name = "logitech usb receiver", left_handed = false })\n'
+        .. 'hl.device({ name = "trackball", left_handed = false, scroll_factor = 0.5 })' })
+    eq(2, #devices(), "the local file's own calls still reach Hyprland")
+    S.calls = {}
+    conf_input.mouse("logitech-usb-receiver", 3)
+    conf_input.mouse("trackball", 3)
+    conf_input.mouse("other-mouse", 3)
+    local d = devices()
+    eq(nil, d[1].left_handed, "its handedness is the local file's (spaces as dashes)")
+    eq(3, d[1].scroll_factor, "but the wheel speed still applies")
+    eq(nil, d[2].left_handed, "both set locally")
+    eq(nil, d[2].scroll_factor, "both set locally")
+    eq(true, d[3].left_handed, "a mouse the local file didn't name")
+end)
+
+test("only hyprland.local.lua's own hl.device calls are recorded", function()
+    load({ ["local"] = 'hl.device({ name = "trackball", left_handed = false })\nerror("late")' })
+    eq(1, #S.notifications, "the error is reported")
+    hl.device({ name = "mouse", left_handed = false })
+    S.calls = {}
+    conf_input.mouse("trackball", 3)
+    conf_input.mouse("mouse", 3)
+    local d = devices()
+    eq(nil, d[1].left_handed, "a call before the error counts")
+    eq(true, d[2].left_handed, "a call after loading doesn't")
+end)
+
 test("an unreadable hyprland.local.lua is reported, not taken as absent", function()
     load()
     assert(os.execute("mkdir -p '" .. tmp .. "/" .. LOCAL .. "'"))

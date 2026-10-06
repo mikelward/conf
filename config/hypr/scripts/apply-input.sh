@@ -44,11 +44,13 @@ for name in $names; do
             # Touchpad: keep the global defaults (left button primary).
             ;;
         *)
-            # Mouse: right button primary + faster wheel. The Lua config has
-            # no keyword command, so this evaluates an hl.device() call
-            # with the name escaped for a Lua string.
+            # Mouse: right button primary + faster wheel, through
+            # hyprland.lua's conf_input.mouse(), which leaves alone what
+            # hyprland.local.lua set for the device. The Lua config has no
+            # keyword command, so this is an eval, with the name escaped
+            # for a Lua string.
             lua_name=$(printf '%s' "$name" | sed 's/[\\"]/\\&/g')
-            result=$(hyprctl eval "hl.device({ name = \"$lua_name\", left_handed = true, scroll_factor = $MOUSE_SCROLL })" 2>&1)
+            result=$(hyprctl eval "conf_input.mouse(\"$lua_name\", $MOUSE_SCROLL)" 2>&1)
             if test "$result" != ok; then
                 echo "apply-input.sh: couldn't configure mouse '$name': $result" >&2
                 status=1
