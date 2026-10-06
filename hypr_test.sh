@@ -140,10 +140,27 @@ rm -rf "$_fake"
 # theme.sh against fakes that log what it starts; waybar only when it's the
 # bar.
 _tfake=$(mktemp -d)
-for _p in waybar swaync gsettings; do
+for _p in waybar swaync; do
     printf '#!/bin/sh\nprintf "%%s %%s\\n" "%s" "$*" >> "$FAKE_LOG"\n' "$_p" > "$_tfake/$_p"
     chmod +x "$_tfake/$_p"
 done
+# gsettings logs too; `get` answers $FAKE_SCHEME, and with none, as with no
+# schema, it and `writable` fail; `writable` prints $FAKE_WRITABLE (true).
+cat > "$_tfake/gsettings" <<'FAKE'
+#!/bin/sh
+printf 'gsettings %s\n' "$*" >> "$FAKE_LOG"
+case "$1" in
+    writable)
+        test -n "$FAKE_SCHEME" || exit 1
+        echo "${FAKE_WRITABLE:-true}"
+        ;;
+    get)
+        test -n "$FAKE_SCHEME" || exit 1
+        printf "'%s'\n" "$FAKE_SCHEME"
+        ;;
+esac
+FAKE
+chmod +x "$_tfake/gsettings"
 # pkill finds a waybar only when $FAKE_WAYBAR_UP is set, and anything else
 # always, as the real one would after the launches above.
 cat > "$_tfake/pkill" <<'FAKE'
@@ -181,6 +198,94 @@ assert_contains "swaync --style" "$(cat "$_tfake/log")"
 start_test "theme.sh run by hand in tide restarts a waybar that's up"
 run_theme XDG_CURRENT_DESKTOP=tide:Hyprland FAKE_WAYBAR_UP=1
 assert_contains "waybar -s" "$(cat "$_tfake/log")"
+
+# In tide with the Quickshell bar, the shell sets the color scheme, and the
+# rest follows it.
+run_follow() {
+    : > "$_tfake/log"
+    rm -f "$_tfake/theme-mode"
+    env -u SWAYSOCK -u XDG_CONFIG_HOME PATH="$_tfake:$PATH" FAKE_LOG="$_tfake/log" XDG_RUNTIME_DIR="$_tfake" HOME="$_tfake" XDG_CURRENT_DESKTOP= \
+        TIDE_BAR=quickshell "$@" 9>&1 >/dev/null 2>&1 | cat >/dev/null
+}
+
+start_test "theme.sh follow styles swaync for the color scheme, and sets none"
+run_follow FAKE_SCHEME=prefer-light sh "$_theme" follow
+assert_contains "swaync --style $_tfake/.config/swaync/style-light.css" "$(cat "$_tfake/log")"
+assert_not_contains "gsettings set" "$(cat "$_tfake/log")"
+run_follow FAKE_SCHEME=prefer-dark sh "$_theme" follow
+assert_contains "swaync --style $_tfake/.config/swaync/style.css" "$(cat "$_tfake/log")"
+assert_not_contains "gsettings set" "$(cat "$_tfake/log")"
+
+start_test "theme.sh follow falls back to the clock when the scheme can't be read"
+run_follow FAKE_SCHEME= sh "$_theme" follow
+assert_contains "swaync --style" "$(cat "$_tfake/log")"
+assert_not_contains "gsettings set" "$(cat "$_tfake/log")"
+
+start_test "theme.sh follow styles unlocked when the lock can't be made"
+: > "$_tfake/log"
+env -u SWAYSOCK -u XDG_CONFIG_HOME PATH="$_tfake:$PATH" FAKE_LOG="$_tfake/log" XDG_RUNTIME_DIR="$_tfake/no-such-dir" HOME="$_tfake" XDG_CURRENT_DESKTOP= \
+    TIDE_BAR=quickshell FAKE_SCHEME=prefer-dark sh "$_theme" follow 9>&1 >/dev/null 2>&1 | cat >/dev/null
+assert_contains "swaync --style $_tfake/.config/swaync/style.css" "$(cat "$_tfake/log")"
+
+start_test "theme.sh scheme reads gsettings' answer"
+assert_equal dark "$(PATH="$_tfake:$PATH" FAKE_LOG=/dev/null FAKE_SCHEME=prefer-dark sh "$_theme" scheme)"
+assert_equal light "$(PATH="$_tfake:$PATH" FAKE_LOG=/dev/null FAKE_SCHEME=default sh "$_theme" scheme)"
+assert_equal "" "$(PATH="$_tfake:$PATH" FAKE_LOG=/dev/null FAKE_SCHEME= sh "$_theme" scheme)"
+
+# What theme.sh starts in the background mustn't hold its lock: swaync
+# would keep it for the session, and the next follow would wait on it.
+start_test "theme.sh follow's lock isn't held by the swaync it starts"
+if test -d /proc/self/fd && command -v flock >/dev/null 2>&1; then
+    cat > "$_tfake/swaync" <<'FAKE'
+#!/bin/sh
+printf 'swaync %s\n' "$*" >> "$FAKE_LOG"
+if test -e /proc/$$/fd/8; then echo "swaync holds fd 8" >> "$FAKE_LOG"; fi
+FAKE
+    run_follow FAKE_SCHEME=prefer-dark sh "$_theme" follow
+    assert_contains "swaync --style" "$(cat "$_tfake/log")"
+    assert_not_contains "holds fd 8" "$(cat "$_tfake/log")"
+    printf '#!/bin/sh\nprintf "%%s %%s\\n" "swaync" "$*" >> "$FAKE_LOG"\n' > "$_tfake/swaync"
+fi
+
+# The daemon, against the fakes: its theme.sh is the one under test, and the
+# fake sleep ends it. With SIGTERM: CI's runner ignores SIGPIPE, which its
+# children inherit, and a pipeline's first command dying of TERM goes
+# unannounced.
+mkdir -p "$_tfake/.config/hypr/scripts"
+ln -sf "$_theme" "$_tfake/.config/hypr/scripts/theme.sh"
+printf '#!/bin/sh\nkill "$PPID"\n' > "$_tfake/sleep"
+chmod +x "$_tfake/sleep"
+
+start_test "theme-daemon.sh styles once for tide's color scheme, and sets none"
+run_follow FAKE_SCHEME=prefer-light timeout 10 sh "$_themed"
+assert_not_contains "gsettings set" "$(cat "$_tfake/log")"
+assert_equal 1 "$(grep -c '^swaync --style' "$_tfake/log")"
+assert_contains "swaync --style $_tfake/.config/swaync/style-light.css" "$(cat "$_tfake/log")"
+
+start_test "theme-daemon.sh keeps the clock when the color scheme can't be read"
+run_follow FAKE_SCHEME= timeout 10 sh "$_themed"
+assert_contains "gsettings set org.gnome.desktop.interface color-scheme" "$(cat "$_tfake/log")"
+
+start_test "theme-daemon.sh keeps the clock when the color scheme is locked"
+run_follow FAKE_SCHEME=prefer-light FAKE_WRITABLE=false timeout 10 sh "$_themed"
+assert_contains "gsettings set org.gnome.desktop.interface color-scheme" "$(cat "$_tfake/log")"
+
+start_test "theme-daemon.sh sets the color scheme itself outside tide's Quickshell bar"
+run_follow TIDE_BAR=waybar timeout 10 sh "$_themed"
+assert_contains "gsettings set org.gnome.desktop.interface color-scheme" "$(cat "$_tfake/log")"
+rm -f "$_tfake/sleep"
+
+# tide's shell runs the hook after each change it makes.
+_hook="$_srcdir/config/tide/appearance-hook"
+start_test "tide's appearance hook restyles for the scheme now, and sets none"
+assert_true test -x "$_hook"
+run_follow FAKE_SCHEME=prefer-dark sh "$_hook"
+assert_contains "swaync --style $_tfake/.config/swaync/style.css" "$(cat "$_tfake/log")"
+assert_not_contains "gsettings set" "$(cat "$_tfake/log")"
+
+start_test "tide's appearance hook leaves the styling to the clock when the scheme is locked"
+run_follow FAKE_SCHEME=prefer-dark FAKE_WRITABLE=false sh "$_hook"
+assert_not_contains "swaync" "$(cat "$_tfake/log")"
 
 # launch-fuzzel.sh, against a fake fuzzel that logs its arguments.
 _fuzzel="$_srcdir/config/hypr/scripts/launch-fuzzel.sh"
