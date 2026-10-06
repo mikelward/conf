@@ -455,24 +455,34 @@ test("an unreadable tide layout is reported, not taken as absent", function()
     truthy(S.notifications[1].text:find("couldn't read", 1, true), S.notifications[1].text)
 end)
 
+local TIDE = { XDG_CURRENT_DESKTOP = "tide:Hyprland" }
+
 test("the focus guard is set up when installed", function()
-    load({ focus = FAKE_FOCUS })
+    load({ focus = FAKE_FOCUS, env = TIDE })
     truthy(_G.fake_focus_opts, "setup() was called")
     eq(0, #S.notifications, "notifications")
 end)
 
+test("a plain Hyprland login leaves the focus guard out", function()
+    -- Nothing there grants focus, so the guard would keep every new window
+    -- unfocused, even an app launched from a key on an empty workspace.
+    load({ focus = FAKE_FOCUS })
+    eq(nil, _G.fake_focus_opts, "setup() wasn't called")
+    eq(0, #S.notifications, "notifications")
+end)
+
 test("no focus guard installed is quiet", function()
-    load()
+    load({ env = TIDE })
     eq(nil, _G.fake_focus_opts)
     eq(0, #S.notifications, "notifications")
 end)
 
 test("a broken focus guard is reported, and the rest of the config loads", function()
-    load({ focus = "error('boom')" })
+    load({ focus = "error('boom')", env = TIDE })
     eq(1, #S.notifications, "notifications")
     truthy(S.notifications[1].text:find("focus guard failed to load", 1, true), S.notifications[1].text)
     truthy(S.rules.pip, "later sections still ran")
-    load({ focus = "return {}" })
+    load({ focus = "return {}", env = TIDE })
     eq(1, #S.notifications, "a module with no setup() is reported too")
 end)
 

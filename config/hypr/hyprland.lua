@@ -171,9 +171,13 @@ do
 end
 
 -- The tide focus guard (SPEC.md §14): nothing steals the keyboard.
--- It's installed beside the layout; without it, Hyprland's own focus rules
--- apply (misc:focus_on_activate is off below either way).
-do
+-- It's installed beside the layout, and loads in the tide session alone:
+-- it opens every window unfocused until a grant says otherwise, and only
+-- that session grants (`tide launch`, tide-grant), so in a plain login
+-- even an app you just launched would open unfocused. Without it,
+-- Hyprland's own focus rules apply (misc:focus_on_activate is off below
+-- either way).
+if tide_session then
     local path = home .. "/.config/hypr/tide/focus.lua"
     local text = read_optional(path, "tide focus guard", 1024 * 1024)
     if text then
