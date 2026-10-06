@@ -114,7 +114,9 @@ test-all: \
 	test-bash \
 	test-zsh \
 	test-prompt \
+	test-prompt-zsh \
 	test-vcs \
+	test-vcs-zsh \
 	test-fish \
 	test-nu \
 	test-mesh \
@@ -139,9 +141,10 @@ $(CACHE):
 # functions we actually care about). The dash target only runs
 # shrc_dash_test.sh, which regression-tests that sourcing shrc under
 # dash falls into the failsafe-mode short-circuit cleanly -- we don't try
-# to make every shrc function work under dash semantics. test-prompt
-# and test-vcs are bash-only because their drivers use bash/zsh-only
-# syntax (here-strings, arrays).
+# to make every shrc function work under dash semantics. The prompt and
+# VCS drivers use bash/zsh-only syntax (here-strings, arrays), and run
+# under both: test-prompt and test-vcs under bash, and test-prompt-zsh
+# and test-vcs-zsh under zsh, which is optional like test-zsh.
 
 # shrc_dash_test.sh sources `shrc` under dash and symlinks shrc.vcs into
 # $HOME/.shrc.vcs to regression-test the failsafe-mode short-circuit, so
@@ -196,6 +199,14 @@ $(CACHE)/test-prompt.stamp: shrc shrc_test_lib.sh shrc_prompt_test.sh | $(CACHE)
 	@touch $@
 test-prompt: $(CACHE)/test-prompt.stamp
 
+$(CACHE)/test-prompt-zsh.stamp: shrc shrc_test_lib.sh shrc_prompt_test.sh | $(CACHE)
+	@if command -v zsh >/dev/null 2>&1; then \
+		zsh shrc_prompt_test.sh && touch $@; \
+	else \
+		echo "SKIP: test-prompt-zsh (zsh not installed)"; \
+	fi
+test-prompt-zsh: $(CACHE)/test-prompt-zsh.stamp
+
 $(CACHE)/test-prompt-perf.stamp: shrc shrc_test_lib.sh shrc_prompt_perf_test.sh | $(CACHE)
 	@bash shrc_prompt_perf_test.sh
 	@touch $@
@@ -204,10 +215,18 @@ test-prompt-perf: $(CACHE)/test-prompt-perf.stamp
 # test-vcs depends on vcs/vcs (the real binary, not the PHONY vcs-build)
 # so a binary rebuild invalidates the stamp and the tests re-run. No
 # fetch is triggered by `make test`.
-$(CACHE)/test-vcs.stamp: shrc.vcs shrc_test_lib.sh shrc_vcs_test.sh vcs/vcs | $(CACHE)
+$(CACHE)/test-vcs.stamp: shrc shrc.vcs shrc_test_lib.sh shrc_vcs_test.sh vcs/vcs | $(CACHE)
 	@PATH="$(CURDIR)/vcs:$$PATH" bash shrc_vcs_test.sh
 	@touch $@
 test-vcs: $(CACHE)/test-vcs.stamp
+
+$(CACHE)/test-vcs-zsh.stamp: shrc shrc.vcs shrc_test_lib.sh shrc_vcs_test.sh vcs/vcs | $(CACHE)
+	@if command -v zsh >/dev/null 2>&1; then \
+		PATH="$(CURDIR)/vcs:$$PATH" zsh shrc_vcs_test.sh && touch $@; \
+	else \
+		echo "SKIP: test-vcs-zsh (zsh not installed)"; \
+	fi
+test-vcs-zsh: $(CACHE)/test-vcs-zsh.stamp
 
 # fish_test.sh / fish_prompt_test.sh are bash drivers that test
 # config/fish/config.fish; fish itself isn't a hard requirement. The
@@ -419,7 +438,8 @@ test-sway: $(CACHE)/test-sway.stamp
 .PHONY: all install install-dotfiles install-vcs bootstrap \
 	vcs-build vcs-sync vcs-fetch \
 	test test-verbose test-full test-all test-claude-settings test-session-start-hook \
-	test-dash test-ksh test-bash test-zsh test-prompt test-prompt-perf test-vcs \
+	test-dash test-ksh test-bash test-zsh test-prompt test-prompt-zsh test-prompt-perf \
+	test-vcs test-vcs-zsh \
 	test-fish test-nu test-mesh test-elvish test-lint \
 	test-env test-gitconfig test-makefile test-amethyst test-karabiner \
 	test-hypr test-sway

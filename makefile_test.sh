@@ -368,8 +368,8 @@ assert_contains "test" "$_test_full_recipe"
 # with -j.
 start_test "test-all target exists"
 assert_contains "test-all" "$_targets"
-for _sub in test-dash test-bash test-zsh test-prompt test-vcs \
-            test-fish test-nu test-lint \
+for _sub in test-dash test-bash test-zsh test-prompt test-prompt-zsh \
+            test-vcs test-vcs-zsh test-fish test-nu test-lint \
             test-gitconfig test-makefile test-amethyst \
             test-claude-settings; do
     start_test "$_sub target exists"
@@ -380,8 +380,8 @@ unset _sub
 # Test that test-all depends on every per-topic sub-target so that a single
 # `make test-all` invocation covers the full test suite.
 _test_all_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^test-all:')
-for _sub in test-dash test-bash test-zsh test-prompt test-vcs \
-            test-fish test-nu test-lint \
+for _sub in test-dash test-bash test-zsh test-prompt test-prompt-zsh \
+            test-vcs test-vcs-zsh test-fish test-nu test-lint \
             test-gitconfig test-makefile test-amethyst \
             test-claude-settings; do
     start_test "test-all depends on $_sub"

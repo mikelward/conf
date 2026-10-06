@@ -4,6 +4,21 @@
 # Stubs/mocks VCS and environment functions to test prompt output.
 #
 
+# zsh's USERNAME is the real user's name: assigning it fails, or as root
+# tries to become that user. So under zsh this file runs again inside a
+# function that hides it (local -h), and the tests' USERNAME is a plain
+# variable there, as in bash.
+if test -n "${ZSH_VERSION:-}" && test -z "${_prompt_test_hidden:-}"; then
+    _prompt_test_file=$0
+    _prompt_test_run() {
+        local -h USERNAME
+        _prompt_test_hidden=1
+        source "$_prompt_test_file"
+    }
+    _prompt_test_run
+    exit $?
+fi
+
 source "$(dirname "$0")/shrc_test_lib.sh"
 
 # Disable colors for predictable output in assertions.
@@ -29,6 +44,11 @@ shell="bash"
 # are left untouched. Replaces what used to be ~40 individual
 # extract_func calls.
 SHRC_LOAD_FUNCTIONS_ONLY=1 . "$_srcdir/shrc"
+
+# The tests stub bash_last_error, and zsh's follows it. A test that sets
+# $shell to try the other shell's code puts back $_real_shell, so the
+# rest of a zsh run stays on zsh's paths.
+zsh_last_error() { bash_last_error; }
 
 # Stub VCS functions (no VCS by default). prompt_line calls
 # `vcs prompt-line`; stub vcs() so tests don't depend on the real binary.
@@ -1051,12 +1071,14 @@ result="$(last_job_info)"
 assert_contains $'\033[33m'"took 5 seconds"$'\033[0m' "$result"
 
 start_test "ps1_character is red-wrapped dollar when root"
-# \[...\] are the bash markers that tell readline the enclosed
-# sequence is zero-width. _ps1_red_char emits them around the ANSI
-# escape + glyph; shell=bash is the shrc-detected mode under this
-# test harness.
+# The markers that tell the line editor the enclosed sequence is
+# zero-width: bash's \[...\], zsh's %{...%}. _ps1_red_char emits them
+# around the ANSI escape + glyph.
 i_am_root() { true; }
-assert_equal '\['$'\033[31m''\]$\['$'\033[0m''\]' "$(ps1_character)"
+case "$_real_shell" in
+bash) assert_equal '\['$'\033[31m''\]$\['$'\033[0m''\]' "$(ps1_character)" ;;
+zsh) assert_equal '%{'$'\033[31m''%}$%{'$'\033[0m''%}' "$(ps1_character)" ;;
+esac
 i_am_root() { false; }
 
 start_test "host_info root tag: brackets plain, 'root' in red"
@@ -1075,6 +1097,9 @@ i_am_root() { false; }
 _saved_bold="$bold"
 bold=$'\033[1m'
 
+# Bolding input through the prompt, and PS0 to turn it off, are bash's;
+# zsh leaves input to zle_highlight and has no PS0.
+if test "$_real_shell" = bash; then
 start_test "ps1 ends with the bold input attribute under bash"
 assert_equal '$ \['$'\033[1m''\]' "$(ps1)"
 
@@ -1105,6 +1130,16 @@ basic_prompt
 assert_equal '$ \['$'\033[1m''\]' "$PS1"
 assert_equal '_ \['$'\033[1m''\]' "$PS2"
 assert_equal $'\033[0m' "$PS0"
+else
+start_test "basic_prompt leaves input alone under zsh, and PS0 too"
+PS0="kept"
+basic_prompt
+assert_equal '$ ' "$PS1"
+assert_equal '_ ' "$PS2"
+assert_equal "kept" "$PS0"
+PS0=
+unset _inherited_ps0 _our_ps0
+fi
 
 start_test "zsh leaves input highlighting to zle_highlight"
 shell="zsh"
@@ -1117,7 +1152,7 @@ set_prompt
 assert_equal "untouched" "$PS0"
 PS0=
 unset _inherited_ps0
-shell="bash"
+shell=$_real_shell
 
 start_test "no input attribute when colour is off"
 color=false
@@ -1126,8 +1161,10 @@ color=true
 
 # PS0 is a bash 4.4 feature. Without it nothing turns the attribute off
 # before the command runs, so bolding input would bold its output too.
+# These stand in bash's version, so they run as bash under zsh too.
 start_test "no input attribute on bash too old for PS0"
-_saved_bash_version="$BASH_VERSION"
+shell=bash
+_saved_bash_version="${BASH_VERSION-}"
 BASH_VERSION="3.2.57(1)-release"
 assert_equal '$ ' "$(ps1)"
 BASH_VERSION="4.3.48(1)-release"
@@ -1136,7 +1173,12 @@ assert_equal '$ ' "$(ps1)"
 start_test "input attribute on bash new enough for PS0"
 BASH_VERSION="4.4.20(1)-release"
 assert_equal '$ \['$'\033[1m''\]' "$(ps1)"
-BASH_VERSION="$_saved_bash_version"
+if test -n "$_saved_bash_version"; then
+    BASH_VERSION="$_saved_bash_version"
+else
+    unset BASH_VERSION
+fi
+shell=$_real_shell
 
 bold="$_saved_bold"
 
