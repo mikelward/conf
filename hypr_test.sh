@@ -373,9 +373,11 @@ assert_contains "hl.dsp.dpms({ action = \"off\" })" "$_idle_body"
 # goes to tide-lock, a plain Hyprland login to hyprlock.
 _idle_lock_cmd=$(sed -n 's/^ *lock_cmd = //p' "$_idle")
 _idle_lock_step=$(sed -n '/^listener {/,/^}/{/timeout = 300$/,/^}/s/^ *on-timeout = //p}' "$_idle")
-start_test "hypridle's lock command and idle lock step are found"
+_idle_suspend_step=$(sed -n '/^listener {/,/^}/{/timeout = 1800$/,/^}/s/^ *on-timeout = //p}' "$_idle")
+start_test "hypridle's lock command and idle lock and suspend steps are found"
 assert_contains "esac" "$_idle_lock_cmd"
 assert_contains "esac" "$_idle_lock_step"
+assert_contains "esac" "$_idle_suspend_step"
 
 _ifake=$(mktemp -d)
 for _t in systemctl hyprlock tide loginctl; do
@@ -400,6 +402,11 @@ start_test "in a plain Hyprland login, the idle step locks through logind"
 assert_equal "loginctl lock-session" "$(_idle_run Hyprland "$_idle_lock_step")"
 start_test "with no desktop set, a lock runs hyprlock"
 assert_equal "hyprlock " "$(_idle_run "" "$_idle_lock_cmd")"
+# tide decides whether to suspend (on battery only).
+start_test "in the tide session, the suspend step runs tide idle-suspend"
+assert_equal "tide idle-suspend" "$(_idle_run tide:Hyprland "$_idle_suspend_step")"
+start_test "in a plain Hyprland login, the suspend step suspends"
+assert_equal "systemctl suspend" "$(_idle_run Hyprland "$_idle_suspend_step")"
 rm -rf "$_ifake"
 
 ################################################################################
