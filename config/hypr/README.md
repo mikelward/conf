@@ -266,6 +266,11 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   wallpaper. **fuzzel** is themed per-launch by `launch-fuzzel.sh`. Because the
   daemon owns waybar/swaync, they are not started by their own autostart
   lines. Edit `LIGHT_START` / `DARK_START` in `theme.sh` to change the times.
+  In tide with its Quickshell bar, the shell keeps the schedule instead
+  (tide's `appearance.json`) and sets the color scheme itself. The daemon
+  then styles swaync and the wallpaper once at startup, and the shell runs
+  `config/tide/appearance-hook` after each change it makes, which restyles
+  them again.
 - **Power management is identical on laptops and desktops** — one shared
   `hypridle.conf` (dim → lock → DPMS off → suspend). On a desktop with no
   backlight the dim step is simply a no-op.

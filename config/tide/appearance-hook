@@ -1,0 +1,13 @@
+#!/bin/sh
+#
+# Run by tide's shell after it sets the light/dark color scheme (tide
+# SPEC.md §15), with no arguments. Restyles what the shell doesn't draw
+# yet -- swaync and the wallpaper -- for the scheme as it is now; theme.sh
+# reads it under a lock, so overlapping runs end on the latest.
+
+# Where the shell can't set the scheme (a dconf lock, no schema), the theme
+# daemon keeps the clock, and this leaves the styling to it.
+if ! test "$(gsettings writable org.gnome.desktop.interface color-scheme 2>/dev/null)" = true; then
+    exit 0
+fi
+exec "$HOME/.config/hypr/scripts/theme.sh" follow
