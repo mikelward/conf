@@ -48,8 +48,14 @@ fn -prompt-glyph {|root color|
 # TODO: hand-rolled, because `atuin init` has no elvish target -- the other
 # shells get this widget from atuin itself. `atuin search -i` draws its TUI on
 # the terminal and writes the chosen command to stdout, which is the same
-# contract the shipped integrations rely on. A cancelled search prints nothing
-# and exits non-zero, which is the `catch` below.
+# contract the shipped integrations rely on. Esc, under atuin's default
+# exit_mode = return-original, prints nothing and exits 0, so the empty check
+# below keeps the line as it was; the `catch` is for atuin failing, which it
+# reports on the terminal itself.
+#
+# Enter puts the line in the buffer to edit, as Tab does, despite enter_accept
+# in config/atuin/config.toml: atuin marks a line to run only when ATUIN_SHELL
+# names a shell it knows, and Elvish isn't one. See TODO.md.
 #
 # The pane's size and style come from config/atuin/config.toml, which atuin
 # reads whoever launched it, so the inline nine-row search the other shells get
