@@ -256,32 +256,6 @@ without cancelling the search, or reedline gains a conditional event.
 
 **mesh** is untouched: a separate session owns its ghost + dropdown model.
 
-### Follow-ups from the fuzzy-arrows review
-
-* **Exercise the remaining arrow widgets, not just their bindings.** The pty
-  harness this asked for now exists: `shrc_zsh_test.sh` drives a live `zle`
-  through `zsh/zpty` and presses real arrow keys, for the one case where a
-  binding check proves nothing -- Down walking the prefix matches mid-walk
-  versus opening atuin's pane from a fresh prompt. It waits on the probe log
-  reaching a line count after each key rather than sleeping, so it isn't the
-  flaky kind; four things it needs are non-obvious and cost an afternoon each
-  if rediscovered: answer `compinit`'s insecure-completion question while
-  waiting for the load (shrc's `compinit` has no `-u`, so it asks "Ignore
-  insecure ... and continue?" and reads the answer from the terminal -- a pty
-  has one, so the source blocks forever, which is what CI did while a sandbox
-  with no such entry passed; sanitizing `fpath` first does not work, since
-  `compaudit` names insecure *files* too and `setup_brew` can add to `fpath`
-  mid-source), wait for the child's prompt before typing
-  anything (zsh flushes pending input as it takes the terminal, so a line
-  written into a fresh pty is swallowed), clear the inherited `EXIT` trap
-  before `exec` in the zpty command (the forked shell otherwise deletes
-  `$_testdir` for the whole suite), and turn `WANT_TMUX`/`WANT_SHPOOL` off (a
-  real pty hands the session to tmux or shpool before shrc's bindings ever
-  load). All four are failures the harness reports as a timeout, so the waits
-  name what they were waiting for and print the log and the pty's output. Still uncovered
-  and now cheap to add: the multiline-buffer guards on both arrows, the
-  per-keymap atuin variants, and the native fallback when `atuin init` failed.
-
 ## Grant shell functions' programs
 
 `tide-grant` (tide repo) names the app a command line's first
