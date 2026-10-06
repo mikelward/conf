@@ -25,6 +25,17 @@ hide-env --ignore-errors DISPLAY
 const CONFIG = path self "config.nu"
 source $CONFIG
 
+# Aliases for tide-line-as-run's tests, at the top level, where nu's
+# parser can see them from inside a def (one in a test's block can't).
+# tide-test-old binds the first tide-test-app, as nu parses it, so the
+# redefinition after it doesn't change what it runs.
+alias tide-test-app = ^firefox
+alias tide-test-old = tide-test-app
+alias tide-test-app = ^chromium
+alias tide-test-subl = ^subl --wait
+alias tide-test-edit = tide-test-subl
+alias "tide-test g co" = git checkout
+
 # Run one test case in an isolated env. Plain `do { ... }` does NOT
 # propagate $env mutations back to the caller, so a case can freely set
 # $env.UID, $env.HOSTNAME, etc. without bleeding into the next one.
@@ -1064,6 +1075,28 @@ except OSError: pass
         $env.XDG_CURRENT_DESKTOP = "tide:Hyprland"
         tide-grant-line "env A=1 nautilus ."
         assert equal (open --raw $log | str trim) $"--pid ($nu.pid) -- env A=1 nautilus ."
+    })
+    (run-test "nu tide-grant-line grants the program an alias runs" {
+        let bin = (mktemp -d)
+        let log = (mktemp)
+        ("#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"" + $log + "\"\n") | save -f ($bin | path join "tide-grant")
+        ^chmod +x ($bin | path join "tide-grant")
+        $env.PATH = ($env.PATH | prepend $bin)
+        $env.XDG_CURRENT_DESKTOP = "tide:Hyprland"
+        # config.nu's own: alias install = ^package install
+        tide-grant-line "install firefox"
+        assert equal (open --raw $log | str trim) $"--pid ($nu.pid) -- package install firefox"
+    })
+    (run-test "nu tide-line-as-run gives a line as nu will run it" {
+        assert equal (tide-line-as-run "tide-test-old notes.txt") "firefox notes.txt"
+        assert equal (tide-line-as-run "tide-test-edit 'my notes.txt'") "subl --wait 'my notes.txt'"
+        assert equal (tide-line-as-run "tide-test g co main") "git checkout main"
+        assert equal (tide-line-as-run "^firefox --new-window") "firefox --new-window"
+        assert equal (tide-line-as-run "env A=1 nautilus .") "env A=1 nautilus ."
+        assert equal (tide-line-as-run "firefox $env.HOME") "firefox '$env.HOME'"
+        # An internal command, or a line nu can't parse, is left as typed.
+        assert equal (tide-line-as-run "ls | where size > 1kb") "ls | where size > 1kb"
+        assert equal (tide-line-as-run "(") "("
     })
     (run-test "nu tide-grant-line does nothing outside tide" {
         let bin = (mktemp -d)

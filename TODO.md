@@ -320,7 +320,7 @@ without cancelling the search, or reedline gains a conditional event.
   and now cheap to add: the multiline-buffer guards on both arrows, the
   per-keymap atuin variants, and the native fallback when `atuin init` failed.
 
-## Grant shell functions' programs, and nushell's aliases
+## Grant shell functions' programs
 
 `tide-grant` (tide repo) names the app a command line's first
 command runs, but it runs outside the shell, so a shell function names
@@ -330,11 +330,9 @@ pid; an already-running or D-Bus-activated app's doesn't. Following a
 function's body is open-ended. fish's `alias` makes a function, so it's
 the same case there.
 
-Aliases are covered in zsh, whose preexec hands `precommand` the line with
-aliases expanded, and bash, whose DEBUG trap sees it expanded already.
-nushell's `commandline` is the line as typed, so an alias there still
-grants its own name; `scope aliases` has each alias's expansion, for
-`tide-grant-line` to substitute.
+Aliases are covered: zsh's preexec hands `precommand` the line with
+aliases expanded, bash's DEBUG trap sees it expanded already, and nushell's
+`tide-line-as-run` reads the external call from nu's own parse (`ast`).
 
 ## Port the tide focus grant to mesh
 

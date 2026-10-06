@@ -2088,11 +2088,34 @@ if (have-command carapace) {
 # Appended rather than assigned: atuin's generated init adds its own
 # hooks to these same lists (that's how it opens and closes history
 # entries), and a plain assignment would drop whichever side ran first.
+# The line as nu will run it, for tide-grant, which parses shell syntax
+# and runs outside nu, where an alias is a name it can't resolve: an
+# external call, from nu's own parse, as its program and arguments, so
+# aliases expand as nu binds them when it parses them (a redefinition
+# later doesn't change what an earlier alias runs), and nu's ^ goes. A
+# literal argument is its value, quoted for a shell where it needs it;
+# any other is its nu source, quoted. Anything else, or a line nu can't
+# parse, is the line as typed.
+def tide-line-as-run [line: string] {
+    let parsed = (try { ast --json $line | get block | from json } catch { null })
+    let call = ($parsed | get -o pipelines.0.elements.0.expr.expr.ExternalCall)
+    if $call == null { return $line }
+    [$call.0] | append ($call.1 | each {|arg| $arg | values | first }) | each {|word|
+        let literal = ($word.expr | transpose kind value | get -o 0)
+        let text = if ($literal != null and $literal.kind in [GlobPattern String RawString]) {
+            if ($literal.value | describe | str starts-with "list") { $literal.value.0 } else { $literal.value }
+        } else {
+            $word.span.span_source? | default ""
+        }
+        if ($text =~ '^[A-Za-z0-9_@%+=:,./-]+$') { $text } else { $"'($text | str replace --all "'" "'\\''")'" }
+    } | str join " "
+}
+
 # In a tide session, records a focus grant for the command line with
 # tide's focus guard (tide SPEC.md §14.3), so the first window it
 # opens may take focus. tide-grant names this shell's pid, for a window
-# from any of its descendants, and the app of the line's first command.
-# Outside tide this costs one string check.
+# from any of its descendants, and the app of the line's first command,
+# as nu will run it. Outside tide this costs one string check.
 def tide-grant-line [line: string] {
     if not ($":($env.XDG_CURRENT_DESKTOP? | default ''):" | str contains ":tide:") {
         return
@@ -2103,7 +2126,7 @@ def tide-grant-line [line: string] {
     }
     # tide-grant reports its own failures on stderr; the catch keeps
     # its exit status from also failing the hook.
-    try { ^tide-grant --pid $nu.pid -- $line } catch { }
+    try { ^tide-grant --pid $nu.pid -- (tide-line-as-run $line) } catch { }
 }
 
 $env.config = ($env.config | upsert hooks.pre_execution (
