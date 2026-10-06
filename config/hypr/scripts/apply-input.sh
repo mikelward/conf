@@ -1,12 +1,15 @@
 #!/bin/sh
 #
 # Auto-configure pointing devices so no device names need hardcoding.
-#   TOUCHPADS keep the global defaults (LEFT button primary).
-#   MICE      get left_handed = true (RIGHT button primary) + a faster wheel.
+#   TOUCHPADS keep the global defaults (LEFT button primary), plus the speed
+#             and handedness tide's Touchpad settings give them.
+#   MICE      get left_handed = true (RIGHT button primary) + a faster wheel,
+#             or what tide's Mouse settings say instead.
 #
 # Devices are classified by name (touchpads report "touchpad"/"trackpad"/
 # "synaptics" in their libinput name, which is what Hyprland uses). Runs at
-# login from hyprland.lua's autostart; re-run it after hotplugging a mouse.
+# login from hyprland.lua's autostart; re-run it after hotplugging a mouse or
+# touchpad.
 # Override the mouse scroll speed with HYPR_MOUSE_SCROLL_FACTOR (default 3).
 
 MOUSE_SCROLL="${HYPR_MOUSE_SCROLL_FACTOR:-3}"
@@ -41,7 +44,15 @@ for name in $names; do
     test -n "$name" || continue
     case "$name" in
         *touchpad*|*trackpad*|*synaptics*)
-            # Touchpad: keep the global defaults (left button primary).
+            # Touchpad: tide's touchpad speed and handedness, through
+            # hyprland.lua's conf_input.touchpad(), which leaves alone what
+            # hyprland.local.lua set for the device.
+            lua_name=$(printf '%s' "$name" | sed 's/[\\"]/\\&/g')
+            result=$(hyprctl eval "conf_input.touchpad(\"$lua_name\")" 2>&1)
+            if test "$result" != ok; then
+                echo "apply-input.sh: couldn't configure touchpad '$name': $result" >&2
+                status=1
+            fi
             ;;
         *)
             # Mouse: right button primary + faster wheel, through

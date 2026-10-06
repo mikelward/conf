@@ -313,36 +313,171 @@ hl.config({
 --------------------------------------------------------------------------------
 -- INPUT
 --------------------------------------------------------------------------------
-hl.config({
-    input = {
-        kb_layout = "us",
-        kb_variant = "dvorak",
-        -- Caps Lock is Compose, matching `setup`'s XKBOPTIONS. Menu is a
-        -- second Super, as xmodmaprc made it under X11.
-        kb_options = "compose:caps,altwin:menu_win",
+-- Kept as a table, since it's also what a setting tide stops making goes
+-- back to (apply_tide_input).
+local INPUT = {
+    kb_layout = "us",
+    kb_variant = "dvorak",
+    -- Caps Lock is Compose, matching `setup`'s XKBOPTIONS. Menu is a
+    -- second Super, as xmodmaprc made it under X11.
+    kb_options = "compose:caps,altwin:menu_win",
 
-        -- Focus follows the mouse, but only when it crosses into a window,
-        -- and closing a window focuses the one under the pointer.
-        follow_mouse = 1,
-        mouse_refocus = false,
-        focus_on_close = 1,
+    -- Focus follows the mouse, but only when it crosses into a window,
+    -- and closing a window focuses the one under the pointer.
+    follow_mouse = 1,
+    mouse_refocus = false,
+    focus_on_close = 1,
 
-        -- libinput's adaptive acceleration at full speed, the KDE setup this
-        -- replaces; flat, and custom curves, felt wrong on a real session.
-        sensitivity = 1.0,
-        accel_profile = "adaptive",
-        -- Right-handed by default, which trackpads want; apply-input.sh
-        -- flips mice to the right button primary.
-        left_handed = false,
+    -- libinput's adaptive acceleration at full speed, the KDE setup this
+    -- replaces; flat, and custom curves, felt wrong on a real session.
+    sensitivity = 1.0,
+    accel_profile = "adaptive",
+    -- Right-handed by default, which trackpads want; apply-input.sh
+    -- flips mice to the right button primary.
+    left_handed = false,
+    natural_scroll = false,
+    -- Hyprland's own, spelled out so tide's settings have a value to
+    -- go back to.
+    repeat_delay = 600,
+    repeat_rate = 25,
 
-        touchpad = {
-            natural_scroll = true,
-            tap_to_click = true,
-            disable_while_typing = true,
-            scroll_factor = 1.0,
-        },
+    touchpad = {
+        natural_scroll = true,
+        tap_to_click = true,
+        disable_while_typing = true,
+        scroll_factor = 1.0,
     },
-})
+}
+-- A copy, so nothing that keeps the table it's given can change INPUT.
+local function copy(t)
+    local out = {}
+    for k, v in pairs(t) do
+        out[k] = type(v) == "table" and copy(v) or v
+    end
+    return out
+end
+hl.config({ input = copy(INPUT) })
+
+-- tide's Mouse, Touchpad and Keyboard settings (tide SPEC.md §16), which
+-- tide writes to tide-input.lua beside this file as a table in Hyprland's
+-- own option names: { mouse = {...}, touchpad = {...}, keyboard = {...} }.
+-- The keyboard's options, and the touchpad's own section, apply over the
+-- ones above; mice and touchpads get their speed and handedness one device
+-- at a time, through conf_input below, as apply-input.sh meets each. With
+-- no file, the settings above stand. It's read as data, with nothing in
+-- scope, and a value of the wrong type, or an unknown section or setting,
+-- is reported and left out.
+local TIDE_INPUT_TYPES = {
+    mouse = { sensitivity = "number", scroll_factor = "number", natural_scroll = "boolean", left_handed = "boolean" },
+    touchpad = {
+        sensitivity = "number", scroll_factor = "number", natural_scroll = "boolean", left_handed = "boolean",
+        tap_to_click = "boolean", disable_while_typing = "boolean",
+    },
+    keyboard = { kb_layout = "string", kb_variant = "string", repeat_delay = "number", repeat_rate = "number" },
+}
+-- The touchpad options that live in input.touchpad, for every touchpad;
+-- the rest go to each one through conf_input.touchpad.
+local TOUCHPAD_SECTION = { natural_scroll = true, tap_to_click = true, disable_while_typing = true, scroll_factor = true }
+-- No settings: each kind's table is there, empty.
+local function no_tide_input()
+    return { mouse = {}, touchpad = {}, keyboard = {} }
+end
+local tide_input = no_tide_input()
+-- The input options hyprland.local.lua set through hl.config, keyed
+-- "kb_layout" or "touchpad.scroll_factor": a reload of tide's settings
+-- leaves them alone, so the local file still wins, and a setting tide
+-- stops making goes back to the local file's value before INPUT's.
+local local_input = {}
+
+-- What an input option is when tide doesn't set it.
+local function input_default(key)
+    if local_input[key] ~= nil then
+        return local_input[key]
+    end
+    local section, option = key:match("^(%w+)%.(.+)$")
+    if section then
+        return INPUT[section][option]
+    end
+    return INPUT[key]
+end
+
+local function read_tide_input()
+    local path = home .. "/.config/hypr/tide-input.lua"
+    local text = read_optional(path, "tide-input.lua", 64 * 1024)
+    if not text then
+        return no_tide_input()
+    end
+    local chunk, err = load(text, "@" .. path, "t", {})
+    if not chunk then
+        notify_error("tide-input.lua (none of it applied): " .. tostring(err))
+        return no_tide_input()
+    end
+    local ok, value = pcall(chunk)
+    if not ok then
+        notify_error("tide-input.lua (none of it applied): " .. tostring(value))
+        return no_tide_input()
+    end
+    if type(value) ~= "table" then
+        notify_error("tide-input.lua (none of it applied): expected a table, not " .. type(value))
+        return no_tide_input()
+    end
+    local out = no_tide_input()
+    for kind in pairs(value) do
+        if TIDE_INPUT_TYPES[kind] == nil then
+            notify_error("tide-input.lua: unknown section " .. tostring(kind))
+        end
+    end
+    for kind, types in pairs(TIDE_INPUT_TYPES) do
+        local given = value[kind]
+        if given ~= nil and type(given) ~= "table" then
+            notify_error("tide-input.lua: " .. kind .. " should be a table, not " .. type(given))
+            given = nil
+        end
+        for k, v in pairs(given or {}) do
+            if types[k] == nil then
+                notify_error("tide-input.lua: unknown setting " .. kind .. "." .. tostring(k))
+            elseif type(v) ~= types[k] then
+                notify_error("tide-input.lua: " .. kind .. "." .. k .. " should be a " .. types[k] .. ", not " .. type(v))
+            else
+                out[kind][k] = v
+            end
+        end
+    end
+    return out
+end
+
+-- Every option tide can set is applied each time, its value or the
+-- default: hl.config merges, so one tide stops setting would otherwise
+-- stay at its last value until a full reload.
+local function apply_tide_input()
+    tide_input = read_tide_input()
+    local input, touchpad = {}, {}
+    for k in pairs(TIDE_INPUT_TYPES.keyboard) do
+        if local_input[k] == nil then
+            local v = tide_input.keyboard[k]
+            if v == nil then
+                v = input_default(k)
+            end
+            input[k] = v
+        end
+    end
+    for k in pairs(TOUCHPAD_SECTION) do
+        if local_input["touchpad." .. k] == nil then
+            local v = tide_input.touchpad[k]
+            if v == nil then
+                v = input_default("touchpad." .. k)
+            end
+            touchpad[k] = v
+        end
+    end
+    if next(touchpad) then
+        input.touchpad = touchpad
+    end
+    if next(input) then
+        hl.config({ input = input })
+    end
+end
+apply_tide_input()
 
 -- A 3-finger horizontal swipe changes workspace.
 hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
@@ -799,22 +934,58 @@ hl.layer_rule({
 -- Binds add rather than replace, so rebinding a key needs hl.unbind first.
 --
 -- apply-input.sh runs after this, at login and after every reload, and sets
--- each mouse through conf_input.mouse(). The fields the local file gave a
--- device in hl.device() are recorded, and the script leaves those alone,
--- so a machine can make one mouse right-handed or slow its wheel here.
--- hl.device() merges field by field, so the rest still applies.
+-- each mouse through conf_input.mouse() and each touchpad through
+-- conf_input.touchpad(). A mouse is left-handed with the script's wheel
+-- speed, unless tide's mouse settings say otherwise; a touchpad takes tide's
+-- touchpad speed and handedness. The fields the local file gave a device in
+-- hl.device() are recorded, and these leave those alone, so a machine can
+-- make one mouse right-handed or slow its wheel here. hl.device() merges
+-- field by field, so the rest still applies. conf_input.reload() is how tide
+-- applies a change to its settings: it reads tide-input.lua again and runs
+-- apply-input.sh.
 local local_devices = {}
+
+local function device(name, want)
+    local set = local_devices[(name:gsub(" ", "-"))] or {}
+    local t = { name = name }
+    for k, v in pairs(want) do
+        if set[k] == nil then
+            t[k] = v
+        end
+    end
+    hl.device(t)
+end
+
+-- Each device gets every field tide can set, its value or the default,
+-- for the same reason as apply_tide_input: hl.device merges too.
 _G.conf_input = {
     mouse = function(name, scroll_factor)
-        local set = local_devices[(name:gsub(" ", "-"))] or {}
-        local t = { name = name }
-        if set.left_handed == nil then
-            t.left_handed = true
+        local want = {
+            left_handed = true,
+            scroll_factor = scroll_factor,
+            sensitivity = input_default("sensitivity"),
+            natural_scroll = input_default("natural_scroll"),
+        }
+        for k, v in pairs(tide_input.mouse) do
+            want[k] = v
         end
-        if set.scroll_factor == nil then
-            t.scroll_factor = scroll_factor
+        device(name, want)
+    end,
+    touchpad = function(name)
+        local want = {
+            sensitivity = input_default("sensitivity"),
+            left_handed = input_default("left_handed"),
+        }
+        for k, v in pairs(tide_input.touchpad) do
+            if not TOUCHPAD_SECTION[k] then
+                want[k] = v
+            end
         end
-        hl.device(t)
+        device(name, want)
+    end,
+    reload = function()
+        apply_tide_input()
+        hl.exec_cmd(runenv .. " " .. scripts .. "/apply-input.sh")
     end,
 }
 do
@@ -829,7 +1000,7 @@ do
             notify_error("hyprland.local.lua (none of it applied): " .. tostring(err))
         else
             -- Hyprland names a device with its spaces as dashes.
-            local device = hl.device
+            local real_device, real_config = hl.device, hl.config
             hl.device = function(t)
                 if type(t) == "table" and type(t.name) == "string" then
                     local key = t.name:gsub(" ", "-")
@@ -839,10 +1010,25 @@ do
                     end
                     local_devices[key] = set
                 end
-                return device(t)
+                return real_device(t)
+            end
+            hl.config = function(t)
+                local input = type(t) == "table" and t.input
+                if type(input) == "table" then
+                    for k, v in pairs(input) do
+                        if k == "touchpad" and type(v) == "table" then
+                            for tk, tv in pairs(v) do
+                                local_input["touchpad." .. tk] = tv
+                            end
+                        else
+                            local_input[k] = v
+                        end
+                    end
+                end
+                return real_config(t)
             end
             local ok, run_err = pcall(chunk)
-            hl.device = device
+            hl.device, hl.config = real_device, real_config
             if not ok then
                 notify_error("hyprland.local.lua stopped (the calls before this applied): " .. tostring(run_err))
             end

@@ -236,23 +236,40 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   nm-connection-editor, blueman-manager, portal file choosers, and "Open
   File" / "Save File" / "Save As" titles. Picture-in-picture floats pinned in
   the bottom-right corner.
-- **Per-device handedness (auto).** Global default is right-handed so
-  **trackpads keep the left button primary**. `apply-input.sh` (autostarted)
-  enumerates the pointers at login, classifies each as touchpad or mouse by
-  name, and flips **mice** to `left_handed` (right button primary) with a faster
-  `scroll_factor` — no device names to hardcode, and the same config works on
-  every machine. It configures each mouse with `hyprctl eval`, since the Lua
-  config has no `hyprctl keyword`, calling `hyprland.lua`'s
-  `conf_input.mouse()`. A config reload resets devices, so `hyprland.lua`
-  runs it again after each one.
-  Re-run it after hotplugging a mouse; override the mouse wheel speed
-  (default 3) with `HYPR_MOUSE_SCROLL_FACTOR` in `~/.env.local`: `hyprland.lua`
-  runs it through `runenv`, which sources that file, and in the tide
-  session `tide.service`'s run at login sees it once `~/.env.local` is
-  linked into `environment.d` as `~/.env` describes. A mouse that
-  `hyprland.local.lua` gives a `left_handed` or `scroll_factor` in
-  `hl.device()` keeps it: `conf_input.mouse()` sets only the fields the
-  local file didn't.
+- **Per-device handedness and speed (auto).** Global default is
+  right-handed so **trackpads keep the left button primary**.
+  `apply-input.sh` (autostarted) enumerates the pointers at login,
+  classifies each as touchpad or mouse by name, and configures each one —
+  no device names to hardcode, and the same config works on every machine:
+  - **Mice** flip to `left_handed` (right button primary) with a faster
+    `scroll_factor`, through `hyprland.lua`'s `conf_input.mouse()`.
+  - **Touchpads** go through `conf_input.touchpad()`, which keeps the
+    global defaults unless tide's Touchpad settings (below) give a speed or
+    handedness.
+
+  It calls them with `hyprctl eval`, since the Lua config has no `hyprctl
+  keyword`. A config reload resets devices, so `hyprland.lua` runs it
+  again after each one. Re-run it after hotplugging a mouse or touchpad;
+  override the mouse wheel speed (default 3) with
+  `HYPR_MOUSE_SCROLL_FACTOR` in `~/.env.local`: `hyprland.lua` runs it
+  through `runenv`, which sources that file, and in the tide session
+  `tide.service`'s run at login sees it once `~/.env.local` is linked into
+  `environment.d` as `~/.env` describes. A device that `hyprland.local.lua`
+  gives fields in `hl.device()` keeps them: `conf_input` sets only the
+  fields the local file didn't.
+- **tide's Mouse, Touchpad and Keyboard settings.** tide's settings panel
+  writes them to `~/.config/hypr/tide-input.lua`, a table in Hyprland's
+  option names, which `hyprland.lua` reads as data, reporting a broken file
+  or an unknown setting. The keyboard's options and the touchpad's
+  `input.touchpad` ones apply over the config's own; speed and handedness
+  go to each device through `conf_input`, so a mouse and a trackpad can
+  differ. tide applies a change with `conf_input.reload()`, which re-reads
+  the file and reruns `apply-input.sh`. A setting tide stops making goes
+  back to the config's. `hyprland.local.lua` still wins where it sets the
+  same thing: an option it sets through `hl.config()`, or a device's field
+  through `hl.device()`. Its global speed or handedness is each device's
+  default, which tide's settings for that kind of device apply over, as a
+  mouse's own `left_handed` does.
 - **Laptop lid.** logind owns suspend with its defaults
   (`HandleLidSwitch=suspend`, `HandleLidSwitchDocked=ignore`), and hypridle
   locks first. `hyprland.lua` handles only the docked case: closing the lid
