@@ -328,32 +328,6 @@ the line. zsh only. Remaining:
   to be built by hand. Same mental model everywhere (ghost + right-arrow
   accepts + Enter runs the line), different machinery, uneven coverage.
 
-## Let `$SHELL` switch a login shell into Elvish
-
-`shrc`'s `want_reexec` re-execs into `$SHELL` when the login shell sshd started
-differs from the one wanted, which is how `echo 'export SHELL=/bin/bash' >>
-~/.env` changes shells without `chsh`. It only recognises bash and zsh:
-
-```sh
-case "${SHELL:-}" in
-    */bash|bash) test "$shell" = bash && return 1;;
-    */zsh|zsh)   test "$shell" = zsh && return 1;;
-    *) return 1;;
-esac
-```
-
-So `SHELL=/usr/local/bin/elvish` falls through the `*)` arm and nothing
-happens; reaching Elvish as a login shell needs `chsh` today. Adding an
-`*/elvish|elvish)` arm would make `~/.env` enough, which is the point of the
-mechanism.
-
-Two things to settle first. `$shell` is set from `$ZSH_VERSION` / `$BASH_VERSION`
-and only ever holds bash/zsh/ksh/sh, so the "already in it" guard needs a
-different test for a shell that never sources `shrc` at all. And the re-exec
-runs `exec "$SHELL" -l`: Elvish accepts `-l` but treats it as a no-op, so a
-login Elvish would rely on `rc.elv` alone — which is fine today only because
-there is nothing an Elvish login shell reads that an interactive one doesn't.
-
 ## Review and merge gates
 
 - [ ] **Add `zizmor` to the ruleset's required set** once it has reported
