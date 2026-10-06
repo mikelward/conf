@@ -92,17 +92,6 @@ Delete an entry once you have agreed with it or reversed it.
       follow with their own inline-message mechanisms. *Reversible:* it's an
       additive per-shell feature, and it's opt-in and off by default meanwhile.
 
-## Let hyprland.local.lua override a mouse's handedness and wheel speed
-
-`apply-input.sh` runs after `hyprland.local.lua`, at login and after every
-config reload, so it overwrites any `hl.device()` in the local file that sets
-a mouse's `left_handed` or `scroll_factor`. For now the template says so, and
-`HYPR_MOUSE_SCROLL_FACTOR` sets the wheel speed per machine. A real fix would
-have `apply-input.sh` skip, or reapply after itself, the devices the local
-file names. For example, `hyprland.lua` could record the local file's
-`hl.device()` calls and `apply-input.sh` could replay them through
-`hyprctl eval`, if that shares the config's Lua state.
-
 ## Close theme.sh's gaps when following tide's shell
 
 When the theme daemon's first `theme.sh follow` and tide's first

@@ -28,13 +28,13 @@
 -- hl.bind("SUPER + E", hl.dsp.exec_cmd("nautilus"))
 
 -- Input tweaks on top of apply-input.sh's automatic classification
--- (names: hyprctl devices). apply-input.sh runs after this file, at login and
--- after every reload, and sets each mouse's left_handed and scroll_factor, so
--- those two can't be overridden here; set this machine's wheel speed with
--- HYPR_MOUSE_SCROLL_FACTOR in ~/.env.local instead (and, in the tide
--- session, link that into environment.d as ~/.env describes, for
--- tide.service's run at login). Other settings stick:
+-- (names: hyprctl devices). apply-input.sh makes each mouse left_handed with
+-- a faster scroll_factor, but leaves alone either one set for that mouse
+-- here. HYPR_MOUSE_SCROLL_FACTOR in ~/.env.local sets every mouse's wheel
+-- speed at once (in the tide session, link that into environment.d as
+-- ~/.env describes, for tide.service's run at login).
 -- hl.device({ name = "logitech-mx-master-3", sensitivity = 0.5 })
+-- hl.device({ name = "kensington-slimblade-trackball", left_handed = false })
 -- hl.config({ input = { touchpad = { scroll_factor = 1.5 } } })
 
 -- A stronger focus cue, if 0.07 is too subtle on dark apps:

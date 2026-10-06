@@ -797,6 +797,26 @@ hl.layer_rule({
 -- .shrc.local, is loaded last so its settings win. It is machine-local and
 -- never committed; hyprland.local.lua.template shows what belongs there.
 -- Binds add rather than replace, so rebinding a key needs hl.unbind first.
+--
+-- apply-input.sh runs after this, at login and after every reload, and sets
+-- each mouse through conf_input.mouse(). The fields the local file gave a
+-- device in hl.device() are recorded, and the script leaves those alone,
+-- so a machine can make one mouse right-handed or slow its wheel here.
+-- hl.device() merges field by field, so the rest still applies.
+local local_devices = {}
+_G.conf_input = {
+    mouse = function(name, scroll_factor)
+        local set = local_devices[(name:gsub(" ", "-"))] or {}
+        local t = { name = name }
+        if set.left_handed == nil then
+            t.left_handed = true
+        end
+        if set.scroll_factor == nil then
+            t.scroll_factor = scroll_factor
+        end
+        hl.device(t)
+    end,
+}
 do
     local path = home .. "/.config/hypr/hyprland.local.lua"
     local text = read_optional(path, "hyprland.local.lua", 1024 * 1024)
@@ -808,7 +828,21 @@ do
         if not chunk then
             notify_error("hyprland.local.lua (none of it applied): " .. tostring(err))
         else
+            -- Hyprland names a device with its spaces as dashes.
+            local device = hl.device
+            hl.device = function(t)
+                if type(t) == "table" and type(t.name) == "string" then
+                    local key = t.name:gsub(" ", "-")
+                    local set = local_devices[key] or {}
+                    for k, v in pairs(t) do
+                        set[k] = v
+                    end
+                    local_devices[key] = set
+                end
+                return device(t)
+            end
             local ok, run_err = pcall(chunk)
+            hl.device = device
             if not ok then
                 notify_error("hyprland.local.lua stopped (the calls before this applied): " .. tostring(run_err))
             end

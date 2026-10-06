@@ -88,8 +88,8 @@ _old_ipc=$(grep -rnE --exclude='*.md' 'hyprctl (keyword|dispatch [a-z])' \
 assert_equal "" "$_old_ipc"
 
 ################################################################################
-# apply-input.sh, against a fake hyprctl: mice get the right button primary
-# through `hyprctl eval`; touchpads are left alone.
+# apply-input.sh, against a fake hyprctl: each mouse goes through
+# hyprland.lua's conf_input.mouse() by `hyprctl eval`; touchpads are left alone.
 ################################################################################
 _fake=$(mktemp -d)
 cat > "$_fake/hyprctl" <<'FAKE'
@@ -110,20 +110,20 @@ _apply_run() {
     PATH="$_fake:$PATH" FAKE_LOG="$_fake/log" sh "$_apply" 2>"$_fake/err"
 }
 
-start_test "apply-input configures each mouse (left-handed, wheel at 3), not the touchpad"
+start_test "apply-input configures each mouse (wheel at 3) through conf_input, not the touchpad"
 _apply_run
 assert_equal 0 "$?"
 _apply_log=$(cat "$_fake/log")
-assert_contains 'hl.device({ name = "logitech-usb-receiver", left_handed = true, scroll_factor = 3 })' "$_apply_log"
+assert_contains 'conf_input.mouse("logitech-usb-receiver", 3)' "$_apply_log"
 assert_not_contains "synaptics" "$_apply_log"
 assert_not_contains "at-keyboard" "$_apply_log"
 
 start_test "apply-input escapes quotes in a device name for Lua"
-assert_contains 'name = "odd \"quoted\" mouse"' "$_apply_log"
+assert_contains 'conf_input.mouse("odd \"quoted\" mouse", 3)' "$_apply_log"
 
 start_test "apply-input honors HYPR_MOUSE_SCROLL_FACTOR"
 HYPR_MOUSE_SCROLL_FACTOR=2.25 _apply_run
-assert_contains "scroll_factor = 2.25 })" "$(cat "$_fake/log")"
+assert_contains '"logitech-usb-receiver", 2.25)' "$(cat "$_fake/log")"
 
 start_test "apply-input refuses a scroll factor that isn't a number"
 HYPR_MOUSE_SCROLL_FACTOR='1) os.exit(' _apply_run
