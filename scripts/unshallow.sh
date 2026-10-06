@@ -19,17 +19,43 @@ set -eu
 # probe so neither can mask an inspection failure. The session-start hook runs
 # this best-effort (`... || true`), so a non-zero exit there is swallowed and
 # never blocks startup.
+#
+# The flag is stdout alone: a diagnostic git prints on success (GIT_TRACE, a
+# config warning) must not turn "true" into something the caller reads as
+# "not shallow". git's stderr goes straight through to ours, so its own
+# account of a failure still reaches the reader. Anything but true/false is
+# an inspection failure too.
 report_shallow() {
-  _flag=$(git rev-parse --is-shallow-repository 2>&1) || {
-    echo "unshallow: cannot inspect the repository: $_flag" >&2
+  if ! _flag=$(git rev-parse --is-shallow-repository); then
+    echo "unshallow: cannot inspect the repository (git's error is above)" >&2
     return 1
-  }
-  printf '%s\n' "$_flag"
+  fi
+  case "$_flag" in
+    true | false) printf '%s\n' "$_flag" ;;
+    *)
+      echo "unshallow: cannot inspect the repository: unexpected shallow flag '$_flag'" >&2
+      return 1
+      ;;
+  esac
 }
 
 is_shallow=$(report_shallow) || exit 1
 if test "$is_shallow" != "true"; then
   echo "unshallow: already complete"
+  exit 0
+fi
+
+# Once per failure window, not once per hook run. SessionStart also fires on
+# resume, clear and compaction, so an origin this session cannot reach would
+# otherwise cost the full deadline again on every one of them. A failed
+# attempt leaves a stamp; for the next 30 minutes the script says so and
+# returns at once. `find -mmin` is what reads the age, and where `find` is
+# missing the fetch is simply tried again, which is the behavior without
+# the stamp, not a hang.
+stamp="$(git rev-parse --git-dir)/unshallow-failed"
+if test -f "$stamp" && command -v find >/dev/null 2>&1 \
+  && test -n "$(find "$stamp" -mmin -30 2>/dev/null)"; then
+  echo "unshallow: skipped — a fetch failed within the last 30 minutes; remove $stamp to retry now" >&2
   exit 0
 fi
 
@@ -108,6 +134,12 @@ case "$deadline" in
   '' | *[!0-9]*) deadline=120 ;;
 esac
 test "$deadline" -ge 1 2>/dev/null || deadline=120
+# `main` by explicit refspec. A bare fetch follows the clone's configured
+# refspec, and a single-branch clone of a feature branch configures only that
+# branch — so `origin/main`, which a count of main's history reads, would
+# stay missing or stale. Unshallowing through `main` completes the whole
+# repository, HEAD's history included.
+refspec=+refs/heads/main:refs/remotes/origin/main
 status=0
 if command -v perl >/dev/null 2>&1; then
   # Perl first even where coreutils exists, because it is the only branch
@@ -127,17 +159,21 @@ if command -v perl >/dev/null 2>&1; then
     $SIG{ALRM} = sub { kill "TERM", -$pid; sleep 5; kill "KILL", -$pid; exit 124 };
     alarm $limit;
     waitpid($pid, 0);
-    exit($? >> 8);
-  ' "$deadline" git fetch --unshallow --quiet >"$tmp" 2>&1 || status=$?
+    # A signaled child has its signal in the low bits and zero above them,
+    # so `$? >> 8` alone would turn a killed fetch into a success. 128+N is
+    # the shell convention, and a non-zero status is what reaches the
+    # fetch-failure report below.
+    exit($? & 127 ? 128 + ($? & 127) : $? >> 8);
+  ' "$deadline" git fetch --unshallow --quiet origin "$refspec" >"$tmp" 2>&1 || status=$?
 elif command -v timeout >/dev/null 2>&1; then
   # Fallback for a host with coreutils but no perl. `-k 5` escalates to KILL
   # for a direct child that ignores TERM (short form: BusyBox rejects the
   # long one). A transport grandchild that outlives git is an accepted
   # residual here — it holds only the log file, never the session — on a
   # host shape that is already unusual.
-  timeout -k 5 "$deadline" git fetch --unshallow --quiet >"$tmp" 2>&1 || status=$?
+  timeout -k 5 "$deadline" git fetch --unshallow --quiet origin "$refspec" >"$tmp" 2>&1 || status=$?
 elif command -v gtimeout >/dev/null 2>&1; then
-  gtimeout -k 5 "$deadline" git fetch --unshallow --quiet >"$tmp" 2>&1 || status=$?
+  gtimeout -k 5 "$deadline" git fetch --unshallow --quiet origin "$refspec" >"$tmp" 2>&1 || status=$?
 else
   echo "unshallow: nothing here can bound the fetch, so skipping it rather than risk hanging the session" >&2
   status=127
@@ -161,13 +197,29 @@ fi
 is_shallow=$(report_shallow) || exit 1
 if test "$is_shallow" = "true"; then
   echo "unshallow: WARNING still shallow — commit counts and blame will be wrong" >&2
+  # A write, not just a create, so a repeat failure moves the mtime on.
+  echo "$$" > "$stamp" 2>/dev/null || echo "unshallow: could not record the failure, so the next hook run retries" >&2
+  exit 0
+fi
+# Deepened, so nothing is left to retry. `rm` may be missing on a narrow PATH;
+# a stale stamp only delays a retry, and a complete clone never needs one.
+rm -f "$stamp" 2>/dev/null || true
+
+# Complete is not the same as succeeded. The fetch can bring in the whole
+# history and still fail to write origin/main -- a stale origin/main/<x> ref
+# blocks it, and git says so above -- and origin/main is what a count of
+# main's history reads. Report it rather than "deepened"; no later run can
+# repair a ref conflict on its own, so the warning names what to look at.
+if test "$status" -ne 0; then
+  echo "unshallow: WARNING history is complete, but the fetch failed, so origin/main may be missing or stale — see git's error above" >&2
   exit 0
 fi
 
 # The deepening succeeded; the count is cosmetic, so a rev-list that somehow
-# fails here is reported rather than printed as "deepened to  commits".
-if ! count=$(git rev-list --count HEAD 2>&1); then
-  echo "unshallow: deepened, but could not count commits: $count" >&2
+# fails here is reported rather than printed as "deepened to  commits". Stdout
+# alone, for the same reason as the shallow flag; git's stderr passes through.
+if ! count=$(git rev-list --count HEAD); then
+  echo "unshallow: deepened, but could not count commits (git's error is above)" >&2
   exit 0
 fi
 echo "unshallow: deepened to $count commits"
