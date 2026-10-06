@@ -14,6 +14,7 @@ if ! command -v fish >/dev/null 2>&1; then
 fi
 
 _config="$_srcdir/config/fish/config.fish"
+_config_q=$(shell_quote "$_config")
 
 # Run a fish snippet with config.fish preloaded. Uses a fake HOME so
 # config.fish's interactive setup (history file, ssh alias parsing,
@@ -1003,7 +1004,7 @@ assert_equal "[]" "$result"
 # TEST: CDPATH is set for all shells (not just interactive)
 
 start_test "fish CDPATH contains HOME"
-result="$(HOME=$_testdir/fakehome run_with_timeout 15 fish --no-config -c "source $_config; echo \$CDPATH" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome run_with_timeout 15 fish --no-config -c "source $_config_q; echo \$CDPATH" 2>/dev/null)"
 assert_contains "$_testdir/fakehome" "$result"
 start_test "fish CDPATH does not contain conf"
 assert_not_contains "$_testdir/fakehome/conf" "$result"
@@ -1015,7 +1016,7 @@ start_test "fish EDITRC exported when ~/.editrc exists"
 result="$(_fish_run '
     touch $HOME/.editrc
     # Re-source to pick up the newly-created file.
-    source '"$_config"'
+    source '"$_config_q"'
     echo $EDITRC
 ')"
 assert_contains ".editrc" "$result"
@@ -1025,15 +1026,15 @@ assert_contains ".editrc" "$result"
 # are set even in a non-interactive fish
 
 start_test "fish BLOCKSIZE/GREP_COLOR/CLICOLOR set in non-interactive shell"
-result="$(HOME=$_testdir/fakehome run_with_timeout 15 fish --no-config -c "source $_config; echo \$BLOCKSIZE \$GREP_COLOR \$CLICOLOR" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome run_with_timeout 15 fish --no-config -c "source $_config_q; echo \$BLOCKSIZE \$GREP_COLOR \$CLICOLOR" 2>/dev/null)"
 assert_equal "1024 4 true" "$result"
 
 start_test "fish LSCOLORS for xterm"
-result="$(HOME=$_testdir/fakehome TERM=xterm run_with_timeout 15 fish --no-config -c "source $_config; echo \$LSCOLORS" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome TERM=xterm run_with_timeout 15 fish --no-config -c "source $_config_q; echo \$LSCOLORS" 2>/dev/null)"
 assert_equal "exfxxxxxcxxxxx" "$result"
 
 start_test "fish LSCOLORS for linux terminal"
-result="$(HOME=$_testdir/fakehome TERM=linux run_with_timeout 15 fish --no-config -c "source $_config; echo \$LSCOLORS" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome TERM=linux run_with_timeout 15 fish --no-config -c "source $_config_q; echo \$LSCOLORS" 2>/dev/null)"
 assert_equal "ExFxxxxxCxxxxx" "$result"
 
 ###############
@@ -1048,17 +1049,17 @@ SCRIPT
 chmod +x "$_fnm_bin/fnm"
 
 start_test "fish loads fnm env when fnm present"
-result="$(HOME=$_testdir/fakehome FNM_PATH=$_fnm_home PATH="$_fnm_bin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config; echo \$FNM_MARKER" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome FNM_PATH=$_fnm_home PATH="$_fnm_bin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config_q; echo \$FNM_MARKER" 2>/dev/null)"
 assert_equal "loaded" "$result"
 
 start_test "fish adds FNM_PATH dir to PATH when fnm present"
-result="$(HOME=$_testdir/fakehome FNM_PATH=$_fnm_home PATH="$_fnm_bin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config; contains $_fnm_home \$PATH; and echo yes" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome FNM_PATH=$_fnm_home PATH="$_fnm_bin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config_q; contains $_fnm_home \$PATH; and echo yes" 2>/dev/null)"
 assert_equal "yes" "$result"
 
 # A brew/cargo/release install has fnm on PATH but no data dir yet; the
 # eval must still run (fnm env creates the dir) rather than being skipped.
 start_test "fish runs fnm env when fnm present even if FNM_PATH dir missing"
-result="$(HOME=$_testdir/fakehome FNM_PATH=/nonexistent-fnm-xyz PATH="$_fnm_bin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config; echo done:\$FNM_MARKER" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome FNM_PATH=/nonexistent-fnm-xyz PATH="$_fnm_bin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config_q; echo done:\$FNM_MARKER" 2>/dev/null)"
 assert_equal "done:loaded" "$result"
 
 # The marker is quoted: fish drops an unquoted word containing an unset
@@ -1067,7 +1068,7 @@ assert_equal "done:loaded" "$result"
 # have_command, and fish is invoked by absolute path since the trimmed PATH
 # may not contain it (see the brew off-PATH note).
 start_test "fish skips fnm env when fnm not installed"
-result="$(HOME=$_testdir/fakehome FNM_PATH=/nonexistent-fnm-xyz PATH="/usr/bin:/bin" run_with_timeout 15 "$(command -v fish)" --no-config -c "source $_config; echo \"done:\$FNM_MARKER\"" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome FNM_PATH=/nonexistent-fnm-xyz PATH="/usr/bin:/bin" run_with_timeout 15 "$(command -v fish)" --no-config -c "source $_config_q; echo \"done:\$FNM_MARKER\"" 2>/dev/null)"
 assert_equal "done:" "$result"
 
 # With FNM_PATH unset, the default install dir honours $XDG_DATA_HOME,
@@ -1076,7 +1077,7 @@ start_test "fish honours XDG_DATA_HOME for the default fnm dir"
 _xdg=$(mktemp -d)
 mkdir -p "$_xdg/fnm"
 cp "$_fnm_bin/fnm" "$_xdg/fnm/fnm"
-result="$(HOME=$_testdir/fakehome FNM_PATH= XDG_DATA_HOME=$_xdg run_with_timeout 15 fish --no-config -c "source $_config; echo \$FNM_MARKER" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome FNM_PATH= XDG_DATA_HOME=$_xdg run_with_timeout 15 fish --no-config -c "source $_config_q; echo \$FNM_MARKER" 2>/dev/null)"
 assert_equal "loaded" "$result"
 rm -rf "$_xdg"
 
@@ -1090,7 +1091,7 @@ mkdir -p "$_legacy_home/.fnm" "$_legacy_xdg/fnm"
 printf '#!/bin/sh\necho %s\n' "'set -gx FNM_MARKER legacy'" > "$_legacy_home/.fnm/fnm"
 printf '#!/bin/sh\necho %s\n' "'set -gx FNM_MARKER xdg'" > "$_legacy_xdg/fnm/fnm"
 chmod +x "$_legacy_home/.fnm/fnm" "$_legacy_xdg/fnm/fnm"
-result="$(HOME=$_legacy_home FNM_PATH= XDG_DATA_HOME=$_legacy_xdg run_with_timeout 15 fish --no-config -c "source $_config; echo \$FNM_MARKER" 2>/dev/null)"
+result="$(HOME=$_legacy_home FNM_PATH= XDG_DATA_HOME=$_legacy_xdg run_with_timeout 15 fish --no-config -c "source $_config_q; echo \$FNM_MARKER" 2>/dev/null)"
 assert_equal "legacy" "$result"
 rm -rf "$_legacy_home" "$_legacy_xdg"
 
@@ -1103,7 +1104,7 @@ mkdir -p "$_mac_home/Library/Application Support/fnm"
 cp "$_fnm_bin/fnm" "$_mac_home/Library/Application Support/fnm/fnm"
 printf '#!/bin/sh\necho Darwin\n' > "$_mac_unamebin/uname"
 chmod +x "$_mac_unamebin/uname"
-result="$(HOME=$_mac_home FNM_PATH= XDG_DATA_HOME= PATH="$_mac_unamebin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config; echo \$FNM_MARKER" 2>/dev/null)"
+result="$(HOME=$_mac_home FNM_PATH= XDG_DATA_HOME= PATH="$_mac_unamebin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config_q; echo \$FNM_MARKER" 2>/dev/null)"
 assert_equal "loaded" "$result"
 rm -rf "$_mac_home" "$_mac_unamebin"
 
@@ -1121,7 +1122,7 @@ printf '#!/bin/sh\necho %s\n' "'set -gx BREW_MARKER onpath'" > "$_brew_bin/brew"
 chmod +x "$_brew_bin/brew"
 
 start_test "fish loads brew shellenv when brew on PATH"
-result="$(HOME=$_testdir/fakehome PATH="$_brew_bin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config; echo \$BREW_MARKER" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome PATH="$_brew_bin:$PATH" run_with_timeout 15 fish --no-config -c "source $_config_q; echo \$BREW_MARKER" 2>/dev/null)"
 assert_equal "onpath" "$result"
 
 # brew off PATH (the Linuxbrew case: it installs under a prefix that isn't on
@@ -1136,7 +1137,7 @@ chmod +x "$_brew_off/brew"
 # must not also hide fish itself (it does whenever fish isn't in /usr/bin,
 # e.g. a Homebrew or ~/.local install).
 start_test "fish discovers brew off-PATH via a known location"
-result="$(HOME=$_testdir/fakehome BREW="$_brew_off/brew" PATH="/usr/bin:/bin" run_with_timeout 15 "$(command -v fish)" --no-config -c "source $_config; echo \$BREW_MARKER" 2>/dev/null)"
+result="$(HOME=$_testdir/fakehome BREW="$_brew_off/brew" PATH="/usr/bin:/bin" run_with_timeout 15 "$(command -v fish)" --no-config -c "source $_config_q; echo \$BREW_MARKER" 2>/dev/null)"
 assert_equal "discovered" "$result"
 
 rm -rf "$_brew_bin" "$_brew_off"
@@ -1265,7 +1266,7 @@ assert_equal "jjd -f repo" "$result"
 
 start_test "fish FAILSAFE=1 prints failsafe mode and skips heavy setup"
 _failsafe_out="$(HOME=$_testdir/fakehome FAILSAFE=1 run_with_timeout 15 \
-    fish --no-config -c "source $_config; echo AFTER; functions --query switchshpool; and echo switchshpool-defined" 2>&1)"
+    fish --no-config -c "source $_config_q; echo AFTER; functions --query switchshpool; and echo switchshpool-defined" 2>&1)"
 assert_contains "failsafe mode" "$_failsafe_out"
 assert_contains "AFTER" "$_failsafe_out"
 # `asp` / wrappers like `jd` / switchshpool are defined past the early-return point.
@@ -1273,7 +1274,7 @@ assert_not_contains "switchshpool-defined" "$_failsafe_out"
 
 start_test "fish FAILSAFE unset loads config.fish normally"
 _failsafe_out="$(HOME=$_testdir/fakehome run_with_timeout 15 \
-    fish --no-config -c "source $_config; echo AFTER; functions --query switchshpool; and echo switchshpool-defined" 2>&1)"
+    fish --no-config -c "source $_config_q; echo AFTER; functions --query switchshpool; and echo switchshpool-defined" 2>&1)"
 assert_not_contains "failsafe mode" "$_failsafe_out"
 assert_contains "AFTER" "$_failsafe_out"
 # switchshpool lives past the failsafe early-return, so a normal load defines it.
@@ -1284,19 +1285,19 @@ assert_contains "switchshpool-defined" "$_failsafe_out"
 # since someone writing FAILSAFE=yes meant *on*.
 start_test "fish FAILSAFE=true triggers failsafe mode"
 _failsafe_out="$(HOME=$_testdir/fakehome FAILSAFE=true run_with_timeout 15 \
-    fish --no-config -c "source $_config; echo AFTER" 2>&1)"
+    fish --no-config -c "source $_config_q; echo AFTER" 2>&1)"
 assert_contains "failsafe mode" "$_failsafe_out"
 assert_contains "AFTER" "$_failsafe_out"
 
 start_test "fish LC_FAILSAFE=true triggers failsafe mode"
 _failsafe_out="$(HOME=$_testdir/fakehome LC_FAILSAFE=true run_with_timeout 15 \
-    fish --no-config -c "source $_config; echo AFTER" 2>&1)"
+    fish --no-config -c "source $_config_q; echo AFTER" 2>&1)"
 assert_contains "failsafe mode" "$_failsafe_out"
 
 for _failsafe_off in 0 false; do
     start_test "fish FAILSAFE=$_failsafe_off loads config.fish and says nothing"
     _failsafe_out="$(HOME=$_testdir/fakehome FAILSAFE="$_failsafe_off" run_with_timeout 15 \
-        fish --no-config -c "source $_config; echo AFTER" 2>&1)"
+        fish --no-config -c "source $_config_q; echo AFTER" 2>&1)"
     assert_not_contains "failsafe mode" "$_failsafe_out"
     assert_not_contains "is not 1/0/true/false" "$_failsafe_out"
     assert_contains "AFTER" "$_failsafe_out"
@@ -1304,7 +1305,7 @@ done
 
 start_test "fish FAILSAFE=yes is reported and read as off"
 _failsafe_out="$(HOME=$_testdir/fakehome FAILSAFE=yes run_with_timeout 15 \
-    fish --no-config -c "source $_config; echo AFTER" 2>&1)"
+    fish --no-config -c "source $_config_q; echo AFTER" 2>&1)"
 assert_contains "FAILSAFE=yes is not 1/0/true/false" "$_failsafe_out"
 assert_not_contains "failsafe mode" "$_failsafe_out"
 assert_contains "AFTER" "$_failsafe_out"
@@ -1313,7 +1314,7 @@ assert_contains "AFTER" "$_failsafe_out"
 # session's function namespace.
 start_test "fish failsafe helper does not outlive the check"
 _failsafe_out="$(HOME=$_testdir/fakehome run_with_timeout 15 \
-    fish --no-config -c "source $_config; functions -q __failsafe_flag; and echo LEAKED; or echo GONE" 2>&1)"
+    fish --no-config -c "source $_config_q; functions -q __failsafe_flag; and echo LEAKED; or echo GONE" 2>&1)"
 assert_contains "GONE" "$_failsafe_out"
 assert_not_contains "LEAKED" "$_failsafe_out"
 
@@ -1321,7 +1322,7 @@ assert_not_contains "LEAKED" "$_failsafe_out"
 # AcceptEnv LC_*), so `LC_FAILSAFE=1 ssh host` reaches the remote.
 start_test "fish LC_FAILSAFE=1 also triggers failsafe mode"
 _failsafe_out="$(HOME=$_testdir/fakehome LC_FAILSAFE=1 run_with_timeout 15 \
-    fish --no-config -c "source $_config; echo AFTER" 2>&1)"
+    fish --no-config -c "source $_config_q; echo AFTER" 2>&1)"
 assert_contains "failsafe mode" "$_failsafe_out"
 assert_contains "AFTER" "$_failsafe_out"
 
@@ -1332,7 +1333,7 @@ mkdir -p "$_fish_failsafe_home"
 touch "$_fish_failsafe_home/.failsafe"
 start_test "fish ~/.failsafe file triggers failsafe mode"
 _failsafe_out="$(HOME=$_fish_failsafe_home run_with_timeout 15 \
-    fish --no-config -c "source $_config; echo AFTER" 2>&1)"
+    fish --no-config -c "source $_config_q; echo AFTER" 2>&1)"
 assert_contains "failsafe mode" "$_failsafe_out"
 assert_contains "AFTER" "$_failsafe_out"
 
@@ -2156,7 +2157,7 @@ assert_equal "132" "$result"
 # my_vi_key_bindings runs in every interactive fish. fish 4 dropped `bind -k`,
 # so a terminfo key name there errors on every start and leaves the key unbound.
 _fish_keys() {
-    fish --no-config -c "source $_srcdir/config/fish/functions/my_vi_key_bindings.fish
+    fish --no-config -c "source $_srcdir_q/config/fish/functions/my_vi_key_bindings.fish
 my_vi_key_bindings
 $1"
 }

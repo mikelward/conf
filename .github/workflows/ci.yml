@@ -63,9 +63,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: classify
     if: needs.classify.outputs.docs_only != 'true'
+    # A checkout path with a space, so a test that pastes the path into a
+    # child shell's command unquoted fails here rather than on a laptop.
+    defaults:
+      run:
+        working-directory: with space/conf
     steps:
       - uses: actions/checkout@v4
         with:
+          path: with space/conf
           submodules: recursive
           # Read-only test job; don't leave a write-capable token in
           # the local git config for subsequent steps.

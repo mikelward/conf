@@ -455,7 +455,7 @@ _fish_run_config_stdin() {
             # depending on TERM=dumb terminfo quirks.
             function tput; return 1; end
             $_pre
-            source $_srcdir/config/fish/config.fish
+            source $_srcdir_q/config/fish/config.fish
             $_post
             $_snippet
         "
@@ -474,6 +474,14 @@ mkdir "$_nohooks"
 # spawn subshells with a different cwd (e.g. the bash -i autocd test)
 # can still refer to $_srcdir/shrc reliably.
 _srcdir="$(cd "$(dirname "$0")" && pwd)"
+
+# Quote $1 for pasting into a child shell's command text, so a checkout
+# path with a space or a quote reaches it as one word. POSIX single
+# quotes, which fish reads the same way.
+shell_quote() {
+    printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
+_srcdir_q=$(shell_quote "$_srcdir")
 
 # Extract a shell function definition from a file and eval it.
 # Assumes the function starts at column 0 and ends with } at column 0.

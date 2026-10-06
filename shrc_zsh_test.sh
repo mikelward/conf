@@ -15,7 +15,7 @@
 # only runs under `zsh -i`.
 start_test "shrc enables AUTO_CD under interactive zsh"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     if [[ -o AUTO_CD ]]; then print -r "ON"; else print -r "OFF"; fi
 ' </dev/null 2>/dev/null | grep -E '^(ON|OFF)$' | tail -1)
 assert_equal "ON" "$result"
@@ -26,7 +26,7 @@ assert_equal "ON" "$result"
 # interactive zsh the block runs, so SHARE_HISTORY is enabled...
 start_test "shrc enables SHARE_HISTORY under interactive zsh"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     if [[ -o SHARE_HISTORY ]]; then print -r "ON"; else print -r "OFF"; fi
 ' </dev/null 2>/dev/null | grep -E '^(ON|OFF)$' | tail -1)
 assert_equal "ON" "$result"
@@ -37,7 +37,7 @@ assert_equal "ON" "$result"
 # run on every source -- so a launcher that re-execs or hands off skips it.
 start_test "shrc defers SHARE_HISTORY out of essential setup_shell_compat_common"
 result=$(zsh --no-rcs -c '
-    SHRC_LOAD_FUNCTIONS_ONLY=1 source '"$_srcdir"'/shrc >/dev/null 2>&1
+    SHRC_LOAD_FUNCTIONS_ONLY=1 source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     if [[ -o SHARE_HISTORY ]]; then print -r "ON"; else print -r "OFF"; fi
 ' </dev/null 2>/dev/null | grep -E '^(ON|OFF)$' | tail -1)
 assert_equal "OFF" "$result"
@@ -56,7 +56,7 @@ chmod +x "$_grantdir/tide-grant"
 : >"$_grantdir/log"
 run_interactive_with_timeout 10 env WANT_TMUX=0 WANT_SHPOOL=0 FAKE_LOG="$_grantdir/log" \
     zsh --no-rcs -i -c '
-    source '"'$_srcdir'"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     PATH='"'$_grantdir'"':$PATH
     XDG_CURRENT_DESKTOP=tide:Hyprland
     preexec "s notes.txt" "subl --wait notes.txt" "subl --wait notes.txt" >/dev/null 2>&1
@@ -75,7 +75,7 @@ assert_equal "-- subl --wait notes.txt" "$(sed 's/^--pid [0-9]* //' "$_grantdir/
 # zsh version, so this only rules out the lookup failure.
 start_test "command fg resolves to the fg builtin under zsh"
 result=$(zsh --no-rcs -c '
-    SHRC_LOAD_FUNCTIONS_ONLY=1 source '"$_srcdir"'/shrc >/dev/null 2>&1
+    SHRC_LOAD_FUNCTIONS_ONLY=1 source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     command fg
 ' </dev/null 2>&1 | tail -1)
 assert_not_contains "command not found" "$result"
@@ -84,7 +84,7 @@ assert_not_contains "command not found" "$result"
 # `command jobs` is the same class as `command fg` without needing a tty.
 start_test "command reaches zsh builtins at all"
 result=$(zsh --no-rcs -c '
-    SHRC_LOAD_FUNCTIONS_ONLY=1 source '"$_srcdir"'/shrc >/dev/null 2>&1
+    SHRC_LOAD_FUNCTIONS_ONLY=1 source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     command jobs >/dev/null 2>&1 && print -r "FOUND" || print -r "MISSING"
 ' </dev/null 2>/dev/null | grep -E '^(FOUND|MISSING)$' | tail -1)
 assert_equal "FOUND" "$result"
@@ -104,7 +104,7 @@ assert_equal "FOUND" "$result"
 # guarantee went away, rather than surfacing as a broken command weeks later.
 start_test "shrc establishes the zsh options its code depends on"
 result=$(zsh --no-rcs -c '
-    SHRC_LOAD_FUNCTIONS_ONLY=1 source '"$_srcdir"'/shrc >/dev/null 2>&1
+    SHRC_LOAD_FUNCTIONS_ONLY=1 source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     for _o in POSIX_BUILTINS SH_WORD_SPLIT KSH_ARRAYS NOMATCH; do
         if [[ -o $_o ]]; then print -r "$_o=on"; else print -r "$_o=off"; fi
     done
@@ -130,7 +130,7 @@ assert_contains "NOMATCH=off" "$result"
 # this test exists to notice.
 start_test "x, xa and f are defined as functions under interactive zsh"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     for _f in x xa f; do
         case "$(whence -w "$_f" 2>/dev/null)" in
             *": function") print -r "$_f=defined" ;;
@@ -163,7 +163,7 @@ _ghost_math_probe() {
 }
 PLUGIN
 result=$(HOME="$_ghosthome" run_interactive_with_timeout 10 zsh --no-rcs -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     POSTDISPLAY=hello
     _ghost_math_probe
 ' </dev/null 2>&1)
@@ -177,7 +177,7 @@ assert_not_contains "bad math expression" "$result"
 # the style is set regardless of whether the plugin itself is installed.
 start_test "the ghost's highlight style is set to a non-bold gray under zsh"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     print -r -- "ghost-style:${ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE:-unset}"
 ' </dev/null 2>/dev/null)
 assert_contains "ghost-style:fg=8" "$result"
@@ -188,7 +188,7 @@ assert_contains "ghost-style:fg=8" "$result"
 # reaching into the POSTDISPLAY (ghost) region beyond it.
 start_test "the bold-input hook bolds only the typed buffer, not the ghost"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     if (( ${+functions[_shrc_bold_input]} )); then
         region_highlight=(); BUFFER="git commit"; POSTDISPLAY=" --amend"
         _shrc_bold_input
@@ -207,7 +207,7 @@ assert_not_contains "hook:absent" "$result"
 start_test "re-sourcing shrc clears a stale whole-line default:bold"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     typeset -a zle_highlight; zle_highlight=(default:bold)
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     if (( ${+functions[_shrc_bold_input]} )); then
         case "${zle_highlight[*]}" in
             *default:bold*) print -r -- "stale:present" ;;
@@ -225,7 +225,7 @@ assert_not_contains "hook:absent" "$result"
 # stay off by default.
 start_test "the history preview is off (function undefined) without WANT_HISTORY_PREVIEW"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     if (( ${+functions[_shrc_history_preview_pick]} )); then
         print -r -- "pick:defined"
     else
@@ -241,7 +241,7 @@ assert_contains "pick:absent" "$result"
 start_test "the history preview warns when add-zle-hook-widget is unavailable"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     WANT_HISTORY_PREVIEW=1
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     fpath=()
     init_history_preview 2>&1
 ' </dev/null 2>&1)
@@ -260,7 +260,7 @@ mkdir -p "$_hppollhome"
 start_test "the history preview picks a mid-command substring match with WANT_HISTORY_PREVIEW"
 result=$(HOME="$_hppollhome" run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     WANT_HISTORY_PREVIEW=1
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     if (( ${+functions[_shrc_history_preview_pick]} )); then
         print -s -- "qwrtp_marker echo hello world"
         print -s -- "an unrelated newer line"
@@ -278,7 +278,7 @@ assert_not_contains "pick:absent" "$result"
 start_test "the history preview skips an entry equal to the buffer"
 result=$(HOME="$_hppollhome" run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     WANT_HISTORY_PREVIEW=1
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     print -s -- "qwrtp_exact_marker"
     _shrc_history_preview_pick "qwrtp_exact_marker"
     print -r -- "match:[$_shrc_preview_text]"
@@ -290,7 +290,7 @@ assert_contains "match:[]" "$result"
 start_test "the history preview is empty when nothing matches"
 result=$(HOME="$_hppollhome" run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     WANT_HISTORY_PREVIEW=1
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     print -s -- "qwrtp_marker echo hello world"
     _shrc_history_preview_pick "no_such_zzq_sentinel"
     print -r -- "match:[$_shrc_preview_text]"
@@ -304,7 +304,7 @@ assert_contains "match:[]" "$result"
 start_test "the history preview passes its message to zle -M without a -- terminator"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     WANT_HISTORY_PREVIEW=1
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     print -r -- "${functions[_shrc_history_preview]}"
 ' </dev/null 2>/dev/null)
 assert_contains 'zle -M "$_shrc_preview_text"' "$result"
@@ -317,7 +317,7 @@ assert_not_contains "zle -M --" "$result"
 start_test "the history preview collapses a multi-line command to one line"
 result=$(HOME="$_hppollhome" run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     WANT_HISTORY_PREVIEW=1
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     print -s -- $'\''grep foo\nbar baz\nqux'\''
     _shrc_history_preview_pick "bar baz"
     print -r -- "match:$_shrc_preview_text"
@@ -332,9 +332,9 @@ assert_contains 'match:grep foo\nbar baz\nqux' "$result"
 start_test "flipping WANT_HISTORY_PREVIEW off and re-sourcing removes the preview hook"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     WANT_HISTORY_PREVIEW=1
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     WANT_HISTORY_PREVIEW=0
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     typeset -a out; zstyle -g out zle-line-pre-redraw widgets 2>/dev/null
     case "${out[*]}" in
         *_shrc_history_preview*) print -r -- "hook:present" ;;
@@ -361,7 +361,7 @@ _hplocal="$_testdir/hp-local-home"
 mkdir -p "$_hplocal"
 print -r -- "WANT_HISTORY_PREVIEW=1" > "$_hplocal/.shrc.local"
 result=$(HOME="$_hplocal" run_interactive_with_timeout 10 env -u ZDOTDIR zsh --no-rcs -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     print -r -- "pickfn:${+functions[_shrc_history_preview_pick]}"
 ' </dev/null 2>/dev/null)
 assert_contains "pickfn:1" "$result"
@@ -373,7 +373,7 @@ assert_contains "pickfn:1" "$result"
 # accepts the zsh-autosuggestions ghost, whose accept fires from end-of-line.
 start_test "shrc binds the CSI Home/End forms under interactive zsh"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     print -r -- "end:$(bindkey "^[[F")"
     print -r -- "home:$(bindkey "^[[H")"
 ' </dev/null 2>/dev/null)
@@ -386,7 +386,7 @@ assert_not_contains "undefined-key" "$result"
 # zsh inserts the sequence's tail ("5D") instead of moving by word.
 start_test "shrc binds Ctrl+Left/Right and Alt+Left/Right to word motion"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     for _map in emacs viins vicmd; do
         print -r -- "$_map:$(bindkey -M $_map "^[[1;5D") $(bindkey -M $_map "^[[1;3D")"
         print -r -- "$_map:$(bindkey -M $_map "^[[1;5C") $(bindkey -M $_map "^[[1;3C")"
@@ -402,7 +402,7 @@ assert_not_contains "undefined-key" "$result"
 # the -match widget only parses shell words when the word-style reaches it.
 start_test "shrc binds Ctrl+Backspace to shell-word deletion"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     print -r -- "emacs-bs:$(bindkey -M emacs "^H")"
     print -r -- "viins-bs:$(bindkey -M viins "^H")"
     print -r -- "vicmd-bs:$(bindkey -M vicmd "^H")"
@@ -419,7 +419,7 @@ assert_contains "word-style shell" "$result"
 # since a forward kill takes the cursor's own character with it.
 start_test "shrc binds Alt+Backspace and Ctrl+Delete to shell-word deletion"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     for _map in emacs viins vicmd; do
         print -r -- "$_map-abs:$(bindkey -M $_map "^[^?")"
         print -r -- "$_map-cdel:$(bindkey -M $_map "^[[3;5~")"
@@ -449,7 +449,7 @@ for _d in ${(s.:.)PATH}; do
 done
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     export PATH='"$_noatuin_path"'
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     print -r -- "up:$(bindkey "^[[A")"
     print -r -- "down:$(bindkey "^[[B")"
 ' </dev/null 2>/dev/null)
@@ -464,7 +464,7 @@ start_test "the history preview warns to install atuin when atuin is absent"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     export PATH='"$_noatuin_path"'
     WANT_HISTORY_PREVIEW=1
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     init_history_preview 2>&1
 ' </dev/null 2>&1)
 assert_contains "install atuin" "$result"
@@ -476,7 +476,7 @@ start_test "the atuin nudge is suppressed when the preview cannot install"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     export PATH='"$_noatuin_path"'
     WANT_HISTORY_PREVIEW=1
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     fpath=()
     init_history_preview 2>&1
 ' </dev/null 2>&1)
@@ -520,7 +520,7 @@ ATUIN
 chmod +x "$_atuinbin/atuin"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     export PATH='"$_atuinbin"':$PATH
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     print -r -- "up:$(bindkey "^[[A")"
     print -r -- "down:$(bindkey "^[[B")"
     print -r -- "ctrlr-emacs:$(bindkey -M emacs "^r")"
@@ -555,7 +555,7 @@ assert_contains "ctrlr-viins:\"^R\" ctrl-r-atuin-search-viins" "$result"
 start_test "Up is the native prefix search in every keymap, with atuin present"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     export PATH='"$_atuinbin"':$PATH
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     for _map in emacs viins vicmd; do
         print -r -- "$_map-csi:$(bindkey -M $_map "^[[A")"
         print -r -- "$_map-ss3:$(bindkey -M $_map "^[OA")"
@@ -771,7 +771,7 @@ fi
 start_test "the Down wrapper's missing-variant fallback is atuin's fuzzy search"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     export PATH='"$_atuinbin"':$PATH
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     print -r -- "${functions[_shrc_atuin_down]}"
 ' </dev/null 2>/dev/null)
 assert_contains "_shrc_open_atuin atuin-search" "$result"
@@ -783,7 +783,7 @@ assert_not_contains "_shrc_open_atuin atuin-up-search" "$result"
 start_test "the atuin open helper clears the history preview before opening the pane"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     export PATH='"$_atuinbin"':$PATH
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     print -r -- "${functions[_shrc_open_atuin]}"
 ' </dev/null 2>/dev/null)
 assert_contains "_shrc_preview_active" "$result"
@@ -799,7 +799,7 @@ assert_contains 'return $_ret' "$result"
 start_test "the Ctrl-R wrapper falls back to native search when atuin isn't ready"
 result=$(run_interactive_with_timeout 10 zsh --no-rcs -i -c '
     export PATH='"$_atuinbin"':$PATH
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     print -r -- "${functions[_shrc_atuin_ctrlr]}"
 ' </dev/null 2>/dev/null)
 assert_contains "_shrc_atuin_ready" "$result"
