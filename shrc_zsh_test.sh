@@ -611,13 +611,49 @@ SAVEHIST=0
 print -r -- "STARTED" >>"$_ptylog"
 source "$_srcdir/shrc" >"$_ptydir/shrc.out" 2>&1
 _shrc_status=\$?
-_pty_atuin() { print -r -- "ATUIN" >>"$_ptylog" }
+# One stub per variant: inside a widget another one called, \$WIDGET still
+# names the caller, so it can't say which variant was opened.
+_pty_atuin() { print -r -- "ATUIN atuin-search" >>"$_ptylog" }
+_pty_atuin_viins() { print -r -- "ATUIN atuin-search-viins" >>"$_ptylog" }
+_pty_atuin_vicmd() { print -r -- "ATUIN atuin-search-vicmd" >>"$_ptylog" }
 zle -N atuin-search _pty_atuin
-zle -N atuin-search-viins _pty_atuin
-zle -N atuin-search-vicmd _pty_atuin
+zle -N atuin-search-viins _pty_atuin_viins
+zle -N atuin-search-vicmd _pty_atuin_vicmd
 _pty_probe() { print -r -- "PROBE fresh=\$((HISTNO==HISTCMD)) buffer=[\$BUFFER]" >>"$_ptylog" }
 zle -N _pty_probe
 for _m in emacs viins vicmd; do bindkey -M \$_m '^P' _pty_probe; done
+# The probe for the steps after the walk, which also need the keymap and the
+# line the cursor is on. The line, not the column: where a vertical move lands
+# on a shorter line depends on the column an earlier move left behind. A
+# newline in the buffer is logged as | to keep one log line per step.
+_pty_where() {
+    local _nl=\${LBUFFER//[^\$'\n']/}
+    print -r -- "WHERE keymap=\$KEYMAP line=\${#_nl} buffer=[\${BUFFER//\$'\n'/|}]" >>"$_ptylog"
+}
+# Set up a step's starting state directly, so no step depends on how some
+# other binding edits the line. None of these log; the probe after them does.
+_pty_clear() { BUFFER=; CURSOR=0 }
+_pty_multi_top() { BUFFER=\$'top\nbottom'; CURSOR=0 }
+_pty_multi_end() { BUFFER=\$'top\nbottom'; CURSOR=\${#BUFFER} }
+_pty_emacs() { zle -K emacs }
+_pty_viins() { zle -K viins }
+# Not ready, and the native widget logs when it runs: from a fresh prompt its
+# forward search has nowhere to go, so the line alone can't tell the fallback
+# from a wrapper that did nothing.
+_pty_native() { print -r -- "NATIVE" >>"$_ptylog"; down_line_or_local_history }
+_pty_unready() { _shrc_atuin_ready=; zle -N down-line-or-local-history _pty_native }
+for _w in _pty_where _pty_clear _pty_multi_top _pty_multi_end _pty_emacs _pty_viins _pty_unready; do
+    zle -N \$_w
+done
+for _m in emacs viins vicmd; do
+    bindkey -M \$_m '\e[90~' _pty_where
+    bindkey -M \$_m '\e[91~' _pty_clear
+    bindkey -M \$_m '\e[92~' _pty_multi_top
+    bindkey -M \$_m '\e[93~' _pty_multi_end
+    bindkey -M \$_m '\e[94~' _pty_emacs
+    bindkey -M \$_m '\e[95~' _pty_viins
+    bindkey -M \$_m '\e[96~' _pty_unready
+done
 print -s 'echo alpha one'
 print -s 'echo beta'
 print -s 'echo alpha two'
@@ -738,6 +774,32 @@ PTYRC
         _pty_step $'\e[B'      6 'Down back to the newer match'
         _pty_step $'\e[B'      7 'Down past the newest, restoring the line'
         _pty_step $'\e[B'      9 'Down from the restored prompt opening the pane'
+        # The rest probe with _pty_where. Each line count is the step's probe
+        # plus any pane it opened.
+        _pty_where_step() { zpty -w -n _zlepty "$1"; zpty -w -n _zlepty $'\e[90~'; _pty_wait "$2" 15 "$3" }
+        # Multiline guards: a newline on the cursor's side moves the cursor a
+        # line rather than searching. Down from the top line of a fresh
+        # two-line buffer moves to the bottom one; only then does it open the
+        # pane. Up from the end moves to the top line, where a prefix search
+        # for the whole buffer would have left the cursor where it was. In
+        # emacs, set rather than inherited: zsh picks the starting keymap from
+        # $EDITOR, which differs between hosts.
+        _pty_where_step $'\e[94~\e[92~' 10 'a two-line buffer in emacs, cursor on the top line'
+        _pty_where_step $'\e[B'   11 'Down onto the bottom line'
+        _pty_where_step $'\e[B'   13 'Down from the bottom line opening the pane'
+        _pty_where_step $'\e[93~' 14 'a two-line buffer, cursor at the end'
+        _pty_where_step $'\e[A'   15 'Up onto the top line'
+        # Each keymap opens its own variant of the pane.
+        _pty_where_step $'\e[91~\e[95~' 16 'a fresh line in viins'
+        _pty_where_step $'\e[B'   18 'Down in viins opening the pane'
+        _pty_where_step $'\e'     19 'Esc into vicmd'
+        _pty_where_step $'\e[B'   21 'Down in vicmd opening the pane'
+        _pty_where_step $'\e[94~' 22 'switching to emacs'
+        _pty_where_step $'\e[B'   24 'Down in emacs opening the pane'
+        # Down when this run's atuin init didn't succeed is the native search,
+        # from a fresh prompt too.
+        _pty_where_step $'\e[96~\e[91~' 25 'atuin marked not ready, on a fresh line'
+        _pty_where_step $'\e[B'   27 'Down with atuin not ready running the native search'
     fi
     zpty -d _zlepty 2>/dev/null
     result=$(cat "$_ptylog")
@@ -765,7 +827,29 @@ PROBE fresh=1 buffer=[echo alpha]" "$result"
     # one pressed from the restored prompt.
     assert_contains "PROBE fresh=1 buffer=[echo alpha]
 ATUIN" "$result"
-    assert_equal "1" "$(grep -c '^ATUIN$' "$_ptylog")"
+    assert_equal "1" "$(head -n 9 "$_ptylog" | grep -c '^ATUIN')"
+    # After the walk, in order: the multiline guards, a pane per keymap, and
+    # the native fallback, which runs the native search and opens nothing. A timeout in those steps is
+    # still reported under the walk's name, since one pty drives both.
+    start_test "the arrows' multiline guards, per-keymap panes and native fallback, in a live zle"
+    assert_equal "WHERE keymap=emacs line=0 buffer=[top|bottom]
+WHERE keymap=emacs line=1 buffer=[top|bottom]
+ATUIN atuin-search
+WHERE keymap=emacs line=1 buffer=[top|bottom]
+WHERE keymap=emacs line=1 buffer=[top|bottom]
+WHERE keymap=emacs line=0 buffer=[top|bottom]
+WHERE keymap=viins line=0 buffer=[]
+ATUIN atuin-search-viins
+WHERE keymap=viins line=0 buffer=[]
+WHERE keymap=vicmd line=0 buffer=[]
+ATUIN atuin-search-vicmd
+WHERE keymap=vicmd line=0 buffer=[]
+WHERE keymap=emacs line=0 buffer=[]
+ATUIN atuin-search
+WHERE keymap=emacs line=0 buffer=[]
+WHERE keymap=emacs line=0 buffer=[]
+NATIVE
+WHERE keymap=emacs line=0 buffer=[]" "$(tail -n +10 "$_ptylog")"
 fi
 
 start_test "the Down wrapper's missing-variant fallback is atuin's fuzzy search"
