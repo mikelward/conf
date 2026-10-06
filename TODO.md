@@ -103,6 +103,27 @@ file names. For example, `hyprland.lua` could record the local file's
 `hl.device()` calls and `apply-input.sh` could replay them through
 `hyprctl eval`, if that shares the config's Lua state.
 
+## Close theme.sh's gaps when following tide's shell
+
+When the theme daemon's first `theme.sh follow` and tide's first
+appearance hook overlap at login, and the scheme changed between them, the
+first releases its lock once swaync is forked, before it has exec'd. In
+that window the second run's `pkill -x swaync` can't see it (the child's
+name is still `sh`), so two swaync can start, and the old style can win
+the D-Bus name until the next switch. It needs a change in that
+millisecond window at login. A fix would keep the lock until swaync owns
+`org.freedesktop.Notifications` (bounded), or have swaync reload its style
+(`swaync-client --reload-css` with a style path swaync re-reads) instead of
+restarting it. (Codex on mikelward/conf#386.)
+
+Related: the theme daemon checks once, at startup, whether tide's shell
+can set the color scheme. If a dconf lock on it appears mid-session, the
+hook steps aside but the daemon is still in its idle loop, so swaync and
+the wallpaper stay as they were until the next login. A fix would have
+the daemon recheck `gsettings writable` at each clock boundary and fall
+back to the clock loop when it turns false. Locks are set by an admin,
+and rarely mid-session, so this waits.
+
 ## The test suite can't run from a checkout path containing spaces
 
 Found while checking a Codex P2 (mikelward/conf#342) that asked for the pty
