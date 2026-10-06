@@ -4169,4 +4169,59 @@ case "$result" in
         ;;
 esac
 
+###############
+# tide-grant-line hands the line to tide-grant, faked here.
+
+_qs_stub="$_testdir/qs-stub"
+mkdir -p "$_qs_stub"
+cat > "$_qs_stub/tide-grant" <<'STUB'
+#!/bin/sh
+printf '%s\n' "$*" >> "$QS_LOG"
+STUB
+chmod +x "$_qs_stub/tide-grant"
+export QS_LOG="$_testdir/qs-log"
+
+start_test "mesh tide-grant-line passes the line and mesh's pid"
+: > "$QS_LOG"
+result="$(PATH="$_qs_stub:$PATH" XDG_CURRENT_DESKTOP=tide:Hyprland \
+    _mesh_run_config '' 'tide-grant-line "env A=1 nautilus ."; puts $sh.pid')"
+assert_equal "--pid $result -- env A=1 nautilus ." "$(cat "$QS_LOG")"
+
+start_test "mesh command-started records the grant"
+: > "$QS_LOG"
+PATH="$_qs_stub:$PATH" XDG_CURRENT_DESKTOP=tide:Hyprland \
+    _mesh_run_config '' 'command-started firefox' >/dev/null
+assert_contains "-- firefox" "$(cat "$QS_LOG")"
+
+start_test "mesh tide-grant-line does nothing outside tide"
+: > "$QS_LOG"
+PATH="$_qs_stub:$PATH" XDG_CURRENT_DESKTOP=KDE \
+    _mesh_run_config '' 'tide-grant-line "nautilus ."' >/dev/null
+PATH="$_qs_stub:$PATH" XDG_CURRENT_DESKTOP=notide:Hyprland \
+    _mesh_run_config '' 'tide-grant-line "nautilus ."' >/dev/null
+assert_equal "" "$(cat "$QS_LOG")"
+
+start_test "mesh command-started runs with XDG_CURRENT_DESKTOP unset"
+: > "$QS_LOG"
+_qs_had_desktop=${XDG_CURRENT_DESKTOP+set}
+_qs_saved_desktop=${XDG_CURRENT_DESKTOP-}
+unset XDG_CURRENT_DESKTOP
+result="$(PATH="$_qs_stub:$PATH" _mesh_run_config '' 'command-started firefox; puts ran')"
+if test -n "$_qs_had_desktop"; then
+    export XDG_CURRENT_DESKTOP="$_qs_saved_desktop"
+fi
+assert_contains "ran" "$result"
+assert_equal "" "$(cat "$QS_LOG")"
+
+# have-command says no, so a host with tide installed still exercises this.
+start_test "mesh tide-grant-line reports a missing tide-grant"
+result="$(XDG_CURRENT_DESKTOP=tide _mesh_run_config '
+    status func have-command(name) {
+        return false if $name == "tide-grant"
+        type -P --quiet $name
+    }
+' 'tide-grant-line "nautilus ."; puts "status=$sh.status"' 2>&1)"
+assert_contains "no tide-grant, so this command gets no focus grant" "$result"
+assert_contains "status=1" "$result"
+
 test_summary "mesh_test"

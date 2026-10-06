@@ -1642,8 +1642,27 @@ func command-finished(cmd, status, elapsed) {
   puts $reported if $reported != ""
 }
 
-# log every interactive command, the way shrc's precommand does
-func command-started(cmd) { log-history $cmd }
+# In a tide session, records a focus grant for the command line with tide's
+# focus guard (tide SPEC.md §14.3), so the first window it opens may take
+# focus. tide-grant names this shell's pid, for a window from any of its
+# descendants, and the app of the line's first command. Outside tide this
+# costs one match. A preexec hook's status is dropped, so failing here adds
+# nothing past the warning.
+func tide-grant-line(line) {
+  return unless $env:get(XDG_CURRENT_DESKTOP, "") ~ /(^|:)tide(:|$)/
+  if not have-command(tide-grant) {
+    warn "tide: no tide-grant, so this command gets no focus grant; run make install-session in the tide checkout"
+    fail
+  }
+  tide-grant --pid $sh.pid -- $line
+}
+
+# log every interactive command, the way shrc's precommand does, and grant it
+# focus in a tide session
+func command-started(cmd) {
+  log-history $cmd
+  tide-grant-line $cmd
+}
 
 ##########################
 # COMMAND SHORTCUTS
