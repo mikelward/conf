@@ -483,8 +483,13 @@ hl.bind(key("SHIFT + Right"), step_workspace(1, true))
 
 -- The way to a window that wanted focus and didn't get it (§14). Lua can't
 -- mark a window urgent, so tide's focus guard keeps the ones it held
--- back; otherwise it's Hyprland's urgent window, or the last one. Super+Tab
--- and Super+Home both do it, on trial until one sticks.
+-- back; otherwise it's Hyprland's urgent window, or the last one. So with
+-- one window marked, a press goes there and the next comes back.
+-- Super+Tab and Super+Home both do it, on trial until one sticks.
+--
+-- Not `urgent_or_last`: in 0.56 its "last" reads the focus history from the
+-- oldest end, so pressing it again walked through every window. `last`
+-- reads it from the newest.
 local function focus_attention()
     local guard = rawget(_G, "tide_focus")
     if guard and guard.focus_attention then
@@ -495,7 +500,15 @@ local function focus_attention()
             return
         end
     end
-    hl.dispatch(hl.dsp.focus({ urgent_or_last = true }))
+    local urgent = query("Super+Tab: couldn't look for an urgent window", function()
+        local w = hl.get_urgent_window()
+        return w and w.address
+    end)
+    if urgent then
+        hl.dispatch(hl.dsp.focus({ window = "address:" .. urgent }))
+    else
+        hl.dispatch(hl.dsp.focus({ last = true }))
+    end
 end
 hl.bind(key("Tab"), focus_attention)
 hl.bind(key("Home"), focus_attention)

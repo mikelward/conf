@@ -209,6 +209,10 @@ local function new_hl()
             if S.active_window == "raise" then error("window gone") end
             return S.active_window
         end,
+        get_urgent_window = function()
+            if S.urgent_window == "raise" then error("window gone") end
+            return S.urgent_window
+        end,
         -- Disabled monitors are listed only with { all = true }, as in Hyprland.
         get_monitors = function(opts)
             local out = {}
@@ -637,8 +641,24 @@ test("Super+Tab focuses the urgent or last window without the guard", function()
     for _, keys in ipairs({ "SUPER + Tab", "SUPER + Home" }) do
         local d = run(keys)
         eq(1, #d, keys)
-        eq(true, d[1].args.urgent_or_last, keys)
+        -- Not urgent_or_last, whose "last" walks every window in 0.56.
+        eq(true, d[1].args.last, keys .. ": none urgent goes back")
+        S.urgent_window = { address = "0xabc" }
+        d = run(keys)
+        eq(1, #d, keys)
+        eq("address:0xabc", d[1].args.window, keys .. ": the urgent window")
+        S.urgent_window = nil
     end
+end)
+
+test("Super+Tab goes back when it can't look for an urgent window", function()
+    load()
+    _G.tide_focus = nil
+    S.urgent_window = "raise"
+    local d = run("SUPER + Tab")
+    eq(1, #S.notifications)
+    truthy(S.notifications[1].text:find("urgent window", 1, true))
+    eq(true, d[1].args.last)
 end)
 
 test("Super+Tab and Super+Home go to the guard's waiting window first", function()
@@ -658,12 +678,12 @@ test("Super+Tab and Super+Home go to the guard's waiting window first", function
     eq(1, #d)
     eq("guard-focus", d[1].name)
     d = run("SUPER + Home")
-    eq(true, d[1].args.urgent_or_last, "none waiting: falls back")
+    eq(true, d[1].args.last, "none waiting: goes back")
     _G.tide_focus = { focus_attention = function() error("boom") end }
     d = run("SUPER + Tab")
     eq(1, #S.notifications)
     truthy(S.notifications[1].text:find("boom", 1, true))
-    eq(true, d[1].args.urgent_or_last, "a failed guard falls back")
+    eq(true, d[1].args.last, "a failed guard falls back")
     _G.tide_focus = nil
 end)
 
