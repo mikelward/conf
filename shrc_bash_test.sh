@@ -35,7 +35,7 @@ mkdir -p "$_autocd_root/sub"
 # residual hang to ~N+2s.
 start_test "bash -i autocds on trailing slash via DEBUG trap"
 result=$(cd "$_autocd_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     install_precommand_trap
     ./sub/
     printf "\nPWDMARK=%s\n" "$PWD"
@@ -47,7 +47,7 @@ assert_equal "$_autocd_root/sub" "$result"
 # regression this fix addresses.
 start_test "bash -i autocds on ~/foo/ via DEBUG trap"
 result=$(HOME="$_autocd_root" run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     install_precommand_trap
     ~/sub/
     printf "\nPWDMARK=%s\n" "$PWD"
@@ -66,7 +66,7 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     alias l="ls -CF"
     alias ll="ls -alF"
     alias la="ls -A"
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     if type install_precommand_trap >/dev/null 2>&1; then
         printf "OK"
     else
@@ -87,7 +87,7 @@ assert_equal "OK" "$result"
 # behaviour while still giving coverage on boxes with timeout.
 start_test "shrc stty guard: sources cleanly with stdin=/dev/null (no SIGTTOU hang)"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     printf "DONE"
 ' </dev/null 2>/dev/null)
 assert_equal "DONE" "$result"
@@ -100,7 +100,7 @@ assert_equal "DONE" "$result"
 # still reports the variable, hence the stderr redirect.
 start_test "shrc enables readline colored-stats"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     bind -v 2>/dev/null | sed -n "s/^set colored-stats //p"
 ' </dev/null 2>/dev/null)
 assert_equal "on" "$result"
@@ -126,7 +126,7 @@ assert_equal "3" "$(grep -cF '"\e[1;5D": vi-bWord' "$_srcdir/inputrc")"
 assert_equal "3" "$(grep -cF '"\e[1;3C": vi-fWord' "$_srcdir/inputrc")"
 start_test "shrc binds Ctrl/Alt+Left/Right to word motion under interactive bash"
 result=$(run_interactive_with_timeout 10 bash --norc -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     bind -p -m emacs; bind -p -m vi-insert; bind -p -m vi-command
 ' </dev/null 2>/dev/null)
 # Match from the "[": bash prints the ESC prefix as \e or \M- by version.
@@ -143,7 +143,7 @@ start_test "inputrc binds Ctrl+Backspace to shell-word deletion where text is ty
 assert_equal "2" "$(grep -cF '"\C-h": shell-backward-kill-word' "$_srcdir/inputrc")"
 start_test "shrc binds Ctrl+Backspace to shell-word deletion under interactive bash"
 result=$(run_interactive_with_timeout 10 bash --norc -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     for _map in emacs vi-insert vi-command; do
         echo "map:$_map"
         bind -p -m "$_map" | grep -F "\"\\C-h\":"
@@ -168,7 +168,7 @@ start_test "shrc binds Alt+Backspace and Ctrl+Delete to shell-word deletion unde
 # bash prints the ESC prefix as \e or \M- by version, so each line is reduced
 # to the map, the key and its function.
 result=$(run_interactive_with_timeout 10 bash --norc -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     for _map in emacs vi-insert vi-command; do
         bind -p -m "$_map" | awk -v map="$_map" '"'"'
             /^"(\\e|\\M-)\\C-\?": / { print map "-abs:" $2 }
@@ -192,7 +192,7 @@ assert_contains 'vi-command-cdel:shell-kill-word' "$result"
 # atuin history entry, with the real command then going unrecorded.
 start_test "the DEBUG trap passes only the user's command to precommand"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     precommand() { printf "SAW[%s]\n" "$*"; }
     __fake_prompt_hook() { :; }
     install_precommand_trap
@@ -210,7 +210,7 @@ assert_equal "SAW[echo the-user-command > /dev/null]" "$result"
 # the same from preexec's third argument).
 start_test "the DEBUG trap passes an alias's expansion to precommand"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     precommand() { printf "SAW[%s]\n" "$*"; }
     subl() { :; }
     alias s="subl --wait"
@@ -226,7 +226,7 @@ assert_equal "SAW[subl --wait notes.txt]" "$result"
 # widget runs, which is what distinguishes them.
 start_test "the DEBUG trap ignores commands run by readline widgets"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     precommand() { printf "SAW[%s]\n" "$*"; }
     __fake_widget() { :; }
     install_precommand_trap
@@ -245,7 +245,7 @@ assert_not_contains "__fake_widget" "$result"
 # recorded as `preprompt`, with its title and timing to match.
 start_test "the DEBUG trap drops the arm when the prompt hooks run first"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     precommand() { printf "SAW[%s]\n" "$*"; }
     install_precommand_trap
     # No user command in between: this stands in for a prompt cycle that
@@ -263,7 +263,7 @@ assert_equal "" "$result"
 # it recorded like any other command.
 start_test "the DEBUG trap records a prompt-hook name the user typed"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     precommand() { printf "SAW[%s]\n" "$*"; }
     preprompt() { :; }
     install_precommand_trap
@@ -278,7 +278,7 @@ assert_equal "SAW[preprompt]" "$result"
 # make every failure look like a success.
 start_test "the prompt cycle carries the exit status through to preprompt"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     preprompt() { printf "\nSTATUS[%s]\n" "$?"; }
     (exit 3)
     eval "$PROMPT_COMMAND"
@@ -405,7 +405,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcgit() { COMPREPLY=(checkout commit cherry-pick rebase); }
     complete -F _fzcgit __fzcgit
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcgit ckout"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -425,7 +425,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
         COMPREPLY=($(compgen -W "checkout commit rebase" -- "$2"))
     }
     complete -F _fzcfilter __fzcfilter
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcfilter rbse"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -440,7 +440,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcfilter() { COMPREPLY=($(compgen -W "rebase" -- "$2")); }
     complete -F _fzcfilter __fzcvars
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcvars rbse"
     printf "\nOUT=[%s|%s|%s]\n" \
@@ -453,7 +453,7 @@ assert_equal "rbse|__fzcvars rbse|14" "$result"
 start_test "completion fuzzy-matches filenames for an unknown command"
 result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcnospec mp"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -470,7 +470,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcempty() { COMPREPLY=(); }
     complete -F _fzcempty __fzcempty
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcempty mp"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -484,7 +484,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcempty() { COMPREPLY=(); }
     complete -o default -F _fzcempty __fzcdef
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcdef mp"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -507,7 +507,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
         esac
     }
     complete -F _fzckind __fzckind
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzckind --verbse"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -530,7 +530,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
         esac
     }
     complete -F _fzckind2 __fzckind2
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     _FUZZY_COMPLETE_MAX_RETRIES=0
     '"$_fzc_driver"'
     drive "__fzckind2 --verbse"
@@ -548,7 +548,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcquiet() { COMPREPLY=(); }
     complete -D -F _fzcquiet
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcquiet mp"
     printf "\nREPLY=[%s] SPEC=[%s]\n" "${COMPREPLY[*]}" "$(complete -p -D)"
@@ -561,7 +561,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcopt() { COMPREPLY=(); }
     complete -D -o nospace -o default -F _fzcopt
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     printf "\nSPEC=[%s]\n" "$(complete -p -D)"
 ' </dev/null 2>/dev/null | sed -n 's/.*SPEC=\[\(.*\)\]/\1/p')
 assert_equal "complete -o default -o nospace -F _fuzzy_complete -D" "$result"
@@ -577,7 +577,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="$_cancelbin:$PATH"
     _fzccancel() { COMPREPLY=(checkout commit); }
     complete -o default -F _fzccancel __fzccancel
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzccancel mp"
     rm -rf "$_cancelbin"
@@ -598,7 +598,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="$_nobin:$PATH"
     _fzcnomatch() { COMPREPLY=(checkout commit); }
     complete -o default -F _fzcnomatch __fzcnomatch
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcnomatch mp"
     rm -rf "$_nobin"
@@ -614,8 +614,8 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcprior2() { COMPREPLY=(alpha beta gamma); }
     complete -D -F _fzcprior2
-    source '"$_srcdir"'/bashrc.fuzzycomplete
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcresourced gma"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -629,8 +629,8 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcgit2() { COMPREPLY=(checkout commit rebase); }
     complete -F _fzcgit2 __fzcagain
-    source '"$_srcdir"'/bashrc.fuzzycomplete
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcagain ckout"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -645,9 +645,9 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcorig() { COMPREPLY=(checkout); }
     complete -o default -F _fzcorig __fzcoff2
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     WANT_FUZZY_COMPLETE=0
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     # The -D message names an internal command and varies by version,
     # so ask whether one is registered rather than what it says.
     complete -p -D >/dev/null 2>&1 && _d=present || _d=gone
@@ -662,7 +662,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcgone() { COMPREPLY=(zzgonecandidate); }
     complete -F _fzcgone __fzcgone
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     complete -r __fzcgone
     '"$_fzc_driver"'
     drive "__fzcgone zzgone"
@@ -682,7 +682,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="$_badbin:$PATH"
     _fzcbad() { COMPREPLY=(checkout commit); }
     complete -F _fzcbad __fzcbad
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcbad ck" 2>&1
     rm -rf "$_badbin"
@@ -698,7 +698,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="$_badbin:$PATH"
     _fzcbad2() { COMPREPLY=(checkout commit); }
     complete -F _fzcbad2 __fzcbad2
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcbad2 ck"
     drive "__fzcbad2 co"
@@ -720,7 +720,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="$_badbin:$PATH"
     _fzcbad3() { COMPREPLY=(checkout checkpoint); }
     complete -F _fzcbad3 __fzcbad3
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcbad3 check" 2>/dev/null
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -741,7 +741,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="$_partbin:$PATH"
     _fzcpart() { COMPREPLY=(checkout checkpoint); }
     complete -F _fzcpart __fzcpart
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcpart check" 2>/dev/null
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -760,7 +760,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="$_canbin:$PATH"
     _fzccanp() { COMPREPLY=(checkout checkpoint); }
     complete -F _fzccanp __fzccanp
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzccanp check" 2>/dev/null
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -777,7 +777,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcnl() { COMPREPLY=($'"'"'alpha\nbeta'"'"' zzz); }
     complete -F _fzcnl __fzcnl
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcnl beta"
     printf "\nN=[%s] REPLY=[%s]\n" "${#COMPREPLY[@]}" "${COMPREPLY[0]}"
@@ -794,7 +794,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzctn() { COMPREPLY=($'"'"'alpha\n'"'"' zzz); }
     complete -F _fzctn __fzctn
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzctn alp"
     printf "\nREPLY=[%q]\n" "${COMPREPLY[0]}"
@@ -812,7 +812,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="$_killbin:$PATH"
     _fzckill() { COMPREPLY=(alpha beta); }
     complete -F _fzckill __fzckill
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzckill al" 2>/dev/null
     rm -rf "$_killbin"
@@ -829,7 +829,7 @@ assert_equal "alpha beta" "$result"
 start_test "completion matches filename candidates on the decoded word"
 result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     # bash-completion sets -o filenames with compopt from inside its
     # helpers, so the saved spec never shows it and only a live reading
     # can. compopt is valid only in a real completion, so it is shadowed.
@@ -853,7 +853,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     printf "#!/bin/sh\nexit 130\n" > "$_cancelbin/fzf"
     chmod +x "$_cancelbin/fzf"
     export PATH="$_cancelbin:$PATH"
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     _fzcasked=
     compopt() {
         if test -z "${1-}"; then printf "compopt -o filenames cmd\n"
@@ -882,7 +882,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     printf "#!/bin/sh\nexit 130\n" > "$_cancelbin/fzf"
     chmod +x "$_cancelbin/fzf"
     export PATH="$_cancelbin:$PATH"
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     _fzcqc() { COMPREPLY=("My Pictures" "My Picnic"); }
     complete -F _fzcqc __fzcqc
     _fuzzy_complete_install __fzcqc
@@ -903,7 +903,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     printf "#!/bin/sh\nexit 130\n" > "$_cancelbin/fzf"
     chmod +x "$_cancelbin/fzf"
     export PATH="$_cancelbin:$PATH"
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     _fzcqu() { COMPREPLY=("My Pictures" "My Picnic"); }
     complete -F _fzcqu __fzcqu
     _fuzzy_complete_install __fzcqu
@@ -922,7 +922,7 @@ start_test "completion takes the fallback kind from the live options"
 result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
     : > "Mystery File"
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     compopt() { test -n "${1-}" || printf "compopt +o default -o dirnames cmd\n"; }
     _fzclk() { COMPREPLY=(); }
     complete -o default -F _fzclk __fzclk
@@ -942,7 +942,7 @@ assert_equal "" "$result"
 start_test "completion hands back a decoded path prefix"
 result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     COMP_WORDS=(cat "My\\ Pictures/hol"); COMP_CWORD=1
     COMP_LINE="cat My\\ Pictures/hol"; COMP_POINT=${#COMP_LINE}
     COMPREPLY=(); _fuzzy_complete cat "My\\ Pictures/hol" cat
@@ -975,7 +975,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcdnq() { COMPREPLY=(ab '"'"'a\b'"'"'); }
     complete -o dirnames -F _fzcdnq __fzcdnq
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcdnq a\\b"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -991,7 +991,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcfnq() { COMPREPLY=(ab '"'"'a\b'"'"'); }
     complete -o filenames -F _fzcfnq __fzcfnq
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcfnq a\\b"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -1001,7 +1001,7 @@ assert_equal "ab" "$result"
 start_test "completion leaves a quoted word's filename candidates alone"
 result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     compopt() { test -n "${1-}" || printf "compopt -o filenames cmd\n"; }
     _fzcqq() { COMPREPLY=(ab '"'"'a\b'"'"'); }
     complete -F _fzcqq __fzcqq
@@ -1022,7 +1022,7 @@ assert_equal 'ab a\b' "$result"
 start_test "completion keeps a quoted candidate its query could not match"
 result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     compopt() { test -n "${1-}" || printf "compopt -o filenames cmd\n"; }
     _fzcsq() { COMPREPLY=('"'"'Slash\Dir'"'"'); }
     complete -F _fzcsq __fzcsq
@@ -1040,7 +1040,7 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     _qroot="$(mktemp -d)"
     mkdir -p "$_qroot/My Pictures"
     cd "$_qroot" || exit 1
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     COMP_WORDS=(cat "'"'"'mp"); COMP_CWORD=1
     COMP_LINE="cat '"'"'mp"; COMP_POINT=${#COMP_LINE}
     COMPREPLY=(); _fuzzy_complete cat "mp" cat
@@ -1056,7 +1056,7 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     _qroot="$(mktemp -d)"
     mkdir -p "$_qroot/My Pictures"
     cd "$_qroot" || exit 1
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     COMP_WORDS=(cat "\"mp"); COMP_CWORD=1
     COMP_LINE="cat \"mp"; COMP_POINT=${#COMP_LINE}
     COMPREPLY=(); _fuzzy_complete cat "mp" cat
@@ -1074,7 +1074,7 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     mkdir -p "$_qroot2/SlashDir"
     : > "$_qroot2/SlashDir/My Pictures"
     cd "$_qroot2" || exit 1
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     COMP_WORDS=(cat "Base/'"'"'Slash\\Dir/mp"); COMP_CWORD=1
     COMP_LINE="cat Base/'"'"'Slash\\Dir/mp"; COMP_POINT=${#COMP_LINE}
     COMPREPLY=(); _fuzzy_complete cat "Slash\\Dir/mp" cat
@@ -1093,7 +1093,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcbrack() { COMPREPLY=(); }
     complete -F _fzcbrack "["
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     printf "\nSPEC=[%s]\n" "$(complete -p "[")"
 ' </dev/null 2>/dev/null | sed -n 's/.*SPEC=\[\(.*\)\]/\1/p')
 assert_equal "complete -F _fuzzy_complete '['" "$result"
@@ -1107,7 +1107,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     bind "set completion-ignore-case on" 2>/dev/null
     _fzcci() { COMPREPLY=("My Pictures"); }
     complete -F _fzcci __fzcci
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcci MY"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -1129,7 +1129,7 @@ start_test "completion keeps fuzzy matching when readline is case-sensitive"
 result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
     bind "set completion-ignore-case off" 2>/dev/null
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzccasenospec mp"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -1144,7 +1144,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcpath() { COMPREPLY=(checkout commit rebase); }
     complete -F _fzcpath __fzcpath
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "./__fzcpath ckout"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -1159,10 +1159,10 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     _fzcold() { COMPREPLY=(old); }
     _fzcnew() { COMPREPLY=(new); }
     complete -F _fzcold __fzcreplaced
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     complete -F _fzcnew __fzcreplaced
     WANT_FUZZY_COMPLETE=0
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     printf "\nSPEC=[%s]\n" "$(complete -p __fzcreplaced)"
 ' </dev/null 2>/dev/null | sed -n 's/.*SPEC=\[\(.*\)\]/\1/p')
 assert_equal "complete -F _fzcnew __fzcreplaced" "$result"
@@ -1175,7 +1175,7 @@ assert_equal "complete -F _fzcnew __fzcreplaced" "$result"
 start_test "completion asks readline to treat file candidates as filenames"
 result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     compopt() { printf "COMPOPT[%s]\n" "$*" >> "$_fzc_log"; }
     export _fzc_log="$(mktemp)"
     '"$_fzc_driver"'
@@ -1195,7 +1195,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcwrap() { COMPREPLY=(gamma); }
     complete -P PRE -S SUF -o default -F _fzcwrap __fzcwrap
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     printf "\nSPEC=[%s]\n" "$(complete -p __fzcwrap)"
 ' </dev/null 2>/dev/null | sed -n 's/.*SPEC=\[\(.*\)\]/\1/p')
 assert_equal "complete -o default -P 'PRE' -S 'SUF' -F _fzcwrap __fzcwrap" "$result"
@@ -1208,10 +1208,10 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     _fzcfirst() { COMPREPLY=(); }
     _fzclater() { COMPREPLY=(); }
     complete -D -F _fzcfirst
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     complete -D -F _fzclater
     WANT_FUZZY_COMPLETE=0
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     printf "\nSPEC=[%s]\n" "$(complete -p -D)"
 ' </dev/null 2>/dev/null | sed -n 's/.*SPEC=\[\(.*\)\]/\1/p')
 assert_equal "complete -F _fzclater -D" "$result"
@@ -1226,9 +1226,9 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcgone() { COMPREPLY=(zzunique); }
     complete -D -F _fzcgone
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     complete -r -D
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcnospec zzu"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -1247,7 +1247,7 @@ start_test "fuzzy completion defines nothing on a bash too old for it"
 result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
     BASH_VERSION=3.2.57
-    _out="$( . '"$_srcdir"'/bashrc.fuzzycomplete 2>&1 )"
+    _out="$( . '"$_srcdir_q"'/bashrc.fuzzycomplete 2>&1 )"
     printf "\nOUT=[%s] FN=[%s]\n" "$_out" "$(type -t _fuzzy_complete)"
 ' </dev/null 2>/dev/null | sed -n 's/.*OUT=\[\(.*\)\] FN=\[\(.*\)\]/\1|\2/p')
 # Nothing said, and nothing defined.
@@ -1261,7 +1261,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcdashf() { COMPREPLY=(alpha); }
     complete -F _fzcdashf -P "-F" __fzcdashf
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     # The parser directly: such a spec is declined for its -P, so the
     # only place the step-over is visible is what the parse produced.
     _fuzzy_complete_parse "$(complete -p __fzcdashf)" cmd
@@ -1286,7 +1286,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
         test -n "$2" || COMPREPLY=(zzemptydomain)
     }
     complete -F _fzccap __fzccap
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     export _fzc_log="$(mktemp)"
     '"$_fzc_driver"'
     drive "__fzccap abcdefghij"
@@ -1304,7 +1304,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcshort() { test -n "$2" || COMPREPLY=(zzreached); }
     complete -F _fzcshort __fzcshort
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcshort zzr"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -1319,7 +1319,7 @@ start_test "completion keeps an open quote out of the word it retries with"
 result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcquote() { printf "WORD[%s]\n" "${COMP_WORDS[COMP_CWORD]}" >> "$_fzc_log"; }
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     export _fzc_log="$(mktemp)"
     # As bash presents it inside an open double quote: the array keeps
     # the quote, $2 does not.
@@ -1340,7 +1340,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcplus() { COMPREPLY=(alpha); }
     complete -o plusdirs -F _fzcplus __fzcplus
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     printf "\nSPEC=[%s]\n" "$(complete -p __fzcplus)"
 ' </dev/null 2>/dev/null | sed -n 's/.*SPEC=\[\(.*\)\]/\1/p')
 assert_equal "complete -o plusdirs -F _fzcplus __fzcplus" "$result"
@@ -1357,7 +1357,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     _fzcscope() { COMPREPLY=(checkout commit rebase); }
     complete -F _fzcscope __fzcscope
     # Exactly how .shrc loads it.
-    _init_it() { . '"$_srcdir"'/bashrc.fuzzycomplete; }
+    _init_it() { . '"$_srcdir_q"'/bashrc.fuzzycomplete; }
     _init_it
     '"$_fzc_driver"'
     drive "__fzcscope ckout"
@@ -1373,7 +1373,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcmixed() { COMPREPLY=(alpha); }
     complete -F _fzcmixed -W "beta gamma" __fzcmixed
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     printf "\nSPEC=[%s]\n" "$(complete -p __fzcmixed)"
 ' </dev/null 2>/dev/null | sed -n 's/.*SPEC=\[\(.*\)\]/\1/p')
 assert_equal "complete -W 'beta gamma' -F _fzcmixed __fzcmixed" "$result"
@@ -1385,7 +1385,7 @@ start_test "completion succeeds when it declines an unsupported -D"
 result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
     complete -D -W "alpha beta"
-    if . '"$_srcdir"'/bashrc.fuzzycomplete; then _r=ok; else _r=failed; fi
+    if . '"$_srcdir_q"'/bashrc.fuzzycomplete; then _r=ok; else _r=failed; fi
     printf "\nSTATUS=[%s] D=[%s]\n" "$_r" "$(complete -p -D)"
 ' </dev/null 2>/dev/null | sed -n 's/.*STATUS=\[\(.*\)\] D=\[\(.*\)\]/\1|\2/p')
 assert_equal "ok|complete -W 'alpha beta' -D" "$result"
@@ -1405,7 +1405,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     complete -o plusdirs -F _fzcact __fzcact4
     # ... and one that names nothing else, which must still be wrapped.
     complete -o nospace -F _fzcact __fzcact5
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     _r=
     for _c in __fzcact1 __fzcact2 __fzcact3 __fzcact4; do
         case "$(complete -p $_c)" in
@@ -1429,7 +1429,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcdact() { COMPREPLY=(alpha); }
     complete -D -F _fzcdact -W "beta gamma"
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     printf "\nSPEC=[%s]\n" "$(complete -p -D)"
 ' </dev/null 2>/dev/null | sed -n 's/.*SPEC=\[\(.*\)\]/\1/p')
 assert_equal "complete -W 'beta gamma' -F _fzcdact -D" "$result"
@@ -1440,7 +1440,7 @@ assert_equal "complete -W 'beta gamma' -F _fzcdact -D" "$result"
 start_test "completion keeps the fallback veto made for the typed word"
 result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     # compopt is only valid inside a real completion, so it is shadowed
     # here -- a function wins over the builtin -- with just enough state
     # to answer what the live options are.
@@ -1476,7 +1476,7 @@ assert_equal "" "$result"
 start_test "completion restores the options the honest call left"
 result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     # Shadowed the same way as the veto test above, tracking one option.
     _fzcopts=
     compopt() {
@@ -1514,7 +1514,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcpfx() { COMPREPLY=(); }
     complete -P " -o default " -F _fzcpfx __fzcpfx
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcpfx mp"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -1531,7 +1531,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     : > "Mystery File"
     _fzcempty() { COMPREPLY=(); }
     complete -o dirnames -F _fzcempty __fzcdirs
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcdirs myf"
     rm -f "Mystery File"
@@ -1548,7 +1548,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcmid() { COMPREPLY=(checkout commit rebase); }
     complete -F _fzcmid __fzcmid
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     COMP_WORDS=(__fzcmid ckoutZZZ); COMP_CWORD=1
     COMP_LINE="__fzcmid ckoutZZZ"; COMP_POINT=14
     COMPREPLY=()
@@ -1564,7 +1564,7 @@ start_test "completion's retry leaves the line alone with the cursor mid-word"
 result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcsaw() { printf "\nSAW=[%s|%s]\n" "$COMP_LINE" "$COMP_POINT" >&2; COMPREPLY=(); }
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     COMP_WORDS=(cmd abcdef); COMP_CWORD=1
     COMP_LINE="cmd abcdef"; COMP_POINT=7
     _fuzzy_complete_call_bare _fzcsaw cmd abc cmd
@@ -1581,7 +1581,7 @@ start_test "completion's retry shortens the line with the cursor at the end"
 result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcsaw2() { printf "\nSAW=[%s|%s]\n" "$COMP_LINE" "$COMP_POINT" >&2; COMPREPLY=(); }
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     COMP_WORDS=(cmd abc); COMP_CWORD=1
     COMP_LINE="cmd abc"; COMP_POINT=7
     _fuzzy_complete_call_bare _fzcsaw2 cmd abc cmd
@@ -1595,7 +1595,7 @@ start_test "completion's retry shortens an escaped word without splicing"
 result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcesc() { printf "\nSAW=[%s|%s]\n" "${COMP_WORDS[COMP_CWORD]}" "$2" >&2; COMPREPLY=(); }
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     COMP_WORDS=(cmd "My\\ Pic"); COMP_CWORD=1
     COMP_LINE="cmd My\\ Pic"; COMP_POINT=11
     # As bash presents it: the backslash is gone from $2 and kept in the
@@ -1617,7 +1617,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
         return 124
     }
     complete -D -F _fzcloader
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzclazy ckout"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -1631,7 +1631,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcprior() { COMPREPLY=(alpha beta gamma); }
     complete -D -F _fzcprior
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcunknown gma"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -1647,7 +1647,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcrepl() { COMPREPLY=(replacement); }
     complete -F _fzcrepl __fzcrepl
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcrepl x"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -1662,7 +1662,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcgit() { COMPREPLY=(checkout commit); }
     complete -F _fzcgit __fzcnone
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcnone zzqqzz"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -1676,7 +1676,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     _fzcgit() { COMPREPLY=(checkout); }
     complete -F _fzcgit __fzcoff
     WANT_FUZZY_COMPLETE=0
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     printf "\nSPEC=[%s]\n" "$(complete -p __fzcoff)"
 ' </dev/null 2>/dev/null | sed -n 's/.*SPEC=\[\(.*\)\]/\1/p')
 assert_equal "complete -F _fzcgit __fzcoff" "$result"
@@ -1697,7 +1697,7 @@ result=$(cd "$_fzc_root" && HOME="$_fzc_home" \
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcshrc() { COMPREPLY=(checkout commit rebase); }
     complete -F _fzcshrc __fzcshrc
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     '"$_fzc_driver"'
     drive "__fzcshrc ckout"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -1711,7 +1711,7 @@ start_test "shrc wraps a compspec registered by .shrc.local"
 result=$(cd "$_fzc_root" && HOME="$_fzc_localhome" \
     run_interactive_with_timeout 20 bash --norc --noprofile -i -c '
     export PATH="'"$_fzc_bin"':$PATH"
-    source '"$_srcdir"'/shrc >/dev/null 2>&1
+    source '"$_srcdir_q"'/shrc >/dev/null 2>&1
     '"$_fzc_driver"'
     drive "__fzclocal ckout"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -1725,14 +1725,14 @@ assert_equal "checkout" "$result"
 start_test "shrc does not source the fuzzy completion file outside bash"
 result=$(cd "$_fzc_root" && run_with_timeout 10 dash -c "
     HOME='$_fzc_root'
-    cp $_srcdir/bashrc.fuzzycomplete \$HOME/.bashrc.fuzzycomplete
-    . $_srcdir/shrc" 2>&1 | grep -c "fuzzycomplete")
+    cp $_srcdir_q/bashrc.fuzzycomplete \$HOME/.bashrc.fuzzycomplete
+    . $_srcdir_q/shrc" 2>&1 | grep -c "fuzzycomplete")
 assert_equal "0" "$result"
 
 # The string helpers, which is all of it that isn't bash-specific.
 start_test "fuzzy completion splits a word into directory and base"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     printf "\nOUT=[%s|%s|%s|%s]\n" \
         "$(fuzzy_complete_dir docs/mp)" "$(fuzzy_complete_base docs/mp)" \
         "$(fuzzy_complete_dir mp)" "$(fuzzy_complete_base mp)"
@@ -1741,7 +1741,7 @@ assert_equal "docs/|mp||mp" "$result"
 
 start_test "fuzzy completion unescapes a word for the filesystem"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     printf "\nOUT=[%s]\n" "$(fuzzy_complete_unescape "My\\ Pictures/")"
 ' </dev/null 2>/dev/null | sed -n 's/.*OUT=\[\(.*\)\]/\1/p')
 assert_equal "My Pictures/" "$result"
@@ -1751,14 +1751,14 @@ assert_equal "My Pictures/" "$result"
 # inserted as a path you could enter and not leave.
 start_test "fuzzy completion refuses a name needing ANSI-C quoting"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     fuzzy_complete_quote "$(printf "tab\there")" >/dev/null && echo BAD || echo OK
 ' </dev/null 2>/dev/null | grep -c "^OK")
 assert_equal "1" "$result"
 
 start_test "fuzzy completion reads the filename flags off a spec"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     _r=
     for _o in filenames dirnames plusdirs default; do
         fuzzy_complete_wants_filenames "complete -o $_o -F f c" &&
@@ -1784,7 +1784,7 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     cd "$_lroot" || exit 1
     _fzclive() { COMPREPLY=(); }
     complete -o dirnames -F _fzclive __fzclive
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     compopt() { test -n "${1-}" || printf "compopt +o dirnames -o bashdefault cmd\n"; }
     '"$_fzc_driver"'
     drive "__fzclive pln"
@@ -1804,7 +1804,7 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     cd "$_lroot2" || exit 1
     _fzclive2() { COMPREPLY=(); }
     complete -o dirnames -F _fzclive2 __fzclive2
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     compopt() { test -n "${1-}" || printf "compopt -o dirnames cmd\n"; }
     '"$_fzc_driver"'
     drive "__fzclive2 D1"
@@ -1819,7 +1819,7 @@ assert_equal "Dir1" "$result"
 # obsolete saved one over their newer completion.
 start_test "fuzzy completion reads ownership from the -F value"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     _r=
     fuzzy_complete_is_ours "complete -o nospace -F _fuzzy_complete demo" &&
         _r="${_r}1" || _r="${_r}0"
@@ -1847,7 +1847,7 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     : > "$_figroot/alpine.txt"
     cd "$_figroot" || exit 1
     FIGNORE=.o
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcnospec ph"
     cd / && rm -rf "$_figroot"
@@ -1865,7 +1865,7 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     : > "$_figroot/alpine.txt"
     cd "$_figroot" || exit 1
     FIGNORE=.zzz
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcnospec ph"
     cd / && rm -rf "$_figroot"
@@ -1879,7 +1879,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     FIGNORE=.o
     _fzcfig() { COMPREPLY=(alpha.o alpine.txt); }
     complete -o filenames -F _fzcfig __fzcfig
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcfig ph"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -1900,7 +1900,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     FIGNORE=.o
     _fzcfig2() { COMPREPLY=(alpha.o alpine.txt); }
     complete -F _fzcfig2 __fzcfig2
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcfig2 ph"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -1917,7 +1917,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     FIGNORE=.o
     _fzcfig3() { COMPREPLY=(alpha.o beta.o); }
     complete -o filenames -F _fzcfig3 __fzcfig3
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcfig3 ph"
     printf "\nREPLY=[%s]\n" "${COMPREPLY[*]}"
@@ -1929,7 +1929,7 @@ assert_equal "alpha.o" "$result"
 # does not hide `alpha.o`.
 start_test "fuzzy completion applies bash's FIGNORE suffix rule"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     FIGNORE=":.o::.log:"
     fuzzy_complete_ignore_fignore a.o b.log c.txt d.orig
     _r="${_fuzzy_complete_kept[*]}"
@@ -1943,7 +1943,7 @@ assert_equal "c.txt d.orig|alpha.o" "$result"
 # reads like it should and does not.
 start_test "fuzzy completion reads the FIGNORE filter option off a spec"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     _r=
     for _o in filenames plusdirs dirnames default; do
         fuzzy_complete_filters_fignore "complete -o $_o -F f c" &&
@@ -1963,7 +1963,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcpd() { COMPREPLY=(alpha beta); }
     complete -F _fzcpd __fzcpd
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     compopt() { test -n "${1-}" || printf "compopt -o plusdirs cmd\n"; }
     '"$_fzc_driver"'
     drive "__fzcpd alp"
@@ -1979,7 +1979,7 @@ result=$(cd "$_fzc_root" && run_interactive_with_timeout 10 bash --norc --noprof
     export PATH="'"$_fzc_bin"':$PATH"
     _fzcpd2() { COMPREPLY=(alpha beta); }
     complete -F _fzcpd2 __fzcpd2
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     compopt() { test -n "${1-}" || printf "compopt +o plusdirs cmd\n"; }
     '"$_fzc_driver"'
     drive "__fzcpd2 alp"
@@ -1991,7 +1991,7 @@ assert_equal "alpha" "$result"
 # says it is off and must not read as on.
 start_test "fuzzy completion reads plusdirs off the live options"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     _r=
     for _s in "compopt -o plusdirs cmd" "compopt +o plusdirs cmd" \
             "compopt -o filenames cmd"; do
@@ -2015,7 +2015,7 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     cd "$_bdroot" || exit 1
     _fzcbd() { COMPREPLY=(); }
     complete -o bashdefault -F _fzcbd __fzcbd
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcbd mp"
     cd / && rm -rf "$_bdroot"
@@ -2033,7 +2033,7 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     cd "$_bdroot" || exit 1
     _fzcdf() { COMPREPLY=(); }
     complete -o default -F _fzcdf __fzcdf
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcdf mp"
     cd / && rm -rf "$_bdroot"
@@ -2053,7 +2053,7 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     cd "$_vroot" || exit 1
     _fzcvar() { COMPREPLY=(); }
     complete -o default -F _fzcvar __fzcvar
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzcvar \$HME"
     cd / && rm -rf "$_vroot"
@@ -2070,7 +2070,7 @@ result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
     cd "$_troot" || exit 1
     _fzctil() { COMPREPLY=(); }
     complete -o default -F _fzctil __fzctil
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     '"$_fzc_driver"'
     drive "__fzctil ~rkt"
     cd / && rm -rf "$_troot"
@@ -2080,7 +2080,7 @@ assert_equal "" "$result"
 
 start_test "fuzzy completion reads the file-naming fallbacks off a spec"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     _r=
     for _o in default dirnames bashdefault nospace; do
         fuzzy_complete_wants_files "complete -o $_o -F f c" &&
@@ -2101,7 +2101,7 @@ assert_equal "110010" "$result"
 # staying out of the way.
 start_test "fuzzy completion declines a bash too old for it"
 result=$(run_interactive_with_timeout 10 bash --norc --noprofile -i -c '
-    source '"$_srcdir"'/bashrc.fuzzycomplete
+    source '"$_srcdir_q"'/bashrc.fuzzycomplete
     _r=
     for _v in "3.2.57(1)-release" "4.1.2(1)-release" "4.2.53(1)-release" "5.2.15(1)-release"; do
         fuzzy_complete_bash_version_ok "$_v" && _r="${_r}1" || _r="${_r}0"

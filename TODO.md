@@ -113,24 +113,6 @@ the daemon recheck `gsettings writable` at each clock boundary and fall
 back to the clock loop when it turns false. Locks are set by an admin,
 and rarely mid-session, so this waits.
 
-## The test suite can't run from a checkout path containing spaces
-
-Found while checking a Codex P2 (mikelward/conf#342) that asked for the pty
-test's generated `rc.zsh` to quote its paths. That one was real and is fixed,
-and the new test passes from such a path -- but copying the repo to
-`.../with space/conf` and running `zsh shrc_zsh_test.sh` fails **50 of its 66
-tests**, all pre-existing. They interpolate `$_srcdir` into a single-quoted
-snippet (`source '"$_srcdir"'/shrc`), which reaches the child zsh unquoted, so
-the word splits and nothing loads. The same shape is in `shrc_test.sh` and the
-other `*_test.sh` files.
-
-Nobody has hit it -- CI checks out to `/home/runner/work/conf/conf` and the
-usual local clone has no spaces -- so this is a latent limitation, not a live
-bug. Fixing it means quoting the interpolation at every one of those sites
-(`source '"$_srcdir"'/shrc` -> `source "'"$_srcdir"'/shrc"`, or passing the
-path in the environment instead), which is a wide mechanical change and its own
-branch.
-
 ## Get perf stats, then settle on one history entry point: native or atuin
 
 The shell now has two history back ends in play — zsh's own in-memory

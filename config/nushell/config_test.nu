@@ -635,48 +635,48 @@ let results = [
     # confirm: reads from ^head (process stdin), so we spawn a sub-nu
     # process with controlled stdin to test all paths.
     (run-test "nu confirm yes on y" {
-        let out = ("y" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        let out = ("y" | nu --no-config-file -c $"source ($CONFIG | to nuon); print \(confirm go\)")
         assert str contains $out "true"
     })
     (run-test "nu confirm yes on Y (uppercase)" {
-        let out = ("Y" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        let out = ("Y" | nu --no-config-file -c $"source ($CONFIG | to nuon); print \(confirm go\)")
         assert str contains $out "true"
     })
     (run-test "nu confirm yes on yes" {
-        let out = ("yes" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        let out = ("yes" | nu --no-config-file -c $"source ($CONFIG | to nuon); print \(confirm go\)")
         assert str contains $out "true"
     })
     (run-test "nu confirm no on n" {
-        let out = ("n" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        let out = ("n" | nu --no-config-file -c $"source ($CONFIG | to nuon); print \(confirm go\)")
         assert str contains $out "false"
     })
     (run-test "nu confirm no on no" {
-        let out = ("no" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        let out = ("no" | nu --no-config-file -c $"source ($CONFIG | to nuon); print \(confirm go\)")
         assert str contains $out "false"
     })
     # A bare Enter is one byte, and still means yes. Piping "" instead sends
     # *zero* bytes -- end of input, not an empty line -- which is why this case
     # is spelled with the newline and the decline case below is not.
     (run-test "nu confirm defaults to yes on a bare Enter" {
-        let out = ("\n" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        let out = ("\n" | nu --no-config-file -c $"source ($CONFIG | to nuon); print \(confirm go\)")
         assert str contains $out "true"
     })
     # Nothing to read at all declines: a caller with no one at the keyboard must
     # not have the prompt answered yes for it. shrc, config.fish, rc.mesh and
     # rc.elv agree.
     (run-test "nu confirm declines at end of input" {
-        let out = ("" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        let out = ("" | nu --no-config-file -c $"source ($CONFIG | to nuon); print \(confirm go\)")
         assert str contains $out "false"
     })
     # The byte count separates end of input from an empty line, so a final line
     # with no trailing newline has to stay an answer rather than becoming a
     # decline -- the regression the guard would otherwise introduce.
     (run-test "nu confirm reads a final line with no trailing newline" {
-        let out = ("y" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        let out = ("y" | nu --no-config-file -c $"source ($CONFIG | to nuon); print \(confirm go\)")
         assert str contains $out "true"
     })
     (run-test "nu confirm treats non-y reply as no" {
-        let out = ("maybe" | nu --no-config-file -c $"source ($CONFIG); print \(confirm go\)")
+        let out = ("maybe" | nu --no-config-file -c $"source ($CONFIG | to nuon); print \(confirm go\)")
         assert str contains $out "false"
     })
     # stdout carries confirm's return value — nu prints the final value of a
@@ -684,7 +684,7 @@ let results = [
     # stdout is empty. A prompt on stdout would corrupt any caller piping the
     # answer onward.
     (run-test "nu confirm prints its prompt to stderr" {
-        let out = ("y" | nu --no-config-file -c $"source ($CONFIG); confirm 'are you sure'" | complete)
+        let out = ("y" | nu --no-config-file -c $"source ($CONFIG | to nuon); confirm 'are you sure'" | complete)
         assert not ($out.stdout | str contains "are you sure")
         assert str contains $out.stderr "are you sure? [Y/n] "
     })
@@ -1611,7 +1611,7 @@ except OSError: pass
         "#!/bin/sh\necho changeshpool-called\n" | save -f ($bin | path join "changeshpool")
         ^chmod +x ($bin | path join "changeshpool")
         let out = (with-env { SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
-            ^nu --no-config-file -c $"source ($CONFIG); csp; print stayed"
+            ^nu --no-config-file -c $"source ($CONFIG | to nuon); csp; print stayed"
         } | complete)
         assert ($out.stdout | str contains "changeshpool-called")
         assert (not ($out.stdout | str contains "stayed"))
@@ -1621,7 +1621,7 @@ except OSError: pass
         "#!/bin/sh\necho changesession-called\n" | save -f ($bin | path join "changesession")
         ^chmod +x ($bin | path join "changesession")
         let out = (with-env { SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
-            ^nu --no-config-file -c $"source ($CONFIG); cs; print stayed"
+            ^nu --no-config-file -c $"source ($CONFIG | to nuon); cs; print stayed"
         } | complete)
         assert ($out.stdout | str contains "changesession-called")
         assert (not ($out.stdout | str contains "stayed"))
@@ -1633,7 +1633,7 @@ except OSError: pass
         "#!/bin/sh\necho changesession-called\n" | save -f ($bin | path join "changesession")
         ^chmod +x ($bin | path join "changesession")
         let out = (with-env { TMUX: "/tmp/sock", SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
-            ^nu --no-config-file -c $"source ($CONFIG); cs; print stayed"
+            ^nu --no-config-file -c $"source ($CONFIG | to nuon); cs; print stayed"
         } | complete)
         assert ($out.stdout | str contains "stayed")
     })
@@ -1644,7 +1644,7 @@ except OSError: pass
         "#!/bin/sh\necho changeshpool-called\n" | save -f ($bin | path join "changeshpool")
         ^chmod +x ($bin | path join "changeshpool")
         let out = (with-env { SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
-            ^nu --no-config-file -c $"source ($CONFIG); csp --list; print stayed"
+            ^nu --no-config-file -c $"source ($CONFIG | to nuon); csp --list; print stayed"
         } | complete)
         assert ($out.stdout | str contains "stayed")
     })
@@ -1655,7 +1655,7 @@ except OSError: pass
         "#!/bin/sh\nexit 0\n" | save -f ($bin | path join "changesession")
         ^chmod +x ($bin | path join "changesession")
         let out = (with-env { TMUX: "/tmp/sock", SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
-            ^nu --no-config-file -c $"source ($CONFIG); cs; print stayed"
+            ^nu --no-config-file -c $"source ($CONFIG | to nuon); cs; print stayed"
         } | complete)
         assert ($out.stdout | str contains "stayed")
         assert ($out.exit_code == 0)
@@ -1668,7 +1668,7 @@ except OSError: pass
         "#!/bin/sh\nexit 130\n" | save -f ($bin | path join "changesession")
         ^chmod +x ($bin | path join "changesession")
         let out = (with-env { SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
-            ^nu --no-config-file -c $"source ($CONFIG); cs; print stayed"
+            ^nu --no-config-file -c $"source ($CONFIG | to nuon); cs; print stayed"
         } | complete)
         assert (not ($out.stdout | str contains "stayed"))
         assert ($out.exit_code != 0)
@@ -1678,7 +1678,7 @@ except OSError: pass
         "#!/bin/sh\nexit 130\n" | save -f ($bin | path join "changeshpool")
         ^chmod +x ($bin | path join "changeshpool")
         let out = (with-env { SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
-            ^nu --no-config-file -c $"source ($CONFIG); csp; print stayed"
+            ^nu --no-config-file -c $"source ($CONFIG | to nuon); csp; print stayed"
         } | complete)
         assert (not ($out.stdout | str contains "stayed"))
         assert ($out.exit_code != 0)
@@ -1692,7 +1692,7 @@ except OSError: pass
         "#!/bin/sh\necho makeshpool-called\n" | save -f ($bin | path join "makeshpool")
         ^chmod +x ($bin | path join "makeshpool")
         let out = (with-env { SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
-            ^nu --no-config-file -c $"source ($CONFIG); msp newproj; print stayed"
+            ^nu --no-config-file -c $"source ($CONFIG | to nuon); msp newproj; print stayed"
         } | complete)
         assert ($out.stdout | str contains "makeshpool-called")
         assert (not ($out.stdout | str contains "stayed"))
@@ -1702,7 +1702,7 @@ except OSError: pass
         "#!/bin/sh\necho makesession-called\n" | save -f ($bin | path join "makesession")
         ^chmod +x ($bin | path join "makesession")
         let out = (with-env { SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
-            ^nu --no-config-file -c $"source ($CONFIG); ms newproj; print stayed"
+            ^nu --no-config-file -c $"source ($CONFIG | to nuon); ms newproj; print stayed"
         } | complete)
         assert ($out.stdout | str contains "makesession-called")
         assert (not ($out.stdout | str contains "stayed"))
@@ -1714,7 +1714,7 @@ except OSError: pass
         "#!/bin/sh\necho makesession-called\n" | save -f ($bin | path join "makesession")
         ^chmod +x ($bin | path join "makesession")
         let out = (with-env { TMUX: "/tmp/sock", SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
-            ^nu --no-config-file -c $"source ($CONFIG); ms newproj; print stayed"
+            ^nu --no-config-file -c $"source ($CONFIG | to nuon); ms newproj; print stayed"
         } | complete)
         assert ($out.stdout | str contains "stayed")
         assert ($out.exit_code == 0)
@@ -1726,7 +1726,7 @@ except OSError: pass
         "#!/bin/sh\nexit 3\n" | save -f ($bin | path join "makesession")
         ^chmod +x ($bin | path join "makesession")
         let out = (with-env { SHPOOL_SESSION_NAME: "work", PATH: ($env.PATH | prepend $bin) } {
-            ^nu --no-config-file -c $"source ($CONFIG); ms newproj; print stayed"
+            ^nu --no-config-file -c $"source ($CONFIG | to nuon); ms newproj; print stayed"
         } | complete)
         assert (not ($out.stdout | str contains "stayed"))
         assert ($out.exit_code != 0)
@@ -2094,7 +2094,7 @@ except OSError: pass
         let dir = (mktemp -d)
         # PATH with no ssh-add, no shpool, no autoshpool -- isolates the
         # auth failure from the other interactive-startup branches.
-        let cmd = $"nu --no-config-file -c 'with-env {PATH: [(char dq)($dir)(char dq) (char dq)/usr/bin(char dq) (char dq)/bin(char dq)]} { source ($CONFIG); print READY }'"
+        let cmd = $"nu --no-config-file -c 'with-env {PATH: [(char dq)($dir)(char dq) (char dq)/usr/bin(char dq) (char dq)/bin(char dq)]} { source ($CONFIG | to nuon); print READY }'"
         let r = (^script -qc $cmd /dev/null | complete)
         assert ($r.stdout | str contains "READY") $"startup should finish despite missing ssh-add: ($r.stdout) stderr=($r.stderr)"
     })
@@ -2198,7 +2198,7 @@ except OSError: pass
             ^chmod +x ($dir | path join $cmd)
         }
         let out = ("y" | nu --no-config-file -c $"
-            source ($CONFIG)
+            source ($CONFIG | to nuon)
             $env.PATH = [($dir) /usr/bin /bin]
             clone https://github.com/foo/bar.git
         " | str trim)
@@ -2211,7 +2211,7 @@ except OSError: pass
             ^chmod +x ($dir | path join $cmd)
         }
         let out = ("n" | nu --no-config-file -c $"
-            source ($CONFIG)
+            source ($CONFIG | to nuon)
             $env.PATH = [($dir) /usr/bin /bin]
             clone https://github.com/foo/bar.git
         " | str trim)
@@ -2223,16 +2223,16 @@ except OSError: pass
     (run-test "nu puts prints to stdout" {
         # puts uses `print` which writes to terminal, not pipeline. Spawn a
         # sub-nu and capture its combined stdout.
-        let out = (nu --no-config-file -c $"source ($CONFIG); puts 'hello world'" | str trim)
+        let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); puts 'hello world'" | str trim)
         assert equal $out "hello world"
     })
     (run-test "nu error prints to stderr" {
         # error writes to stderr; capture via a sub-nu so we can read stderr
-        let r = (nu --no-config-file -c $"source ($CONFIG); error 'oops'" | complete)
+        let r = (nu --no-config-file -c $"source ($CONFIG | to nuon); error 'oops'" | complete)
         assert str contains $r.stderr "oops"
     })
     (run-test "nu warn prints to stderr" {
-        let r = (nu --no-config-file -c $"source ($CONFIG); warn 'heads up'" | complete)
+        let r = (nu --no-config-file -c $"source ($CONFIG | to nuon); warn 'heads up'" | complete)
         assert str contains $r.stderr "heads up"
     })
 
@@ -2578,7 +2578,7 @@ except OSError: pass
         $"#!/bin/sh\nc=$\(cat ($counter) 2>/dev/null || echo 0\)\nc=$\(\(c + 1\)\)\necho $c > ($counter)\nexit 0" | save ($dir | path join "retrystub")
         ^chmod +x ($dir | path join "retrystub")
         nu --no-config-file -c $"
-            source ($CONFIG)
+            source ($CONFIG | to nuon)
             $env.TERM = 'dumb'
             $env.PATH = [($dir) /usr/bin /bin]
             retry --sleep 0sec retrystub
@@ -2592,7 +2592,7 @@ except OSError: pass
         $"#!/bin/sh\nc=$\(cat ($counter) 2>/dev/null || echo 0\)\nc=$\(\(c + 1\)\)\necho $c > ($counter)\nif [ $c -lt 2 ]; then exit 1; fi\nexit 0" | save ($dir | path join "retrystub")
         ^chmod +x ($dir | path join "retrystub")
         nu --no-config-file -c $"
-            source ($CONFIG)
+            source ($CONFIG | to nuon)
             $env.TERM = 'dumb'
             $env.PATH = [($dir) /usr/bin /bin]
             retry --sleep 0sec retrystub
@@ -2699,7 +2699,7 @@ except OSError: pass
         "#!/bin/sh" | save ($dir | path join "shpool")
         ^chmod +x ($dir | path join "shpool")
         let r = (nu --no-config-file -c $"
-            source ($CONFIG)
+            source ($CONFIG | to nuon)
             $env.stdin-is-tty = {|| true }
             $env.WANT_TMUX = '0'
             $env.PATH = [($dir) /usr/bin /bin]
@@ -2720,7 +2720,7 @@ except OSError: pass
         "#!/bin/sh" | save ($dir | path join "shpool")
         ^chmod +x ($dir | path join "shpool")
         let r = (nu --no-config-file -c $"
-            source ($CONFIG)
+            source ($CONFIG | to nuon)
             $env.stdin-is-tty = {|| true }
             $env.WANT_TMUX = '0'
             $env.PATH = [($dir) /usr/bin /bin]
@@ -2751,7 +2751,7 @@ except OSError: pass
             $env.SHLVL = "2"
             maybe-start-session-and-exit
             if ($env.SESSION_SHELL? | default "") == "" { print "after-empty" } else { print "after-set" }
-        ' | str replace "CONFIG_PATH" $CONFIG | str replace "STUB_DIR" $dir)
+        ' | str replace "CONFIG_PATH" ($CONFIG | to nuon) | str replace "STUB_DIR" $dir)
         let r = (nu --no-config-file -c $script | str trim)
         assert ($r | str contains " -l]") $"launcher did not see the launching shell: got ($r)"
         assert ($r | str contains "after-empty") $"SESSION_SHELL leaked past the handoff: got ($r)"
@@ -2769,7 +2769,7 @@ except OSError: pass
         "#!/bin/sh" | save ($dir | path join "shpool")
         ^chmod +x ($dir | path join "shpool")
         let r = (nu --no-config-file -c $"
-            source ($CONFIG)
+            source ($CONFIG | to nuon)
             $env.stdin-is-tty = {|| true }
             $env.WANT_TMUX = '0'
             $env.PATH = [($dir) /usr/bin /bin]
@@ -2788,7 +2788,7 @@ except OSError: pass
         "#!/bin/sh" | save ($dir | path join "shpool")
         ^chmod +x ($dir | path join "shpool")
         let r = (nu --no-config-file -c $"
-            source ($CONFIG)
+            source ($CONFIG | to nuon)
             $env.stdin-is-tty = {|| true }
             $env.WANT_TMUX = '0'
             $env.PATH = [($dir) /usr/bin /bin]
@@ -2820,7 +2820,7 @@ except OSError: pass
         # Set PATH and SSH_CONNECTION via with-env so they're visible during
         # source; this prevents the interactive auth block from using the real
         # ssh-add and hanging on a passphrase prompt.
-        let cmd = $"nu --no-config-file -c 'with-env {PATH: [\"($dir)\" /usr/bin /bin], SSH_CONNECTION: \"1.2.3.4 22 5.6.7.8 22\", WANT_TMUX: \"0\"} { source ($CONFIG); hide-env --ignore-errors SHPOOL_SESSION_NAME; maybe-start-session-and-exit }'"
+        let cmd = $"nu --no-config-file -c 'with-env {PATH: [\"($dir)\" /usr/bin /bin], SSH_CONNECTION: \"1.2.3.4 22 5.6.7.8 22\", WANT_TMUX: \"0\"} { source ($CONFIG | to nuon); hide-env --ignore-errors SHPOOL_SESSION_NAME; maybe-start-session-and-exit }'"
         ^script -qc $cmd /dev/null out+err> (["/dev/null"] | path join)
         let status = (open $marker | str trim)
         assert equal $status "tty" $"autoshpool stdout should be a tty when nu runs under a pty, got: ($status)"
@@ -3411,7 +3411,7 @@ except OSError: pass
     # command with plain string concat so the $env reference lands
     # verbatim in the child.
     (run-test "nu FAILSAFE=1 bails before heavy startup runs" {
-        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let cmd = "source " + ($CONFIG | to nuon) + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
         let r = (with-env {FAILSAFE: "1", HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
             ^nu --no-config-file -c $cmd
         } | complete)
@@ -3420,7 +3420,7 @@ except OSError: pass
     })
 
     (run-test "nu FAILSAFE unset loads config.nu normally" {
-        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let cmd = "source " + ($CONFIG | to nuon) + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
         let r = (with-env {HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
             ^nu --no-config-file -c $cmd
         } | complete)
@@ -3433,7 +3433,7 @@ except OSError: pass
     # Only these four: anything else is reported rather than read as off in
     # silence, since someone writing FAILSAFE=yes meant *on*.
     (run-test "nu FAILSAFE=true triggers failsafe mode" {
-        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let cmd = "source " + ($CONFIG | to nuon) + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
         let r = (with-env {FAILSAFE: "true", HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
             ^nu --no-config-file -c $cmd
         } | complete)
@@ -3442,7 +3442,7 @@ except OSError: pass
     })
 
     (run-test "nu LC_FAILSAFE=true triggers failsafe mode" {
-        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let cmd = "source " + ($CONFIG | to nuon) + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
         let r = (with-env {LC_FAILSAFE: "true", HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
             ^nu --no-config-file -c $cmd
         } | complete)
@@ -3453,7 +3453,7 @@ except OSError: pass
     # Written out rather than looped: a `for` variable is not in scope inside
     # the closure `run-test` takes, so the two off spellings each get a block.
     (run-test "nu FAILSAFE=0 loads config.nu and says nothing" {
-        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let cmd = "source " + ($CONFIG | to nuon) + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
         let r = (with-env {FAILSAFE: "0", HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
             ^nu --no-config-file -c $cmd
         } | complete)
@@ -3463,7 +3463,7 @@ except OSError: pass
     })
 
     (run-test "nu FAILSAFE=false loads config.nu and says nothing" {
-        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let cmd = "source " + ($CONFIG | to nuon) + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
         let r = (with-env {FAILSAFE: "false", HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
             ^nu --no-config-file -c $cmd
         } | complete)
@@ -3477,7 +3477,7 @@ except OSError: pass
     # Both spellings of on have to work, or re-sourcing this config in a
     # session drops the escape hatch -- and reports `true` as not being `true`.
     (run-test "nu FAILSAFE as a native bool triggers failsafe mode" {
-        let cmd = "$env.FAILSAFE = true; source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let cmd = "$env.FAILSAFE = true; source " + ($CONFIG | to nuon) + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
         let r = (with-env {HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
             ^nu --no-config-file -c $cmd
         } | complete)
@@ -3487,7 +3487,7 @@ except OSError: pass
     })
 
     (run-test "nu FAILSAFE as a native int triggers failsafe mode" {
-        let cmd = "$env.FAILSAFE = 1; source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let cmd = "$env.FAILSAFE = 1; source " + ($CONFIG | to nuon) + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
         let r = (with-env {HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
             ^nu --no-config-file -c $cmd
         } | complete)
@@ -3497,7 +3497,7 @@ except OSError: pass
     })
 
     (run-test "nu FAILSAFE as a native false loads config.nu and says nothing" {
-        let cmd = "$env.FAILSAFE = false; source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let cmd = "$env.FAILSAFE = false; source " + ($CONFIG | to nuon) + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
         let r = (with-env {HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
             ^nu --no-config-file -c $cmd
         } | complete)
@@ -3507,7 +3507,7 @@ except OSError: pass
     })
 
     (run-test "nu FAILSAFE=yes is reported and read as off" {
-        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let cmd = "source " + ($CONFIG | to nuon) + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
         let r = (with-env {FAILSAFE: "yes", HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
             ^nu --no-config-file -c $cmd
         } | complete)
@@ -3519,7 +3519,7 @@ except OSError: pass
     # LC_FAILSAFE=1 is the ssh-survivable alias (most sshd configs
     # AcceptEnv LC_*), so `LC_FAILSAFE=1 ssh host` reaches the remote.
     (run-test "nu LC_FAILSAFE=1 also triggers failsafe mode" {
-        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let cmd = "source " + ($CONFIG | to nuon) + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
         let r = (with-env {LC_FAILSAFE: "1", HOME: $env.HOME, HISTORY_FILE: "SENTINEL"} {
             ^nu --no-config-file -c $cmd
         } | complete)
@@ -3549,7 +3549,7 @@ except OSError: pass
     (run-test "nu ~/.failsafe file triggers failsafe mode" {
         let fhome = (mktemp -d)
         touch ($fhome | path join ".failsafe")
-        let cmd = "source " + $CONFIG + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
+        let cmd = "source " + ($CONFIG | to nuon) + "; print $'HISTORY_FILE=($env.HISTORY_FILE)'"
         let r = (with-env {HOME: $fhome, HISTORY_FILE: "SENTINEL"} {
             ^nu --no-config-file -c $cmd
         } | complete)

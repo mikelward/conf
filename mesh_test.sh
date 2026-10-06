@@ -20,6 +20,8 @@ fi
 
 _env_mesh="$_srcdir/config/mesh/env.mesh"
 _rc_mesh="$_srcdir/config/mesh/rc.mesh"
+_env_mesh_q=$(shell_quote "$_env_mesh")
+_rc_mesh_q=$(shell_quote "$_rc_mesh")
 _fakehome="$_testdir/fakehome"
 mkdir -p "$_fakehome"
 
@@ -42,8 +44,8 @@ _mesh_run_config() {
         TMUX= \
         SSH_CONNECTION= \
         run_with_timeout 15 mesh -c "
-            source $_env_mesh
-            source $_rc_mesh
+            source $_env_mesh_q
+            source $_rc_mesh_q
             $_post
             $_snippet
         " </dev/null
@@ -62,8 +64,8 @@ _mesh_run_stdin() {
         TMUX= \
         SSH_CONNECTION= \
         run_with_timeout 15 mesh -c "
-            source $_env_mesh
-            source $_rc_mesh
+            source $_env_mesh_q
+            source $_rc_mesh_q
             $_post
             $_snippet
         "
@@ -92,7 +94,7 @@ _mesh_run() {
 
 start_test "mesh FAILSAFE=1 bails out of rc.mesh"
 result="$(HOME="$_fakehome" FAILSAFE=1 run_with_timeout 15 mesh -c "
-    source $_rc_mesh
+    source $_rc_mesh_q
     if type --quiet tilde-pwd { puts defined } else { puts undefined }
 " 2>&1 </dev/null)"
 assert_contains "failsafe mode" "$result"
@@ -100,7 +102,7 @@ assert_contains "undefined" "$result"
 
 start_test "mesh LC_FAILSAFE=1 bails out of rc.mesh"
 result="$(HOME="$_fakehome" LC_FAILSAFE=1 run_with_timeout 15 mesh -c "
-    source $_rc_mesh
+    source $_rc_mesh_q
     puts done
 " 2>&1 </dev/null)"
 assert_contains "failsafe mode" "$result"
@@ -110,14 +112,14 @@ assert_contains "failsafe mode" "$result"
 # old `== "1"` comparison swallowed -- now tells the person who typed it.
 start_test "mesh FAILSAFE=true bails out of rc.mesh"
 result="$(HOME="$_fakehome" FAILSAFE=true run_with_timeout 15 mesh -c "
-    source $_rc_mesh
+    source $_rc_mesh_q
     puts done
 " 2>&1 </dev/null)"
 assert_contains "failsafe mode" "$result"
 
 start_test "mesh LC_FAILSAFE=true bails out of rc.mesh"
 result="$(HOME="$_fakehome" LC_FAILSAFE=true run_with_timeout 15 mesh -c "
-    source $_rc_mesh
+    source $_rc_mesh_q
     puts done
 " 2>&1 </dev/null)"
 assert_contains "failsafe mode" "$result"
@@ -125,7 +127,7 @@ assert_contains "failsafe mode" "$result"
 for _failsafe_off in 0 false; do
     start_test "mesh FAILSAFE=$_failsafe_off loads rc.mesh and says nothing"
     result="$(HOME="$_fakehome" FAILSAFE="$_failsafe_off" run_with_timeout 15 mesh -c "
-        source $_rc_mesh
+        source $_rc_mesh_q
         puts done
     " 2>&1 </dev/null)"
     assert_not_contains "failsafe mode" "$result"
@@ -135,7 +137,7 @@ done
 
 start_test "mesh FAILSAFE=yes is reported and read as off"
 result="$(HOME="$_fakehome" FAILSAFE=yes run_with_timeout 15 mesh -c "
-    source $_rc_mesh
+    source $_rc_mesh_q
     puts done
 " 2>&1 </dev/null)"
 assert_contains "is not 1/0/true/false" "$result"
@@ -145,7 +147,7 @@ assert_contains "done" "$result"
 start_test "mesh ~/.failsafe bails out of rc.mesh"
 touch "$_fakehome/.failsafe"
 result="$(HOME="$_fakehome" run_with_timeout 15 mesh -c "
-    source $_rc_mesh
+    source $_rc_mesh_q
     puts done
 " 2>&1 </dev/null)"
 rm -f "$_fakehome/.failsafe"
@@ -161,7 +163,7 @@ assert_equal "defined" "$result"
 # `want-failsafe`, which is the half that calls env-on.
 start_test "mesh env-on reads an unset flag as off"
 result="$(HOME="$_fakehome" run_with_timeout 15 mesh -c "
-    source $_env_mesh
+    source $_env_mesh_q
     puts env-on(FAILSAFE)
 " 2>&1 </dev/null)"
 assert_equal "false" "$result"
@@ -169,7 +171,7 @@ assert_equal "false" "$result"
 for _on in 1 true; do
     start_test "mesh env-on reads $_on as on"
     result="$(HOME="$_fakehome" FAILSAFE="$_on" run_with_timeout 15 mesh -c "
-        source $_env_mesh
+        source $_env_mesh_q
         puts env-on(FAILSAFE)
     " 2>&1 </dev/null | tail -1)"
     assert_equal "true" "$result"
@@ -178,7 +180,7 @@ done
 for _off in 0 false; do
     start_test "mesh env-on reads $_off as off"
     result="$(HOME="$_fakehome" FAILSAFE="$_off" run_with_timeout 15 mesh -c "
-        source $_env_mesh
+        source $_env_mesh_q
         puts env-on(FAILSAFE)
     " 2>&1 </dev/null)"
     assert_equal "false" "$result"
@@ -187,21 +189,21 @@ done
 
 start_test "mesh env-on reports a value that is neither"
 result="$(HOME="$_fakehome" FAILSAFE=yes run_with_timeout 15 mesh -c "
-    source $_env_mesh
+    source $_env_mesh_q
     puts env-on(FAILSAFE)
 " 2>&1 </dev/null)"
 assert_contains "is not 1/0/true/false" "$result"
 
 start_test "mesh want-failsafe answers for LC_FAILSAFE too"
 result="$(HOME="$_fakehome" LC_FAILSAFE=1 run_with_timeout 15 mesh -c "
-    source $_env_mesh
+    source $_env_mesh_q
     puts want-failsafe()
 " 2>&1 </dev/null | tail -1)"
 assert_equal "true" "$result"
 
 start_test "mesh want-failsafe is false with no flag and no ~/.failsafe"
 result="$(HOME="$_fakehome" run_with_timeout 15 mesh -c "
-    source $_env_mesh
+    source $_env_mesh_q
     puts want-failsafe()
 " 2>&1 </dev/null)"
 assert_equal "false" "$result"
@@ -236,7 +238,7 @@ assert_equal "$_testdir/cdpath-target" "$result"
 start_test "mesh CDPATH reaches a non-interactive script"
 printf 'puts $env.CDPATH:join(",")\n' > "$_testdir/cdpath.mesh"
 result="$(HOME="$_fakehome" run_with_timeout 15 mesh -c "
-    source $_env_mesh
+    source $_env_mesh_q
     puts \$env.CDPATH:join(\",\")
 " </dev/null 2>&1)"
 assert_equal ".,$_fakehome" "$result"
@@ -250,8 +252,8 @@ assert_equal ".,$_fakehome" "$result"
 # TERM=dumb, which is exactly the variable under test here.
 _flash_run() {
     HOME="$_fakehome" TERM="$1" run_with_timeout 15 mesh -c "
-        source $_env_mesh
-        source $_rc_mesh
+        source $_env_mesh_q
+        source $_rc_mesh_q
         flash-terminal
     " </dev/null 2>&1 | od -c | head -1
 }
@@ -277,8 +279,8 @@ assert_not_contains '\a' "$(_flash_run xtermfoo)"
 # left for the user.
 start_test "mesh preprompt rings the bell last"
 result="$(HOME="$_fakehome" TERM=xterm run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
+    source $_env_mesh_q
+    source $_rc_mesh_q
     int func terminal-width() { return 1 }
     str func auth-info() { return \"\" }
     func maybe-background-fetch(auth = \"\") { return }
@@ -463,8 +465,8 @@ assert_equal "curl got: --location URL" "$result"
 
 start_test "mesh body forwards a long flag and prints the header"
 result="$(printf 'HEADER\naaa\nbbb\n' | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
+    source $_env_mesh_q
+    source $_rc_mesh_q
     body grep --invert-match aaa
 ")"
 assert_equal "HEADER
@@ -475,8 +477,8 @@ bbb" "$result"
 # -2, not a string, so the head is interpolated to text before parsing.
 start_test "mesh body accepts the -N shorthand"
 result="$(printf 'H1\nH2\nxxx\n' | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
+    source $_env_mesh_q
+    source $_rc_mesh_q
     body -2 cat
 ")"
 assert_equal "H1
@@ -494,8 +496,8 @@ assert_equal "2" "$result"
 
 start_test "mesh body reads its own --lines"
 result="$(printf 'H1\nH2\nxxx\n' | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
+    source $_env_mesh_q
+    source $_rc_mesh_q
     body --lines=2 cat
 ")"
 assert_equal "H1
@@ -631,8 +633,8 @@ assert_equal "PROMPTED" "$result"
 # below, and it should be the only one that breaks when the wording changes.
 _confirm_status() {
     printf '%s' "$1" | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout 15 mesh -c "
-        source $_env_mesh
-        source $_rc_mesh
+        source $_env_mesh_q
+        source $_rc_mesh_q
         confirm are you sure
     " >/dev/null 2>&1
     echo "$?"
@@ -660,8 +662,8 @@ assert_equal "1" "$(_confirm_status '')"
 
 start_test "mesh confirm says nothing about an unbound variable at end of input"
 printf '' | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
+    source $_env_mesh_q
+    source $_rc_mesh_q
     confirm are you sure
 " >/dev/null 2>"$_testdir/confirm-eof.err"
 assert_not_contains "unbound variable" "$(cat "$_testdir/confirm-eof.err")"
@@ -672,8 +674,8 @@ assert_not_contains "unbound variable" "$(cat "$_testdir/confirm-eof.err")"
 # 77dca06 fixed that, which is what made the stream worth choosing.
 _confirm_streams() {
     printf 'y\n' | HOME="$_fakehome" TERM=dumb NO_COLOR=1 run_with_timeout 15 mesh -c "
-        source $_env_mesh
-        source $_rc_mesh
+        source $_env_mesh_q
+        source $_rc_mesh_q
         confirm are you sure
     " 2>"$_testdir/confirm.err" >"$_testdir/confirm.out"
 }
@@ -906,7 +908,7 @@ chmod +x "$_failing_fnm_bin/fnm"
 mkdir -p "$_testdir/stale-shim/bin"
 result="$(PATH="$_failing_fnm_bin:$PATH" FNM_MULTISHELL_PATH="$_testdir/stale-shim" \
     HOME="$_fakehome" run_with_timeout 15 mesh -c "
-    source $_env_mesh
+    source $_env_mesh_q
     puts \"first=\$env.PATH[0]\"
 " </dev/null 2>&1)"
 assert_contains "could not read the node environment" "$result"
@@ -1022,8 +1024,8 @@ $_testdir/brew-idem/share/info," "$result"
 
 start_test "mesh setup-brew reload keeps an inherited MANPATH entry once"
 result="$(HOME="$_fakehome" MANPATH=/usr/share/man run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
+    source $_env_mesh_q
+    source $_rc_mesh_q
     \$env.BREW = \"$_testdir/brew-idem/bin/brew\"
     setup-brew
     setup-brew
@@ -1035,7 +1037,7 @@ assert_equal "$_testdir/brew-idem/share/man,/usr/share/man," "$result"
 # so deduplicating must not take it with the Homebrew entry.
 start_test "mesh setup-brew keeps an inherited INFOPATH sentinel"
 result="$(HOME="$_fakehome" INFOPATH="/custom:" run_with_timeout 15 mesh -c "
-    source $_env_mesh
+    source $_env_mesh_q
     \$env.BREW = \"$_testdir/brew-idem/bin/brew\"
     setup-brew
     setup-brew
@@ -1045,7 +1047,7 @@ assert_equal "$_testdir/brew-idem/share/info,/custom," "$result"
 
 start_test "mesh setup-brew keeps an interior MANPATH empty"
 result="$(HOME="$_fakehome" MANPATH="/a::/b" run_with_timeout 15 mesh -c "
-    source $_env_mesh
+    source $_env_mesh_q
     \$env.BREW = \"$_testdir/brew-idem/bin/brew\"
     setup-brew
     setup-brew
@@ -1155,8 +1157,8 @@ assert_equal "$_testdir/brew-arm/bin $_testdir/brew-arm/sbin" "$result"
 
 start_test "mesh setup-brew sets MANPATH with an unset MANPATH"
 result="$(HOME="$_fakehome" run_with_timeout 15 env -u MANPATH mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
+    source $_env_mesh_q
+    source $_rc_mesh_q
     \$env.BREW = \"$_testdir/brew-arm/bin/brew\"
     setup-brew
     puts \$env.MANPATH:join(\",\")
@@ -1165,8 +1167,8 @@ assert_equal "$_testdir/brew-arm/share/man," "$result"
 
 start_test "mesh setup-brew keeps an existing MANPATH and its trailing component"
 result="$(HOME="$_fakehome" MANPATH=/usr/share/man run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
+    source $_env_mesh_q
+    source $_rc_mesh_q
     \$env.BREW = \"$_testdir/brew-arm/bin/brew\"
     setup-brew
     puts \$env.MANPATH:join(\",\")
@@ -1175,8 +1177,8 @@ assert_equal "$_testdir/brew-arm/share/man,/usr/share/man," "$result"
 
 start_test "mesh setup-brew sets INFOPATH with an unset INFOPATH"
 result="$(HOME="$_fakehome" run_with_timeout 15 env -u INFOPATH mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
+    source $_env_mesh_q
+    source $_rc_mesh_q
     \$env.BREW = \"$_testdir/brew-arm/bin/brew\"
     setup-brew
     puts \$env.INFOPATH:join(\",\")
@@ -1185,8 +1187,8 @@ assert_equal "$_testdir/brew-arm/share/info," "$result"
 
 start_test "mesh setup-brew keeps an existing INFOPATH"
 result="$(HOME="$_fakehome" INFOPATH=/usr/share/info run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
+    source $_env_mesh_q
+    source $_rc_mesh_q
     \$env.BREW = \"$_testdir/brew-arm/bin/brew\"
     setup-brew
     puts \$env.INFOPATH:join(\",\")
@@ -1196,7 +1198,7 @@ assert_equal "$_testdir/brew-arm/share/info,/usr/share/info" "$result"
 start_test "mesh env.mesh completes its setup with brew installed and no MANPATH"
 result="$(HOME="$_fakehome" run_with_timeout 15 env -u MANPATH -u INFOPATH \
     BREW="$_testdir/brew-arm/bin/brew" mesh -c "
-    source $_env_mesh
+    source $_env_mesh_q
     puts \$env.GREP_COLORS
 " 2>&1 </dev/null)"
 assert_equal "mt=4" "$result"
@@ -1271,8 +1273,8 @@ assert_equal "/etc" "$result"
 start_test "mesh tilde-pwd shortens a \$HOME of /"
 result="$(HOME=/ TERM=dumb NO_COLOR=1 SHPOOL_SESSION_NAME= TMUX= SSH_CONNECTION= \
     run_with_timeout 15 mesh -c "
-        source $_env_mesh
-        source $_rc_mesh
+        source $_env_mesh_q
+        source $_rc_mesh_q
         cd /
         puts tilde-pwd()
     " </dev/null)"
@@ -2601,7 +2603,7 @@ assert_equal "status=1 kept=[/no-such-dir-here]" "$result"
 # capture exports the diagnostic to every child and into every history line.
 start_test "mesh TTY is empty when stdin is not a terminal"
 result="$(HOME="$_fakehome" run_with_timeout 15 env -u TTY mesh -c "
-    source $_env_mesh
+    source $_env_mesh_q
     puts \"[\$env.TTY]\"
 " </dev/null)"
 assert_equal "[]" "$result"
@@ -2618,7 +2620,7 @@ assert_equal "[]" "$result"
 # terminal: what matters is that the inherited value did not survive.
 start_test "mesh TTY is recomputed rather than inherited"
 result="$(HOME="$_fakehome" run_with_timeout 15 env TTY=/dev/pts/7 mesh -c "
-    source $_env_mesh
+    source $_env_mesh_q
     puts \"[\$env.TTY]\"
 " </dev/null)"
 assert_equal "[]" "$result"
@@ -3431,8 +3433,8 @@ EOF
 # Run a snippet with the ssh config in place and the aliases already defined.
 _ssh_aliases_run() {
     HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-        source $_env_mesh
-        source $_rc_mesh
+        source $_env_mesh_q
+        source $_rc_mesh_q
         set-up-ssh-aliases
         $1
 " </dev/null 2>&1
@@ -3476,8 +3478,8 @@ assert_equal "to: host1" "$result"
 # builtin now, so `st` is what carries the vcs spelling.
 start_test "mesh st still reaches vcs after the ssh aliases load"
 result="$(PATH="$_fake_vcs_bin:$PATH" HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
+    source $_env_mesh_q
+    source $_rc_mesh_q
     set-up-ssh-aliases
     st
 " </dev/null 2>&1)"
@@ -3515,8 +3517,8 @@ assert_equal "true" "$result"
 start_test "mesh ssh aliases survive a Host mesh cannot bind"
 result="$(PATH="$_fake_ssh_bin:$PATH" HOME="$_ssh_config_home" HOSTNAME=mybox \
     run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
+    source $_env_mesh_q
+    source $_rc_mesh_q
     set-up-ssh-aliases
     host1 uptime
 " </dev/null 2>&1)"
@@ -3535,8 +3537,8 @@ start_test "mesh ssh host aliases forward every argument to ssh-to"
 _write_ssh_config
 result="$(PATH="$_fake_ssh_bin:$PATH" HOME="$_ssh_config_home" HOSTNAME=mybox \
     run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
+    source $_env_mesh_q
+    source $_rc_mesh_q
     bool func have-command(name) { return false if \$name == \"rw\"
         return true }
     str func short-hostname() { return \"mybox\" }
@@ -3561,8 +3563,8 @@ chmod +x "$_fake_cat_bin/cat"
 start_test "mesh set-up-ssh-aliases reports an unreadable ssh config"
 _write_ssh_config
 result="$(HOME="$_ssh_config_home" PATH="$_fake_cat_bin:$PATH" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
+    source $_env_mesh_q
+    source $_rc_mesh_q
     set-up-ssh-aliases
     puts \"status=\$sh.status\"
     host1
@@ -3577,8 +3579,8 @@ rm -rf "$_ssh_spaced_home"
 mkdir -p "$_ssh_spaced_home/.ssh"
 printf 'Host host1\n' > "$_ssh_spaced_home/.ssh/config"
 result="$(HOME="$_ssh_spaced_home" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
+    source $_env_mesh_q
+    source $_rc_mesh_q
     set-up-ssh-aliases
     puts (is-function(host1))
 " </dev/null 2>&1)"
@@ -3588,8 +3590,8 @@ start_test "mesh set-up-ssh-aliases does nothing without an ssh config"
 rm -rf "$_ssh_config_home"
 mkdir -p "$_ssh_config_home"
 HOME="$_ssh_config_home" run_with_timeout 15 mesh -c "
-    source $_env_mesh
-    source $_rc_mesh
+    source $_env_mesh_q
+    source $_rc_mesh_q
     set-up-ssh-aliases
     puts survived
 " </dev/null 2>&1 | grep -q survived
@@ -3899,8 +3901,8 @@ assert_equal "1" "$(wc -l < "$_auth_calls" | tr -d ' ')"
 # than a variable assignment prefix.
 _run_with_uid() {
     HOME="$_fakehome" run_with_timeout 15 env "UID=$1" mesh -c "
-        source $_env_mesh
-        source $_rc_mesh
+        source $_env_mesh_q
+        source $_rc_mesh_q
         puts i-am-root():repr
     " </dev/null
 }
@@ -3926,8 +3928,8 @@ start_test "mesh i-am-root forks no id when \$UID is set"
 rm -f "$_testdir/id-calls"
 HOME="$_fakehome" run_with_timeout 15 \
     env "PATH=$_fake_id_bin:$PATH" UID=1000 USERNAME=someone mesh -c "
-        source $_env_mesh
-        source $_rc_mesh
+        source $_env_mesh_q
+        source $_rc_mesh_q
         puts i-am-root():repr
         puts i-am-root():repr
         puts i-am-root():repr
@@ -3942,7 +3944,7 @@ start_test "mesh env.mesh forks no id for an unset \$UID"
 rm -f "$_testdir/id-calls"
 HOME="$_fakehome" run_with_timeout 15 \
     env -u UID "PATH=$_fake_id_bin:$PATH" USERNAME=someone HOSTNAME=host1 mesh -c "
-        source $_env_mesh
+        source $_env_mesh_q
         puts \$env.UID
     " </dev/null >/dev/null 2>&1
 assert_equal "" "$(cat "$_testdir/id-calls" 2>/dev/null)"
@@ -3950,7 +3952,7 @@ assert_equal "" "$(cat "$_testdir/id-calls" 2>/dev/null)"
 start_test "mesh env.mesh sets \$UID from \$sh.uid when it is unset"
 result="$(HOME="$_fakehome" run_with_timeout 15 \
     env -u UID USERNAME=someone HOSTNAME=host1 mesh -c "
-        source $_env_mesh
+        source $_env_mesh_q
         puts \$env.UID
     " </dev/null)"
 assert_equal "$(id -u)" "$result"
@@ -3991,28 +3993,28 @@ assert_equal "mt=4 1024" "$result"
 
 start_test "mesh env.mesh picks light-background ls colors by default"
 result="$(HOME="$_fakehome" TERM=xterm-256color run_with_timeout 15 mesh -c "
-    source $_env_mesh
+    source $_env_mesh_q
     puts \$env.LSCOLORS
 " </dev/null)"
 assert_equal "exfxxxxxcxxxxx" "$result"
 
 start_test "mesh env.mesh picks dark-background ls colors on a linux console"
 result="$(HOME="$_fakehome" TERM=linux run_with_timeout 15 mesh -c "
-    source $_env_mesh
+    source $_env_mesh_q
     puts \$env.LSCOLORS
 " </dev/null)"
 assert_equal "ExFxxxxxCxxxxx" "$result"
 
 start_test "mesh env.mesh keeps an inherited GOPATH"
 result="$(HOME="$_fakehome" GOPATH=/somewhere/else run_with_timeout 15 mesh -c "
-    source $_env_mesh
+    source $_env_mesh_q
     puts \$env.GOPATH
 " </dev/null)"
 assert_equal "/somewhere/else" "$result"
 
 start_test "mesh env.mesh defaults GOPATH to \$HOME"
 result="$(HOME="$_fakehome" GOPATH= run_with_timeout 15 mesh -c "
-    source $_env_mesh
+    source $_env_mesh_q
     puts \$env.GOPATH
 " </dev/null)"
 assert_equal "$_fakehome" "$result"
@@ -4023,7 +4025,7 @@ assert_equal "$_fakehome/.history" "$result"
 
 start_test "mesh env.mesh failsafe skips the environment setup"
 result="$(HOME="$_fakehome" FAILSAFE=1 run_with_timeout 15 env -u GREP_COLORS mesh -c "
-    source $_env_mesh
+    source $_env_mesh_q
     puts \$env:get(GREP_COLORS, \"(unset)\")
 " 2>/dev/null </dev/null)"
 assert_equal "(unset)" "$result"
