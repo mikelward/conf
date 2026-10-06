@@ -340,19 +340,27 @@ or failed fetch silently keeps the plain prompt rather than blocking or
 erroring startup. Weigh all that against just accepting a plain prompt on hosts
 where `vcs` wasn't installed.
 
-## Handle atuin's enter_accept in Elvish's hand-rolled Ctrl-R
+## Decide whether Elvish's Ctrl-R should run on Enter
 
-`config/atuin/config.toml` sets `enter_accept = true` (shared by every shell).
-For the shells with a shipped `atuin init` integration (zsh, bash, fish) that
-makes Enter run the selection and Tab insert-for-edit. But Elvish's Ctrl-R is
-hand-rolled (`config/elvish/lib/interactive.elv`'s `-atuin-search`): it slurps
-`atuin search -i`'s stdout into the buffer and treats any nonzero exit as a
-cancel (the `catch`). It doesn't set `ATUIN_SHELL`, so it may receive atuin's
-accept signal (an `__atuin_accept__:` output prefix and/or a nonzero "execute"
-exit status) and either insert the literal prefix or discard the line.
+`config/atuin/config.toml` sets `enter_accept = true`, so in zsh, bash and fish
+Enter runs the selection and Tab puts it on the line to edit. In Elvish, whose
+Ctrl-R is hand-rolled (`-atuin-search` in `config/elvish/lib/interactive.elv`),
+both edit.
 
-Verify on a box with atuin + elvish which signal atuin emits when `ATUIN_SHELL`
-is unset, then update the wrapper to handle it: strip an `__atuin_accept__:`
-prefix, and distinguish the execute status from a real cancel (run the line
-rather than dropping it). Tier 2 fast-follow, so it lags the zsh change rather
-than gating it.
+Checked against atuin 18.23.0's source, the fear that used to be recorded here
+can't happen. atuin marks a line to run, with an `__atuin_accept__:` prefix,
+only when `ATUIN_SHELL` names zsh, fish, bash, xonsh, nu or PowerShell, and
+Elvish sets none. So it gets the plain line, never the prefix. Esc, under the
+default `exit_mode = return-original`, prints nothing and exits 0, which keeps
+the line as it was; no line is dropped either.
+
+Running on Enter would mean claiming a shell atuin knows for the search, say
+`ATUIN_SHELL=bash`, then stripping the prefix and running the line. It costs
+two things:
+
+- atuin's default `search.shells = auto` would narrow the results to commands
+  recorded from bash. Setting `shells` in `config.toml` would undo that, for
+  every shell.
+- Its cd mode would answer in bash's quoting, which Elvish doesn't read.
+
+Worth deciding rather than doing by symmetry. Tier 2, so it doesn't gate zsh.
