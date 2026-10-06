@@ -29,10 +29,16 @@
 
 -- Input tweaks on top of apply-input.sh's automatic classification
 -- (names: hyprctl devices). apply-input.sh makes each mouse left_handed with
--- a faster scroll_factor, but leaves alone either one set for that mouse
--- here. HYPR_MOUSE_SCROLL_FACTOR in ~/.env.local sets every mouse's wheel
--- speed at once (in the tide session, link that into environment.d as
--- ~/.env describes, for tide.service's run at login).
+-- a faster scroll_factor, or as tide's Mouse settings say, and gives each
+-- touchpad tide's Touchpad speed and handedness, but leaves alone whatever
+-- is set for that device here. HYPR_MOUSE_SCROLL_FACTOR in ~/.env.local sets
+-- every mouse's wheel speed at once, unless tide's settings set one (in the
+-- tide session, link that into environment.d as ~/.env describes, for
+-- tide.service's run at login). An input option set here through hl.config
+-- wins over tide's setting of the same option, and is each device's default;
+-- tide's Mouse and Touchpad settings are per device, so they apply over that
+-- default, as a mouse's own left_handed does, and a field set here through
+-- hl.device beats both.
 -- hl.device({ name = "logitech-mx-master-3", sensitivity = 0.5 })
 -- hl.device({ name = "kensington-slimblade-trackball", left_handed = false })
 -- hl.config({ input = { touchpad = { scroll_factor = 1.5 } } })

@@ -89,7 +89,8 @@ assert_equal "" "$_old_ipc"
 
 ################################################################################
 # apply-input.sh, against a fake hyprctl: each mouse goes through
-# hyprland.lua's conf_input.mouse() by `hyprctl eval`; touchpads are left alone.
+# hyprland.lua's conf_input.mouse() by `hyprctl eval`, each touchpad through
+# conf_input.touchpad(), and keyboards are left alone.
 ################################################################################
 _fake=$(mktemp -d)
 cat > "$_fake/hyprctl" <<'FAKE'
@@ -110,12 +111,13 @@ _apply_run() {
     PATH="$_fake:$PATH" FAKE_LOG="$_fake/log" sh "$_apply" 2>"$_fake/err"
 }
 
-start_test "apply-input configures each mouse (wheel at 3) through conf_input, not the touchpad"
+start_test "apply-input configures each mouse (wheel at 3) and touchpad through conf_input, not the keyboard"
 _apply_run
 assert_equal 0 "$?"
 _apply_log=$(cat "$_fake/log")
 assert_contains 'conf_input.mouse("logitech-usb-receiver", 3)' "$_apply_log"
-assert_not_contains "synaptics" "$_apply_log"
+assert_contains 'conf_input.touchpad("synps/2-synaptics-touchpad")' "$_apply_log"
+assert_not_contains 'conf_input.mouse("synps/2-synaptics-touchpad"' "$_apply_log"
 assert_not_contains "at-keyboard" "$_apply_log"
 
 start_test "apply-input escapes quotes in a device name for Lua"

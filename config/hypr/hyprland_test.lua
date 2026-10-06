@@ -60,6 +60,7 @@ end
 local LAYOUT = ".config/hypr/tide/layout.lua"
 local FOCUS = ".config/hypr/tide/focus.lua"
 local LOCAL = ".config/hypr/hyprland.local.lua"
+local TIDE_INPUT = ".config/hypr/tide-input.lua"
 local LID_FILE = "run/hypr/sig1/tide-lid"
 
 local function exists(rel)
@@ -231,7 +232,7 @@ end
 -- (whose lid state file survives).
 local function load(setup)
     if not (setup and setup.keep_files) then
-        assert(os.execute("rm -rf '" .. tmp .. "/" .. LAYOUT .. "' '" .. tmp .. "/" .. LOCAL .. "'"))
+        assert(os.execute("rm -rf '" .. tmp .. "/" .. LAYOUT .. "' '" .. tmp .. "/" .. LOCAL .. "' '" .. tmp .. "/" .. TIDE_INPUT .. "'"))
     end
     if not (setup and setup.reload) then
         -- rm -rf, since a failed test can leave a directory in its place.
@@ -249,6 +250,9 @@ local function load(setup)
     _G.fake_focus_opts = nil
     if setup and setup["local"] then
         write(LOCAL, setup["local"])
+    end
+    if setup and setup.input then
+        write(TIDE_INPUT, setup.input)
     end
     env_overrides = { XDG_RUNTIME_DIR = tmp .. "/run", HYPRLAND_INSTANCE_SIGNATURE = "sig1", XDG_CURRENT_DESKTOP = false }
     for k, v in pairs((setup and setup.env) or {}) do
@@ -1166,6 +1170,175 @@ test("only hyprland.local.lua's own hl.device calls are recorded", function()
     local d = devices()
     eq(nil, d[1].left_handed, "a call before the error counts")
     eq(true, d[2].left_handed, "a call after loading doesn't")
+end)
+
+-- tide's settings (tide SPEC.md §16), as tide writes them.
+local TIDE_SETTINGS = [[
+return {
+    mouse = { sensitivity = -0.5, scroll_factor = 2, natural_scroll = false, left_handed = false },
+    touchpad = {
+        sensitivity = 0.25, scroll_factor = 0.75, natural_scroll = false, left_handed = true,
+        tap_to_click = false, disable_while_typing = false,
+    },
+    keyboard = { kb_layout = "us,de", kb_variant = "dvorak,", repeat_delay = 300, repeat_rate = 40 },
+}
+]]
+
+test("without tide's input settings, the config's own stand", function()
+    load()
+    eq("us", S.config.input.kb_layout)
+    eq("dvorak", S.config.input.kb_variant)
+    eq(true, S.config.input.touchpad.tap_to_click)
+    eq(0, #S.notifications)
+    S.calls = {}
+    conf_input.touchpad("synps/2-synaptics-touchpad")
+    local d = devices()
+    eq(1, #d)
+    eq(1.0, d[1].sensitivity, "a touchpad takes the global settings")
+    eq(false, d[1].left_handed)
+end)
+
+test("tide's keyboard and touchpad settings apply over the config's", function()
+    load({ input = TIDE_SETTINGS })
+    eq(0, #S.notifications)
+    eq("us,de", S.config.input.kb_layout)
+    eq("dvorak,", S.config.input.kb_variant)
+    eq(300, S.config.input.repeat_delay)
+    eq(40, S.config.input.repeat_rate)
+    eq(false, S.config.input.touchpad.tap_to_click)
+    eq(false, S.config.input.touchpad.disable_while_typing)
+    eq(false, S.config.input.touchpad.natural_scroll)
+    eq(0.75, S.config.input.touchpad.scroll_factor)
+    eq(nil, S.config.input.touchpad.sensitivity, "speed and handedness are per touchpad")
+    eq("compose:caps,altwin:menu_win", S.config.input.kb_options, "what tide doesn't set stays")
+end)
+
+test("each mouse takes tide's mouse settings, and each touchpad its own", function()
+    load({ input = TIDE_SETTINGS })
+    S.calls = {}
+    conf_input.mouse("logitech-usb-receiver", 3)
+    conf_input.touchpad("synps/2-synaptics-touchpad")
+    local d = devices()
+    eq(2, #d)
+    eq(false, d[1].left_handed, "tide's handedness over the default")
+    eq(2, d[1].scroll_factor, "tide's wheel speed over the script's")
+    eq(-0.5, d[1].sensitivity)
+    eq(false, d[1].natural_scroll)
+    eq(true, d[2].left_handed)
+    eq(0.25, d[2].sensitivity)
+    eq(nil, d[2].tap_to_click, "the touchpad section's options aren't per device")
+end)
+
+test("hyprland.local.lua still wins over tide's settings, per device and in input", function()
+    load({
+        input = TIDE_SETTINGS,
+        ["local"] = 'hl.device({ name = "logitech usb receiver", sensitivity = 0.9 })\n'
+            .. 'hl.config({ input = { kb_layout = "fr", touchpad = { tap_to_click = true } } })',
+    })
+    eq("fr", S.config.input.kb_layout)
+    eq(true, S.config.input.touchpad.tap_to_click)
+    S.calls = {}
+    conf_input.mouse("logitech-usb-receiver", 3)
+    eq(nil, devices()[1].sensitivity, "the local file's speed for that mouse")
+    eq(false, devices()[1].left_handed, "tide's for the rest")
+    -- A change to tide's settings reapplies them, but not over the local file.
+    S.calls, S.execs = {}, {}
+    conf_input.reload()
+    eq("fr", S.config.input.kb_layout)
+    eq(true, S.config.input.touchpad.tap_to_click)
+    eq("us,de", (function()
+        for _, c in ipairs(S.calls) do
+            if c[1] == "config" and c[2].input and c[2].input.kb_variant then
+                return "us,de"
+            end
+        end
+    end)(), "the rest of tide's settings reapply")
+end)
+
+test("a setting tide stops making goes back to the config's on reload", function()
+    load({ input = TIDE_SETTINGS })
+    write(TIDE_INPUT, "return {}")
+    conf_input.reload()
+    eq("us", S.config.input.kb_layout)
+    eq("dvorak", S.config.input.kb_variant)
+    eq(600, S.config.input.repeat_delay)
+    eq(true, S.config.input.touchpad.tap_to_click)
+    eq(1.0, S.config.input.touchpad.scroll_factor)
+    S.calls = {}
+    conf_input.mouse("logitech-usb-receiver", 3)
+    conf_input.touchpad("synps/2-synaptics-touchpad")
+    local d = devices()
+    eq(true, d[1].left_handed, "a mouse is left-handed again")
+    eq(3, d[1].scroll_factor, "with the script's wheel speed")
+    eq(1.0, d[1].sensitivity, "and the global speed")
+    eq(false, d[1].natural_scroll)
+    eq(false, d[2].left_handed, "a touchpad is right-handed again")
+    eq(1.0, d[2].sensitivity)
+    -- And the same with no file at all.
+    os.remove(tmp .. "/" .. TIDE_INPUT)
+    conf_input.reload()
+    eq("us", S.config.input.kb_layout)
+end)
+
+test("a device's default follows a global the local file changed", function()
+    load({ ["local"] = 'hl.config({ input = { sensitivity = 0.5, left_handed = true } })' })
+    S.calls = {}
+    conf_input.touchpad("synps/2-synaptics-touchpad")
+    conf_input.mouse("logitech-usb-receiver", 3)
+    local d = devices()
+    eq(0.5, d[1].sensitivity)
+    eq(true, d[1].left_handed)
+    eq(0.5, d[2].sensitivity)
+    -- tide's settings for a kind of device are more specific than a global,
+    -- as the mouse's own left-handed default is, so they apply over it.
+    load({ input = TIDE_SETTINGS, ["local"] = 'hl.config({ input = { sensitivity = 0.5, left_handed = true } })' })
+    eq(0.5, S.config.input.sensitivity, "the global stays the local file's")
+    S.calls = {}
+    conf_input.touchpad("synps/2-synaptics-touchpad")
+    conf_input.mouse("logitech-usb-receiver", 3)
+    d = devices()
+    eq(0.25, d[1].sensitivity, "tide's touchpad speed")
+    eq(-0.5, d[2].sensitivity, "tide's mouse speed")
+    eq(false, d[2].left_handed, "tide's mouse handedness")
+end)
+
+test("conf_input.reload reads tide's settings again and reapplies every device", function()
+    load()
+    write(TIDE_INPUT, TIDE_SETTINGS)
+    S.execs = {}
+    conf_input.reload()
+    eq("us,de", S.config.input.kb_layout)
+    eq(1, #S.execs)
+    truthy(S.execs[1]:find("apply-input.sh", 1, true), "apply-input.sh runs again: " .. tostring(S.execs[1]))
+    S.calls = {}
+    conf_input.touchpad("synps/2-synaptics-touchpad")
+    eq(0.25, devices()[1].sensitivity)
+end)
+
+test("a broken tide-input.lua is reported and applies nothing", function()
+    load({ input = "return {" })
+    eq(1, #S.notifications)
+    truthy(S.notifications[1].text:find("tide-input.lua (none of it applied)", 1, true), S.notifications[1].text)
+    eq("us", S.config.input.kb_layout)
+    load({ input = "return 5" })
+    truthy(S.notifications[1].text:find("expected a table", 1, true), S.notifications[1].text)
+end)
+
+test("tide-input.lua is data: it can't reach anything", function()
+    load({ input = 'os.execute("true") return {}' })
+    eq(1, #S.notifications)
+    truthy(S.notifications[1].text:find("none of it applied", 1, true), S.notifications[1].text)
+end)
+
+test("a setting of the wrong type or name is reported and left out", function()
+    load({ input = 'return { keyboard = { kb_layout = 5, repeat_rate = 30 }, mouse = { speed = 1 } }' })
+    eq(2, #S.notifications)
+    eq("us", S.config.input.kb_layout, "the bad one is left out")
+    eq(30, S.config.input.repeat_rate, "the good one applies")
+    load({ input = 'return { keybord = { kb_layout = "de" }, keyboard = { repeat_rate = 30 } }' })
+    eq(1, #S.notifications)
+    truthy(S.notifications[1].text:find("unknown section keybord", 1, true), S.notifications[1].text)
+    eq(30, S.config.input.repeat_rate, "the known section still applies")
 end)
 
 test("an unreadable hyprland.local.lua is reported, not taken as absent", function()
