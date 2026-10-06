@@ -289,19 +289,12 @@ command runs, but it runs outside the shell, so a shell function names
 nothing it can see: a function `s` that runs `subl` grants `s`. A window
 the command's own processes open still takes the grant through the shell's
 pid; an already-running or D-Bus-activated app's doesn't. Following a
-function's body is open-ended. fish's `alias` makes a function, so it's
-the same case there.
+function's body is open-ended. fish's and mesh's `alias` each make a
+function, so it's the same case there.
 
 Aliases are covered: zsh's preexec hands `precommand` the line with
 aliases expanded, bash's DEBUG trap sees it expanded already, and nushell's
 `tide-line-as-run` reads the external call from nu's own parse (`ast`).
-
-## Port the tide focus grant to mesh
-
-bash, zsh, fish, nushell and Elvish hand each command line to
-`tide-grant` before running it. mesh has a `preexec` hook for the
-same call, once conf's tests run mesh (see `install-ci-shells.sh`). Until
-then, a GUI app started from mesh opens unfocused and waits for Super+Tab.
 
 ## Ghost text: fan out beyond zsh
 
