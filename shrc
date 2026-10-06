@@ -102,13 +102,17 @@ fi
 # want_reexec: true when we should re-exec into $SHELL. Pure policy over
 # $SHELL, the running shell ($shell), and the one-shot SHELL_REEXEC_DONE
 # guard, with no interactive/tty checks, so it is unit-testable. Only switches
-# between shells shrc supports (bash/zsh), and only when $SHELL is a different,
-# executable shell we haven't already switched into.
+# to bash, zsh or Elvish, and only when $SHELL is a different, executable shell
+# we haven't already switched into.
 want_reexec() {
     test -n "${SHELL_REEXEC_DONE:-}" && return 1
     case "${SHELL:-}" in
         */bash|bash) test "$shell" = bash && return 1;;
         */zsh|zsh)   test "$shell" = zsh && return 1;;
+        # Elvish never reads shrc, so a shell running this isn't Elvish yet.
+        # Its -l is a no-op, which is fine: rc.elv reads nothing only a login
+        # shell would, and ~/.env has already run in the shell handing over.
+        */elvish|elvish) ;;
         *) return 1;;
     esac
     command -v "$SHELL" >/dev/null 2>&1

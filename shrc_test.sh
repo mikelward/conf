@@ -1736,9 +1736,13 @@ assert_equal "rc=0 moved=no" "$result"
 mkdir -p "$_testdir/fakebin"
 printf '#!/bin/sh\nexit 0\n' > "$_testdir/fakebin/bash"
 printf '#!/bin/sh\nexit 0\n' > "$_testdir/fakebin/zsh"
-chmod +x "$_testdir/fakebin/bash" "$_testdir/fakebin/zsh"
+printf '#!/bin/sh\nexit 0\n' > "$_testdir/fakebin/elvish"
+printf '#!/bin/sh\nexit 0\n' > "$_testdir/fakebin/fish"
+chmod +x "$_testdir/fakebin/bash" "$_testdir/fakebin/zsh" \
+    "$_testdir/fakebin/elvish" "$_testdir/fakebin/fish"
 _fakebash="$_testdir/fakebin/bash"
 _fakezsh="$_testdir/fakebin/zsh"
+_fakeelvish="$_testdir/fakebin/elvish"
 
 # Run want_reexec in a subshell so the temporary $shell/$SHELL/guard
 # assignments don't bleed into later tests; echo yes/no for the parent.
@@ -1757,6 +1761,18 @@ assert_equal "yes" "$(_want_reexec_result bash "$_fakezsh" "")"
 start_test "want_reexec stays put when SHELL names the running shell"
 assert_equal "no" "$(_want_reexec_result bash "$_fakebash" "")"
 
+# ~/.env setting SHELL to Elvish is enough to land there: shrc never runs in
+# Elvish, so whichever of bash or zsh is running this hands over.
+start_test "want_reexec switches zsh -> Elvish"
+assert_equal "yes" "$(_want_reexec_result zsh "$_fakeelvish" "")"
+
+start_test "want_reexec switches bash -> Elvish, named bare"
+assert_equal "yes" "$( PATH="$_testdir/fakebin:$PATH" _want_reexec_result bash elvish "")"
+
+start_test "want_reexec does not switch to Elvish twice (SHELL_REEXEC_DONE guard)"
+assert_equal "no" "$(_want_reexec_result zsh "$_fakeelvish" "1")"
+
+# fish is executable here, so only the policy can refuse it.
 start_test "want_reexec ignores an unsupported target shell"
 assert_equal "no" "$(_want_reexec_result zsh "$_testdir/fakebin/fish" "")"
 
