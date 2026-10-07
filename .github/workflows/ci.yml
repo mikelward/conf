@@ -61,6 +61,9 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    # A run takes a few minutes; without a limit, a stall would hold the job
+    # for GitHub's default six hours.
+    timeout-minutes: 20
     needs: classify
     if: needs.classify.outputs.docs_only != 'true'
     # A checkout path with a space, so a test that pastes the path into a
@@ -76,6 +79,11 @@ jobs:
           # Read-only test job; don't leave a write-capable token in
           # the local git config for subsequent steps.
           persist-credentials: false
+      # Every apt-get below gives up on a mirror that stalls for 30 s and
+      # tries again, rather than waiting out the job's limit, as Azure's
+      # Ubuntu mirror has made it.
+      - name: give up on a stalled apt mirror
+        run: printf '%s\n' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' 'Acquire::Retries "3";' | sudo tee /etc/apt/apt.conf.d/80-ci-timeouts >/dev/null
       # Without this the job covers bash and dash only: every other target
       # prints "SKIP: ... not installed" and still exits 0, so the check goes
       # green having run a fraction of the suite.

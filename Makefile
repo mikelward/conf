@@ -353,6 +353,7 @@ $(CACHE)/test-session-start-hook.stamp: .claude/hooks/session-start.sh \
 test-session-start-hook: $(CACHE)/test-session-start-hook.stamp
 
 $(CACHE)/test-install-ci-shells.stamp: install-ci-shells.sh test-tool-versions.sh \
+                          .github/workflows/ci.yml \
                           install_ci_shells_test.sh shrc_test_lib.sh | $(CACHE)
 	@sh install_ci_shells_test.sh
 	@touch $@

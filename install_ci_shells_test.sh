@@ -312,4 +312,23 @@ _out=$(PATH="$_stubs" "$_script" 2>/dev/null)
 assert_not_contains "using the installed" "$_out"
 rm -rf "$_stubs"
 
+# The workflow that runs the script: the test job writes apt's timeouts
+# before the script's apt-get, or a stalled mirror holds the job, and the
+# job has a limit, or that hold lasts GitHub's default six hours.
+_ci="$_srcdir/.github/workflows/ci.yml"
+_test_job=$(awk '$0 == "  test:" { on = 1; next } on && /^  [a-z][a-z-]*:$/ { exit } on' "$_ci")
+_conf_line=$(printf '%s\n' "$_test_job" | grep -n '80-ci-timeouts' | head -n 1)
+_script_line=$(printf '%s\n' "$_test_job" | grep -n 'install-ci-shells.sh' | head -n 1 | cut -d: -f1)
+start_test "ci.yml's test job writes apt's timeouts before installing the shells"
+assert_true test -n "$_conf_line" -a -n "$_script_line"
+if test -n "$_conf_line" && test -n "$_script_line"; then
+    assert_true test "${_conf_line%%:*}" -lt "$_script_line"
+fi
+for _setting in 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' 'Acquire::Retries "3";'; do
+    start_test "ci.yml's apt timeouts say $_setting"
+    assert_contains "$_setting" "$_conf_line"
+done
+start_test "ci.yml's test job has a time limit"
+assert_contains "timeout-minutes:" "$_test_job"
+
 test_summary "install-ci-shells"
