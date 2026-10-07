@@ -82,7 +82,209 @@ end
 --------------------------------------------------------------------------------
 -- Every output at its preferred mode, placed left to right, so no monitor
 -- names are needed. Pin a specific arrangement in hyprland.local.lua.
-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" })
+local default_monitor = { output = "", mode = "preferred", position = "auto", scale = "auto" }
+
+local function copy_rule(r, output)
+    local out = {}
+    for k, v in pairs(r) do
+        out[k] = v
+    end
+    out.output = output or r.output
+    return out
+end
+hl.monitor(copy_rule(default_monitor))
+
+-- tide's Displays settings (tide SPEC.md §16), which tide writes to
+-- tide-outputs.lua beside this file as { ["desc:<description>"] = { scale
+-- = 1.5, position = "auto-left" } }. Each is a rule for that monitor over
+-- the one above, by its description, so it follows the monitor from port
+-- to port. It's read as data, with nothing in scope, and an entry or a
+-- setting that's wrong is reported and left out.
+local TIDE_POSITIONS = { auto = true, ["auto-right"] = true, ["auto-left"] = true, ["auto-up"] = true, ["auto-down"] = true }
+
+local function read_tide_outputs()
+    local path = home .. "/.config/hypr/tide-outputs.lua"
+    local text = read_optional(path, "tide-outputs.lua", 64 * 1024)
+    if not text then
+        return {}
+    end
+    local chunk, err = load(text, "@" .. path, "t", {})
+    if not chunk then
+        notify_error("tide-outputs.lua (none of it applied): " .. tostring(err))
+        return {}
+    end
+    local ok, value = pcall(chunk)
+    if not ok then
+        notify_error("tide-outputs.lua (none of it applied): " .. tostring(value))
+        return {}
+    end
+    if type(value) ~= "table" then
+        notify_error("tide-outputs.lua (none of it applied): expected a table, not " .. type(value))
+        return {}
+    end
+    local outputs = {}
+    for output, given in pairs(value) do
+        if type(output) ~= "string" or not output:match("^desc:.") then
+            notify_error("tide-outputs.lua: " .. tostring(output) .. " should be desc: and a monitor's description")
+        elseif type(given) ~= "table" then
+            notify_error("tide-outputs.lua: " .. output .. " should be a table, not " .. type(given))
+        else
+            table.insert(outputs, output)
+        end
+    end
+    -- Sorted, so the rules go in the same order each time.
+    table.sort(outputs)
+    local entries = {}
+    for _, output in ipairs(outputs) do
+        local set = {}
+        for k, v in pairs(value[output]) do
+            if k == "scale" then
+                if type(v) == "number" and v >= 0.25 and v <= 10 then
+                    -- hl.monitor takes a scale as a string.
+                    set.scale = tostring(v)
+                else
+                    notify_error("tide-outputs.lua: " .. output .. ".scale should be a number from 0.25 to 10")
+                end
+            elseif k == "position" then
+                if TIDE_POSITIONS[v] then
+                    set.position = v
+                else
+                    notify_error("tide-outputs.lua: " .. output .. ".position should be auto, auto-right, auto-left, auto-up or auto-down")
+                end
+            else
+                notify_error("tide-outputs.lua: unknown setting " .. output .. "." .. tostring(k))
+            end
+        end
+        table.insert(entries, { output = output, set = set })
+    end
+    return entries
+end
+
+-- Entry `e`'s rule, `name` its output if given, else its desc:. What the
+-- entry leaves out is the catch-all's, as it is when the rule is added:
+-- naming a monitor means the catch-all no longer applies to it.
+local function tide_rule(e, name)
+    local rule = copy_rule(default_monitor, name or e.output)
+    for k, v in pairs(e.set) do
+        rule[k] = v
+    end
+    return rule
+end
+
+local tide_monitors = read_tide_outputs()
+for _, e in ipairs(tide_monitors) do
+    hl.monitor(tide_rule(e))
+end
+
+-- The monitor rules hyprland.local.lua makes, in order, and whether one
+-- is its own catch-all (see PER-MACHINE OVERRIDES).
+local local_monitors = {}
+local local_catchall = false
+
+-- Whether rule `selector` names monitor `m`, as Hyprland 0.56's
+-- CMonitor::matchesStaticSelector does: by its name, or desc: and the start
+-- of its description.
+local function names_monitor(selector, m)
+    local desc = selector:match("^desc:%s*(.-)%s*$")
+    if desc then
+        return type(m.description) == "string" and m.description:sub(1, #desc) == desc
+    end
+    return selector == m.name
+end
+
+-- Whether the local file's rule `selector` names monitor `m`. Hyprland
+-- also matches desc: against a monitor's full description, which
+-- hl.get_monitors doesn't give (its description is the short one, as
+-- hyprctl monitors shows), so where Hyprland can resolve the selector it's
+-- asked.
+local function local_names(selector, m)
+    if names_monitor(selector, m) then
+        return true
+    end
+    if selector == "" or type(hl.get_monitor) ~= "function" then
+        return false
+    end
+    -- It gives an HL.Monitor userdata, or nil for one it can't resolve (a
+    -- monitor not connected, or off), which is left to the match above, as
+    -- is a selector it refuses.
+    local ok, name = pcall(function()
+        local found = hl.get_monitor(selector)
+        return found ~= nil and found.name or nil
+    end)
+    return ok and name ~= nil and name == m.name
+end
+
+-- Hyprland 0.56.2 takes a desc: rule added at runtime but doesn't apply it
+-- to a monitor already connected (hyprwm/Hyprland#15961), though a rule by
+-- name it does. So when tide applies a change, each connected monitor that
+-- tide sets, and the local file doesn't, gets its rule by name too. A name
+-- can come to mean another monitor, so one given a rule here goes back to
+-- the catch-all's settings once tide no longer sets the monitor it names,
+-- as does one whose monitor tide stops setting (`reset`, its selectors).
+local tide_named = {}
+
+local function tide_name_rules(reset)
+    local rules, named, seen = {}, {}, {}
+    -- The monitors on: Hyprland 0.56.2's hl.get_monitors lists no others,
+    -- whatever it's passed, so a closed lid's panel gets its rule when it
+    -- comes back (monitor.added, below).
+    for _, m in ipairs(hl.get_monitors()) do
+        if type(m.name) == "string" and m.name ~= "" then
+            seen[m.name] = true
+            local mine = false
+            for _, r in ipairs(local_monitors) do
+                mine = mine or local_names(r.output, m)
+            end
+            local entry, was = nil, tide_named[m.name]
+            for _, e in ipairs(tide_monitors) do
+                if names_monitor(e.output, m) then
+                    entry = e -- the last, as Hyprland takes it
+                end
+            end
+            for _, selector in ipairs(reset or {}) do
+                was = was or names_monitor(selector, m)
+            end
+            -- Where the local file has a rule, it wins, as it did when the
+            -- config loaded.
+            if entry and not mine then
+                named[m.name] = true
+                table.insert(rules, tide_rule(entry, m.name))
+            elseif was and not mine then
+                table.insert(rules, copy_rule(default_monitor, m.name))
+            end
+        end
+    end
+    -- A name not connected now keeps its mark, so whatever connects as it
+    -- next is put right (monitor.added, below).
+    for name in pairs(tide_named) do
+        if not seen[name] then
+            named[name] = true
+        end
+    end
+    tide_named = named
+    return rules
+end
+
+-- Hyprland uses the last rule added that names a monitor, and adding one
+-- for an output that has a rule moves it last. So something that adds a
+-- rule puts tide's back on top of it, then the local file's on top of
+-- those, as the config loaded them, then turns a closed lid's panel
+-- (`lid_panel`) off again. Rules that haven't changed change nothing
+-- (Hyprland 0.56's CMonitorRuleManager::ensureMonitorStatus).
+local function restack_monitors(reset, lid_panel)
+    for _, e in ipairs(tide_monitors) do
+        hl.monitor(tide_rule(e))
+    end
+    for _, r in ipairs(tide_name_rules(reset)) do
+        hl.monitor(r)
+    end
+    for _, r in ipairs(local_monitors) do
+        hl.monitor(copy_rule(r))
+    end
+    if lid_panel then
+        hl.monitor({ output = lid_panel, disabled = true })
+    end
+end
 
 --------------------------------------------------------------------------------
 -- AUTOSTART
@@ -876,7 +1078,13 @@ local function lid_open()
     -- once the panel shows up as a monitor again (monitor.added below). A
     -- rule for an output that has one starts from that one's fields
     -- (Hyprland 0.56's hlMonitor), so it has to undo lid_close's disabled.
-    hl.monitor({ output = panel, disabled = false, mode = "preferred", position = "auto", scale = "auto" })
+    -- It takes the catch-all's settings, the local file's if it has one,
+    -- since naming the panel means the catch-all no longer applies to it.
+    local rule = copy_rule(default_monitor, panel)
+    rule.disabled = false
+    hl.monitor(rule)
+    -- And it would win over tide's and the local file's rules for the panel.
+    restack_monitors(nil, nil)
 end
 
 -- After a reload with the lid still closed, keep the panel off. The file is
@@ -1059,6 +1267,42 @@ _G.conf_input = {
         hl.exec_cmd(runenv .. " " .. scripts .. "/apply-input.sh")
     end,
 }
+-- conf_outputs.reload() is how tide applies a change to its display
+-- settings: it reads tide-outputs.lua again and restacks the rules, so the
+-- local file's still win, then turns a closed lid's panel off again. A
+-- monitor tide no longer sets goes back to the catch-all's settings, since
+-- Hyprland can't drop a rule.
+_G.conf_outputs = {
+    reload = function()
+        local gone = {}
+        for _, e in ipairs(tide_monitors) do
+            gone[e.output] = true
+        end
+        tide_monitors = read_tide_outputs()
+        for _, e in ipairs(tide_monitors) do
+            gone[e.output] = nil
+        end
+        local outputs = {}
+        for output in pairs(gone) do
+            table.insert(outputs, output)
+        end
+        table.sort(outputs)
+        for _, output in ipairs(outputs) do
+            hl.monitor(copy_rule(default_monitor, output))
+        end
+        restack_monitors(outputs, lid.panel)
+    end,
+}
+
+-- A monitor that connects, or comes back on, takes tide's rule by name,
+-- which a desc: rule added since the config loaded wouldn't give it; and
+-- one that connects as a name this gave a rule to may not be the monitor
+-- the rule was for.
+hl.on("monitor.added", function()
+    if next(tide_named) ~= nil or #tide_monitors > 0 then
+        restack_monitors(nil, lid.panel)
+    end
+end)
 do
     local path = home .. "/.config/hypr/hyprland.local.lua"
     local text = read_optional(path, "hyprland.local.lua", 1024 * 1024)
@@ -1071,7 +1315,21 @@ do
             notify_error("hyprland.local.lua (none of it applied): " .. tostring(err))
         else
             -- Hyprland names a device with its spaces as dashes.
-            local real_device, real_config = hl.device, hl.config
+            local real_device, real_config, real_monitor = hl.device, hl.config, hl.monitor
+            hl.monitor = function(t)
+                if type(t) == "table" and type(t.output) == "string" then
+                    table.insert(local_monitors, copy_rule(t))
+                    -- What tide's rules leave out, and a monitor tide stops
+                    -- setting goes back to.
+                    if t.output == "" then
+                        for k, v in pairs(t) do
+                            default_monitor[k] = v
+                        end
+                        local_catchall = true
+                    end
+                end
+                return real_monitor(t)
+            end
             hl.device = function(t)
                 if type(t) == "table" and type(t.name) == "string" then
                     local key = t.name:gsub(" ", "-")
@@ -1099,9 +1357,15 @@ do
                 return real_config(t)
             end
             local ok, run_err = pcall(chunk)
-            hl.device, hl.config = real_device, real_config
+            hl.device, hl.config, hl.monitor = real_device, real_config, real_monitor
             if not ok then
                 notify_error("hyprland.local.lua stopped (the calls before this applied): " .. tostring(run_err))
+            end
+            -- tide's rules were added before the local catch-all was known,
+            -- so they're added again with it, under the local file's and a
+            -- closed lid's, as a reload of tide's settings would add them.
+            if local_catchall then
+                restack_monitors(nil, lid.panel)
             end
         end
     end
