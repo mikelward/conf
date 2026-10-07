@@ -18,7 +18,7 @@ Files (all live under this repo's `config/` and map to `~/.config/`):
 | `config/hypr/hyprland.local.lua.template` | Per-machine override template (copy to `~/.config/hypr/hyprland.local.lua`) |
 | `config/hypr/hypridle.conf` | Idle: dim → lock → DPMS off → suspend (in tide, on battery only) |
 | `config/hypr/hyprlock.conf` | Lock screen outside the tide session |
-| `config/hypr/scripts/apply-input.sh` | Auto-classify pointers (mice → right-handed) |
+| `config/hypr/scripts/apply-input.sh` | Auto-classify pointers (mice → right-handed), and give each keyboard tide's settings |
 | `config/hypr/scripts/theme.sh` | Apply light/dark theme by time of day |
 | `config/hypr/scripts/theme-daemon.sh` | Re-apply theme at each 07:00/19:00 boundary |
 | `config/hypr/scripts/launch-fuzzel.sh` | Launch fuzzel with the current theme's colours |
@@ -256,10 +256,15 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   - **Touchpads** go through `conf_input.touchpad()`, which keeps the
     global defaults unless tide's Touchpad settings (below) give a speed or
     handedness.
+  - **Keyboards** go through `conf_input.keyboard()`, which gives each the
+    keyboard options, or tide's settings for that one keyboard (below).
+    Hyprland leaves a keyboard whose options haven't changed alone, so this
+    doesn't reset the layout `next-layout.sh` switched to.
 
   It calls them with `hyprctl eval`, since the Lua config has no `hyprctl
   keyword`. A config reload resets devices, so `hyprland.lua` runs it
-  again after each one. Re-run it after hotplugging a mouse or touchpad;
+  again after each one. Re-run it after hotplugging a mouse, touchpad or
+  keyboard;
   override the mouse wheel speed (default 3) with
   `HYPR_MOUSE_SCROLL_FACTOR` in `~/.env.local`: `hyprland.lua` runs it
   through `runenv`, which sources that file, and in the tide session
@@ -274,8 +279,10 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   `input.touchpad` ones apply over the config's own; speed and handedness
   go to each device through `conf_input`, so a mouse and a trackpad can
   differ. A device named in the file's `devices` table gets its own
-  settings over its kind's (a mouse only a mouse's), so two mice can
-  differ too; each touchpad
+  settings over its kind's (a mouse only a mouse's, a keyboard only a
+  keyboard's), so two mice, or two keyboards, can differ too. A wireless
+  receiver that's a mouse and a keyboard under one name can have both.
+  Each touchpad
   also gets the `input.touchpad` options as its own, so a setting a
   device stops having goes back to its kind's. tide applies a change with `conf_input.reload()`, which re-reads
   the file and reruns `apply-input.sh`. A setting tide stops making goes
