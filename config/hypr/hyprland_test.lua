@@ -590,7 +590,7 @@ test("every key in the spec is bound", function()
         "SUPER + period", "SUPER + comma", "SUPER + grave",
         "SUPER + Up", "SUPER + SHIFT + Up", "SUPER + Down",
         "SUPER + SHIFT + F", "SUPER + Insert", "SUPER + SHIFT + R",
-        "SUPER + Tab", "SUPER + Home", "SUPER + SHIFT + N",
+        "SUPER + Tab", "SUPER + Home", "SUPER + SHIFT + N", "SUPER + ALT + Space",
         "Print", "ALT + Print", "SHIFT + Print", "SUPER + Print",
         "XF86AudioMicMute", "SUPER + SHIFT + M",
         "XF86AudioRaiseVolume", "XF86AudioLowerVolume", "XF86AudioMute",
@@ -1327,6 +1327,14 @@ test("in the tide session, app keys go through tide launch", function()
     eq("tide launch --app 'org.gnome.Calculator' -- gnome-calculator", bind("XF86Calculator").target.args)
     -- Not apps: these stay plain commands.
     eq("qs -c tide ipc call notifications toggle || swaync-client -t -sw", bind("SUPER + SHIFT + N").target.args)
+end)
+
+test("Super+Alt+Space switches to the next keyboard layout, on the lock screen too", function()
+    load()
+    local b = bind("SUPER + ALT + Space")
+    eq("~/.config/hypr/scripts/next-layout.sh", b.target.args)
+    eq("Next keyboard layout", b.opts.description)
+    eq(true, b.opts.locked)
 end)
 
 test("Super+Shift+N opens tide's notification center, else swaync's", function()

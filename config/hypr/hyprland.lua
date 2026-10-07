@@ -823,6 +823,11 @@ hl.bind(key("E"), app(terminal .. " -e yazi", terminal), does("Files"))
 -- otherwise (no shell), and fuzzel opens instead, through runenv so its app
 -- list sees the user's scripts.
 hl.bind(key("Space"), exec("qs -c tide ipc call launcher toggle || " .. runenv .. " " .. scripts .. "/launch-fuzzel.sh"), does("Launcher"))
+-- The next keyboard layout, once there are two (kb_layout "us,de", say, from
+-- tide's Keyboard page), on every keyboard so they stay in step
+-- (next-layout.sh). Locked too, so a password can be typed in the other
+-- layout. Super+Space would be GNOME's, but it's the launcher.
+hl.bind(key("ALT + Space"), exec(scripts .. "/next-layout.sh"), does("Next keyboard layout", { locked = true }))
 -- tide's notification center (SPEC.md §9) while its shell is the
 -- notification server; the call fails otherwise (no shell, or the server not
 -- opted in), and swaync's panel opens instead.
