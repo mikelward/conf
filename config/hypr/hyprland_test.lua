@@ -1226,7 +1226,95 @@ test("each mouse takes tide's mouse settings, and each touchpad its own", functi
     eq(false, d[1].natural_scroll)
     eq(true, d[2].left_handed)
     eq(0.25, d[2].sensitivity)
-    eq(nil, d[2].tap_to_click, "the touchpad section's options aren't per device")
+    eq(false, d[2].tap_to_click, "the touchpad section's options, as input.touchpad has them")
+end)
+
+local TIDE_DEVICES = [[
+return {
+    mouse = { sensitivity = -0.5, left_handed = false },
+    touchpad = { tap_to_click = false },
+    devices = {
+        ["logitech-usb-receiver"] = { sensitivity = 0.75, left_handed = true },
+        ["synps/2-synaptics-touchpad"] = { tap_to_click = true, sensitivity = -0.25 },
+    },
+}
+]]
+
+test("a device tide's settings name gets its own over its kind's", function()
+    load({ input = TIDE_DEVICES })
+    eq(0, #S.notifications)
+    S.calls = {}
+    conf_input.mouse("logitech-usb-receiver", 3)
+    conf_input.mouse("other-mouse", 3)
+    conf_input.touchpad("synps/2-synaptics-touchpad")
+    local d = devices()
+    eq(3, #d)
+    eq(0.75, d[1].sensitivity, "its own speed")
+    eq(true, d[1].left_handed, "its own handedness")
+    eq(3, d[1].scroll_factor, "the rest as every mouse's")
+    eq(-0.5, d[2].sensitivity, "another mouse keeps every mouse's")
+    eq(false, d[2].left_handed)
+    eq(-0.25, d[3].sensitivity)
+    eq(true, d[3].tap_to_click, "a touchpad section option, for this touchpad alone")
+    eq(false, S.config.input.touchpad.tap_to_click, "every other touchpad keeps tide's")
+end)
+
+test("a mouse takes only a mouse's settings of its own, so none stays set once gone", function()
+    load({ input = 'return { devices = { trackball = { tap_to_click = false, disable_while_typing = false, sensitivity = 0.5 } } }' })
+    eq(0, #S.notifications)
+    S.calls = {}
+    conf_input.mouse("trackball", 3)
+    local d = devices()
+    eq(0.5, d[1].sensitivity)
+    eq(nil, d[1].tap_to_click)
+    eq(nil, d[1].disable_while_typing)
+end)
+
+test("a device's own setting that tide stops making goes back to its kind's on reload", function()
+    load({ input = TIDE_DEVICES })
+    write(TIDE_INPUT, 'return { mouse = { sensitivity = -0.5, left_handed = false }, touchpad = { tap_to_click = false } }')
+    conf_input.reload()
+    S.calls = {}
+    conf_input.mouse("logitech-usb-receiver", 3)
+    conf_input.touchpad("synps/2-synaptics-touchpad")
+    local d = devices()
+    eq(-0.5, d[1].sensitivity)
+    eq(false, d[1].left_handed)
+    eq(1.0, d[2].sensitivity)
+    eq(false, d[2].tap_to_click, "tide's touchpad setting again")
+end)
+
+test("hyprland.local.lua still wins over a device's own tide settings", function()
+    load({
+        input = TIDE_DEVICES,
+        ["local"] = 'hl.device({ name = "synps/2-synaptics-touchpad", tap_to_click = false })\n'
+            .. 'hl.config({ input = { touchpad = { disable_while_typing = false } } })',
+    })
+    S.calls = {}
+    conf_input.touchpad("synps/2-synaptics-touchpad")
+    local d = devices()
+    eq(nil, d[1].tap_to_click, "the local file's field for that touchpad")
+    eq(-0.25, d[1].sensitivity, "its own tide setting for the rest")
+    eq(false, d[1].disable_while_typing, "the local file's touchpad option, as input.touchpad has it")
+end)
+
+test("a devices table that isn't one, or a bad device setting, is reported and left out", function()
+    load({ input = 'return { devices = 5, mouse = { sensitivity = 0.5 } }' })
+    eq(1, #S.notifications)
+    truthy(S.notifications[1].text:find("devices should be a table", 1, true), S.notifications[1].text)
+    load({ input = 'return { devices = { trackball = { speed = 1, left_handed = "yes", sensitivity = 0.5 }, [1] = {} } }' })
+    eq(3, #S.notifications)
+    local texts = {}
+    for _, n in ipairs(S.notifications) do
+        texts[#texts + 1] = n.text
+    end
+    local all = table.concat(texts, "\n")
+    truthy(all:find("unknown setting devices.trackball.speed", 1, true), all)
+    truthy(all:find("devices.trackball.left_handed should be a boolean", 1, true), all)
+    truthy(all:find("devices.1 should be a table of settings", 1, true), all)
+    S.calls = {}
+    conf_input.mouse("trackball", 3)
+    eq(0.5, devices()[1].sensitivity, "its good setting still applies")
 end)
 
 test("hyprland.local.lua still wins over tide's settings, per device and in input", function()

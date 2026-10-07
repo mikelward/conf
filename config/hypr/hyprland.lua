@@ -360,13 +360,14 @@ hl.config({ input = copy(INPUT) })
 
 -- tide's Mouse, Touchpad and Keyboard settings (tide SPEC.md §16), which
 -- tide writes to tide-input.lua beside this file as a table in Hyprland's
--- own option names: { mouse = {...}, touchpad = {...}, keyboard = {...} }.
--- The keyboard's options, and the touchpad's own section, apply over the
--- ones above; mice and touchpads get their speed and handedness one device
--- at a time, through conf_input below, as apply-input.sh meets each. With
--- no file, the settings above stand. It's read as data, with nothing in
--- scope, and a value of the wrong type, or an unknown section or setting,
--- is reported and left out.
+-- own option names: { mouse = {...}, touchpad = {...}, keyboard = {...},
+-- devices = { ["name"] = {...} } }. The keyboard's options, and the
+-- touchpad's own section, apply over the ones above; mice and touchpads get
+-- their speed and handedness one device at a time, through conf_input
+-- below, as apply-input.sh meets each, and a device named in devices gets
+-- its own settings over its kind's. With no file, the settings above
+-- stand. It's read as data, with nothing in scope, and a value of the wrong
+-- type, or an unknown section or setting, is reported and left out.
 local TIDE_INPUT_TYPES = {
     mouse = { sensitivity = "number", scroll_factor = "number", natural_scroll = "boolean", left_handed = "boolean" },
     touchpad = {
@@ -375,12 +376,15 @@ local TIDE_INPUT_TYPES = {
     },
     keyboard = { kb_layout = "string", kb_variant = "string", repeat_delay = "number", repeat_rate = "number" },
 }
+-- A named device takes any mouse or touchpad option, keyed by the name
+-- hyprctl devices gives it.
+local TIDE_DEVICE_TYPES = TIDE_INPUT_TYPES.touchpad
 -- The touchpad options that live in input.touchpad, for every touchpad;
 -- the rest go to each one through conf_input.touchpad.
 local TOUCHPAD_SECTION = { natural_scroll = true, tap_to_click = true, disable_while_typing = true, scroll_factor = true }
 -- No settings: each kind's table is there, empty.
 local function no_tide_input()
-    return { mouse = {}, touchpad = {}, keyboard = {} }
+    return { mouse = {}, touchpad = {}, keyboard = {}, devices = {} }
 end
 local tide_input = no_tide_input()
 -- The input options hyprland.local.lua set through hl.config, keyed
@@ -423,7 +427,7 @@ local function read_tide_input()
     end
     local out = no_tide_input()
     for kind in pairs(value) do
-        if TIDE_INPUT_TYPES[kind] == nil then
+        if TIDE_INPUT_TYPES[kind] == nil and kind ~= "devices" then
             notify_error("tide-input.lua: unknown section " .. tostring(kind))
         end
     end
@@ -440,6 +444,27 @@ local function read_tide_input()
                 notify_error("tide-input.lua: " .. kind .. "." .. k .. " should be a " .. types[k] .. ", not " .. type(v))
             else
                 out[kind][k] = v
+            end
+        end
+    end
+    local devices = value.devices
+    if devices ~= nil and type(devices) ~= "table" then
+        notify_error("tide-input.lua: devices should be a table, not " .. type(devices))
+        devices = nil
+    end
+    for name, given in pairs(devices or {}) do
+        if type(name) ~= "string" or type(given) ~= "table" then
+            notify_error("tide-input.lua: devices." .. tostring(name) .. " should be a table of settings, keyed by the device's name")
+        else
+            out.devices[name] = {}
+            for k, v in pairs(given) do
+                if TIDE_DEVICE_TYPES[k] == nil then
+                    notify_error("tide-input.lua: unknown setting devices." .. name .. "." .. tostring(k))
+                elseif type(v) ~= TIDE_DEVICE_TYPES[k] then
+                    notify_error("tide-input.lua: devices." .. name .. "." .. k .. " should be a " .. TIDE_DEVICE_TYPES[k] .. ", not " .. type(v))
+                else
+                    out.devices[name][k] = v
+                end
             end
         end
     end
@@ -945,6 +970,19 @@ hl.layer_rule({
 -- apply-input.sh.
 local local_devices = {}
 
+-- What input.touchpad's option is, as apply_tide_input set it: the local
+-- file's, else tide's, else the config's.
+local function touchpad_option(k)
+    local v = local_input["touchpad." .. k]
+    if v == nil then
+        v = tide_input.touchpad[k]
+    end
+    if v == nil then
+        v = INPUT.touchpad[k]
+    end
+    return v
+end
+
 local function device(name, want)
     local set = local_devices[(name:gsub(" ", "-"))] or {}
     local t = { name = name }
@@ -957,7 +995,8 @@ local function device(name, want)
 end
 
 -- Each device gets every field tide can set, its value or the default,
--- for the same reason as apply_tide_input: hl.device merges too.
+-- for the same reason as apply_tide_input: hl.device merges too. A device
+-- tide's settings name gets its own over its kind's.
 _G.conf_input = {
     mouse = function(name, scroll_factor)
         local want = {
@@ -968,6 +1007,13 @@ _G.conf_input = {
         }
         for k, v in pairs(tide_input.mouse) do
             want[k] = v
+        end
+        for k, v in pairs(tide_input.devices[name] or {}) do
+            -- A touchpad's tap_to_click means nothing to a mouse, and once
+            -- set it would stay set, since nothing here resets it.
+            if TIDE_INPUT_TYPES.mouse[k] ~= nil then
+                want[k] = v
+            end
         end
         device(name, want)
     end,
@@ -980,6 +1026,16 @@ _G.conf_input = {
             if not TOUCHPAD_SECTION[k] then
                 want[k] = v
             end
+        end
+        -- Its own settings may include the touchpad section's, which
+        -- hl.device takes for one touchpad (Hyprland 0.56's DEVICE_FIELDS).
+        -- So each touchpad gets those too, as input.touchpad has them, so
+        -- that one its own settings stop making goes back.
+        for k in pairs(TOUCHPAD_SECTION) do
+            want[k] = touchpad_option(k)
+        end
+        for k, v in pairs(tide_input.devices[name] or {}) do
+            want[k] = v
         end
         device(name, want)
     end,

@@ -5,6 +5,7 @@
 #             and handedness tide's Touchpad settings give them.
 #   MICE      get left_handed = true (RIGHT button primary) + a faster wheel,
 #             or what tide's Mouse settings say instead.
+#   Either takes tide's settings for that one device over its kind's.
 #
 # Devices are classified by name (touchpads report "touchpad"/"trackpad"/
 # "synaptics" in their libinput name, which is what Hyprland uses). Runs at

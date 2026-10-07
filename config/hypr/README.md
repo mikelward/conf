@@ -263,7 +263,11 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   or an unknown setting. The keyboard's options and the touchpad's
   `input.touchpad` ones apply over the config's own; speed and handedness
   go to each device through `conf_input`, so a mouse and a trackpad can
-  differ. tide applies a change with `conf_input.reload()`, which re-reads
+  differ. A device named in the file's `devices` table gets its own
+  settings over its kind's (a mouse only a mouse's), so two mice can
+  differ too; each touchpad
+  also gets the `input.touchpad` options as its own, so a setting a
+  device stops having goes back to its kind's. tide applies a change with `conf_input.reload()`, which re-reads
   the file and reruns `apply-input.sh`. A setting tide stops making goes
   back to the config's. `hyprland.local.lua` still wins where it sets the
   same thing: an option it sets through `hl.config()`, or a device's field
