@@ -92,6 +92,20 @@ Delete an entry once you have agreed with it or reversed it.
       follow with their own inline-message mechanisms. *Reversible:* it's an
       additive per-shell feature, and it's opt-in and off by default meanwhile.
 
+## Find a docked panel that's off
+
+`lid_open`'s fallback, for a lid closed with no saved state (it predates
+this config, or the state file couldn't be written), looks for an
+internal panel that is off with `hl.get_monitors({ all = true })`.
+Hyprland 0.56.2's `hl.get_monitors` ignores its argument and lists only
+the monitors on (`hlGetMonitors` in `LuaBindingsQuery.cpp`), and
+`hl.get_monitor` resolves only those too, so the fallback never finds the
+panel and the lid opens to a dark panel. `HYPR_INTERNAL_OUTPUT` names it
+without a listing, so with that set the fallback could turn it on by name
+regardless. The stub in `hyprland_test.lua` still lists monitors that are
+off under `{ all = true }` for the fallback's own test; `on_only` makes it
+list as 0.56.2 does, and should become the default once this is fixed.
+
 ## Close theme.sh's gaps when following tide's shell
 
 When the theme daemon's first `theme.sh follow` and tide's first
