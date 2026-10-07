@@ -150,6 +150,10 @@ launch paths get the same environment (edit both if you change a var).
 the tiling controls sit on symbol keys so they don't take the letters. The
 table is the tide spec's (SPEC.md §6.6).
 
+Each binding says what it does with `does("...")`, its `hl.bind`
+description, which tide's settings panel lists on its Keys page;
+`hyprland_test.lua` fails on a binding without one.
+
 ### Apps / session
 
 | Keys | Action |

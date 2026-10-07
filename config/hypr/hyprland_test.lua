@@ -649,6 +649,25 @@ test("the resize submap resizes and has a way out", function()
     eq("reset", bind("Return", "resize").target.args)
 end)
 
+-- tide's Keys page lists `hyprctl binds -j`, where a Lua binding's
+-- dispatcher is only "__lua": its description is all that says what it does.
+test("every binding says what it does, for tide's Keys page", function()
+    load()
+    truthy(#S.bind_order > 0, "some bindings")
+    for _, id in ipairs(S.bind_order) do
+        local d = S.binds[id].opts.description
+        truthy(type(d) == "string" and d ~= "", id .. " has a description")
+    end
+    eq("Terminal", bind("SUPER + T").opts.description)
+    eq("Taller", bind("J", "resize").opts.description)
+    eq("Send the window to workspace 3", bind("SUPER + SHIFT + 3").opts.description)
+    -- Bindings that share an options table each keep their own description,
+    -- and the table's options.
+    eq("Mute", bind("XF86AudioMute").opts.description)
+    eq("Play or pause", bind("XF86AudioPlay").opts.description)
+    eq(true, bind("XF86AudioMute").opts.locked)
+end)
+
 test("Super+Tab focuses the urgent or last window without the guard", function()
     load()
     _G.tide_focus = nil
