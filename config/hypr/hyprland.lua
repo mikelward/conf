@@ -454,6 +454,10 @@ hl.config({
 --------------------------------------------------------------------------------
 -- LOOK
 --------------------------------------------------------------------------------
+-- The inactive dim's strength, unless tide's Appearance page sets one
+-- (apply_tide_appearance below).
+local DIM_STRENGTH = 0.07
+
 hl.config({
     decoration = {
         rounding = 6,
@@ -475,9 +479,9 @@ hl.config({
         inactive_opacity = 1.0,
         -- Hyprland's dim looks stronger than KDE's dim-inactive effect at
         -- the same number, so 0.07. If a dark app next to a dark app is hard
-        -- to tell apart, try 0.1.
+        -- to tell apart, try 0.1, on tide's Appearance page.
         dim_inactive = true,
-        dim_strength = 0.07,
+        dim_strength = DIM_STRENGTH,
         dim_special = 0.2,
     },
     animations = { enabled = true },
@@ -705,6 +709,58 @@ local function apply_tide_input()
     end
 end
 apply_tide_input()
+
+-- tide's Appearance settings that reach Hyprland (tide SPEC.md §16): the
+-- inactive dim's strength, which tide writes to tide-appearance.lua beside
+-- this file as { dim_strength = 0.1 }. With no file, or no setting,
+-- DIM_STRENGTH stands. It's read as data, as tide-input.lua is, and
+-- hyprland.local.lua's own dim_strength still wins (local_dim).
+-- conf_appearance.reload() is how tide applies a change.
+local local_dim = nil
+
+local function read_tide_appearance()
+    local path = home .. "/.config/hypr/tide-appearance.lua"
+    local text = read_optional(path, "tide-appearance.lua", 64 * 1024)
+    if not text then
+        return {}
+    end
+    local chunk, err = load(text, "@" .. path, "t", {})
+    if not chunk then
+        notify_error("tide-appearance.lua (none of it applied): " .. tostring(err))
+        return {}
+    end
+    local ok, value = pcall(chunk)
+    if not ok then
+        notify_error("tide-appearance.lua (none of it applied): " .. tostring(value))
+        return {}
+    end
+    if type(value) ~= "table" then
+        notify_error("tide-appearance.lua (none of it applied): expected a table, not " .. type(value))
+        return {}
+    end
+    local out = {}
+    for k, v in pairs(value) do
+        if k ~= "dim_strength" then
+            notify_error("tide-appearance.lua: unknown setting " .. tostring(k))
+        elseif type(v) ~= "number" or v ~= v or v < 0 or v > 1 then
+            notify_error("tide-appearance.lua: dim_strength should be a number from 0 to 1, not " .. tostring(v))
+        else
+            out.dim_strength = v
+        end
+    end
+    return out
+end
+
+-- The dim is applied each time, tide's or the default, so a setting tide
+-- stops making goes back to DIM_STRENGTH rather than staying put.
+local function apply_tide_appearance()
+    local tide = read_tide_appearance()
+    if local_dim == nil then
+        hl.config({ decoration = { dim_strength = tide.dim_strength or DIM_STRENGTH } })
+    end
+end
+apply_tide_appearance()
+_G.conf_appearance = { reload = apply_tide_appearance }
 
 -- A 3-finger horizontal swipe changes workspace.
 hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
@@ -1342,6 +1398,10 @@ do
                 return real_device(t)
             end
             hl.config = function(t)
+                local decoration = type(t) == "table" and t.decoration
+                if type(decoration) == "table" and decoration.dim_strength ~= nil then
+                    local_dim = decoration.dim_strength
+                end
                 local input = type(t) == "table" and t.input
                 if type(input) == "table" then
                     for k, v in pairs(input) do
