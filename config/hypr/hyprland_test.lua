@@ -149,6 +149,9 @@ local function new_hl()
         dispatched = {},
         notifications = {},
         monitors = {},
+        -- The monitor rules as Hyprland keeps them, which monitors above
+        -- doesn't (tests clear it); see rule_for.
+        monitor_rules = {},
         rules = {}, layer_rules = {},
         -- What the getters return; set per test.
         active_workspace = nil,
@@ -162,7 +165,23 @@ local function new_hl()
     end
     return {
         config = function(t) record("config", t); merge(S.config, t) end,
-        monitor = function(t) record("monitor", t); table.insert(S.monitors, t) end,
+        monitor = function(t)
+            record("monitor", t)
+            table.insert(S.monitors, t)
+            -- As Hyprland 0.56 keeps them: a rule for an output that already
+            -- has one starts from that one's fields, and goes last.
+            local rule = {}
+            for i, r in ipairs(S.monitor_rules) do
+                if r.output == t.output then
+                    rule = table.remove(S.monitor_rules, i)
+                    break
+                end
+            end
+            for k, v in pairs(t) do
+                rule[k] = v
+            end
+            table.insert(S.monitor_rules, rule)
+        end,
         env = function(k, v) record("env", k); S.config.env = S.config.env or {}; S.config.env[k] = v end,
         device = function(t) record("device", t) end,
         gesture = function(t) record("gesture", t); S.gesture = t end,
@@ -262,6 +281,25 @@ local function load(setup)
     _G.hl = new_hl()
     dofile(config_path)
     return S
+end
+
+-- The rule Hyprland 0.56 uses for monitor `m` ({ name, description }): the
+-- last one added that names it, by its name or desc: and the start of its
+-- description, else the catch-all.
+local function rule_for(m)
+    for i = #S.monitor_rules, 1, -1 do
+        local r = S.monitor_rules[i]
+        local desc = r.output:match("^desc:(.*)$")
+        if r.output == m.name or (desc and (m.description or ""):sub(1, #desc) == desc) then
+            return r
+        end
+    end
+    for _, r in ipairs(S.monitor_rules) do
+        if r.output == "" then
+            return r
+        end
+    end
+    return nil
 end
 
 local function bind(keys, submap)
@@ -831,6 +869,7 @@ test("docked lid close disables the panel; open restores it and its workspaces",
     eq("eDP-1", S.monitors[1].output)
     eq("preferred", S.monitors[1].mode)
     eq("auto", S.monitors[1].scale, "auto scale, not 1x on a HiDPI panel")
+    eq(false, rule_for({ name = "eDP-1" }).disabled, "the panel's rule no longer turns it off")
     eq(0, #S.dispatched, "workspaces wait for the panel to come back")
     fire("monitor.added", { name = "DP-2" })
     eq(0, #S.dispatched, "another monitor isn't the panel")
@@ -860,6 +899,7 @@ test("a reload with the lid closed keeps the panel off, and opening restores it"
     lid("off")
     eq("eDP-1", S.monitors[1].output)
     eq("preferred", S.monitors[1].mode)
+    eq(false, rule_for({ name = "eDP-1" }).disabled, "the panel's rule no longer turns it off")
     fire("monitor.added", { name = "eDP-1" })
     eq(2, #S.dispatched, "the workspaces saved before the reload go back")
     eq(false, exists(LID_FILE))
