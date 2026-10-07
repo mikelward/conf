@@ -873,8 +873,10 @@ local function lid_open()
         end
     end
     -- The rule applies on Hyprland's next refresh; the workspaces go back
-    -- once the panel shows up as a monitor again (monitor.added below).
-    hl.monitor({ output = panel, mode = "preferred", position = "auto", scale = "auto" })
+    -- once the panel shows up as a monitor again (monitor.added below). A
+    -- rule for an output that has one starts from that one's fields
+    -- (Hyprland 0.56's hlMonitor), so it has to undo lid_close's disabled.
+    hl.monitor({ output = panel, disabled = false, mode = "preferred", position = "auto", scale = "auto" })
 end
 
 -- After a reload with the lid still closed, keep the panel off. The file is
