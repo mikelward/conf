@@ -531,90 +531,103 @@ local function app(cmd, id)
     return exec("tide launch --app '" .. (id or "*") .. "' -- " .. cmd)
 end
 
+-- A binding's options with what it does, for tide's Keys page (tide SPEC.md
+-- §16), which lists `hyprctl binds -j`: a Lua binding's dispatcher there is
+-- only "__lua", so its description is all that says. A copy, since some
+-- options tables are shared.
+local function does(description, opts)
+    local o = { description = description }
+    for k, v in pairs(opts or {}) do
+        o[k] = v
+    end
+    return o
+end
+
 -- Applications. The helper scripts live in the scripts repo, on the PATH
 -- runenv provides. Super+D and Super+S are left for hyprland.local.lua.
-hl.bind(key("T"), app(terminal, terminal))
-hl.bind(key("W"), app(runenv .. " terminal_on_workstation"))
-hl.bind(key("G"), app(runenv .. " browser1"))
-hl.bind(key("SHIFT + G"), app(runenv .. " browser3"))
-hl.bind(key("F"), app(runenv .. " browser2"))
-hl.bind(key("B"), exec(runenv .. " bluetooth-connect"))
-hl.bind(key("SHIFT + B"), exec(runenv .. " pulseprofile.py"))
-hl.bind(key("C"), app(runenv .. " google-calendar"))
-hl.bind(key("SHIFT + C"), app(runenv .. " google-chat"))
-hl.bind(key("H"), app(runenv .. " home"))
-hl.bind(key("I"), app(runenv .. " irc"))
-hl.bind(key("M"), app(runenv .. " google-meet"))
-hl.bind(key("N"), app(runenv .. " notepad"))
-hl.bind(key("R"), app(runenv .. " remote-desktop"))
-hl.bind(key("Y"), app(runenv .. " youtube-music"))
-hl.bind(key("E"), app(terminal .. " -e yazi", terminal))
+hl.bind(key("T"), app(terminal, terminal), does("Terminal"))
+hl.bind(key("W"), app(runenv .. " terminal_on_workstation"), does("Terminal on the workstation"))
+hl.bind(key("G"), app(runenv .. " browser1"), does("Browser"))
+hl.bind(key("SHIFT + G"), app(runenv .. " browser3"), does("Browser, third profile"))
+hl.bind(key("F"), app(runenv .. " browser2"), does("Browser, second profile"))
+hl.bind(key("B"), exec(runenv .. " bluetooth-connect"), does("Connect the headphones"))
+hl.bind(key("SHIFT + B"), exec(runenv .. " pulseprofile.py"), does("Next audio profile"))
+hl.bind(key("C"), app(runenv .. " google-calendar"), does("Google Calendar"))
+hl.bind(key("SHIFT + C"), app(runenv .. " google-chat"), does("Google Chat"))
+hl.bind(key("H"), app(runenv .. " home"), does("Home folder"))
+hl.bind(key("I"), app(runenv .. " irc"), does("IRC"))
+hl.bind(key("M"), app(runenv .. " google-meet"), does("Google Meet"))
+hl.bind(key("N"), app(runenv .. " notepad"), does("Notepad"))
+hl.bind(key("R"), app(runenv .. " remote-desktop"), does("Remote desktop"))
+hl.bind(key("Y"), app(runenv .. " youtube-music"), does("YouTube Music"))
+hl.bind(key("E"), app(terminal .. " -e yazi", terminal), does("Files"))
 -- tide's launcher (SPEC.md §8) while its shell runs; the call fails
 -- otherwise (no shell), and fuzzel opens instead, through runenv so its app
 -- list sees the user's scripts.
-hl.bind(key("Space"), exec("qs -c tide ipc call launcher toggle || " .. runenv .. " " .. scripts .. "/launch-fuzzel.sh"))
+hl.bind(key("Space"), exec("qs -c tide ipc call launcher toggle || " .. runenv .. " " .. scripts .. "/launch-fuzzel.sh"), does("Launcher"))
 -- tide's notification center (SPEC.md §9) while its shell is the
 -- notification server; the call fails otherwise (no shell, or the server not
 -- opted in), and swaync's panel opens instead.
-hl.bind(key("SHIFT + N"), exec("qs -c tide ipc call notifications toggle || swaync-client -t -sw"))
+hl.bind(key("SHIFT + N"), exec("qs -c tide ipc call notifications toggle || swaync-client -t -sw"), does("Notification center"))
 
 -- Session.
-hl.bind(key("BackSpace"), hl.dsp.window.close())
-hl.bind(key("L"), exec(lock))
-hl.bind(key("SHIFT + E"), hl.dsp.exit())
+hl.bind(key("BackSpace"), hl.dsp.window.close(), does("Close the window"))
+hl.bind(key("L"), exec(lock), does("Lock"))
+hl.bind(key("SHIFT + E"), hl.dsp.exit(), does("Quit Hyprland"))
 
 -- Layouts.
-hl.bind(key("period"), act.next_layout)
-hl.bind(key("comma"), act.prev_layout)
-hl.bind(key("grave"), act.monocle)
-hl.bind(key("backslash"), act.grow, { repeating = true })
-hl.bind(key("slash"), act.shrink, { repeating = true })
-hl.bind(key("equal"), act.add_master)
-hl.bind(key("minus"), act.remove_master)
-hl.bind(key("Return"), act.swap_master)
-hl.bind(key("J"), act.focus_next)
-hl.bind(key("K"), act.focus_prev)
-hl.bind(key("SHIFT + J"), act.move_next)
-hl.bind(key("SHIFT + K"), act.move_prev)
+hl.bind(key("period"), act.next_layout, does("Next layout"))
+hl.bind(key("comma"), act.prev_layout, does("Previous layout"))
+hl.bind(key("grave"), act.monocle, does("Monocle"))
+hl.bind(key("backslash"), act.grow, does("Grow the master", { repeating = true }))
+hl.bind(key("slash"), act.shrink, does("Shrink the master", { repeating = true }))
+hl.bind(key("equal"), act.add_master, does("Add a master"))
+hl.bind(key("minus"), act.remove_master, does("Remove a master"))
+hl.bind(key("Return"), act.swap_master, does("Swap with the master"))
+hl.bind(key("J"), act.focus_next, does("Focus down the stack"))
+hl.bind(key("K"), act.focus_prev, does("Focus up the stack"))
+hl.bind(key("SHIFT + J"), act.move_next, does("Move down the stack"))
+hl.bind(key("SHIFT + K"), act.move_prev, does("Move up the stack"))
 
 -- One window big: maximize keeps the bar, fullscreen covers it, and
 -- Super+Down undoes either. Unset is a no-op for a mode that isn't on.
-hl.bind(key("Up"), hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))
-hl.bind(key("SHIFT + Up"), hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
+hl.bind(key("Up"), hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }), does("Maximize"))
+hl.bind(key("SHIFT + Up"), hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }), does("Fullscreen"))
 hl.bind(key("Down"), function()
     hl.dispatch(hl.dsp.window.fullscreen({ mode = "fullscreen", action = "unset" }))
     hl.dispatch(hl.dsp.window.fullscreen({ mode = "maximized", action = "unset" }))
-end)
+end, does("Restore"))
 
 -- Floating.
-hl.bind(key("SHIFT + F"), hl.dsp.window.float({ action = "toggle" }))
-hl.bind(key("Insert"), hl.dsp.window.float({ action = "toggle" }))
-hl.bind(key("mouse:272"), hl.dsp.window.drag(), { mouse = true })
-hl.bind(key("mouse:273"), hl.dsp.window.resize(), { mouse = true })
+hl.bind(key("SHIFT + F"), hl.dsp.window.float({ action = "toggle" }), does("Float or tile"))
+hl.bind(key("Insert"), hl.dsp.window.float({ action = "toggle" }), does("Float or tile"))
+hl.bind(key("mouse:272"), hl.dsp.window.drag(), does("Move the window", { mouse = true }))
+hl.bind(key("mouse:273"), hl.dsp.window.resize(), does("Resize the window", { mouse = true }))
 -- There are no title bars to double-click, so Super+middle-click toggles
 -- maximize, and a second click puts the window back in its tile. It acts on
 -- the focused window, which focus-follows-mouse makes the one under the
 -- pointer.
-hl.bind(key("mouse:274"), hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))
+hl.bind(key("mouse:274"), hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }), does("Maximize"))
 
 -- Resize mode, for floating windows: h/j/k/l or arrows, Esc or Return to leave.
-hl.bind(key("SHIFT + R"), hl.dsp.submap("resize"))
+hl.bind(key("SHIFT + R"), hl.dsp.submap("resize"), does("Resize mode"))
 hl.define_submap("resize", function()
     local steps = {
         H = { -40, 0 }, L = { 40, 0 }, K = { 0, -40 }, J = { 0, 40 },
         left = { -40, 0 }, right = { 40, 0 }, up = { 0, -40 }, down = { 0, 40 },
     }
     for k, d in pairs(steps) do
-        hl.bind(k, hl.dsp.window.resize({ x = d[1], y = d[2], relative = true }), { repeating = true })
+        local what = d[1] < 0 and "Narrower" or d[1] > 0 and "Wider" or d[2] < 0 and "Shorter" or "Taller"
+        hl.bind(k, hl.dsp.window.resize({ x = d[1], y = d[2], relative = true }), does(what, { repeating = true }))
     end
-    hl.bind("escape", hl.dsp.submap("reset"))
-    hl.bind("Return", hl.dsp.submap("reset"))
+    hl.bind("escape", hl.dsp.submap("reset"), does("Leave resize mode"))
+    hl.bind("Return", hl.dsp.submap("reset"), does("Leave resize mode"))
 end)
 
 -- Workspaces 1-9, one shared pool across monitors.
 for i = 1, 9 do
-    hl.bind(key(tostring(i)), hl.dsp.focus({ workspace = i }))
-    hl.bind(key("SHIFT + " .. i), hl.dsp.window.move({ workspace = i, follow = false }))
+    hl.bind(key(tostring(i)), hl.dsp.focus({ workspace = i }), does("Workspace " .. i))
+    hl.bind(key("SHIFT + " .. i), hl.dsp.window.move({ workspace = i, follow = false }), does("Send the window to workspace " .. i))
 end
 
 -- Previous / next workspace, as in KDE and on the Mac, stopping at 1 and 9.
@@ -637,13 +650,13 @@ local function step_workspace(delta, carry_window)
         end
     end
 end
-hl.bind(key("Left"), step_workspace(-1, false))
-hl.bind(key("Right"), step_workspace(1, false))
+hl.bind(key("Left"), step_workspace(-1, false), does("Previous workspace"))
+hl.bind(key("Right"), step_workspace(1, false), does("Next workspace"))
 -- The same, where GNOME has them.
-hl.bind(key("Page_Up"), step_workspace(-1, false))
-hl.bind(key("Page_Down"), step_workspace(1, false))
-hl.bind(key("SHIFT + Left"), step_workspace(-1, true))
-hl.bind(key("SHIFT + Right"), step_workspace(1, true))
+hl.bind(key("Page_Up"), step_workspace(-1, false), does("Previous workspace"))
+hl.bind(key("Page_Down"), step_workspace(1, false), does("Next workspace"))
+hl.bind(key("SHIFT + Left"), step_workspace(-1, true), does("Move the window to the previous workspace"))
+hl.bind(key("SHIFT + Right"), step_workspace(1, true), does("Move the window to the next workspace"))
 
 -- The way to a window that wanted focus and didn't get it (§14). Lua can't
 -- mark a window urgent, so tide's focus guard keeps the ones it held
@@ -674,8 +687,8 @@ local function focus_attention()
         hl.dispatch(hl.dsp.focus({ last = true }))
     end
 end
-hl.bind(key("Tab"), focus_attention)
-hl.bind(key("Home"), focus_attention)
+hl.bind(key("Tab"), focus_attention, does("The window waiting for attention"))
+hl.bind(key("Home"), focus_attention, does("The window waiting for attention"))
 -- Pressed again while Super is held, Super+Tab steps to the next marked
 -- window, Alt+Tab style, and releasing Super clears only the one it landed
 -- on. Releasing Super ends the guard's cycle, and does nothing outside one,
@@ -692,7 +705,7 @@ local function end_cycle()
     end
 end
 for _, super in ipairs({ "Super_L", "Super_R" }) do
-    hl.bind(mod .. " + " .. super, end_cycle, { release = true, non_consuming = true })
+    hl.bind(mod .. " + " .. super, end_cycle, does("End Super+Tab's cycle", { release = true, non_consuming = true }))
 end
 
 -- Screenshots to the clipboard as PNG, with a notification, through the
@@ -700,20 +713,20 @@ end
 -- region (Shift or Super). It reports its own failures, since a key binding
 -- has no terminal, and Esc on a region cancels quietly.
 local screenshot = runenv .. " screenshot"
-hl.bind("Print", exec(screenshot))
-hl.bind("ALT + Print", exec(screenshot .. " --window"))
-hl.bind("SHIFT + Print", exec(screenshot .. " --region"))
-hl.bind(key("Print"), exec(screenshot .. " --region"))
+hl.bind("Print", exec(screenshot), does("Screenshot"))
+hl.bind("ALT + Print", exec(screenshot .. " --window"), does("Screenshot of the window"))
+hl.bind("SHIFT + Print", exec(screenshot .. " --region"), does("Screenshot of a region"))
+hl.bind(key("Print"), exec(screenshot .. " --region"), does("Screenshot of a region"))
 
 -- Volume, microphone, brightness and playback keys. These work on the lock
 -- screen too; the calculator doesn't, since it opens a window.
 local locked = { locked = true }
 local locked_repeating = { locked = true, repeating = true }
-hl.bind("XF86AudioRaiseVolume", exec("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), locked_repeating)
-hl.bind("XF86AudioLowerVolume", exec("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), locked_repeating)
-hl.bind("XF86AudioMute", exec("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), locked)
-hl.bind("XF86AudioMicMute", exec("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), locked)
-hl.bind(key("SHIFT + M"), exec("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), locked)
+hl.bind("XF86AudioRaiseVolume", exec("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), does("Volume up", locked_repeating))
+hl.bind("XF86AudioLowerVolume", exec("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), does("Volume down", locked_repeating))
+hl.bind("XF86AudioMute", exec("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), does("Mute", locked))
+hl.bind("XF86AudioMicMute", exec("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), does("Mute the microphone", locked))
+hl.bind(key("SHIFT + M"), exec("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), does("Mute the microphone", locked))
 -- tide's command shows the new level on the shell's OSD. Only a
 -- tide from before it (a usage error, 2) or none (127) falls back to
 -- brightnessctl alone: any other failure may have changed the level already,
@@ -722,13 +735,13 @@ local function brightness(step)
     return exec("tide brightness " .. step .. "; s=$?; "
         .. "if test $s -eq 2 || test $s -eq 127; then brightnessctl set " .. step .. "; else exit $s; fi")
 end
-hl.bind("XF86MonBrightnessUp", brightness("5%+"), locked_repeating)
-hl.bind("XF86MonBrightnessDown", brightness("5%-"), locked_repeating)
-hl.bind("XF86AudioPlay", exec("playerctl play-pause"), locked)
-hl.bind("XF86AudioPause", exec("playerctl play-pause"), locked)
-hl.bind("XF86AudioNext", exec("playerctl next"), locked)
-hl.bind("XF86AudioPrev", exec("playerctl previous"), locked)
-hl.bind("XF86Calculator", app("gnome-calculator", "org.gnome.Calculator"))
+hl.bind("XF86MonBrightnessUp", brightness("5%+"), does("Brightness up", locked_repeating))
+hl.bind("XF86MonBrightnessDown", brightness("5%-"), does("Brightness down", locked_repeating))
+hl.bind("XF86AudioPlay", exec("playerctl play-pause"), does("Play or pause", locked))
+hl.bind("XF86AudioPause", exec("playerctl play-pause"), does("Play or pause", locked))
+hl.bind("XF86AudioNext", exec("playerctl next"), does("Next track", locked))
+hl.bind("XF86AudioPrev", exec("playerctl previous"), does("Previous track", locked))
+hl.bind("XF86Calculator", app("gnome-calculator", "org.gnome.Calculator"), does("Calculator"))
 
 --------------------------------------------------------------------------------
 -- LAPTOP LID
@@ -904,8 +917,8 @@ hl.on("monitor.added", function(m)
     forget_lid()
 end)
 
-hl.bind("switch:on:Lid Switch", lid_close, locked)
-hl.bind("switch:off:Lid Switch", lid_open, locked)
+hl.bind("switch:on:Lid Switch", lid_close, does("Lid closed", locked))
+hl.bind("switch:off:Lid Switch", lid_open, does("Lid opened", locked))
 
 --------------------------------------------------------------------------------
 -- WINDOW RULES (tide SPEC.md §6.2 and §6.4)
