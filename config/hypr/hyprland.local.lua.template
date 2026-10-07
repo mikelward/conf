@@ -37,8 +37,9 @@
 -- tide.service's run at login). An input option set here through hl.config
 -- wins over tide's setting of the same option, and is each device's default;
 -- tide's Mouse and Touchpad settings are per device, so they apply over that
--- default, as a mouse's own left_handed does, and a field set here through
--- hl.device beats both.
+-- default, as a mouse's own left_handed does; its settings for one named
+-- device apply over those; and a field set here through hl.device beats
+-- them all.
 -- hl.device({ name = "logitech-mx-master-3", sensitivity = 0.5 })
 -- hl.device({ name = "kensington-slimblade-trackball", left_handed = false })
 -- hl.config({ input = { touchpad = { scroll_factor = 1.5 } } })
