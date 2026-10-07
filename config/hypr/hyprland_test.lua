@@ -61,6 +61,7 @@ local LAYOUT = ".config/hypr/tide/layout.lua"
 local FOCUS = ".config/hypr/tide/focus.lua"
 local LOCAL = ".config/hypr/hyprland.local.lua"
 local TIDE_INPUT = ".config/hypr/tide-input.lua"
+local TIDE_OUTPUTS = ".config/hypr/tide-outputs.lua"
 local LID_FILE = "run/hypr/sig1/tide-lid"
 
 local function exists(rel)
@@ -233,17 +234,48 @@ local function new_hl()
             if S.urgent_window == "raise" then error("window gone") end
             return S.urgent_window
         end,
-        -- Disabled monitors are listed only with { all = true }, as in Hyprland.
+        -- Disabled monitors are listed only with { all = true }. Hyprland
+        -- 0.56.2 lists them never, whatever it's passed (its hlGetMonitors);
+        -- `on_only` has the stub do the same. The lid's fallback test
+        -- predates finding that out (TODO.md, "Find a docked panel that's
+        -- off").
         get_monitors = function(opts)
             local out = {}
             for _, m in ipairs(S.monitor_list) do
-                if (opts and opts.all) or m.enabled ~= false then
+                if (opts and opts.all and not S.on_only) or m.enabled ~= false then
                     table.insert(out, m)
                 end
             end
             return out
         end,
         get_workspaces = function() return S.workspace_list end,
+        -- By name, or desc: and the start of the short description or the
+        -- full one (`full_description`, which hl.get_monitors doesn't give),
+        -- as Hyprland resolves a selector; enabled monitors only. Hyprland
+        -- gives an HL.Monitor userdata: a file handle given its own
+        -- metatable stands in for one, so a check for a table fails here too.
+        get_monitor = function(selector)
+            local function userdata(m)
+                local u = io.tmpfile()
+                debug.setmetatable(u, { __index = function(_, k) return m[k] end })
+                return u
+            end
+            local desc = selector:match("^desc:%s*(.-)%s*$")
+            for _, m in ipairs(S.monitor_list) do
+                if m.enabled ~= false then
+                    if desc then
+                        for _, d in ipairs({ m.description or "", m.full_description or "" }) do
+                            if d:sub(1, #desc) == desc then
+                                return userdata(m)
+                            end
+                        end
+                    elseif m.name == selector then
+                        return userdata(m)
+                    end
+                end
+            end
+            return nil
+        end,
     }
 end
 
@@ -251,7 +283,7 @@ end
 -- (whose lid state file survives).
 local function load(setup)
     if not (setup and setup.keep_files) then
-        assert(os.execute("rm -rf '" .. tmp .. "/" .. LAYOUT .. "' '" .. tmp .. "/" .. LOCAL .. "' '" .. tmp .. "/" .. TIDE_INPUT .. "'"))
+        assert(os.execute("rm -rf '" .. tmp .. "/" .. LAYOUT .. "' '" .. tmp .. "/" .. LOCAL .. "' '" .. tmp .. "/" .. TIDE_INPUT .. "' '" .. tmp .. "/" .. TIDE_OUTPUTS .. "'"))
     end
     if not (setup and setup.reload) then
         -- rm -rf, since a failed test can leave a directory in its place.
@@ -272,6 +304,9 @@ local function load(setup)
     end
     if setup and setup.input then
         write(TIDE_INPUT, setup.input)
+    end
+    if setup and setup.outputs then
+        write(TIDE_OUTPUTS, setup.outputs)
     end
     env_overrides = { XDG_RUNTIME_DIR = tmp .. "/run", HYPRLAND_INSTANCE_SIGNATURE = "sig1", XDG_CURRENT_DESKTOP = false }
     for k, v in pairs((setup and setup.env) or {}) do
@@ -1024,6 +1059,209 @@ test("a desktop with no internal panel ignores the lid", function()
     S.monitor_list = { { name = "DP-1" }, { name = "DP-2" } }
     lid("on")
     eq(0, #S.monitors)
+end)
+
+--------------------------------------------------------------------------------
+-- tide's display settings (tide SPEC.md §16)
+--------------------------------------------------------------------------------
+local DELL = { name = "DP-1", description = "Dell Inc. DELL U2720Q 1234ABC" }
+local PANEL = { name = "eDP-1", description = "BOE 0x0BCA" }
+local DELL_SETTINGS = 'return { ["desc:Dell Inc. DELL U2720Q 1234ABC"] = { scale = 1.5, position = "auto-left" } }'
+
+test("tide's display settings are a rule for each monitor by its description", function()
+    load({ outputs = 'return { ["desc:Dell Inc. DELL U2720Q 1234ABC"] = { scale = 1.5, position = "auto-left" },'
+        .. ' ["desc:BOE 0x0BCA"] = { scale = 2 } }' })
+    eq(0, #S.notifications, "notifications")
+    eq(3, #S.monitors, "the catch-all, then one each")
+    eq("", S.monitors[1].output)
+    eq("desc:BOE 0x0BCA", S.monitors[2].output, "in order")
+    local dell = rule_for(DELL)
+    eq("1.5", dell.scale, "hl.monitor takes a scale as a string")
+    eq("auto-left", dell.position)
+    eq("preferred", dell.mode)
+    eq("2", rule_for(PANEL).scale)
+    eq("auto", rule_for(PANEL).position, "a place it doesn't set is automatic")
+    eq("auto", rule_for({ name = "HDMI-A-1", description = "Other" }).scale, "the rest take the catch-all")
+end)
+
+test("a tide display setting that's wrong is reported and left out", function()
+    load({ outputs = 'return { ["desc:A"] = { scale = 0.1, position = "left", size = 1 }, ["DP-1"] = {}, ["desc:B"] = 2 }' })
+    local texts = {}
+    for _, n in ipairs(S.notifications) do
+        table.insert(texts, n.text)
+    end
+    table.sort(texts)
+    eq(5, #texts, "notifications: " .. table.concat(texts, " | "))
+    truthy(texts[1]:find("DP-1 should be desc:", 1, true), texts[1])
+    truthy(texts[2]:find("desc:A.position should be auto", 1, true), texts[2])
+    truthy(texts[3]:find("desc:A.scale should be a number from 0.25 to 10", 1, true), texts[3])
+    truthy(texts[4]:find("desc:B should be a table", 1, true), texts[4])
+    truthy(texts[5]:find("unknown setting desc:A.size", 1, true), texts[5])
+    eq(2, #S.monitors, "desc:A still gets its rule, at the catch-all's settings")
+    eq("auto", rule_for({ name = "X", description = "A" }).scale)
+    load({ outputs = "return {" })
+    eq(1, #S.notifications)
+    truthy(S.notifications[1].text:find("tide-outputs.lua (none of it applied)", 1, true), S.notifications[1].text)
+    eq(1, #S.monitors, "only the catch-all")
+    load({ outputs = "os.exit(1)" })
+    truthy(S.notifications[1].text:find("none of it applied", 1, true), "nothing in scope: " .. S.notifications[1].text)
+end)
+
+test("the local file's monitor rules win over tide's, before and after tide applies a change", function()
+    load({ outputs = DELL_SETTINGS, ["local"] = 'hl.monitor({ output = "DP-1", scale = "2" })' })
+    eq("2", rule_for(DELL).scale, "the local file loads last")
+    write(TIDE_OUTPUTS, 'return { ["desc:Dell Inc. DELL U2720Q 1234ABC"] = { scale = 1.25 }, ["desc:BOE 0x0BCA"] = { scale = 1.75 } }')
+    conf_outputs.reload()
+    eq("2", rule_for(DELL).scale, "still the local file's")
+    eq("1.75", rule_for(PANEL).scale, "a monitor the local file doesn't set takes tide's change")
+    eq(0, #S.notifications, "notifications")
+end)
+
+test("a monitor tide stops setting goes back to the catch-all's settings", function()
+    load({ outputs = DELL_SETTINGS })
+    write(TIDE_OUTPUTS, "return {}")
+    conf_outputs.reload()
+    eq("auto", rule_for(DELL).scale)
+    eq("auto", rule_for(DELL).position)
+    -- The local file's catch-all, when it has one.
+    load({ outputs = DELL_SETTINGS, ["local"] = 'hl.monitor({ output = "", scale = "1.25" })' })
+    remove(TIDE_OUTPUTS)
+    conf_outputs.reload()
+    eq("1.25", rule_for(DELL).scale)
+end)
+
+test("a closed lid's panel stays off when tide applies a change, and opens with tide's scale", function()
+    load({ outputs = 'return { ["desc:BOE 0x0BCA"] = { scale = 2 } }' })
+    docked()
+    S.monitor_list[1].description = PANEL.description
+    lid("on")
+    write(TIDE_OUTPUTS, 'return { ["desc:BOE 0x0BCA"] = { scale = 1.75 } }')
+    conf_outputs.reload()
+    eq(true, rule_for(PANEL).disabled, "still off")
+    lid("off")
+    eq(false, rule_for(PANEL).disabled == true, "on again")
+    eq("1.75", rule_for(PANEL).scale, "with tide's scale, not the lid's auto")
+end)
+
+-- The rules hyprctl eval's reload added for output `name`, by name.
+local function by_name(name)
+    local out = {}
+    for _, r in ipairs(S.monitors) do
+        if r.output == name then
+            table.insert(out, r)
+        end
+    end
+    return out
+end
+
+test("tide's change also goes to a connected monitor by its name", function()
+    -- Hyprland 0.56.2 doesn't apply a desc: rule added at runtime to a
+    -- monitor already connected (hyprwm/Hyprland#15961).
+    load({ outputs = DELL_SETTINGS })
+    S.monitor_list = { DELL, { name = "HDMI-A-1", description = "Other" } }
+    S.monitors = {}
+    write(TIDE_OUTPUTS, 'return { ["desc:Dell Inc. DELL U2720Q 1234ABC"] = { scale = 1.25 } }')
+    conf_outputs.reload()
+    eq(1, #by_name("DP-1"), "one rule for DP-1")
+    eq("1.25", by_name("DP-1")[1].scale)
+    eq(0, #by_name("HDMI-A-1"), "none for a monitor tide doesn't set")
+    eq("1.25", rule_for(DELL).scale)
+end)
+
+test("a monitor the local file sets gets no rule from tide by its name", function()
+    load({ outputs = DELL_SETTINGS, ["local"] = 'hl.monitor({ output = "desc:Dell Inc.", scale = "2" })' })
+    S.monitor_list = { DELL }
+    S.monitors = {}
+    conf_outputs.reload()
+    eq(0, #by_name("DP-1"))
+    eq("2", rule_for(DELL).scale)
+end)
+
+test("a monitor tide stops setting goes back to the catch-all by its name too", function()
+    load({ outputs = DELL_SETTINGS })
+    S.monitor_list = { DELL }
+    S.monitors = {}
+    write(TIDE_OUTPUTS, "return {}")
+    conf_outputs.reload()
+    eq(1, #by_name("DP-1"), "though the config loaded its rule, not a reload")
+    eq("auto", by_name("DP-1")[1].scale)
+    eq("auto", rule_for(DELL).scale)
+end)
+
+test("a name tide gave a rule goes back to the catch-all when another monitor takes it", function()
+    load({ outputs = DELL_SETTINGS })
+    S.monitor_list = { DELL }
+    conf_outputs.reload()
+    eq("1.5", rule_for(DELL).scale)
+    -- The Dell goes, and a reload while it's away keeps DP-1 marked.
+    S.monitor_list = {}
+    conf_outputs.reload()
+    local other = { name = "DP-1", description = "Other" }
+    S.monitor_list = { other }
+    S.monitors = {}
+    fire("monitor.added", other)
+    eq("auto", rule_for(other).scale, "not the Dell's scale")
+    -- Put right once, it gets no more rules by name.
+    S.monitors = {}
+    fire("monitor.added", other)
+    eq(0, #by_name("DP-1"))
+end)
+
+test("opening the lid gives the panel the local file's catch-all", function()
+    load({ ["local"] = 'hl.monitor({ output = "", scale = "1.25" })' })
+    docked()
+    lid("on")
+    lid("off")
+    eq(false, rule_for(PANEL).disabled == true, "on again")
+    eq("1.25", rule_for(PANEL).scale, "not conf's auto")
+end)
+
+test("a monitor the local file sets by its full description gets no rule from tide by name", function()
+    -- hyprctl monitors and hl.get_monitors give the short description;
+    -- Hyprland also matches the full one, as hl.get_monitor resolves it.
+    load({ outputs = DELL_SETTINGS, ["local"] = 'hl.monitor({ output = "desc:Dell Inc. DELL U2720Q 1234ABC (DP-1)", scale = "2" })' })
+    S.monitor_list = { { name = "DP-1", description = DELL.description, full_description = DELL.description .. " (DP-1)" } }
+    S.monitors = {}
+    conf_outputs.reload()
+    eq(0, #by_name("DP-1"))
+end)
+
+test("a tide entry takes the local catch-all for what it leaves out, at load and on reload alike", function()
+    load({
+        outputs = 'return { ["desc:Dell Inc. DELL U2720Q 1234ABC"] = { position = "auto-left" } }',
+        ["local"] = 'hl.monitor({ output = "", scale = "1.25" })',
+    })
+    eq("1.25", rule_for(DELL).scale, "at load")
+    eq("auto-left", rule_for(DELL).position)
+    conf_outputs.reload()
+    eq("1.25", rule_for(DELL).scale, "a reload changes nothing")
+end)
+
+test("the panel takes tide's rule by name when it comes back on", function()
+    -- Hyprland 0.56.2's hl.get_monitors lists only the monitors on, so the
+    -- panel's rule by name waits for monitor.added.
+    load({ outputs = 'return { ["desc:BOE 0x0BCA"] = { scale = 2 } }' })
+    docked()
+    S.on_only = true
+    S.monitor_list[1].description = PANEL.description
+    lid("on")
+    S.monitor_list[1].enabled = false
+    lid("off")
+    S.monitor_list[1].enabled = true
+    S.monitors = {}
+    fire("monitor.added", S.monitor_list[1])
+    eq(1, #by_name("eDP-1"), "one rule for the panel by name")
+    eq("2", by_name("eDP-1")[1].scale)
+    eq(false, rule_for(PANEL).disabled == true, "and on")
+end)
+
+test("opening the lid keeps the local file's rule for the panel", function()
+    load({ ["local"] = 'hl.monitor({ output = "eDP-1", scale = "1.5" })' })
+    docked()
+    lid("on")
+    lid("off")
+    eq(false, rule_for(PANEL).disabled == true, "on again")
+    eq("1.5", rule_for(PANEL).scale)
 end)
 
 --------------------------------------------------------------------------------

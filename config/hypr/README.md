@@ -278,11 +278,27 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   through `hl.device()`. Its global speed or handedness is each device's
   default, which tide's settings for that kind of device apply over, as a
   mouse's own `left_handed` does.
+- **tide's Displays settings.** tide's settings panel writes each
+  monitor's scale and place to `~/.config/hypr/tide-outputs.lua`, keyed by
+  `desc:` and the monitor's description, which `hyprland.lua` reads as
+  data, reporting a broken file or an unknown setting. Each becomes a
+  monitor rule over the catch-all, so a monitor's settings follow it from
+  port to port; what tide leaves out is the catch-all's, the local file's
+  if it has one. Rules in `hyprland.local.lua` still win, and a closed
+  lid's panel stays off. tide applies a change with
+  `conf_outputs.reload()`, which re-reads the file and adds the rules
+  again in that order, since Hyprland uses the last rule added for a
+  monitor. Hyprland 0.56.2 doesn't apply a `desc:` rule added at runtime to
+  a monitor already connected (hyprwm/Hyprland#15961), so the reload also
+  gives each connected monitor tide's rule by its name. A monitor tide stops
+  setting goes back to the catch-all's settings, and so does a name that
+  comes to mean another monitor.
 - **Laptop lid.** logind owns suspend with its defaults
   (`HandleLidSwitch=suspend`, `HandleLidSwitchDocked=ignore`), and hypridle
   locks first. `hyprland.lua` handles only the docked case: closing the lid
   with an external display attached disables the internal panel (Hyprland
-  moves its workspaces over), and opening it re-enables the panel and moves
+  moves its workspaces over), and opening it re-enables the panel, with
+  tide's or `hyprland.local.lua`'s settings for it if any, and moves
   those workspaces back, even across a config reload in between. The panel
   is auto-detected (first eDP/LVDS/DSI
   output; override with `HYPR_INTERNAL_OUTPUT`). If an old
