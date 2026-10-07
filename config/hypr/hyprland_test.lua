@@ -1607,6 +1607,87 @@ test("hyprland.local.lua still wins over a device's own tide settings", function
     eq(false, d[1].disable_while_typing, "the local file's touchpad option, as input.touchpad has it")
 end)
 
+test("apply-input's conf_input.keyboard gives a keyboard every keyboard option", function()
+    load()
+    S.calls = {}
+    conf_input.keyboard("at-keyboard")
+    local d = devices()
+    eq(1, #d)
+    eq("at-keyboard", d[1].name)
+    eq("us", d[1].kb_layout)
+    eq("dvorak", d[1].kb_variant)
+    eq(600, d[1].repeat_delay)
+    eq(25, d[1].repeat_rate)
+end)
+
+local TIDE_KEYBOARDS = [[
+return {
+    mouse = { sensitivity = -0.5 },
+    keyboard = { kb_layout = "us,de", kb_variant = "dvorak,", repeat_rate = 40 },
+    devices = {
+        ["logitech-usb-receiver"] = { sensitivity = 0.75, kb_layout = "gb", kb_variant = "" },
+    },
+}
+]]
+
+test("a keyboard tide's settings name gets its own over every keyboard's", function()
+    load({ input = TIDE_KEYBOARDS })
+    eq(0, #S.notifications)
+    S.calls = {}
+    conf_input.keyboard("logitech-usb-receiver")
+    conf_input.keyboard("at-keyboard")
+    conf_input.mouse("logitech-usb-receiver", 3)
+    local d = devices()
+    eq(3, #d)
+    eq("gb", d[1].kb_layout, "its own layout")
+    eq("", d[1].kb_variant, "its own variant, none")
+    eq(40, d[1].repeat_rate, "the rest as every keyboard's")
+    eq(600, d[1].repeat_delay, "and the config's where tide sets none")
+    eq(nil, d[1].sensitivity, "a keyboard takes no mouse setting")
+    eq("us,de", d[2].kb_layout, "another keyboard keeps every keyboard's")
+    eq("dvorak,", d[2].kb_variant)
+    eq(0.75, d[3].sensitivity, "the same name as a mouse takes its mouse setting")
+    eq(nil, d[3].kb_layout, "and no keyboard setting")
+end)
+
+test("a keyboard's own layout that tide stops setting goes back to every keyboard's on reload", function()
+    load({ input = TIDE_KEYBOARDS })
+    write(TIDE_INPUT, 'return { keyboard = { kb_layout = "us,de", kb_variant = "dvorak," } }')
+    conf_input.reload()
+    S.calls = {}
+    conf_input.keyboard("logitech-usb-receiver")
+    local d = devices()
+    eq("us,de", d[1].kb_layout)
+    eq("dvorak,", d[1].kb_variant)
+    eq(25, d[1].repeat_rate, "the config's again")
+end)
+
+test("hyprland.local.lua still wins over a keyboard's tide settings", function()
+    load({
+        input = TIDE_KEYBOARDS,
+        ["local"] = 'hl.device({ name = "logitech usb receiver", kb_layout = "fr" })\n'
+            .. 'hl.config({ input = { repeat_delay = 250 } })',
+    })
+    S.calls = {}
+    conf_input.keyboard("logitech-usb-receiver")
+    conf_input.keyboard("at-keyboard")
+    local d = devices()
+    eq(nil, d[1].kb_layout, "the local file's field for that keyboard (spaces as dashes)")
+    eq("", d[1].kb_variant, "its own tide setting for the rest")
+    eq(250, d[2].repeat_delay, "the local file's keyboard option, as input has it")
+end)
+
+test("a keyboard setting of the wrong type in devices is reported and left out", function()
+    load({ input = 'return { devices = { ["at-keyboard"] = { kb_layout = 5, repeat_rate = 30 } } }' })
+    eq(1, #S.notifications)
+    truthy(S.notifications[1].text:find("devices.at-keyboard.kb_layout should be a string", 1, true), S.notifications[1].text)
+    S.calls = {}
+    conf_input.keyboard("at-keyboard")
+    local d = devices()
+    eq("us", d[1].kb_layout)
+    eq(30, d[1].repeat_rate)
+end)
+
 test("a devices table that isn't one, or a bad device setting, is reported and left out", function()
     load({ input = 'return { devices = 5, mouse = { sensitivity = 0.5 } }' })
     eq(1, #S.notifications)

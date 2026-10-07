@@ -91,14 +91,19 @@ assert_equal "" "$_old_ipc"
 ################################################################################
 # apply-input.sh, against a fake hyprctl: each mouse goes through
 # hyprland.lua's conf_input.mouse() by `hyprctl eval`, each touchpad through
-# conf_input.touchpad(), and keyboards are left alone.
+# conf_input.touchpad(), and each keyboard through conf_input.keyboard().
 ################################################################################
 _fake=$(mktemp -d)
 cat > "$_fake/hyprctl" <<'FAKE'
 #!/bin/sh
 case "$1" in
     devices)
-        printf '%s\n' '{"mice": [{"name": "logitech-usb-receiver"}, {"name": "synps/2-synaptics-touchpad"}, {"name": "odd \"quoted\" mouse"}], "keyboards": [{"name": "at-keyboard"}]}'
+        test -z "$FAKE_DEVICES_FAIL" || exit 1
+        if test -n "$FAKE_DEVICES"; then
+            printf '%s\n' "$FAKE_DEVICES"
+        else
+            printf '%s\n' '{"mice": [{"name": "logitech-usb-receiver"}, {"name": "synps/2-synaptics-touchpad"}, {"name": "odd \"quoted\" mouse"}], "keyboards": [{"name": "at-keyboard"}, {"name": "logitech-usb-receiver"}]}'
+        fi
         ;;
     eval)
         printf '%s\n' "$2" >> "$FAKE_LOG"
@@ -109,20 +114,65 @@ FAKE
 chmod +x "$_fake/hyprctl"
 _apply_run() {
     : > "$_fake/log"
-    PATH="$_fake:$PATH" FAKE_LOG="$_fake/log" sh "$_apply" 2>"$_fake/err"
+    PATH="$_fake:${APPLY_PATH:-$PATH}" FAKE_LOG="$_fake/log" sh "$_apply" 2>"$_fake/err"
 }
 
-start_test "apply-input configures each mouse (wheel at 3) and touchpad through conf_input, not the keyboard"
+start_test "apply-input configures each mouse (wheel at 3), touchpad and keyboard through conf_input"
 _apply_run
 assert_equal 0 "$?"
 _apply_log=$(cat "$_fake/log")
 assert_contains 'conf_input.mouse("logitech-usb-receiver", 3)' "$_apply_log"
 assert_contains 'conf_input.touchpad("synps/2-synaptics-touchpad")' "$_apply_log"
 assert_not_contains 'conf_input.mouse("synps/2-synaptics-touchpad"' "$_apply_log"
-assert_not_contains "at-keyboard" "$_apply_log"
+assert_contains 'conf_input.keyboard("at-keyboard")' "$_apply_log"
+assert_not_contains 'conf_input.mouse("at-keyboard"' "$_apply_log"
+
+start_test "apply-input configures a receiver that's a mouse and a keyboard as both"
+assert_contains 'conf_input.keyboard("logitech-usb-receiver")' "$_apply_log"
 
 start_test "apply-input escapes quotes in a device name for Lua"
 assert_contains 'conf_input.mouse("odd \"quoted\" mouse", 3)' "$_apply_log"
+
+start_test "apply-input reads hyprctl's own layout without jq, keeping each list apart"
+mkdir "$_fake/nojq-apply"
+for _tool in sh sed grep cut; do
+    _path=$(command -v "$_tool") && ln -s "$_path" "$_fake/nojq-apply/$_tool"
+done
+FAKE_DEVICES='{
+    "mice": [
+        {
+            "address": "0x1",
+            "name": "trackball",
+            "defaultSpeed": 0.00000
+        }
+    ],
+    "keyboards": [
+        {
+            "address": "0x2",
+            "name": "at-keyboard",
+            "layout": "us",
+            "main": true
+        }
+    ],
+    "tablets": [
+        {
+            "address": "0x3",
+            "name": "pen-tablet"
+        }
+    ]
+}' APPLY_PATH="$_fake/nojq-apply" _apply_run
+assert_equal 0 "$?"
+_apply_log=$(cat "$_fake/log")
+assert_contains 'conf_input.mouse("trackball", 3)' "$_apply_log"
+assert_contains 'conf_input.keyboard("at-keyboard")' "$_apply_log"
+assert_not_contains 'conf_input.mouse("at-keyboard"' "$_apply_log"
+assert_not_contains "pen-tablet" "$_apply_log"
+
+start_test "apply-input reports a device listing hyprctl couldn't give"
+FAKE_DEVICES_FAIL=1 _apply_run
+assert_equal 1 "$?"
+assert_equal "" "$(cat "$_fake/log")"
+assert_contains "hyprctl devices -j failed" "$(cat "$_fake/err")"
 
 start_test "apply-input honors HYPR_MOUSE_SCROLL_FACTOR"
 HYPR_MOUSE_SCROLL_FACTOR=2.25 _apply_run
@@ -138,6 +188,7 @@ start_test "apply-input reports a device Hyprland rejected"
 FAKE_EVAL_REPLY='error: hl.device: unknown field' _apply_run
 assert_equal 1 "$?"
 assert_contains "couldn't configure mouse 'logitech-usb-receiver'" "$(cat "$_fake/err")"
+assert_contains "couldn't configure keyboard 'at-keyboard': error: hl.device: unknown field" "$(cat "$_fake/err")"
 rm -rf "$_fake"
 
 ################################################################################

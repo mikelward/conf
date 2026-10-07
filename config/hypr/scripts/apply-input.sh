@@ -5,12 +5,14 @@
 #             and handedness tide's Touchpad settings give them.
 #   MICE      get left_handed = true (RIGHT button primary) + a faster wheel,
 #             or what tide's Mouse settings say instead.
-#   Either takes tide's settings for that one device over its kind's.
+#   KEYBOARDS get tide's keyboard settings, so one with settings of its own
+#             can have them and lose them again.
+#   Each takes tide's settings for that one device over its kind's.
 #
 # Devices are classified by name (touchpads report "touchpad"/"trackpad"/
 # "synaptics" in their libinput name, which is what Hyprland uses). Runs at
-# login from hyprland.lua's autostart; re-run it after hotplugging a mouse or
-# touchpad.
+# login from hyprland.lua's autostart; re-run it after hotplugging a mouse,
+# touchpad or keyboard.
 # Override the mouse scroll speed with HYPR_MOUSE_SCROLL_FACTOR (default 3).
 
 MOUSE_SCROLL="${HYPR_MOUSE_SCROLL_FACTOR:-3}"
@@ -25,15 +27,27 @@ case "$MOUSE_SCROLL" in
         ;;
 esac
 
-# Pointer device names from the "mice" array. Prefer jq; fall back to a narrow
-# sed window so keyboard/tablet names in the same JSON aren't picked up.
-if command -v jq >/dev/null 2>&1; then
-    names=$(hyprctl devices -j | jq -r '.mice[].name')
-else
-    names=$(hyprctl devices -j \
-        | sed -n '/"mice"/,/\]/p' \
-        | grep -o '"name": *"[^"]*"' \
-        | cut -d'"' -f4)
+if ! devices=$(hyprctl devices -j); then
+    echo "apply-input.sh: hyprctl devices -j failed" >&2
+    exit 1
+fi
+
+# The device names in one array of hyprctl devices -j: "mice" or
+# "keyboards". Prefer jq; fall back to a narrow sed window so another array's
+# names aren't picked up.
+device_names() {
+    if command -v jq >/dev/null 2>&1; then
+        printf '%s\n' "$devices" | jq -r ".$1[].name"
+    else
+        printf '%s\n' "$devices" \
+            | sed -n "/\"$1\"/,/\\]/p" \
+            | grep -o '"name": *"[^"]*"' \
+            | cut -d'"' -f4
+    fi
+}
+if ! names=$(device_names mice) || ! keyboards=$(device_names keyboards); then
+    echo "apply-input.sh: couldn't read the mice and keyboards hyprctl devices -j lists" >&2
+    exit 1
 fi
 
 # Iterate line by line -- device names contain spaces before Hyprland's
@@ -69,5 +83,17 @@ for name in $names; do
             fi
             ;;
     esac
+done
+# Keyboards: tide's keyboard settings, through hyprland.lua's
+# conf_input.keyboard(), which leaves alone what hyprland.local.lua set for
+# the keyboard.
+for name in $keyboards; do
+    test -n "$name" || continue
+    lua_name=$(printf '%s' "$name" | sed 's/[\\"]/\\&/g')
+    result=$(hyprctl eval "conf_input.keyboard(\"$lua_name\")" 2>&1)
+    if test "$result" != ok; then
+        echo "apply-input.sh: couldn't configure keyboard '$name': $result" >&2
+        status=1
+    fi
 done
 exit $status

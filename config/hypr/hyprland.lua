@@ -571,7 +571,7 @@ hl.config({ input = copy(INPUT) })
 -- touchpad's own section, apply over the ones above; mice and touchpads get
 -- their speed and handedness one device at a time, through conf_input
 -- below, as apply-input.sh meets each, and a device named in devices gets
--- its own settings over its kind's. With no file, the settings above
+-- its own settings over its kind's, a keyboard's included. With no file, the settings above
 -- stand. It's read as data, with nothing in scope, and a value of the wrong
 -- type, or an unknown section or setting, is reported and left out.
 local TIDE_INPUT_TYPES = {
@@ -582,9 +582,15 @@ local TIDE_INPUT_TYPES = {
     },
     keyboard = { kb_layout = "string", kb_variant = "string", repeat_delay = "number", repeat_rate = "number" },
 }
--- A named device takes any mouse or touchpad option, keyed by the name
--- hyprctl devices gives it.
-local TIDE_DEVICE_TYPES = TIDE_INPUT_TYPES.touchpad
+-- A named device takes any mouse, touchpad or keyboard option, keyed by the
+-- name hyprctl devices gives it: one name can be a mouse and a keyboard both,
+-- as a wireless receiver is.
+local TIDE_DEVICE_TYPES = {}
+for _, kind in ipairs({ "touchpad", "keyboard" }) do
+    for k, t in pairs(TIDE_INPUT_TYPES[kind]) do
+        TIDE_DEVICE_TYPES[k] = t
+    end
+end
 -- The touchpad options that live in input.touchpad, for every touchpad;
 -- the rest go to each one through conf_input.touchpad.
 local TOUCHPAD_SECTION = { natural_scroll = true, tap_to_click = true, disable_while_typing = true, scroll_factor = true }
@@ -1243,10 +1249,11 @@ hl.layer_rule({
 -- Binds add rather than replace, so rebinding a key needs hl.unbind first.
 --
 -- apply-input.sh runs after this, at login and after every reload, and sets
--- each mouse through conf_input.mouse() and each touchpad through
--- conf_input.touchpad(). A mouse is left-handed with the script's wheel
--- speed, unless tide's mouse settings say otherwise; a touchpad takes tide's
--- touchpad speed and handedness. The fields the local file gave a device in
+-- each mouse through conf_input.mouse(), each touchpad through
+-- conf_input.touchpad() and each keyboard through conf_input.keyboard(). A
+-- mouse is left-handed with the script's wheel speed, unless tide's mouse
+-- settings say otherwise; a touchpad takes tide's touchpad speed and
+-- handedness; a keyboard takes the keyboard options, or its own. The fields the local file gave a device in
 -- hl.device() are recorded, and these leave those alone, so a machine can
 -- make one mouse right-handed or slow its wheel here. hl.device() merges
 -- field by field, so the rest still applies. conf_input.reload() is how tide
@@ -1281,6 +1288,20 @@ end
 -- Each device gets every field tide can set, its value or the default,
 -- for the same reason as apply_tide_input: hl.device merges too. A device
 -- tide's settings name gets its own over its kind's.
+
+-- What a keyboard option is, as apply_tide_input set it: the local file's,
+-- else tide's, else the config's.
+local function keyboard_option(k)
+    local v = local_input[k]
+    if v == nil then
+        v = tide_input.keyboard[k]
+    end
+    if v == nil then
+        v = INPUT[k]
+    end
+    return v
+end
+
 _G.conf_input = {
     mouse = function(name, scroll_factor)
         local want = {
@@ -1319,7 +1340,26 @@ _G.conf_input = {
             want[k] = touchpad_option(k)
         end
         for k, v in pairs(tide_input.devices[name] or {}) do
-            want[k] = v
+            if TIDE_INPUT_TYPES.touchpad[k] ~= nil then
+                want[k] = v
+            end
+        end
+        device(name, want)
+    end,
+    -- Every keyboard gets every option tide sets, its own or every
+    -- keyboard's, so one whose own setting goes takes every keyboard's
+    -- again: hl.device's is kept until something replaces it. Hyprland
+    -- (0.56's applyConfigToKeyboard) leaves a keyboard whose options haven't
+    -- changed alone, so this doesn't put it back on its first layout.
+    keyboard = function(name)
+        local want = {}
+        for k in pairs(TIDE_INPUT_TYPES.keyboard) do
+            want[k] = keyboard_option(k)
+        end
+        for k, v in pairs(tide_input.devices[name] or {}) do
+            if TIDE_INPUT_TYPES.keyboard[k] ~= nil then
+                want[k] = v
+            end
         end
         device(name, want)
     end,
