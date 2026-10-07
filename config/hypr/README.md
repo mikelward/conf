@@ -235,7 +235,12 @@ pointer. An app that asks for focus is marked urgent instead of taking it
 - **The focus cue is the dim alone.** No gaps and no borders;
   `dim_inactive` with `dim_strength = 0.07`: Hyprland's dim looks stronger
   than KDE's "dim inactive" effect at the same number, so 0.15 was too much.
-  A lone window, video and picture-in-picture never dim.
+  A lone window, video and picture-in-picture never dim. tide's Appearance
+  page sets the strength: it writes `~/.config/hypr/tide-appearance.lua`
+  (`{ dim_strength = 0.1 }`), which `hyprland.lua` reads as data, reporting
+  a broken file or an unknown setting, and tide applies a change with
+  `conf_appearance.reload()`. A strength tide stops setting goes back to
+  0.07, and one `hyprland.local.lua` sets through `hl.config()` still wins.
 - **Dialogs float, centered**: modal windows, pavucontrol,
   nm-connection-editor, blueman-manager, portal file choosers, and "Open
   File" / "Save File" / "Save As" titles. Picture-in-picture floats pinned in

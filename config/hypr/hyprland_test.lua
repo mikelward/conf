@@ -62,6 +62,7 @@ local FOCUS = ".config/hypr/tide/focus.lua"
 local LOCAL = ".config/hypr/hyprland.local.lua"
 local TIDE_INPUT = ".config/hypr/tide-input.lua"
 local TIDE_OUTPUTS = ".config/hypr/tide-outputs.lua"
+local TIDE_APPEARANCE = ".config/hypr/tide-appearance.lua"
 local LID_FILE = "run/hypr/sig1/tide-lid"
 
 local function exists(rel)
@@ -283,7 +284,7 @@ end
 -- (whose lid state file survives).
 local function load(setup)
     if not (setup and setup.keep_files) then
-        assert(os.execute("rm -rf '" .. tmp .. "/" .. LAYOUT .. "' '" .. tmp .. "/" .. LOCAL .. "' '" .. tmp .. "/" .. TIDE_INPUT .. "' '" .. tmp .. "/" .. TIDE_OUTPUTS .. "'"))
+        assert(os.execute("rm -rf '" .. tmp .. "/" .. LAYOUT .. "' '" .. tmp .. "/" .. LOCAL .. "' '" .. tmp .. "/" .. TIDE_INPUT .. "' '" .. tmp .. "/" .. TIDE_OUTPUTS .. "' '" .. tmp .. "/" .. TIDE_APPEARANCE .. "'"))
     end
     if not (setup and setup.reload) then
         -- rm -rf, since a failed test can leave a directory in its place.
@@ -307,6 +308,9 @@ local function load(setup)
     end
     if setup and setup.outputs then
         write(TIDE_OUTPUTS, setup.outputs)
+    end
+    if setup and setup.appearance then
+        write(TIDE_APPEARANCE, setup.appearance)
     end
     env_overrides = { XDG_RUNTIME_DIR = tmp .. "/run", HYPRLAND_INSTANCE_SIGNATURE = "sig1", XDG_CURRENT_DESKTOP = false }
     for k, v in pairs((setup and setup.env) or {}) do
@@ -1724,6 +1728,54 @@ test("a setting of the wrong type or name is reported and left out", function()
     eq(1, #S.notifications)
     truthy(S.notifications[1].text:find("unknown section keybord", 1, true), S.notifications[1].text)
     eq(30, S.config.input.repeat_rate, "the known section still applies")
+end)
+
+test("tide-appearance.lua sets the inactive dim's strength", function()
+    load({ appearance = "return { dim_strength = 0.12 }" })
+    eq(0.12, S.config.decoration.dim_strength)
+    eq(0, #S.notifications)
+    load({ appearance = "return {}" })
+    eq(0.07, S.config.decoration.dim_strength, "nothing set keeps the config's")
+end)
+
+test("conf_appearance.reload reads tide's dim again, and goes back to the config's without it", function()
+    load()
+    write(TIDE_APPEARANCE, "return { dim_strength = 0.2 }")
+    conf_appearance.reload()
+    eq(0.2, S.config.decoration.dim_strength)
+    write(TIDE_APPEARANCE, "return {}")
+    conf_appearance.reload()
+    eq(0.07, S.config.decoration.dim_strength, "a setting tide stops making")
+    write(TIDE_APPEARANCE, "return { dim_strength = 0.2 }")
+    conf_appearance.reload()
+    remove(TIDE_APPEARANCE)
+    conf_appearance.reload()
+    eq(0.07, S.config.decoration.dim_strength, "no file")
+end)
+
+test("hyprland.local.lua's dim strength wins over tide's, at load and on a reload", function()
+    load({ appearance = "return { dim_strength = 0.12 }", ["local"] = "hl.config({ decoration = { dim_strength = 0.25 } })" })
+    eq(0.25, S.config.decoration.dim_strength)
+    write(TIDE_APPEARANCE, "return { dim_strength = 0.2 }")
+    conf_appearance.reload()
+    eq(0.25, S.config.decoration.dim_strength)
+end)
+
+test("a broken or wrong tide-appearance.lua is reported and leaves the config's dim", function()
+    for _, text in ipairs({
+        "return {",
+        "return 5",
+        'return { dim_strength = "strong" }',
+        "return { dim_strength = 2 }",
+        "return { dim_strength = 0 / 0 }",
+        "return { dim = 0.1 }",
+        'os.execute("true") return {}',
+    }) do
+        load({ appearance = text })
+        eq(1, #S.notifications, text)
+        truthy(S.notifications[1].text:find("tide-appearance.lua", 1, true), S.notifications[1].text)
+        eq(0.07, S.config.decoration.dim_strength, text)
+    end
 end)
 
 test("an unreadable hyprland.local.lua is reported, not taken as absent", function()
