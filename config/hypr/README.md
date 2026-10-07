@@ -172,6 +172,7 @@ description, which tide's settings panel lists on its Keys page;
 | `SUPER + R` | Remote desktop |
 | `SUPER + Y` | YouTube Music |
 | `SUPER + Space` | Launcher (tide's, or fuzzel without the tide shell) |
+| `SUPER + Alt + Space` | Next keyboard layout, once `kb_layout` has two, on every keyboard and on the lock screen (`next-layout.sh`) |
 | `SUPER + Shift + N` | Notification center (swaync) |
 | `SUPER + Backspace` | Close the current window |
 | `SUPER + L` | Lock (tide-lock in the tide session, hyprlock otherwise) |

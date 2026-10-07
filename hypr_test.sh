@@ -20,6 +20,7 @@ _themed="$_srcdir/config/hypr/scripts/theme-daemon.sh"
 _fuzzellaunch="$_srcdir/config/hypr/scripts/launch-fuzzel.sh"
 _powermenu="$_srcdir/config/waybar/scripts/power-menu.sh"
 _apply="$_srcdir/config/hypr/scripts/apply-input.sh"
+_nextlayout="$_srcdir/config/hypr/scripts/next-layout.sh"
 _waybar_cfg="$_srcdir/config/waybar/config.jsonc"
 _waybar_css="$_srcdir/config/waybar/style.css"
 _fuzzel="$_srcdir/config/fuzzel/fuzzel.ini"
@@ -31,7 +32,7 @@ _swaync_css="$_srcdir/config/swaync/style.css"
 # match against empty strings.
 ################################################################################
 for _f in "$_hypr" "$_hypr_test" "$_hypr_tmpl" "$_idle" "$_lock" \
-          "$_theme" "$_themed" "$_fuzzellaunch" "$_apply" "$_powermenu" \
+          "$_theme" "$_themed" "$_fuzzellaunch" "$_apply" "$_nextlayout" "$_powermenu" \
           "$_waybar_cfg" "$_waybar_css" \
           "$_srcdir/config/waybar/common.css" \
           "$_srcdir/config/waybar/colors-dark.css" \
@@ -137,6 +138,95 @@ start_test "apply-input reports a device Hyprland rejected"
 FAKE_EVAL_REPLY='error: hl.device: unknown field' _apply_run
 assert_equal 1 "$?"
 assert_contains "couldn't configure mouse 'logitech-usb-receiver'" "$(cat "$_fake/err")"
+rm -rf "$_fake"
+
+################################################################################
+# next-layout.sh, against a fake hyprctl: every keyboard goes to the layout
+# after the main keyboard's, by its index, so keyboards out of step come back
+# into it. Run with jq, then with python3 alone, since it takes either.
+################################################################################
+_fake=$(mktemp -d)
+cat > "$_fake/hyprctl" <<'FAKE'
+#!/bin/sh
+case "$1" in
+    devices)
+        printf '%s\n' "$FAKE_DEVICES"
+        ;;
+    switchxkblayout)
+        printf '%s\n' "$*" >> "$FAKE_LOG"
+        printf '%s\n' "${FAKE_SWITCH_REPLY:-ok}"
+        ;;
+esac
+FAKE
+chmod +x "$_fake/hyprctl"
+# A PATH of the fake hyprctl and only the tools the script may use: with
+# python3 and without jq, so the fallback runs even where jq is installed.
+# python3 is linked as the interpreter itself, not a version manager's shim
+# (pyenv, asdf), which needs more of the PATH than this one has.
+mkdir "$_fake/nojq"
+for _tool in sh tr wc; do
+    _path=$(command -v "$_tool") && ln -s "$_path" "$_fake/nojq/$_tool"
+done
+if _python=$(python3 -c 'import sys; print(sys.executable)' 2>"$_fake/err") && test -n "$_python"; then
+    ln -s "$_python" "$_fake/nojq/python3"
+else
+    # Without it, the python3 runs below fail on their own.
+    echo "hypr_test.sh: couldn't find python3's interpreter: $(cat "$_fake/err")" >&2
+fi
+_next_run() {
+    : > "$_fake/log"
+    FAKE_DEVICES=$1 PATH="$_fake:${2:-$PATH}" FAKE_LOG="$_fake/log" sh "$_nextlayout" 2>"$_fake/err"
+}
+_kb() {
+    printf '{"name": "%s", "layout": "%s", "active_layout_index": %s, "main": %s}' "$1" "$2" "$3" "$4"
+}
+for _with in jq python3; do
+    _p=
+    test "$_with" = python3 && _p="$_fake/nojq"
+    if test "$_with" = jq && ! command -v jq >/dev/null 2>&1; then
+        skip_block "next-layout.sh with jq (jq isn't installed)"
+        continue
+    fi
+
+    start_test "next-layout ($_with) goes from the main keyboard's first layout to its second"
+    _next_run "{\"keyboards\": [$(_kb at-keyboard us,de 0 true)]}" "$_p"
+    assert_equal 0 "$?"
+    assert_equal "switchxkblayout all 1" "$(cat "$_fake/log")"
+
+    start_test "next-layout ($_with) goes from the last layout back to the first"
+    _next_run "{\"keyboards\": [$(_kb at-keyboard us,de,fr 2 true)]}" "$_p"
+    assert_equal "switchxkblayout all 0" "$(cat "$_fake/log")"
+
+    start_test "next-layout ($_with) follows the main keyboard, bringing the others into step"
+    _next_run "{\"keyboards\": [$(_kb usb-keyboard us,de 0 false), $(_kb at-keyboard us,de 1 true)]}" "$_p"
+    assert_equal "switchxkblayout all 0" "$(cat "$_fake/log")"
+
+    start_test "next-layout ($_with) takes the first keyboard when none is main"
+    _next_run "{\"keyboards\": [$(_kb at-keyboard us,de 1 false), $(_kb usb-keyboard us,de 0 false)]}" "$_p"
+    assert_equal "switchxkblayout all 0" "$(cat "$_fake/log")"
+
+    start_test "next-layout ($_with) with one layout sets it again"
+    _next_run "{\"keyboards\": [$(_kb at-keyboard us 0 true)]}" "$_p"
+    assert_equal 0 "$?"
+    assert_equal "switchxkblayout all 0" "$(cat "$_fake/log")"
+
+    start_test "next-layout ($_with) reports a keyboard it couldn't find a layout for"
+    _next_run '{"keyboards": []}' "$_p"
+    assert_equal 1 "$?"
+    assert_equal "" "$(cat "$_fake/log")"
+    assert_contains "next-layout.sh:" "$(cat "$_fake/err")"
+done
+
+start_test "next-layout reports a keyboard Hyprland couldn't switch"
+FAKE_SWITCH_REPLY='layout idx out of range of 1' _next_run "{\"keyboards\": [$(_kb at-keyboard us,de 0 true)]}"
+assert_equal 1 "$?"
+assert_contains "couldn't switch every keyboard to layout 1: layout idx out of range of 1" "$(cat "$_fake/err")"
+
+start_test "next-layout says what it needs when it has neither jq nor python3"
+rm "$_fake/nojq/python3"
+_next_run "{\"keyboards\": [$(_kb at-keyboard us,de 0 true)]}" "$_fake/nojq"
+assert_equal 1 "$?"
+assert_contains "needs jq or python3" "$(cat "$_fake/err")"
 rm -rf "$_fake"
 
 # theme.sh against fakes that log what it starts; waybar only when it's the
