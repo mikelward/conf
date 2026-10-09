@@ -92,6 +92,19 @@ Delete an entry once you have agreed with it or reversed it.
       follow with their own inline-message mechanisms. *Reversible:* it's an
       additive per-shell feature, and it's opt-in and off by default meanwhile.
 
+## Need hypridle 0.1.8 for on-resume under an inhibit
+
+hypridle 0.1.7 skips every listener's `on-resume` if a D-Bus ScreenSaver
+inhibit is held when you come back, even after its `on-timeout` ran. Three
+listeners in `config/hypr/hypridle.conf` depend on it: the dimmed
+brightness isn't restored, the displays stay off, and in tide the suspend
+step's `tide idle-suspend --cancel` doesn't run, so a later unplug can
+still suspend a machine someone is using. 0.1.8 fixes it (hypridle 91ab4f0,
+"don't skip on-resume when on-timeout already fired", #192). It needs an
+inhibit taken while idle and held through your return, so this waits for
+the distros conf targets to ship 0.1.8; drop this note then. (Codex on
+mikelward/conf#414.)
+
 ## Find a docked panel that's off
 
 `lid_open`'s fallback, for a lid closed with no saved state (it predates
