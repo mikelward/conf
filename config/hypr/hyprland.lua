@@ -1249,6 +1249,14 @@ hl.layer_rule({
     no_screen_share = true,
 })
 
+-- And the launcher (SPEC.md §12), whose query and results are yours
+-- even mid-share.
+hl.layer_rule({
+    name = "no-share-launcher",
+    match = { namespace = "^tide-launcher$" },
+    no_screen_share = true,
+})
+
 --------------------------------------------------------------------------------
 -- PER-MACHINE OVERRIDES
 --------------------------------------------------------------------------------
