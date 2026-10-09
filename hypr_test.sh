@@ -15,12 +15,14 @@ _hypr_test="$_srcdir/config/hypr/hyprland_test.lua"
 _hypr_tmpl="$_srcdir/config/hypr/hyprland.local.lua.template"
 _idle="$_srcdir/config/hypr/hypridle.conf"
 _lock="$_srcdir/config/hypr/hyprlock.conf"
+_xdph="$_srcdir/config/hypr/xdph.conf"
 _theme="$_srcdir/config/hypr/scripts/theme.sh"
 _themed="$_srcdir/config/hypr/scripts/theme-daemon.sh"
 _fuzzellaunch="$_srcdir/config/hypr/scripts/launch-fuzzel.sh"
 _powermenu="$_srcdir/config/waybar/scripts/power-menu.sh"
 _apply="$_srcdir/config/hypr/scripts/apply-input.sh"
 _nextlayout="$_srcdir/config/hypr/scripts/next-layout.sh"
+_sharepicker="$_srcdir/config/hypr/scripts/share-picker.sh"
 _waybar_cfg="$_srcdir/config/waybar/config.jsonc"
 _waybar_css="$_srcdir/config/waybar/style.css"
 _fuzzel="$_srcdir/config/fuzzel/fuzzel.ini"
@@ -31,8 +33,8 @@ _swaync_css="$_srcdir/config/swaync/style.css"
 # Files exist. Without these guards every assert_contains below would trivially
 # match against empty strings.
 ################################################################################
-for _f in "$_hypr" "$_hypr_test" "$_hypr_tmpl" "$_idle" "$_lock" \
-          "$_theme" "$_themed" "$_fuzzellaunch" "$_apply" "$_nextlayout" "$_powermenu" \
+for _f in "$_hypr" "$_hypr_test" "$_hypr_tmpl" "$_idle" "$_lock" "$_xdph" \
+          "$_theme" "$_themed" "$_fuzzellaunch" "$_apply" "$_nextlayout" "$_sharepicker" "$_powermenu" \
           "$_waybar_cfg" "$_waybar_css" \
           "$_srcdir/config/waybar/common.css" \
           "$_srcdir/config/waybar/colors-dark.css" \
@@ -572,6 +574,36 @@ assert_equal "tide idle-suspend --cancel" "$(_idle_run tide:Hyprland "$_idle_sus
 start_test "in a plain Hyprland login, input after the suspend step runs nothing"
 assert_equal "" "$(_idle_run Hyprland "$_idle_suspend_resume")"
 rm -rf "$_ifake"
+
+################################################################################
+# xdph asks tide's share picker what to share (tide SPEC.md §12), in its
+# screencopy section.
+################################################################################
+start_test "xdph's share picker is conf's share-picker.sh, as confinst installs it"
+assert_equal '$HOME/.config/hypr/scripts/share-picker.sh' "$(sed -n '/^screencopy {$/,/^}$/s/^ *custom_picker_binary = //p' "$_xdph")"
+start_test "xdph keeps its default of no restore token without asking"
+assert_not_contains "allow_token_by_default" "$(cat "$_xdph")"
+
+# share-picker.sh: tide's picker where it's installed, xdph's own otherwise.
+_sfake=$(mktemp -d)
+mkdir "$_sfake/tide" "$_sfake/xdph" "$_sfake/none"
+for _p in tide/tide-share-picker xdph/hyprland-share-picker; do
+    printf '#!/bin/sh\necho "%s $*"\n' "${_p#*/}" >"$_sfake/$_p"
+    chmod +x "$_sfake/$_p"
+done
+cp "$_sfake/xdph/hyprland-share-picker" "$_sfake/tide/"
+_share_picker() {
+    env PATH="$1:/usr/bin:/bin" sh "$_sharepicker" --allow-token 2>"$_sfake/err"
+}
+start_test "share-picker.sh runs tide's picker where tide is installed"
+assert_equal "tide-share-picker --allow-token" "$(_share_picker "$_sfake/tide")"
+start_test "share-picker.sh runs xdph's own picker without tide"
+assert_equal "hyprland-share-picker --allow-token" "$(_share_picker "$_sfake/xdph")"
+start_test "share-picker.sh with neither shares nothing, and says why"
+_out=$(_share_picker "$_sfake/none"); _status=$?
+assert_equal "1 " "$_status $_out"
+assert_contains "neither tide-share-picker nor hyprland-share-picker is installed" "$(cat "$_sfake/err")"
+rm -rf "$_sfake"
 
 ################################################################################
 # Waybar: window title centred; clocks (SFO, LON, local), tray, and battery

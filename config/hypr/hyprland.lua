@@ -1240,6 +1240,15 @@ hl.layer_rule({
     no_screen_share = true,
 })
 
+-- tide's share picker (SPEC.md §12) is black in a share too, so a request
+-- that comes during one, as Chrome's repeat requests do, doesn't show the
+-- far end every window's thumbnail.
+hl.layer_rule({
+    name = "no-share-share-picker",
+    match = { namespace = "^tide-share-picker$" },
+    no_screen_share = true,
+})
+
 --------------------------------------------------------------------------------
 -- PER-MACHINE OVERRIDES
 --------------------------------------------------------------------------------
