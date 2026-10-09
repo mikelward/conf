@@ -391,8 +391,10 @@ $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
                           config/hypr/hyprland.local.lua.template \
                           config/hypr/hypridle.conf \
                           config/hypr/hyprlock.conf \
+                          config/hypr/xdph.conf \
                           config/hypr/scripts/apply-input.sh \
                           config/hypr/scripts/next-layout.sh \
+                          config/hypr/scripts/share-picker.sh \
                           config/hypr/scripts/theme.sh \
                           config/hypr/scripts/theme-daemon.sh \
                           config/tide/appearance-hook \
