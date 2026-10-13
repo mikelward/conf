@@ -244,9 +244,10 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   `conf_appearance.reload()`. A strength tide stops setting goes back to
   0.07, and one `hyprland.local.lua` sets through `hl.config()` still wins.
 - **Dialogs float, centered**: modal windows, pavucontrol,
-  nm-connection-editor, blueman-manager, portal file choosers, and "Open
-  File" / "Save File" / "Save As" titles. Picture-in-picture floats pinned in
-  the bottom-right corner.
+  nm-connection-editor, blueman-manager, portal file choosers, "Open
+  File" / "Save File" / "Save As" titles, and windows with neither an app
+  ID nor a title, such as Chrome's own notification popups.
+  Picture-in-picture floats pinned in the bottom-right corner.
 - **Per-device handedness and speed (auto).** Global default is
   right-handed so **trackpads keep the left button primary**.
   `apply-input.sh` (autostarted) enumerates the pointers at login,

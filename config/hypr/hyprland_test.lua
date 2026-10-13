@@ -1291,7 +1291,7 @@ test("dialogs float centered", function()
     load()
     for _, name in ipairs({ "float-modal", "float-pavucontrol", "float-nm-connection-editor",
                             "float-blueman-manager", "float-portal-file-chooser",
-                            "float-file-dialog-title" }) do
+                            "float-file-dialog-title", "float-unnamed" }) do
         local r = S.rules[name]
         truthy(r, name)
         eq(true, r.float, name .. " float")
@@ -1302,6 +1302,11 @@ test("dialogs float centered", function()
     for _, t in ipairs({ "Open File", "Save File", "Save As" }) do
         truthy(title:find(t, 1, true), t)
     end
+    -- Both must be empty, so an app with a class and no title yet still
+    -- tiles. Hyprland matches the whole string, so "^$" is only "".
+    local unnamed = S.rules["float-unnamed"].match
+    eq("^$", unnamed.class)
+    eq("^$", unnamed.title)
 end)
 
 test("picture-in-picture floats, pinned, undimmed", function()
