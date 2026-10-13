@@ -1209,6 +1209,10 @@ local dialogs = {
     { name = "float-blueman-manager", match = { class = "^blueman-manager$" } },
     { name = "float-portal-file-chooser", match = { class = "^xdg-desktop-portal-(gtk|gnome|kde)$" } },
     { name = "float-file-dialog-title", match = { title = "^(Open File|Open Files|Save File|Save As)(…|\\.\\.\\.)?$" } },
+    -- No app ID and no title when it opens: not an app's main window.
+    -- Chrome's own notification popups open this way, as parentless
+    -- toplevels, when it found no notification server as it started.
+    { name = "float-unnamed", match = { class = "^$", title = "^$" } },
 }
 for _, rule in ipairs(dialogs) do
     rule.float = true
