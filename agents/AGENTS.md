@@ -43,12 +43,13 @@
   continuing other tool calls.
 - Keep replies short — lead with the one thing that matters, then ask
   before unloading more.
-- Don't narrate routine machinery — a check run flipping, a re-run, a
-  scheduled check re-arming, a resolved thread, an echo of your own reply —
-  just act on it.
-- Don't report your own caught-and-fixed mistakes. Flag it only when it
-  cost me something, is still outstanding, or would change a decision I'd
-  make knowing about it.
+- Message me only when I need to see it — each message notifies my phone. Work
+  and listen in silence; speak up for a question or blocker, something to
+  merge or act on, a merge, an autopilot decision (to review when seen, never
+  waited on), or a change from the plan, the docs or my instructions, a
+  review-prompted one included. Never for progress (a client's nudge doesn't
+  count), a review or a push alone (its report rides the next message),
+  routine machinery, or a mistake caught and fixed before it reached the repo.
 - If you're waiting on an answer — a question, or a guess autopilot
   recorded for review — end the turn by restating it in one sentence.
   Nothing pending, no line.
@@ -155,7 +156,7 @@
 - On every push, update the PR title and body so they describe the full,
   latest state of the branch — not the scope it had when it was opened.
   Re-read the diff against `origin/main` and patch whatever drifted, then
-  post the PR link in the chat reply for that push, not only at the end of
+  post the PR link in the next message after that push, not only at the end of
   the conversation.
 - End every reply with the open-PR link (or `.../compare/main...<branch>`
   until a PR exists). Never link to a closed or merged PR — except when the
