@@ -126,6 +126,18 @@ Keep this file as short as it can be and still work. Every session loads it whol
   - Name the PR, and say what to re-read rather than what you read. A SHA or
     a list of which PRs are open goes stale before it fires; one PR number
     does not, and the trigger has to be matchable to it.
+  - A merge can leave other open PRs on its base needing a rebase (`dirty`,
+    or `behind` where branches must be up to date), and nothing tells them.
+    So at your first turn after one of your PRs merges, by hand or by
+    auto-merge, send every other open PR on that base that another session
+    drives one message — the session URL ends its body, where your client
+    can message sessions — naming the PR that merged. Send it whatever the
+    PR's state reads: right after a merge GitHub can still be computing
+    mergeability, so a PR about to need a rebase can look clean. It is no
+    merge cue for the receiver, whose own PR is still open: it prompts a
+    read, not an action, and the receiver's own rules decide the rebase.
+    Skip a PR with no session URL, and don't retry a failed send; its own
+    scheduled check is the fallback.
   - Merged or closed, take one last reply-and-resolve pass — a review can
     land after the merge. Nothing is holding the PR now, so on a merged one
     anything real goes to a follow-up PR, named on the thread, before you
