@@ -59,27 +59,13 @@
 - "Drive" = keep looping without stopping to ask each time: implement,
   open the PR, address review, merge once green and reviewed, pick the
   next task, repeat — until the work runs out or I say stop.
-- "Merge in order" (or "drive in order") = drive to merge that yields to
-  older PRs close to landing. Merge by hand, never auto-merge (disarm any
-  already armed). Just before merging, check every open, non-draft,
-  lower-numbered PR against the same base: if one has ever passed automated
-  review on any head (for Codex, a "didn't find any major issues" comment or
-  a green `codex` commit status) and has had any activity (a push, review,
-  comment, reaction or state change) in the last 30 minutes, wait for it.
-  Keep waiting only while it still meets all of that, and at most 30 minutes
-  in total across every recheck; if it still does at the cap, merge anyway
-  and name the PR you merged over. When a wait ends, rerun the check for the
-  other lower PRs. Waiting holds only the merge: keep driving this PR
-  meanwhile. Then sync — rebase onto the new base where the repo requires
-  branches up to date, or where it conflicts — and merge on the checks and
-  approval for its current head, fresh ones if that moved it, rerunning this
-  check first. Say which lower PR you waited on, or passed over as quiet.
 - A paragraph that orders a new work item after the item before it —
   "next", "then", "after that", "follow-up" — must be merged in order,
   after every earlier item this session was given and any other PR the
   paragraph names. Its PR may open in parallel but merges only once each
   of those is finished, with its PRs merged, in any repo, with no time
-  cap; if one won't finish, hold it and ask, autopilot included. Read the
+  cap; if one won't finish, hold it and ask, autopilot included. Arm no
+  auto-merge on it until then: auto-merge cannot see the order. Read the
   list from the session's record, not memory.
 - "Autopilot" = drive without blocking on me. Take the reversible,
   cheapest-to-undo guess and keep going; log each one in TODO.md under a
