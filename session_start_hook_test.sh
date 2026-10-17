@@ -562,7 +562,7 @@ rm -rf "$_full"
 start_test "unshallow.sh deepens a shallow clone"
 _src=$(mktemp -d)
 _dst=$(mktemp -d)
-( cd "$_src" && git init -q \
+( cd "$_src" && git init -q -b main \
     && _git commit -q --allow-empty -m one \
     && _git commit -q --allow-empty -m two )
 # file:// (not a plain path) so --depth is honored rather than ignored.
@@ -592,12 +592,96 @@ rm -rf "$_none"
 start_test "unshallow.sh keeps a bound when UNSHALLOW_TIMEOUT is 0"
 _src=$(mktemp -d)
 _dst=$(mktemp -d)
-( cd "$_src" && git init -q \
+( cd "$_src" && git init -q -b main \
     && _git commit -q --allow-empty -m one \
     && _git commit -q --allow-empty -m two )
 git clone -q --depth 1 "file://$_src/.git" "$_dst/repo" 2>/dev/null
 ( cd "$_dst/repo" && UNSHALLOW_TIMEOUT=0 "$_srcdir/scripts/unshallow.sh" ) >/dev/null 2>&1
 assert_equal "false" "$(cd "$_dst/repo" && git rev-parse --is-shallow-repository)"
+rm -rf "$_src" "$_dst"
+
+# A single-branch clone of a feature branch narrows the fetch refspec to that
+# branch, so a bare fetch would deepen HEAD and leave origin/main missing --
+# and origin/main is what a count of main's history reads.
+start_test "unshallow.sh brings origin/main into a single-branch feature clone"
+_src=$(mktemp -d)
+_dst=$(mktemp -d)
+( cd "$_src" && git init -q -b main \
+    && _git commit -q --allow-empty -m one \
+    && _git commit -q --allow-empty -m two \
+    && git checkout -q -b feature \
+    && _git commit -q --allow-empty -m three \
+    && git checkout -q main \
+    && _git commit -q --allow-empty -m four )
+git clone -q --depth 1 --single-branch --branch feature "file://$_src/.git" "$_dst/repo" 2>/dev/null
+( cd "$_dst/repo" && "$_srcdir/scripts/unshallow.sh" ) >/dev/null 2>&1
+assert_equal "false" "$(cd "$_dst/repo" && git rev-parse --is-shallow-repository)"
+assert_equal "3" "$(cd "$_dst/repo" && git rev-list --count HEAD)"
+assert_equal "3" "$(cd "$_dst/repo" && git rev-list --count origin/main)"
+rm -rf "$_src" "$_dst"
+
+# GIT_TRACE writes to stderr on a successful rev-parse. Folded into the flag,
+# "true" stops matching and a shallow clone reads as complete.
+start_test "unshallow.sh reads the shallow flag from stdout alone"
+_src=$(mktemp -d)
+_dst=$(mktemp -d)
+( cd "$_src" && git init -q -b main \
+    && _git commit -q --allow-empty -m one \
+    && _git commit -q --allow-empty -m two )
+git clone -q --depth 1 "file://$_src/.git" "$_dst/repo" 2>/dev/null
+( cd "$_dst/repo" && GIT_TRACE=1 "$_srcdir/scripts/unshallow.sh" ) >/dev/null 2>&1
+assert_equal "false" "$(cd "$_dst/repo" && git rev-parse --is-shallow-repository)"
+rm -rf "$_src" "$_dst"
+
+# A stale origin/main/<x> ref blocks the refspec's destination: the fetch
+# removes the shallow boundary, exits non-zero, and leaves origin/main missing.
+start_test "unshallow.sh does not call a fetch that could not write origin/main a success"
+_src=$(mktemp -d)
+_dst=$(mktemp -d)
+( cd "$_src" && git init -q -b main \
+    && _git commit -q --allow-empty -m one \
+    && _git commit -q --allow-empty -m two \
+    && git checkout -q -b feature )
+git clone -q --depth 1 --single-branch --branch feature "file://$_src/.git" "$_dst/repo" 2>/dev/null
+( cd "$_dst/repo" && git update-ref refs/remotes/origin/main/stale HEAD )
+( cd "$_dst/repo" && "$_srcdir/scripts/unshallow.sh" ) >"$_dst/out" 2>&1
+assert_contains "history is complete, but the fetch failed" "$(cat "$_dst/out")"
+assert_false grep -q "deepened to" "$_dst/out"
+rm -rf "$_src" "$_dst"
+
+# perl's `$? >> 8` is 0 for a signaled child; a fetch killed after the
+# transfer (an OOM kill, a cancel) must not read as success.
+if command -v perl >/dev/null 2>&1; then
+  start_test "unshallow.sh treats a fetch killed by a signal as failed"
+  _src=$(mktemp -d)
+  _dst=$(mktemp -d)
+  ( cd "$_src" && git init -q -b main \
+      && _git commit -q --allow-empty -m one \
+      && _git commit -q --allow-empty -m two )
+  git clone -q --depth 1 "file://$_src/.git" "$_dst/repo" 2>/dev/null
+  mkdir "$_dst/bin"
+  _real_git=$(command -v git)
+  printf '#!/bin/sh\nfor a in "$@"; do [ "$a" = fetch ] && { "%s" "$@"; kill -TERM $$; }; done\nexec "%s" "$@"\n' "$_real_git" "$_real_git" >"$_dst/bin/git"
+  chmod +x "$_dst/bin/git"
+  ( cd "$_dst/repo" && PATH="$_dst/bin:$PATH" "$_srcdir/scripts/unshallow.sh" ) >"$_dst/out" 2>&1
+  assert_contains "(exit 143)" "$(cat "$_dst/out")"
+  assert_false grep -q "deepened to" "$_dst/out"
+  rm -rf "$_src" "$_dst"
+fi
+
+# SessionStart also fires on resume, clear and compaction; after a failed
+# fetch a fresh stamp must make the next run return without fetching.
+start_test "unshallow.sh skips the fetch for a while after one failed"
+_src=$(mktemp -d)
+_dst=$(mktemp -d)
+( cd "$_src" && git init -q -b main \
+    && _git commit -q --allow-empty -m one \
+    && _git commit -q --allow-empty -m two )
+git clone -q --depth 1 "file://$_src/.git" "$_dst/repo" 2>/dev/null
+echo 1 >"$_dst/repo/.git/unshallow-failed"
+( cd "$_dst/repo" && "$_srcdir/scripts/unshallow.sh" ) >"$_dst/out" 2>&1
+assert_contains "skipped" "$(cat "$_dst/out")"
+assert_equal "true" "$(cd "$_dst/repo" && git rev-parse --is-shallow-repository)"
 rm -rf "$_src" "$_dst"
 
 test_summary "session-start hook"
