@@ -1,7 +1,7 @@
 ---
 trigger: always_on
 alwaysApply: true
-last_modified: 2026-10-16
+last_modified: 2026-10-17
 ---
 
 # Project Instructions
@@ -53,7 +53,7 @@ Keep this file as short as it can be and still work. Every session loads it whol
 
 ## Asking questions
 
-- Ask questions as plain chat messages. Claude specifically: never use `AskUserQuestion`, Claude Code's multiple-choice question prompt — it is broken in the Claude mobile app, so a question asked through it may be unanswerable. Chat also keeps the question, its context, and the answer in one readable thread.
+- Ask in plain chat or through your client's question tool (`AskUserQuestion` in Claude Code, `ask_question` in Antigravity).
 - After asking, stop and wait for the answer. Do not proceed on an assumed answer, pick a "recommended" option yourself, or keep working on the part the question affects.
 
 ## Git
