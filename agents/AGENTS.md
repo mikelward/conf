@@ -15,8 +15,8 @@
 - Verify tests are passing as you go and when committing.
 - Proactively run lint and presubmit tests and proactively fix them.
 - Check applicable coding conventions and apply them proactively.
-- Do not introduce extra newlines all on their own. Check all added newlines
-  and ensure they're in blocks we need to be touching.
+- Don't add stray blank lines; check each added newline is in a block you
+  need to touch.
 - If preexisting tests are already red when you start a task, fix them as the
   *first* commit of the series — don't stack new work on a broken baseline.
   If the failure is genuinely unrelated and out of scope, say so up front and
@@ -32,6 +32,8 @@
   changes if they relate to something else in the same session or branch.
 - If you make a mistake, suggest changes to AGENTS.md or skills to improve
   future results. Add a new rule the first time something bites, not the third.
+- Keep AGENTS.md under 24,000 bytes (`wc -c AGENTS.md`): Antigravity caps rule
+  files at 24 KB and silently truncates the tail.
 - Let me know if we're getting close to the context window and should compact.
 
 # Talking to me
@@ -60,36 +62,27 @@
 - "Drive" = keep looping without stopping to ask each time: implement,
   open the PR, address review, merge once green and reviewed, pick the
   next task, repeat — until the work runs out or I say stop.
-- A paragraph that orders a new work item after the item before it —
-  "next", "then", "after that", "follow-up" — must be merged in order,
-  after every earlier item this session was given and any other PR the
-  paragraph names. Its PR may open in parallel but merges only once each
-  of those is finished, with its PRs merged, in any repo, with no time
-  cap; if one won't finish, hold it and ask, autopilot included. Arm no
-  auto-merge on it until then: auto-merge cannot see the order. Read the
-  list from the session's record, not memory.
-- A merge can leave other open PRs on its base needing a rebase
-  (`dirty`, or `behind` where branches must be up to date), and nothing
-  tells them. So at your first turn after one of your PRs merges, by
-  hand or by auto-merge, send every other open PR on that base that
-  another session drives one message — the session URL ends its body,
-  where your client can message sessions — naming that PR and saying
-  only that its base now points at `<sha>`, the base's tip after your
-  merge. Send it whatever the PR's state reads: right after a merge
-  GitHub can still be computing mergeability, so a PR about to need a
-  rebase can look clean. Name no merge and no other PR: a receiver on an
-  older copy of these rules reads either as its own merge cue. Receiving
-  one, fetch the base and your PR's head by refspec, unshallowing a
-  shallow clone, and check that head against the fetched base tip, not
-  `<sha>`, which a later merge may already have passed. Answered from
-  your own clone, neither question can be stale the way
-  `mergeable_state` can: the head is `behind` if it doesn't contain the
-  tip (`git merge-base --is-ancestor`), and `dirty` if it doesn't merge
-  cleanly with it (`git merge-tree --write-tree`, Git 2.38 or later,
-  exits 1). Any exit but 0 or 1 from either is a failure to report, not
-  an answer. Your own rules decide the rebase from there. Skip a PR with
-  no session URL, or when your client only has local subagent messaging,
-  and don't retry a failed send.
+- Ordered work ("next", "then", "after that", "follow-up") may open its PR in
+  parallel but merges only after every earlier item this session was given,
+  and any PR the paragraph names, has merged — any repo, no time cap; if one
+  won't finish, hold it and ask, autopilot included. Arm no auto-merge on it
+  until then (auto-merge can't see the order). Read the list from the
+  session's record, not memory.
+- A merge can leave other open PRs on its base `dirty` (or `behind` where
+  branches must be up to date), and nothing tells them. At your first turn
+  after one of your PRs merges, by hand or auto-merge, message every other
+  open PR on that base that another session drives (its body ends with the
+  session URL), naming that PR and saying only that its base now points at
+  `<sha>`, the post-merge tip — whatever its state reads, since GitHub may
+  still be computing mergeability. Name no merge and no other PR: an older
+  copy of these rules reads either as its own merge cue. Receiving one,
+  fetch the base and your PR's head by refspec (unshallowing a shallow
+  clone) and test that head against the fetched tip, not `<sha>`, which a
+  later merge may have passed: `behind` if `git merge-base --is-ancestor
+  <tip> <head>` exits 1, `dirty` if `git merge-tree --write-tree` (Git
+  2.38+) exits 1; any other exit is a failure to report, not an answer. Your
+  own rules decide the rebase. Skip a PR with no session URL, or when your
+  client only has local subagent messaging; don't retry a failed send.
 - "Autopilot" = drive without blocking on me. Take the reversible,
   cheapest-to-undo guess and keep going; log each one in TODO.md under a
   "Decisions needing review" heading (what, the alternative, why it's
@@ -115,9 +108,8 @@
   for Cursor). Don't hard-code `claude/` unless you
   *are* Claude Code. Never commit directly to `main` / `master`. One topic per
   branch.
-- Use standard commit message formatting. Imperative/present mood. "Fix", not
-  "Fixed". First line is <66 chars and has no trailing dot. Remainder of the
-  commit message should cover both the what and they why.
+- Standard commit messages: imperative mood ("Fix", not "Fixed"), first line
+  under 66 chars with no trailing dot, body covering the what and the why.
 - Never name the coding agent's model or version (`Opus 4.8`, `Sonnet`,
   `Gemini …`, `claude-*`, `gemini-*`) in a commit, PR, comment, or pushed
   artifact; keep it to chat. Generic attribution (`Co-Authored-By: Claude` /
@@ -167,11 +159,11 @@
   a branch is ready — don't park a finished branch waiting to be told,
   unless I've said otherwise ("just commit", "no PR yet"), which holds
   until I lift it.
-- On every push, update the PR title and body so they describe the full,
-  latest state of the branch — not the scope it had when it was opened.
-  Re-read the diff against `origin/main` and patch whatever drifted, then
-  post the PR link in the next message after that push, not only at the end of
-  the conversation.
+- On every push, update the PR title and body to the full, latest state of
+  the branch, not the scope it had when opened: re-read the diff against
+  `origin/main`, patch whatever drifted, and post the PR link in the next
+  message after that push, not only at the end. With no PR yet, push, then
+  update it as soon as one is opened.
 - End every reply with the open-PR link (or `.../compare/main...<branch>`
   until a PR exists). Never link to a closed or merged PR — except when the
   reply *is* post-merge follow-up on that PR, where linking it is correct.
@@ -183,7 +175,7 @@
   before acting; if it doesn't hold up, reply saying why and decline.
 - Never leave a review comment thread silently dismissed. Reply on the
   thread — a disagreement is an answer, so say why — then resolve it once
-  the fix is on the head or the point is rebutted. Acknowledgement noise
+  the fix is on the head or the point is rebutted. Acknowledgment noise
   ("good catch, will do") is fine and preferred over silence.
 - Where an automated reviewer (Codex or similar) is configured, it runs on
   its own — don't request it manually unless nothing's come back after a
