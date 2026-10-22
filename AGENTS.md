@@ -1,7 +1,7 @@
 ---
 trigger: always_on
 alwaysApply: true
-last_modified: 2026-10-17
+last_modified: 2026-10-22
 ---
 
 # Project Instructions
@@ -94,7 +94,7 @@ Keep this file as short as it can be and still work, and **under 24,000 bytes** 
 - **Never silently dismiss a thread**: answer (a disagreement is an answer — say why), then resolve once the fix is on the head or it's rebutted; anything still to do stays open. Acknowledgment beats silence. Push, reply citing the sha, resolve — `resolve_review_thread` or `gh api graphql` `resolveReviewThread`, with `PRRT_*` from `review_threads[].id`, not `PRRC_*`.
 - **Restate every finding in your next message**: one bullet each (review comment, top-level comment, review body), most blocking first — claim, where, action or the options. This outranks *keep replies short*; ask only the most blocking question.
 - **Defer a real out-of-scope finding** without asking to merge past it: `TODO.md` entry, commit and push, reply citing the sha, resolve (a threadless finding skips only the resolve). The push re-triggers Codex; poke only as allowed; escalate if it re-raises.
-- **Read the Codex verdict, don't infer it**: its PR-body reaction (`issue_read` → `reactions`; a thread's `Useful?` bar reads true on any PR it touched) — `eyes` reading, `+1` clean, revoked on push, so a visible one belongs to the visible head; `+1` on green CI is a merge. Findings arrive as review comments or a top-level comment (`get_review_comments` is inline-only — read `get_comments` too) and gate whatever the reaction says. A pending `codex` status means findings to address; a clean review with no reaction or an unanswered rebuttal (poke `@codex review` once, five minutes later); or nothing back (poke once, five minutes after the push). Escalate five minutes after a poke rather than poking twice. Leave PR-body reactions to Codex (the count is anonymous).
+- **Read the Codex verdict, don't infer it**: its PR-body reaction (`issue_read` → `reactions`; a thread's `Useful?` bar reads true on any PR it touched) — `eyes` reading, `+1` clean, revoked on push, so a visible one belongs to the visible head; `+1` on green CI is a merge. Findings arrive as review comments or a top-level comment (`get_review_comments` is inline-only — read `get_comments` too) and gate whatever the reaction says. A pending `codex` status means findings to address; a clean review with no reaction or an unanswered rebuttal (poke `@codex review` five minutes later); or a hung review — nothing back five minutes after the push, or stuck at running (👀) ten minutes on (poke). A poke that hangs the same way gets a second an hour later; escalate only if that one hangs too, never after one (maintainer, 2026-10-22). Leave PR-body reactions to Codex (the count is anonymous).
 - **Once Codex +1s a head, make no unnecessary change without asking** (maintainer, 2026-10-13); a necessary one — a rebase for `dirty` or required `behind`, a red-CI fix — and drive or autopilot steps, where in effect, go ahead.
 - **Skip your own echoes silently**: a reply you posted via the GitHub MCP returns as an event from the same identity; if the body matches what you just posted, continue.
 

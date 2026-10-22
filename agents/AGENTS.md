@@ -179,7 +179,11 @@
   ("good catch, will do") is fine and preferred over silence.
 - Where an automated reviewer (Codex or similar) is configured, it runs on
   its own — don't request it manually unless nothing's come back after a
-  few minutes. Read its actual verdict for the *current* head (a reaction
+  few minutes. A review that hangs — nothing back five minutes after a
+  push or request, or stuck in progress (👀) ten minutes on — gets a manual
+  request; one that hangs too gets a second an hour later, and only a
+  second that hangs as well comes to me, never the first. Read its actual
+  verdict for the *current* head (a reaction
   or status tied to that commit — most such tools revoke it on every
   push), not a stale one from before your last push and not a guess; a
   finding blocks merge until fixed or rebutted with reasoning on the
