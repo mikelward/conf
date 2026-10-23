@@ -1,7 +1,7 @@
 ---
 trigger: always_on
 alwaysApply: true
-last_modified: 2026-10-22
+last_modified: 2026-10-23
 ---
 
 # Project Instructions
@@ -51,6 +51,7 @@ Keep this file as short as it can be and still work, and **under 24,000 bytes** 
 
 - Use `git worktree` when available, one per branch, so work on one branch isn't disturbed by another.
 - **One commit per logical change.** Rewrite unmerged commits freely — amend, `git commit --fixup` + autosquash, squash, reorder, split — folding fix-ups and review responses into the commit they belong to; no `wip` / `fix typo` / `address review` churn reaches `main`.
+- **Title commits like a changelog line** (maintainer, 2026-10-23): after any prefix (`hypr:`, …), an imperative verb, then the change as someone using these configs sees it, plain English, sentence case, ≤ ~70 chars, e.g. `Fix …` for what was broken, `Improve …` for what got better, `Add …` for what's new; an optional parenthetical says how. Never the scenario or the mechanism (that's the body). PR titles match.
 - **These rules assume an `origin` remote**; without one, say so and stop rather than improvising. **Exception:** a sandbox with intentionally no remote Git (Codex cloud) follows the branch rules from the current `HEAD` (a pre-created working branch counts), commits locally, and reports fetch, push and PRs unavailable, using its own PR handoff if any. That outranks every `origin`-dependent step (merge-cue fetch, branching off `origin/main`) — name what wasn't possible, don't fake it. But a merge cue needs a base *containing* the merge: say the follow-up needs a fresh sandbox or synced checkout rather than branching off a `HEAD` whose commits just landed.
 - **Branches**: `<agent>/<short-topic>` (`claude/...` Claude Code, `gemini/...` Gemini / Antigravity, `codex/...` Codex) off `origin/main`, one topic each, never committing to `main`; don't hard-code `claude/` unless you *are* Claude Code.
 - **Your `<agent>/` branches are yours**: create freely; push, `--force-with-lease`, rename and delete those this session created or was assigned — no permission, announcement or per-branch confirmation (this file is the standing grant, so don't re-ask). Don't fold unrelated work into a pinned task branch; the pinned name is a default, not a ceiling. Any other branch, or `main`, is a conversation.
