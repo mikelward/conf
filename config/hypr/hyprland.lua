@@ -848,6 +848,9 @@ hl.bind(key("SHIFT + E"), hl.dsp.exit(), does("Quit Hyprland"))
 hl.bind(key("period"), act.next_layout, does("Next layout"))
 hl.bind(key("comma"), act.prev_layout, does("Previous layout"))
 hl.bind(key("grave"), act.monocle, does("Monocle"))
+-- O as in "one window"; it also leaves Super+` free for tico, where Chrome
+-- can't bind a backtick.
+hl.bind(key("O"), act.monocle, does("Monocle"))
 hl.bind(key("backslash"), act.grow, does("Grow the master", { repeating = true }))
 hl.bind(key("slash"), act.shrink, does("Shrink the master", { repeating = true }))
 hl.bind(key("equal"), act.add_master, does("Add a master"))

@@ -496,6 +496,7 @@ test("with the tide layout: lua:tide and its helpers", function()
     eq(qs.cycle_next, bind("SUPER + period").target, "Super+.")
     eq(qs.cycle_prev, bind("SUPER + comma").target, "Super+,")
     eq(qs.toggle_monocle, bind("SUPER + grave").target, "Super+`")
+    eq(qs.toggle_monocle, bind("SUPER + O").target, "Super+O")
     eq(qs.grow, bind("SUPER + backslash").target, "Super+\\")
     eq(qs.shrink, bind("SUPER + slash").target, "Super+/")
     eq(qs.swap_with_master, bind("SUPER + Return").target, "Super+Return")
@@ -587,7 +588,7 @@ test("every key in the spec is bound", function()
         "SUPER + Page_Up", "SUPER + Page_Down",
         "SUPER + J", "SUPER + K", "SUPER + SHIFT + J", "SUPER + SHIFT + K",
         "SUPER + Return", "SUPER + backslash", "SUPER + slash", "SUPER + equal", "SUPER + minus",
-        "SUPER + period", "SUPER + comma", "SUPER + grave",
+        "SUPER + period", "SUPER + comma", "SUPER + grave", "SUPER + O",
         "SUPER + Up", "SUPER + SHIFT + Up", "SUPER + Down",
         "SUPER + SHIFT + F", "SUPER + Insert", "SUPER + SHIFT + R",
         "SUPER + Tab", "SUPER + Home", "SUPER + SHIFT + N", "SUPER + ALT + Space",
@@ -609,7 +610,8 @@ end)
 test("the dropped keys stay unbound", function()
     load()
     -- BSP toggle, pseudo-tile, rotate master, and a tenth workspace.
-    for _, k in ipairs({ "SUPER + SHIFT + backslash", "SUPER + P", "SUPER + O",
+    -- Super+O, which rotated the master, is monocle now.
+    for _, k in ipairs({ "SUPER + SHIFT + backslash", "SUPER + P",
                          "SUPER + SHIFT + O", "SUPER + 0", "SUPER + SHIFT + 0" }) do
         eq(nil, S.binds["|" .. k], k)
     end
