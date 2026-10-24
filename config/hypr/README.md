@@ -206,14 +206,14 @@ description, which tide's settings panel lists on its Keys page;
 | `SUPER + \` / `SUPER + /` | Grow / shrink the master area (mfact ±0.025) |
 | `SUPER + =` / `SUPER + -` | Add / remove a master |
 | `SUPER + .` / `SUPER + ,` | Next / previous layout |
-| `SUPER + \`` (backtick) | Toggle monocle |
+| `SUPER + \`` (backtick), `SUPER + O` | Toggle monocle |
 | `SUPER + Up` / `SUPER + Shift + Up` / `SUPER + Down` | Maximize (bar stays) / fullscreen / restore |
 | `SUPER + Shift + F` / `SUPER + Insert` | Toggle floating |
 | `SUPER + Shift + R` | **Resize** mode (h/j/k/l or arrows; Esc/Enter to exit) |
 
 Without the tide layout, the layout keys drive Hyprland's master layout
 instead: `.` / `,` rotate the master orientation (center is the three-column
-shape) and `` ` `` maximizes the window.
+shape) and `` ` `` or `O` maximizes the window.
 
 ### Mouse
 
