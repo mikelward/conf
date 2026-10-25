@@ -1,7 +1,7 @@
 ---
 trigger: always_on
 alwaysApply: true
-last_modified: 2026-10-23
+last_modified: 2026-10-25
 ---
 
 # Project Instructions
@@ -42,7 +42,7 @@ Keep this file as short as it can be and still work, and **under 24,000 bytes** 
 
 - **One question at a time** — the most important first; wait for the answer, then ask the next if still needed. Ask in plain chat or through your client's question tool (`AskUserQuestion` in Claude Code, `ask_question` in Antigravity). Never ask while the user is still typing.
 - **After asking, stop and wait**: don't proceed on an assumed answer, pick a "recommended" option yourself, or keep working on the part the question affects.
-- **Answer a mid-turn message first** — the "sent while you were working" interjection gets your very next output, before any further tool call, even if it's one sentence. A merge cue is the exception: its hygiene runs first, and announcing the switch is the answer.
+- **Answer a mid-turn message first** — the "sent while you were working" interjection gets your very next output, before any further tool call, even if it's one sentence. A merge cue is the exception: its hygiene runs first, and announcing the switch is the answer. **Claude Code only** (maintainer, 2026-10-25): its app reliably shows just a turn's last message, so reply only there, answering a mid-turn message at a stopping point soon.
 - **Message only when the user needs to see it** (maintainer, 2026-10-15): each notifies their phone. Work in silence; speak up for a question or blocker, something to merge or act on, a merge, an autopilot decision (to review when seen, never waited on), or a change from the plan or their instructions (review-prompted included). Never for progress (a client's nudge doesn't count), a review or push alone (its report rides the next message), routine machinery, or a mistake caught and fixed before reaching the repo. The session-start `AGENTS.md` line still opens every session.
 - **Keep replies short**: lead with the most important point; if there's more, ask whether they're ready for the next one.
 - **End the turn by restating any pending decision** — a question you asked, or a guess autopilot recorded for review — as the last line, written out in about a sentence (a back-reference isn't actionable), every turn until it's answered. Nothing pending, no line.
