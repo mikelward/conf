@@ -1,6 +1,6 @@
 # Karabiner-Elements
 
-Two complex-modification rules for a PC keyboard:
+Three complex-modification rules for a PC keyboard:
 
 - `assets/complex_modifications/pc-alt-tab.json` puts application switching
   back under the physical Alt key.
@@ -8,6 +8,9 @@ Two complex-modification rules for a PC keyboard:
   move by word, Win+Left/Right switch Spaces and Win+Shift+Left/Right move the
   window a Space; see
   [Arrow keys](#arrow-keys).
+- `assets/complex_modifications/timo.json` gives
+  [timo](https://github.com/mikelward/timo) its Super key; see
+  [timo](#timo).
 
 Only the asset file is kept here. Karabiner rewrites
 `~/.config/karabiner/karabiner.json` itself on every UI change, so that file is
@@ -130,12 +133,46 @@ same one-step shift as above, applied as one substitution: `left_control` →
 Only left Ctrl and left Win are mapped, matching the Alt+Tab rule. Home and End
 still reach the line ends.
 
+## timo
+
+timo, the macOS tiling desktop, puts tide's keys on Super, the physical Win
+key. The rotation makes Win into Option, and Option already means things on
+a Mac: Option+Backspace deletes a word, the arrow rule above makes
+Option+arrow from Ctrl+arrow, and Option+E and friends are accent dead keys.
+So this rule turns physical Win+key into a combination nothing else uses,
+Ctrl+Option+Command+key, and timo binds that (timo SPEC.md §7.1).
+
+| Physical keys | Emits | macOS sees |
+| --- | --- | --- |
+| Win+key, for each key timo binds | `left_option`+`left_command`+`left_control`+key | Ctrl+Option+Command+key |
+| Win+Shift+key | the same, plus `shift` | Ctrl+Option+Command+Shift+key |
+| Win+click, Win+right-click, Win+middle-click | the same modifiers, on the button | Super+drag and Super+middle-click in timo |
+| Win, tapped alone | `spacebar` with the same modifiers | timo's launcher |
+
+The outputs name the keys the rotation turns into Control, Option and
+Command, by the same layering as the rules above. A key timo doesn't bind,
+such as Win+Q, is left alone and stays Option.
+
+- **Enable it above the arrow rule.** Both match Win+Left/Right, and
+  Karabiner uses the first rule that matches, with newly added rules at the
+  top. timo's workspace keys take Win+arrow over the Spaces shortcut.
+- **timo finds it by its description,** which starts `timo:`. Without it,
+  timo puts its keys on plain Option and says so once.
+- **The mouse needs enabling too.** Karabiner leaves mouse devices alone by
+  default, so Win+click, Win+drag and Win+middle-click only carry Super once
+  the mouse or trackpad is turned on under Settings > Devices
+  ([Karabiner's mouse button docs](https://karabiner-elements.pqrs.org/docs/help/how-to/mouse-button/)).
+  Until then, timo's mouse gestures see plain Option.
+- Whether a click while Win is held cancels the lone tap, as a key does, is
+  *(unverified)*.
+
 ## Enabling it
 
 Karabiner does not enable assets automatically. In Karabiner-Elements
 Settings > Complex Modifications > Add rule, enable "Alt+Tab switches
 applications" and "Ctrl+Left/Right moves by word, Win+Left/Right switches
-Spaces, Win+Shift+Left/Right moves the window a Space". `setup-macos` installs
+Spaces, Win+Shift+Left/Right moves the window a Space", and, with timo, the
+"timo:" rule last, so it sits above the arrow rule. `setup-macos` installs
 Karabiner and says this, but the enabling step is a GUI action that can't be
 scripted.
 

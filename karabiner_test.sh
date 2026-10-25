@@ -161,4 +161,59 @@ fi
 start_test "eight manipulators: Ctrl, Ctrl+Shift, Win and Win+Shift, per arrow"
 assert_equal "8" "$(grep -c '"type": "basic"' "$_arrow_file")"
 
+# timo's rule (mikelward/timo SPEC.md §7.1): physical Win+key becomes
+# Ctrl+Option+Command+key, which timo registers, so Option keeps its own
+# meanings. Through the rotation that means emitting left_option (Control),
+# left_command (Option) and left_control (Command).
+_timo_file="$_srcdir/config/karabiner/assets/complex_modifications/timo.json"
+
+start_test "timo's rule exists"
+assert_true test -f "$_timo_file"
+
+_timo=$(cat "$_timo_file")
+
+if command -v python3 >/dev/null 2>&1; then
+    start_test "timo's rule is valid JSON"
+    assert_true python3 -m json.tool "$_timo_file" /dev/null
+
+    # timo finds its rule in karabiner.json by a description starting
+    # "timo:" (timo keys.karabiner_ready); renaming it turns timo's keys back
+    # to plain Option.
+    start_test "timo's rule description starts with timo:, which timo looks for"
+    assert_equal "timo:" "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["rules"][0]["description"][:5])' "$_timo_file")"
+
+    _timo_bad=$(python3 - "$_timo_file" <<'PY'
+import json, sys
+hyper = {"left_option", "left_command", "left_control"}
+for m in json.load(open(sys.argv[1]))["rules"][0]["manipulators"]:
+    f = m["from"]
+    if f.get("key_code") == "left_command":
+        continue
+    if f["modifiers"]["mandatory"] != ["left_command"] or f["modifiers"].get("optional") != ["shift"]:
+        print("from", f)
+    for t in m["to"]:
+        if set(t["modifiers"]) != hyper:
+            print("to", t)
+PY
+)
+    start_test "every Win combination emits Ctrl+Option+Command, keeping Shift"
+    assert_equal "" "$_timo_bad"
+fi
+
+start_test "timo's rule matches the physical Win key, left_command"
+assert_contains '"mandatory": [' "$_timo"
+assert_contains '"left_command"' "$_timo"
+
+start_test "a lone Win tap sends Super+Space, timo's launcher key"
+assert_contains '"to_if_alone"' "$_timo"
+assert_contains '"key_code": "spacebar"' "$_timo"
+
+start_test "Win+click and Win+drag carry the same modifiers, for timo's mouse"
+assert_contains '"pointing_button": "button1"' "$_timo"
+assert_contains '"pointing_button": "button2"' "$_timo"
+assert_contains '"pointing_button": "button3"' "$_timo"
+
+start_test "timo's rule doesn't use the left_alt spelling"
+assert_not_contains '"left_alt"' "$_timo"
+
 test_summary "karabiner_test"
