@@ -161,28 +161,34 @@ fi
 start_test "eight manipulators: Ctrl, Ctrl+Shift, Win and Win+Shift, per arrow"
 assert_equal "8" "$(grep -c '"type": "basic"' "$_arrow_file")"
 
-# timo's rule (mikelward/timo SPEC.md §7.1): physical Win+key becomes
-# Ctrl+Option+Command+key, which timo registers, so Option keeps its own
+# tilemo's rule (mikelward/tilemo SPEC.md §7.1): physical Win+key becomes
+# Ctrl+Option+Command+key, which tilemo registers, so Option keeps its own
 # meanings. Through the rotation that means emitting left_option (Control),
 # left_command (Option) and left_control (Command).
-_timo_file="$_srcdir/config/karabiner/assets/complex_modifications/timo.json"
+_tilemo_file="$_srcdir/config/karabiner/assets/complex_modifications/tilemo.json"
 
-start_test "timo's rule exists"
-assert_true test -f "$_timo_file"
+start_test "tilemo's rule exists"
+assert_true test -f "$_tilemo_file"
 
-_timo=$(cat "$_timo_file")
+# The rule was timo.json before the repo was renamed; a copy left behind
+# would list the same rule twice in Karabiner's Add rule dialog.
+start_test "the old timo.json rule is gone"
+assert_false test -e "$_srcdir/config/karabiner/assets/complex_modifications/timo.json"
+
+_tilemo=$(cat "$_tilemo_file")
 
 if command -v python3 >/dev/null 2>&1; then
-    start_test "timo's rule is valid JSON"
-    assert_true python3 -m json.tool "$_timo_file" /dev/null
+    start_test "tilemo's rule is valid JSON"
+    assert_true python3 -m json.tool "$_tilemo_file" /dev/null
 
-    # timo finds its rule in karabiner.json by a description starting
-    # "timo:" (timo keys.karabiner_ready); renaming it turns timo's keys back
-    # to plain Option.
-    start_test "timo's rule description starts with timo:, which timo looks for"
-    assert_equal "timo:" "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["rules"][0]["description"][:5])' "$_timo_file")"
+    # tilemo finds its rule in karabiner.json by a description starting
+    # "tilemo:" (tilemo keys.karabiner_ready, which still accepts the old
+    # "timo:" during the rename); renaming it turns tilemo's keys back to
+    # plain Option.
+    start_test "tilemo's rule description starts with tilemo:, which tilemo looks for"
+    assert_equal "tilemo:" "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["rules"][0]["description"][:7])' "$_tilemo_file")"
 
-    _timo_bad=$(python3 - "$_timo_file" <<'PY'
+    _tilemo_bad=$(python3 - "$_tilemo_file" <<'PY'
 import json, sys
 hyper = {"left_option", "left_command", "left_control"}
 for m in json.load(open(sys.argv[1]))["rules"][0]["manipulators"]:
@@ -197,23 +203,23 @@ for m in json.load(open(sys.argv[1]))["rules"][0]["manipulators"]:
 PY
 )
     start_test "every Win combination emits Ctrl+Option+Command, keeping Shift"
-    assert_equal "" "$_timo_bad"
+    assert_equal "" "$_tilemo_bad"
 fi
 
-start_test "timo's rule matches the physical Win key, left_command"
-assert_contains '"mandatory": [' "$_timo"
-assert_contains '"left_command"' "$_timo"
+start_test "tilemo's rule matches the physical Win key, left_command"
+assert_contains '"mandatory": [' "$_tilemo"
+assert_contains '"left_command"' "$_tilemo"
 
-start_test "a lone Win tap sends Super+Space, timo's launcher key"
-assert_contains '"to_if_alone"' "$_timo"
-assert_contains '"key_code": "spacebar"' "$_timo"
+start_test "a lone Win tap sends Super+Space, tilemo's launcher key"
+assert_contains '"to_if_alone"' "$_tilemo"
+assert_contains '"key_code": "spacebar"' "$_tilemo"
 
-start_test "Win+click and Win+drag carry the same modifiers, for timo's mouse"
-assert_contains '"pointing_button": "button1"' "$_timo"
-assert_contains '"pointing_button": "button2"' "$_timo"
-assert_contains '"pointing_button": "button3"' "$_timo"
+start_test "Win+click and Win+drag carry the same modifiers, for tilemo's mouse"
+assert_contains '"pointing_button": "button1"' "$_tilemo"
+assert_contains '"pointing_button": "button2"' "$_tilemo"
+assert_contains '"pointing_button": "button3"' "$_tilemo"
 
-start_test "timo's rule doesn't use the left_alt spelling"
-assert_not_contains '"left_alt"' "$_timo"
+start_test "tilemo's rule doesn't use the left_alt spelling"
+assert_not_contains '"left_alt"' "$_tilemo"
 
 test_summary "karabiner_test"

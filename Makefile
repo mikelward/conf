@@ -376,7 +376,7 @@ test-amethyst: $(CACHE)/test-amethyst.stamp
 $(CACHE)/test-karabiner.stamp: \
                           config/karabiner/assets/complex_modifications/pc-alt-tab.json \
                           config/karabiner/assets/complex_modifications/pc-arrows.json \
-                          config/karabiner/assets/complex_modifications/timo.json \
+                          config/karabiner/assets/complex_modifications/tilemo.json \
                           karabiner_test.sh shrc_test_lib.sh | $(CACHE)
 	@bash karabiner_test.sh
 	@touch $@
