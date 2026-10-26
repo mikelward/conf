@@ -32,7 +32,7 @@
   changes if they relate to something else in the same session or branch.
 - If you make a mistake, suggest changes to AGENTS.md or skills to improve
   future results. Add a new rule the first time something bites, not the third.
-- Keep AGENTS.md under 24,000 bytes (`wc -c AGENTS.md`): Antigravity caps rule
+- Keep AGENTS.md under 22,000 bytes (`wc -c AGENTS.md`): Antigravity caps rule
   files at 24 KB and silently truncates the tail.
 - Let me know if we're getting close to the context window and should compact.
 
@@ -43,7 +43,9 @@
   the answer before proceeding on an assumed one, and don't interrupt while
   I'm still typing.
 - Respond to anything I send mid-task in your very next output, before
-  continuing other tool calls.
+  continuing other tool calls. **Claude Code only** (maintainer, 2026-10-25):
+  its app reliably shows just a turn's last message, so reply only there,
+  answering a mid-turn message at a stopping point soon.
 - Keep replies short — lead with the one thing that matters, then ask
   before unloading more.
 - Message me only when I need to see it — each message notifies my phone. Work
@@ -108,8 +110,13 @@
   for Cursor). Don't hard-code `claude/` unless you
   *are* Claude Code. Never commit directly to `main` / `master`. One topic per
   branch.
-- Standard commit messages: imperative mood ("Fix", not "Fixed"), first line
-  under 66 chars with no trailing dot, body covering the what and the why.
+- Title commits like a changelog line (maintainer, 2026-10-23): imperative
+  mood ("Fix", not "Fixed"), then the change as someone using the project
+  sees it, in plain English. The first line is under 66 chars with no
+  trailing dot, e.g. `Fix …` for what was broken, `Improve …` for what got
+  better, `Add …` for what's new, with an optional parenthetical saying how.
+  The body covers the what and the why, including the scenario and the
+  mechanism. PR titles match.
 - Never name the coding agent's model or version (`Opus 4.8`, `Sonnet`,
   `Gemini …`, `claude-*`, `gemini-*`) in a commit, PR, comment, or pushed
   artifact; keep it to chat. Generic attribution (`Co-Authored-By: Claude` /
