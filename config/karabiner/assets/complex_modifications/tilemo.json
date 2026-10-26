@@ -1,8 +1,8 @@
 {
-    "title": "timo",
+    "title": "tilemo",
     "rules": [
         {
-            "description": "timo: Win+key and Win+click send Ctrl+Option+Command, and a lone Win tap opens the launcher (alongside the setup-macos modifier rotation)",
+            "description": "tilemo: Win+key and Win+click send Ctrl+Option+Command, and a lone Win tap opens the launcher (alongside the setup-macos modifier rotation)",
             "manipulators": [
                 {
                     "type": "basic",
