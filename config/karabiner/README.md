@@ -1,6 +1,6 @@
 # Karabiner-Elements
 
-Three complex-modification rules for a PC keyboard:
+Four complex-modification rules for a PC keyboard:
 
 - `assets/complex_modifications/pc-alt-tab.json` puts application switching
   back under the physical Alt key.
@@ -8,6 +8,8 @@ Three complex-modification rules for a PC keyboard:
   move by word, Win+Left/Right switch Spaces and Win+Shift+Left/Right move the
   window a Space; see
   [Arrow keys](#arrow-keys).
+- `assets/complex_modifications/pc-terminal.json` gives kitty its Ctrl and
+  Alt back, as Control and Meta; see [Terminals](#terminals).
 - `assets/complex_modifications/tilemo.json` gives
   [tilemo](https://github.com/mikelward/tilemo) its Super key; see
   [tilemo](#tilemo).
@@ -133,6 +135,39 @@ same one-step shift as above, applied as one substitution: `left_control` →
 Only left Ctrl and left Win are mapped, matching the Alt+Tab rule. Home and End
 still reach the line ends.
 
+## Terminals
+
+The rotation's trade, Ctrl for Command, is wrong in a terminal: Ctrl+U,
+Ctrl+K, Ctrl+R and the rest arrive as Cmd+U and so on, which the terminal
+takes as its own shortcuts, and never reach the shell. Alt arrives as
+Control, so Alt+B and Alt+F don't move by word either. In kitty, this rule
+gives both keys back, as on Linux:
+
+| Physical keys | Emits | kitty sees | Does |
+| --- | --- | --- | --- |
+| Ctrl+key, Ctrl+Shift+key | `left_option`+key | Control+key | the shell's Ctrl+U, Ctrl+K, …; kitty's Ctrl+Shift shortcuts |
+| Ctrl+C, Ctrl+V | `left_option`+C, V | Control+C, V | kitty's `kitty.conf` maps: copy (or interrupt, with nothing selected) and paste |
+| Alt+key, Alt+Shift+key | `left_command`+key | Option+key | Meta, through kitty's `macos_option_as_alt left` |
+
+The outputs name the keys the rotation turns into Control and Option, by the
+same layering as above. Copy and paste are kitty's, from conf's `kitty.conf`,
+the same file Linux uses, so Ctrl+C there copies a selection and otherwise
+sends the interrupt.
+
+- **Left to the rotation:** Tab, which the Alt+Tab rule swaps; Space, since
+  Control+Space is macOS's input source switch; and Ctrl+Up and Down, which
+  are Mission Control. Right Ctrl and right Alt are left alone, so right Ctrl
+  still reaches kitty's Command shortcuts (Cmd+Q, Cmd+,).
+- **Enable it after the arrow rule,** so it sits above it: both match
+  Ctrl+Left/Right, and in kitty this one should win, as Control+arrow, which
+  the shell takes as a word move and Ctrl+Shift+Left/Right as kitty's previous
+  and next tab. Otherwise Ctrl+Left/Right still moves by word, as Option+arrow,
+  but Ctrl+Shift+Left/Right reaches the shell as Alt+Shift+arrow instead of
+  switching tabs.
+- **kitty only, for now.** Each manipulator names kitty's bundle ID, and
+  another terminal needs its own copy and paste on Ctrl+C and Ctrl+V before
+  it can join; Ghostty is the next (`TODO.md`).
+
 ## tilemo
 
 tilemo, the macOS tiling desktop, puts tide's keys on Super, the physical Win
@@ -177,9 +212,10 @@ such as Win+Q, is left alone and stays Option.
 
 Karabiner does not enable assets automatically. In Karabiner-Elements
 Settings > Complex Modifications > Add rule, enable "Alt+Tab switches
-applications" and "Ctrl+Left/Right moves by word, Win+Left/Right switches
-Spaces, Win+Shift+Left/Right moves the window a Space", and, with tilemo, the
-"tilemo:" rule last, so it sits above the arrow rule. `setup-macos` installs
+applications", "Ctrl+Left/Right moves by word, Win+Left/Right switches
+Spaces, Win+Shift+Left/Right moves the window a Space" and then "Ctrl is
+Control and Alt is Meta in kitty", so it sits above the arrow rule, and, with
+tilemo, the "tilemo:" rule last, so it sits above them all. `setup-macos` installs
 Karabiner and says this, but the enabling step is a GUI action that can't be
 scripted.
 
