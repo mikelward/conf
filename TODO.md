@@ -92,6 +92,21 @@ Delete an entry once you have agreed with it or reversed it.
       follow with their own inline-message mechanisms. *Reversible:* it's an
       additive per-shell feature, and it's opt-in and off by default meanwhile.
 
+## Add Ghostty alongside kitty
+
+Ghostty is to try next to kitty, on macOS first. Not urgent on Linux.
+
+- **macOS:** add Ghostty's bundle ID (`com.mitchellh.ghostty`) to the
+  Karabiner terminal rule (`config/karabiner/README.md`, "Terminals"), once
+  conf has a Ghostty config giving it kitty's keys: `keybind =
+  performable:ctrl+c=copy_to_clipboard` (copy a selection, else the
+  interrupt), `keybind = ctrl+v=paste_from_clipboard` and `macos-option-as-alt
+  = left`. scripts' `setup` would install it with `brew install --cask
+  ghostty`, and tilemo's Super+T could open either terminal.
+- **Linux:** Debian and Ubuntu don't package it *(unverified for their newest
+  releases)*. When it matters, the choices are a community package or
+  building it from source, which needs Zig.
+
 ## Need hypridle 0.1.8 for on-resume under an inhibit
 
 hypridle 0.1.7 skips every listener's `on-resume` if a D-Bus ScreenSaver

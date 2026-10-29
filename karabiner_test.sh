@@ -222,4 +222,83 @@ assert_contains '"pointing_button": "button3"' "$_tilemo"
 start_test "tilemo's rule doesn't use the left_alt spelling"
 assert_not_contains '"left_alt"' "$_tilemo"
 
+# --- Terminals: Ctrl is Control and Alt is Meta in kitty ---
+#
+# The rotation makes physical Ctrl Command everywhere, so in a terminal Ctrl+U,
+# Ctrl+K and Ctrl+R never reach the shell. In kitty this rule gives Ctrl back
+# to Control by emitting left_option, which the rotation turns into Control,
+# and Alt back to Meta by emitting left_command, which it turns into Option
+# (kitty's macos_option_as_alt). Copy and paste on Ctrl+C and Ctrl+V are
+# kitty's own maps, as on Linux.
+_terminal_file="$_srcdir/config/karabiner/assets/complex_modifications/pc-terminal.json"
+
+start_test "the terminal rule exists"
+assert_true test -f "$_terminal_file"
+
+_terminal=$(cat "$_terminal_file")
+
+start_test "the terminal rule has a title"
+assert_contains '"title"' "$_terminal"
+
+start_test "the terminal rule doesn't use the left_alt spelling"
+assert_not_contains '"left_alt"' "$_terminal"
+
+if command -v python3 >/dev/null 2>&1; then
+    start_test "the terminal rule is valid JSON"
+    assert_true python3 -m json.tool "$_terminal_file" /dev/null
+
+    # Each manipulator as "physical-modifier key -> emitted-modifier key",
+    # with anything off-pattern (another app, Shift not passed through, a
+    # different key out) reported instead.
+    _terminal_pairs=$(python3 - "$_terminal_file" <<'PY'
+import json, sys
+for m in json.load(open(sys.argv[1]))["rules"][0]["manipulators"]:
+    f, (t,) = m["from"], m["to"]
+    if m.get("conditions") != [{"type": "frontmost_application_if", "bundle_identifiers": ["^net\\.kovidgoyal\\.kitty$"]}]:
+        print("BAD condition", m.get("conditions"))
+    if f["modifiers"].get("optional") != ["shift"] or len(f["modifiers"]["mandatory"]) != 1:
+        print("BAD from", f)
+    if t["key_code"] != f["key_code"] or len(t["modifiers"]) != 1:
+        print("BAD to", t)
+    print(f["modifiers"]["mandatory"][0], f["key_code"], "->", t["modifiers"][0])
+PY
+)
+    start_test "every manipulator is kitty's, keeps Shift and the key, and swaps one modifier"
+    assert_not_contains "BAD" "$_terminal_pairs"
+
+    start_test "Ctrl+U, Ctrl+K and Ctrl+F reach kitty as Control"
+    assert_contains "left_control u -> left_option" "$_terminal_pairs"
+    assert_contains "left_control k -> left_option" "$_terminal_pairs"
+    assert_contains "left_control f -> left_option" "$_terminal_pairs"
+
+    start_test "Ctrl+C and Ctrl+V reach kitty as Control too, for its copy and paste maps"
+    assert_contains "left_control c -> left_option" "$_terminal_pairs"
+    assert_contains "left_control v -> left_option" "$_terminal_pairs"
+
+    start_test "Alt+B and Alt+. reach kitty as Option, its Meta"
+    assert_contains "left_option b -> left_command" "$_terminal_pairs"
+    assert_contains "left_option period -> left_command" "$_terminal_pairs"
+
+    start_test "every Ctrl manipulator emits Control, and every Alt one Option"
+    assert_equal "" "$(printf '%s\n' "$_terminal_pairs" | grep -v -e '^left_control .* -> left_option$' -e '^left_option .* -> left_command$')"
+
+    # Tab is the Alt+Tab rule's; Space under Control is macOS's input source
+    # switch; Control+Up and Down are Mission Control, which setup-macos
+    # leaves on.
+    # The rule only makes Ctrl and Alt arrive as Control and Option; kitty's
+    # config does the rest.
+    _kitty_conf="$_srcdir/config/kitty/kitty.conf"
+    start_test "kitty copies on Ctrl+C, interrupting without a selection, and pastes on Ctrl+V"
+    assert_true grep -Eq '^map ctrl\+c +copy_or_interrupt$' "$_kitty_conf"
+    assert_true grep -Eq '^map ctrl\+v +paste_from_clipboard$' "$_kitty_conf"
+    start_test "kitty treats left Option as Alt"
+    assert_true grep -Eq '^macos_option_as_alt +left$' "$_kitty_conf"
+
+    start_test "Tab, Space and Ctrl+Up/Down are left to the rotation"
+    assert_not_contains " tab " "$_terminal_pairs"
+    assert_not_contains " spacebar " "$_terminal_pairs"
+    assert_not_contains "left_control up_arrow" "$_terminal_pairs"
+    assert_not_contains "left_control down_arrow" "$_terminal_pairs"
+fi
+
 test_summary "karabiner_test"
