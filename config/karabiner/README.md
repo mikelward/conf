@@ -107,12 +107,17 @@ switches desktops instead. This rule puts both back where KDE has them:
 | --- | --- | --- | --- |
 | Ctrl+Left/Right | `left_command`+arrow | `Option+arrow` | move by word |
 | Ctrl+Shift+Left/Right | `left_command`+`shift`+arrow | `Option+Shift+arrow` | select by word |
+| Alt+Left/Right | `left_command`+arrow | `Option+arrow` | move by word |
+| Alt+Shift+Left/Right | `left_command`+`shift`+arrow | `Option+Shift+arrow` | select by word |
 | Win+Left/Right | `left_option`+`left_command`+arrow | `Control+Option+arrow` | switch Spaces |
 | Win+Shift+Left/Right | `left_option`+`left_command`+`shift`+arrow | `Control+Option+Shift+arrow` | move the window a Space |
 
 The outputs name the keys the rotation turns into what macOS should see, by
 the same layering as above: `left_command` becomes Option and `left_option`
 becomes Control.
+
+**Alt+arrow moves by word too,** where a Mac keyboard's Option sits. Left to
+the rotation, Alt is Control, and Control+Left/Right jump to the line ends.
 
 **Space switching can't live on `Option+arrow`.** Symbolic hotkeys see the
 event after Karabiner and can't tell a synthesized `Option+Left` from a

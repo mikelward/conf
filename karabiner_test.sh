@@ -146,20 +146,31 @@ for rule in json.load(open(sys.argv[1]))["rules"]:
     assert_contains "left_arrow left_command+shift -> left_option+left_command+shift" "$_pairs"
     assert_contains "right_arrow left_command+shift -> left_option+left_command+shift" "$_pairs"
 
+    # Alt+arrow moves by word too, as Option does on a Mac keyboard. Left to
+    # the rotation it's Control+arrow, which jumps to the line ends.
+    start_test "Alt+arrow emits Option+arrow, word movement, rather than Control+arrow"
+    assert_contains "left_arrow left_option -> left_command" "$_pairs"
+    assert_contains "right_arrow left_option -> left_command" "$_pairs"
+    start_test "Alt+Shift+arrow emits Option+Shift+arrow (select by word)"
+    assert_contains "left_arrow left_option+shift -> left_command+shift" "$_pairs"
+    assert_contains "right_arrow left_option+shift -> left_command+shift" "$_pairs"
+
     start_test "Win+arrow emits Control+Option+arrow, the Space shortcut"
     assert_contains "left_arrow left_command -> left_option+left_command" "$_pairs"
     assert_contains "right_arrow left_command -> left_option+left_command" "$_pairs"
 
-    # The collision this layout exists to avoid: nothing but Ctrl may produce
-    # bare Option+arrow, and Ctrl must not produce the Space chord.
-    start_test "no manipulator besides Ctrl emits bare Option+arrow"
-    assert_equal "2" "$(printf '%s\n' "$_pairs" | grep -c -- '-> left_command$')"
+    # The collision this layout exists to avoid: Win's Space chord and the
+    # word movement must stay apart, so only Ctrl and Alt produce bare
+    # Option+arrow, and Ctrl doesn't produce the Space chord.
+    start_test "only Ctrl and Alt emit bare Option+arrow"
+    assert_equal "4" "$(printf '%s\n' "$_pairs" | grep -c -- '-> left_command$')"
+    assert_equal "0" "$(printf '%s\n' "$_pairs" | grep -- '-> left_command$' | grep -vc -e ' left_control ' -e ' left_option ')"
     start_test "Ctrl+arrow does not emit the Space chord"
     assert_not_contains "left_control -> left_option" "$_pairs"
 fi
 
-start_test "eight manipulators: Ctrl, Ctrl+Shift, Win and Win+Shift, per arrow"
-assert_equal "8" "$(grep -c '"type": "basic"' "$_arrow_file")"
+start_test "twelve manipulators: Ctrl, Alt and Win, with and without Shift, per arrow"
+assert_equal "12" "$(grep -c '"type": "basic"' "$_arrow_file")"
 
 # tilemo's rule (mikelward/tilemo SPEC.md §7.1): physical Win+key becomes
 # Ctrl+Option+Command+key, which tilemo registers, so Option keeps its own
