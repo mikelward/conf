@@ -5,6 +5,16 @@
 Calls autopilot made without asking, each one chosen for being cheap to undo.
 Delete an entry once you have agreed with it or reversed it.
 
+- [ ] **A laptop's pointing stick and the touchpad's I2C nodes count as
+      touchpads.** `apply-input.sh` gives a TrackPoint (or other pointing
+      stick), and any pointer named by an ACPI ID such as
+      `syna8018:00-06cb:ce67-mouse`, the touchpad's settings, so the buttons
+      above a ThinkPad's touchpad stay right-handed; tide's Touchpad page
+      lists them too. The alternatives were a kind of their own (a
+      Pointing stick page) or asking udev (`ID_INPUT_TOUCHPAD`,
+      `ID_INPUT_POINTINGSTICK`); udev wouldn't call the touchpad's `-mouse`
+      node a touchpad either, and the name rule needs no sysfs lookup. It's
+      `is_touchpad` here and `deviceKind` in tide's `input.mjs`.
 - [ ] **Sway and xbindkeys leave Super+C unbound.** Their Google Calendar
       binding went with Hyprland's, so the key means the same everywhere,
       but only tide's shell has the picker, so there it does nothing. The

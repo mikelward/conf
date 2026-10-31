@@ -171,6 +171,18 @@ assert_contains 'conf_input.keyboard("at-keyboard")' "$_apply_log"
 assert_not_contains 'conf_input.mouse("at-keyboard"' "$_apply_log"
 assert_not_contains "pen-tablet" "$_apply_log"
 
+start_test "apply-input gives a laptop's built-in pointers the touchpad's settings"
+# A ThinkPad's: an I2C touchpad named only by its IDs, the same touchpad's
+# HID mouse node, and the TrackPoint, whose buttons sit above the touchpad.
+FAKE_DEVICES='{"mice": [{"name": "abcd1234:00-0a0b:0c0d-mouse"}, {"name": "abcd1234:00-0a0b:0c0d-touchpad"}, {"name": "elan0001:00-04f3:3000"}, {"name": "tpps/2-elan-trackpoint"}, {"name": "alps-dualpoint-stick"}, {"name": "bcm5974"}, {"name": "usb-optical-mouse"}], "keyboards": []}' _apply_run
+assert_equal 0 "$?"
+_apply_log=$(cat "$_fake/log")
+for _dev in abcd1234:00-0a0b:0c0d-mouse abcd1234:00-0a0b:0c0d-touchpad elan0001:00-04f3:3000 tpps/2-elan-trackpoint alps-dualpoint-stick bcm5974; do
+    assert_contains "conf_input.touchpad(\"$_dev\")" "$_apply_log"
+    assert_not_contains "conf_input.mouse(\"$_dev\"" "$_apply_log"
+done
+assert_contains 'conf_input.mouse("usb-optical-mouse", 3)' "$_apply_log"
+
 start_test "apply-input reports a device listing hyprctl couldn't give"
 FAKE_DEVICES_FAIL=1 _apply_run
 assert_equal 1 "$?"

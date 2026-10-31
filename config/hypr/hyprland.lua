@@ -538,8 +538,8 @@ local INPUT = {
     -- replaces; flat, and custom curves, felt wrong on a real session.
     sensitivity = 1.0,
     accel_profile = "adaptive",
-    -- Right-handed by default, which trackpads want; apply-input.sh
-    -- flips mice to the right button primary.
+    -- Right-handed by default, which trackpads and the TrackPoint's
+    -- buttons want; apply-input.sh flips mice to the right button primary.
     left_handed = false,
     natural_scroll = false,
     -- Hyprland's own, spelled out so tide's settings have a value to
