@@ -1242,23 +1242,47 @@ str func session-shell() {
   return "$exe -l"
 }
 
+# tilemo's current workspace on macOS, or "", for a shell that wasn't given
+# TIDE_WORKSPACE (tilemo SPEC.md §6.3). `gets` reads in the shell itself, so
+# no fork; the path stands in for an OS test, as in the other shells. Mirrors
+# shrc's tilemo_workspace.
+str func tilemo-workspace() {
+  file = "$env.HOME/Library/Caches/tilemo/workspace"
+  return "" unless $file:exists
+  readable = $file:type == "file" and $file:read
+  if not $readable {
+    warn "tilemo: can't read the workspace from $file"
+    return ""
+  }
+  # An empty file is status 1 and a line that isn't UTF-8 raises; neither is
+  # a name, so both take the check below as one that isn't.
+  ws = ""
+  gets ws < $file || ws = "-"
+  return "" if $ws == ""
+  valid = $ws ~ /^[A-Za-z0-9]+$/
+  if not $valid {
+    warn "tilemo: ignoring the workspace in $file, which isn't just letters and digits"
+    return ""
+  }
+  return $ws
+}
+
 # The session-name prefix for a backend (shpool or tmux), from the tide
-# workspace the terminal was opened on (tide SPEC.md §6.5). Mirrors shrc's
-# session_prefix.
+# workspace the terminal was opened on (tide SPEC.md §6.5), or with
+# TIDE_WORKSPACE unset, tilemo's file. Mirrors shrc's session_prefix.
 str func session-prefix(backend) {
+  own = $env:get(SHPOOL_PREFIX, "")
+  if $backend == "tmux" { own = $env:get(TMUX_PREFIX, "") }
+  return $own if $own != ""
   ws = $env:get(TIDE_WORKSPACE, "")
+  if not $env:has(TIDE_WORKSPACE) { ws = tilemo-workspace() }
+  return "" if $ws == ""
   if $backend == "tmux" {
-    own = $env:get(TMUX_PREFIX, "")
-    return $own if $own != ""
-    return "" if $ws == ""
     sep = $env:get(TMUX_SEP, "")
     slash = "/"
     return "$ws$slash" if $sep == ""
     return "$ws$sep"
   }
-  own = $env:get(SHPOOL_PREFIX, "")
-  return $own if $own != ""
-  return "" if $ws == ""
   colon = ":"
   return "$ws$colon"
 }

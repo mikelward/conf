@@ -1508,6 +1508,57 @@ assert_equal "[] []
 []
 [mine:] [mine/]" "$_out"
 
+# On macOS, a shell from Cmd+N in a running kitty lacks TIDE_WORKSPACE, and
+# reads tilemo's file instead (tilemo SPEC.md §6.3).
+_tilemo_home="$_testdir/tilemo-home"
+mkdir -p "$_tilemo_home/Library/Caches/tilemo"
+_tilemo_file="$_tilemo_home/Library/Caches/tilemo/workspace"
+
+start_test "session_prefix reads tilemo's workspace file when TIDE_WORKSPACE is unset, and a set one wins"
+printf 'PR12login\n' >"$_tilemo_file"
+_out="$(
+    unset SHPOOL_PREFIX TMUX_PREFIX TMUX_SEP TIDE_WORKSPACE
+    HOME="$_tilemo_home"
+    puts "[$(session_prefix shpool)] [$(session_prefix tmux)]"
+    TIDE_WORKSPACE=docs
+    puts "[$(session_prefix shpool)]"
+    TIDE_WORKSPACE=
+    puts "[$(session_prefix shpool)]"
+    unset TIDE_WORKSPACE
+    SHPOOL_PREFIX=mine:
+    puts "[$(session_prefix shpool)]"
+)"
+assert_equal "[PR12login:] [PR12login/]
+[docs:]
+[]
+[mine:]" "$_out"
+
+start_test "session_prefix takes tilemo's file without a final newline"
+printf 'docs' >"$_tilemo_file"
+_out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_tilemo_home" session_prefix shpool 2>&1)"
+assert_equal "docs:" "$_out"
+
+start_test "session_prefix says nothing when tilemo's file is missing"
+rm -f "$_tilemo_file"
+_out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_tilemo_home" session_prefix shpool 2>&1)"
+assert_equal "" "$_out"
+
+start_test "session_prefix warns about and ignores a name in tilemo's file that isn't letters and digits"
+for _bad in 'my-repo' 'a b' "x'y" 'caf\303\251' '\033]0;x\007'; do
+    printf "$_bad\\n" >"$_tilemo_file"
+    _out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_tilemo_home" session_prefix shpool 2>"$_testdir/tilemo.err")"
+    assert_equal "" "$_out"
+    assert_contains "tilemo: ignoring the workspace in $_tilemo_file" "$(cat "$_testdir/tilemo.err")"
+done
+
+start_test "session_prefix warns when tilemo's file can't be read"
+rm -f "$_tilemo_file"
+mkdir "$_tilemo_file"
+_out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_tilemo_home" session_prefix shpool 2>"$_testdir/tilemo.err")"
+assert_equal "" "$_out"
+assert_contains "tilemo: can't read the workspace from $_tilemo_file" "$(cat "$_testdir/tilemo.err")"
+rmdir "$_tilemo_file"
+
 mkdir -p "$_testdir/prefix-bin"
 printf '%s\n' '#!/bin/sh' 'printf "launcher saw prefix [%s]\n" "$SHPOOL_PREFIX"' 'exit 1' >"$_testdir/prefix-bin/autoshpool"
 printf '%s\n' '#!/bin/sh' 'printf "launcher saw prefix [%s]\n" "$TMUX_PREFIX"' 'exit 1' >"$_testdir/prefix-bin/autotmux"

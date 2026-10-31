@@ -1735,6 +1735,73 @@ assert_equal "[PR12login:] [PR12login/]
 []
 [mine/]" "$result"
 
+# tilemo SPEC.md §6.3: with TIDE_WORKSPACE unset, a macOS shell reads tilemo's
+# file instead. Mirrors shrc_test.sh.
+_tilemo_home="$_testdir/mesh-tilemo-home"
+mkdir -p "$_tilemo_home/Library/Caches/tilemo"
+_tilemo_file="$_tilemo_home/Library/Caches/tilemo/workspace"
+_tilemo_pre='
+    $env.HOME = "'"$_tilemo_home"'"
+    $env.SHPOOL_PREFIX = ""
+    $env.TMUX_PREFIX = ""
+    $env.TMUX_SEP = ""
+    $env.TIDE_WORKSPACE = ""
+    unset $env.TIDE_WORKSPACE
+'
+
+start_test "mesh session-prefix reads tilemo's workspace file when TIDE_WORKSPACE is unset, and a set one wins"
+printf 'PR12login\n' >"$_tilemo_file"
+result="$(_mesh_run_config "$_tilemo_pre" '
+    a = session-prefix(shpool)
+    b = session-prefix(tmux)
+    puts "[$a] [$b]"
+    $env.TIDE_WORKSPACE = "docs"
+    c = session-prefix(shpool)
+    puts "[$c]"
+    $env.TIDE_WORKSPACE = ""
+    d = session-prefix(shpool)
+    puts "[$d]"
+')"
+assert_equal "[PR12login:] [PR12login/]
+[docs:]
+[]" "$result"
+
+start_test "mesh tilemo-workspace takes a file without a final newline, and is quiet without one"
+printf 'docs' >"$_tilemo_file"
+result="$(_mesh_run_config "$_tilemo_pre" '
+    w = tilemo-workspace()
+    puts "[$w]"
+' 2>&1)"
+assert_equal "[docs]" "$result"
+rm -f "$_tilemo_file"
+result="$(_mesh_run_config "$_tilemo_pre" '
+    w = tilemo-workspace()
+    puts "[$w]"
+' 2>&1)"
+assert_equal "[]" "$result"
+
+start_test "mesh tilemo-workspace warns about and ignores a name that isn't letters and digits"
+for _bad in 'my-repo' 'a b' "x'y" 'caf\303\251' '\377' '\033]0;x\007'; do
+    printf "$_bad\\n" >"$_tilemo_file"
+    result="$(_mesh_run_config "$_tilemo_pre" '
+        w = tilemo-workspace()
+        puts "[$w]"
+    ' 2>"$_testdir/mesh-tilemo.err")"
+    assert_equal "[]" "$result"
+    assert_contains "tilemo: ignoring the workspace in $_tilemo_file" "$(cat "$_testdir/mesh-tilemo.err")"
+done
+
+start_test "mesh tilemo-workspace warns when the file can't be read"
+rm -f "$_tilemo_file"
+mkdir "$_tilemo_file"
+result="$(_mesh_run_config "$_tilemo_pre" '
+    w = tilemo-workspace()
+    puts "[$w]"
+' 2>"$_testdir/mesh-tilemo.err")"
+assert_equal "[]" "$result"
+assert_contains "tilemo: can't read the workspace from $_tilemo_file" "$(cat "$_testdir/mesh-tilemo.err")"
+rmdir "$_tilemo_file"
+
 ###############
 # TEST: applydiff only replaces the file when the command succeeded
 
@@ -2163,7 +2230,7 @@ e = one-line("a  b"); e = projectname(); e = projectroot(); e = prompt-line("")
 e = prompt-project-name(); e = prompt-session-name(); e = publish-jobs-file()
 e = red("x"); e = rootdir(); e = session-backend(); e = session-name()
 e = session-prefix("shpool"); e = session-shell(); e = short-hostname(); e = ssh-client-host(); e = tilde-pwd()
-e = title-text(); e = unquoted-head("\"x\""); e = workstation(); e = yellow("x")
+e = tilemo-workspace(); e = title-text(); e = unquoted-head("\"x\""); e = workstation(); e = yellow("x")
 f = age("/etc/hostname")
 '
 

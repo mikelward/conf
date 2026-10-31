@@ -1342,6 +1342,59 @@ except OSError: pass
         assert equal (session-prefix shpool) "mine:"
     })
 
+    # tilemo SPEC.md §6.3: with TIDE_WORKSPACE unset, a macOS shell reads
+    # tilemo's file instead. Mirrors shrc_test.sh.
+    (run-test "nu session-prefix reads tilemo's workspace file when TIDE_WORKSPACE is unset, and a set one wins" {
+        let home = (mktemp -d)
+        mkdir ($home | path join "Library" "Caches" "tilemo")
+        "PR12login\n" | save ($home | path join "Library" "Caches" "tilemo" "workspace")
+        $env.HOME = $home
+        hide-env --ignore-errors SHPOOL_PREFIX TMUX_PREFIX TMUX_SEP TIDE_WORKSPACE
+        assert equal (session-prefix shpool) "PR12login:"
+        assert equal (session-prefix tmux) "PR12login/"
+        $env.TIDE_WORKSPACE = "docs"
+        assert equal (session-prefix shpool) "docs:"
+        $env.TIDE_WORKSPACE = ""
+        assert equal (session-prefix shpool) ""
+    })
+    (run-test "nu tilemo-workspace takes a file without a final newline, and is quiet without one" {
+        let home = (mktemp -d)
+        let dir = ($home | path join "Library" "Caches" "tilemo")
+        mkdir $dir
+        "docs" | save ($dir | path join "workspace")
+        let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tilemo-workspace" | complete)
+        assert equal ($out.stdout | str trim) "docs"
+        assert equal $out.stderr ""
+        rm ($dir | path join "workspace")
+        let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tilemo-workspace" | complete)
+        assert equal ($out.stdout | str trim) ""
+        assert equal $out.stderr ""
+    })
+    (run-test "nu tilemo-workspace warns about and ignores a name that isn't letters and digits" {
+        let home = (mktemp -d)
+        let dir = ($home | path join "Library" "Caches" "tilemo")
+        mkdir $dir
+        let file = ($dir | path join "workspace")
+        for bad in ["my-repo" "a b" "x'y" "café" $"(char -u '1b')]0;x(char bel)"] {
+            $"($bad)\n" | save --force $file
+            let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tilemo-workspace" | complete)
+            assert equal ($out.stdout | str trim) ""
+            assert str contains $out.stderr $"tilemo: ignoring the workspace in ($file)"
+        }
+        0x[ff fe 0a] | save --force $file
+        let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tilemo-workspace" | complete)
+        assert equal ($out.stdout | str trim) ""
+        assert str contains $out.stderr $"tilemo: ignoring the workspace in ($file)"
+    })
+    (run-test "nu tilemo-workspace warns when the file can't be read" {
+        let home = (mktemp -d)
+        let file = ($home | path join "Library" "Caches" "tilemo" "workspace")
+        mkdir $file
+        let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tilemo-workspace" | complete)
+        assert equal ($out.stdout | str trim) ""
+        assert str contains $out.stderr $"tilemo: can't read the workspace from ($file)"
+    })
+
     ###############
     # want-tmux gating (mirrors want-shpool but on the tmux binary)
     (run-test "nu want-tmux true when remote" {

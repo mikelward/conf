@@ -994,9 +994,30 @@ function session_shell
     echo "$(status fish-path) -l"
 end
 
+# tilemo's current workspace on macOS, or nothing, for a shell that wasn't
+# given TIDE_WORKSPACE (tilemo SPEC.md §6.3). Read with the builtin, so no
+# fork. Mirrors shrc's tilemo_workspace.
+function tilemo_workspace
+    set -l file "$HOME/Library/Caches/tilemo/workspace"
+    test -e "$file"; or return 0
+    if test -d "$file"; or not test -r "$file"
+        warn "tilemo: can't read the workspace from $file"
+        return 0
+    end
+    set -l ws
+    # read is false on a last line with no newline, which still counts.
+    read ws <"$file"
+    test -n "$ws"; or return 0
+    if not string match -qr '^[A-Za-z0-9]+$' -- "$ws"
+        warn "tilemo: ignoring the workspace in $file, which isn't just letters and digits"
+        return 0
+    end
+    echo $ws
+end
+
 # The session-name prefix for backend $argv[1] (shpool or tmux), from the
-# tide workspace the terminal was opened on (tide SPEC.md §6.5). Mirrors
-# shrc's session_prefix.
+# tide workspace the terminal was opened on (tide SPEC.md §6.5), or with
+# TIDE_WORKSPACE unset, tilemo's file. Mirrors shrc's session_prefix.
 function session_prefix --argument-names backend
     set -l own
     set -l sep
@@ -1011,8 +1032,12 @@ function session_prefix --argument-names backend
     end
     if test -n "$own"
         echo $own
-    else if test -n "$TIDE_WORKSPACE"
-        echo "$TIDE_WORKSPACE$sep"
+        return 0
+    end
+    set -l ws "$TIDE_WORKSPACE"
+    set -q TIDE_WORKSPACE; or set ws (tilemo_workspace)
+    if test -n "$ws"
+        echo "$ws$sep"
     end
     return 0
 end

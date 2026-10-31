@@ -25,6 +25,15 @@ Delete an entry once you have agreed with it or reversed it.
       shares, would need the scripts repo's launchers to change. Undoing it
       is `session_prefix` in each shell (shrc, fish, nushell, mesh,
       Elvish).
+- [ ] **On macOS, a shell with TIDE_WORKSPACE unset reads tilemo's file,
+      gated on the file's path, not an OS test.**
+      `~/Library/Caches/tilemo/workspace` (tilemo SPEC.md §6.3) only exists
+      on a Mac running tilemo, and fish and mesh can't ask the OS without
+      forking `uname` on every start, so every shell checks the path alone
+      and behaves the same. The alternative is an OS test where it's free
+      (`$OSTYPE` in shrc, `$nu.os-info` in nushell, `platform:os` in Elvish),
+      with fish and mesh left path-only. Undoing it is `tilemo_workspace` in
+      each shell.
 - [ ] **Home's apps are the four Google sites conf's scripts open as
       `--app` windows**: Gmail, Chat, Calendar and YouTube Music, in
       `config/tide/workspaces.json`'s `inApps`. Meet isn't one, since a call
