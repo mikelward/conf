@@ -197,7 +197,7 @@ description, which tide's settings panel lists on its Keys page;
 | `SUPER + Left` / `SUPER + Right`, `SUPER + PgUp` / `SUPER + PgDn` | Previous / next workspace in the bar's order, stopping at the ends |
 | `SUPER + Shift + Left` / `SUPER + Shift + Right` | Move the window to the previous / next workspace |
 | `SUPER + Return` | Move the window to a workspace, through tide's name prompt |
-| `SUPER + A` | Focus the most recent window waiting for attention, or the last one (until tide's switcher has its Attention tab) |
+| `SUPER + A` | tide's switcher on its Attention tab: every window wanting attention, the latest first (without the tide shell, the urgent window or the last one) |
 
 Workspaces have names, not numbers (tide SPEC.md §6.5), so there's no
 `SUPER + 1..9`. The bar's order is tide's: the standing workspaces from

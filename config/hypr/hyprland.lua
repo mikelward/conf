@@ -1074,26 +1074,15 @@ hl.bind(key("Return"), exec("qs -c tide ipc call prompt move || notify-send -a t
     .. "'Super+Return moves a window through the name prompt in the tide shell, which is not running.'"),
     does("Move the window to a workspace"))
 
--- The way to a window that wanted focus and didn't get it (§14). Lua can't
--- mark a window urgent, so tide's focus guard keeps the ones it held
--- back; otherwise it's Hyprland's urgent window, or the last one. So with
--- one window marked, a press goes there and the next comes back.
--- Super+A does it until tide's switcher has its Attention tab (tide
--- SPEC.md §8.1), which replaces it.
+-- The windows wanting attention (§14): tide's switcher on its Attention
+-- tab, every marked window, the latest first (tide SPEC.md §8.1, §14.3).
+-- Without tide's shell there's no list, so a notification says so, and the
+-- urgent window, or the last one, comes up instead.
 --
 -- Not `urgent_or_last`: in 0.56 its "last" reads the focus history from the
 -- oldest end, so pressing it again walked through every window. `last`
 -- reads it from the newest.
-local function focus_attention()
-    local guard = rawget(_G, "tide_focus")
-    if guard and guard.focus_attention then
-        local ok, went = pcall(guard.focus_attention)
-        if not ok then
-            notify_error("Super+A: the focus guard failed: " .. tostring(went))
-        elseif went then
-            return
-        end
-    end
+local function attention_without_shell()
     local urgent = query("Super+A: couldn't look for an urgent window", function()
         local w = hl.get_urgent_window()
         return w and w.address
@@ -1104,25 +1093,11 @@ local function focus_attention()
         hl.dispatch(hl.dsp.focus({ last = true }))
     end
 end
-hl.bind(key("A"), focus_attention, does("The window waiting for attention"))
--- Pressed again while Super is held, Super+A steps to the next marked
--- window, Alt+Tab style, and releasing Super clears only the one it landed
--- on. Releasing Super ends the guard's cycle, and does nothing outside one,
--- which is every other release. Non-consuming, so apps still see Super.
-local function end_cycle()
-    local guard = rawget(_G, "tide_focus")
-    -- A guard from before cycling has no end_cycle, and nothing to end.
-    if not (guard and guard.end_cycle) then
-        return
-    end
-    local ok, err = pcall(guard.end_cycle)
-    if not ok then
-        notify_error("Super+A: the focus guard failed to finish: " .. tostring(err))
-    end
-end
-for _, super in ipairs({ "Super_L", "Super_R" }) do
-    hl.bind(mod .. " + " .. super, end_cycle, does("End Super+A's cycle", { release = true, non_consuming = true }))
-end
+_G.conf_attention = { without_shell = attention_without_shell }
+hl.bind(key("A"), exec("qs -c tide ipc call switcher toggle attention || { "
+    .. "notify-send -a tide 'No Attention tab' 'Super+A lists the windows that want attention in the tide shell, which is not running.'; "
+    .. "hyprctl eval 'conf_attention.without_shell()'; }"),
+    does("The windows that want attention"))
 
 -- Screenshots to the clipboard as PNG, with a notification, through the
 -- scripts repo's screenshot: the screen, the focused window (Alt), or a
