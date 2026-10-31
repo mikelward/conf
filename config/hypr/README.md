@@ -280,6 +280,11 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   - **Touchpads** go through `conf_input.touchpad()`, which keeps the
     global defaults unless tide's Touchpad settings (below) give a speed or
     handedness.
+    A laptop's other built-in pointers count as touchpads: its pointing
+    stick (a TrackPoint, whose buttons sit above the touchpad) and any
+    pointer named by an ACPI ID, as an I2C touchpad and its extra `-mouse`
+    node are (`elan1200:00-04f3:309f-touchpad`). So the buttons above the
+    touchpad stay right-handed with it. Everything else is a mouse.
   - **Keyboards** go through `conf_input.keyboard()`, which gives each the
     keyboard options, or tide's settings for that one keyboard (below).
     Hyprland leaves a keyboard whose options haven't changed alone, so this
