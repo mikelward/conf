@@ -1,9 +1,9 @@
 {
   "standing": ["in", "re", "oc", "me"],
   "inApps": [
-    "mail.google.com",
-    "chat.google.com",
-    "calendar.google.com",
-    "music.youtube.com"
+    "gmail",
+    "google-chat",
+    "google-calendar",
+    "youtube-music"
   ]
 }

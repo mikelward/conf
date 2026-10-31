@@ -49,10 +49,12 @@ Delete an entry once you have agreed with it or reversed it.
       (`$OSTYPE` in shrc, `$nu.os-info` in nushell, `platform:os` in Elvish),
       with fish and mesh left path-only. Undoing it is `tilemo_workspace` in
       each shell.
-- [ ] **Home's apps are the four Google sites conf's scripts open as
-      `--app` windows**: Gmail, Chat, Calendar and YouTube Music, in
-      `config/tide/workspaces.json`'s `inApps`. Meet isn't one, since a call
-      is work you'd name a workspace for. The list is one file's to change.
+- [ ] **Home's apps are scripts' launchers for four Google sites**:
+      `gmail`, `google-chat`, `google-calendar` and `youtube-music`, in
+      `config/tide/workspaces.json`'s `inApps`, which tide starts on home
+      at login and whose `--app` windows it sends there. `youtube-music`
+      rather than its twin `music`, whose name says less. Meet isn't one, since a call is work you'd name a workspace
+      for. The list is one file's to change.
 - [ ] **Home is the default of the first monitor, and is shown on it as it
       connects.** Hyprland matches a `default` rule to a monitor by name, so
       `hyprland.lua` names the monitor with the lowest ID when the config
