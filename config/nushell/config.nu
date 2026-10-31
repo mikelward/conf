@@ -457,7 +457,8 @@ def tilemo-workspace [] {
     # decode is lossy, so bytes that aren't UTF-8 fail the check below.
     let ws = ($raw | decode utf-8 | lines | get 0? | default "")
     if $ws == "" { return "" }
-    if not ($ws =~ '^[A-Za-z0-9]+$') {
+    # Unicode's letters and digits, in any script, whatever the locale.
+    if not ($ws =~ '^[\p{L}\p{N}]+$') {
         warn $"tilemo: ignoring the workspace in ($file), which isn't just letters and digits"
         return ""
     }

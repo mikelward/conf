@@ -1780,8 +1780,26 @@ result="$(_mesh_run_config "$_tilemo_pre" '
 ' 2>&1)"
 assert_equal "[]" "$result"
 
+start_test "mesh tilemo-workspace takes letters and digits in any script, whatever the locale"
+# é composed, Cyrillic, CJK, Arabic-Indic digits, a Roman numeral.
+for _good in 'caf\303\251' '\320\227\320\260\320\274\320\265\321\202\320\272\320\2700' \
+    '\346\227\245\346\234\254\350\252\236' 'build\331\241\331\242' '\342\205\253'; do
+    printf "$_good\\n" >"$_tilemo_file"
+    for _locale in C C.UTF-8; do
+        result="$(LC_ALL=$_locale _mesh_run_config "$_tilemo_pre" '
+            w = tilemo-workspace()
+            puts "[$w]"
+        ' 2>&1)"
+        assert_equal "[$(printf "$_good")]" "$result"
+    done
+done
+
 start_test "mesh tilemo-workspace warns about and ignores a name that isn't letters and digits"
-for _bad in 'my-repo' 'a b' "x'y" 'caf\303\251' '\377' '\033]0;x\007'; do
+# Punctuation, a space, a quote, a decomposed é (a combining mark), an emoji,
+# a tab, bytes that aren't UTF-8 (a lone lead byte, an overlong /, a
+# surrogate), and a terminal escape.
+for _bad in 'my-repo' 'a b' "x'y" 'cafe\314\201' '\360\237\232\200' 'a\tb' 'a\303' '\300\257' \
+    '\355\240\200' '\377' '\033]0;x\007'; do
     printf "$_bad\\n" >"$_tilemo_file"
     result="$(_mesh_run_config "$_tilemo_pre" '
         w = tilemo-workspace()

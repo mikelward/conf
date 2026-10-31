@@ -1654,7 +1654,9 @@ fn tilemo-workspace {
     }
     var ws = (str:split "\n" $text | take 1)
     if (==s $ws '') { put ''; return }
-    if (not (re:match '^[A-Za-z0-9]+$' $ws)) {
+    # Go's \p{L} and \p{N}: Unicode's letters and digits, in any script,
+    # whatever the locale. Bytes that aren't UTF-8 read as U+FFFD, which fails.
+    if (not (re:match '^[\p{L}\p{N}]+$' $ws)) {
         warn "tilemo: ignoring the workspace in "$file", which isn't just letters and digits"
         put ''
         return
