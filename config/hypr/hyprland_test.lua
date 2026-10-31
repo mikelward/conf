@@ -511,7 +511,7 @@ test("without the tide layout: master, with no error shown", function()
     truthy(is_dsp(bind("SUPER + period").target, "layout"), "Super+. is a layoutmsg")
     eq("mfact +0.025", bind("SUPER + backslash").target.args)
     eq("cyclenext", bind("SUPER + J").target.args)
-    eq("swapwithmaster master", bind("SUPER + Return").target.args)
+    eq("swapwithmaster master", bind("ALT + Tab").target.args)
 end)
 
 test("with the tide layout: lua:tide and its helpers", function()
@@ -526,7 +526,7 @@ test("with the tide layout: lua:tide and its helpers", function()
     eq(qs.toggle_monocle, bind("SUPER + O").target, "Super+O")
     eq(qs.grow, bind("SUPER + backslash").target, "Super+\\")
     eq(qs.shrink, bind("SUPER + slash").target, "Super+/")
-    eq(qs.swap_with_master, bind("SUPER + Return").target, "Super+Return")
+    eq(qs.swap_with_master, bind("ALT + Tab").target, "Alt+Tab")
     run("SUPER + J")
     run("SUPER + SHIFT + K")
     eq("focus", qs.calls[1][1])
@@ -618,17 +618,14 @@ test("every key in the spec is bound", function()
         "SUPER + period", "SUPER + comma", "SUPER + grave", "SUPER + O",
         "SUPER + Up", "SUPER + SHIFT + Up", "SUPER + Down",
         "SUPER + SHIFT + F", "SUPER + Insert", "SUPER + SHIFT + R",
-        "SUPER + Tab", "SUPER + Home", "SUPER + SHIFT + N", "SUPER + ALT + Space",
+        "SUPER + Tab", "SUPER + Home", "SUPER + End", "SUPER + A", "ALT + Tab",
+        "SUPER + SHIFT + N", "SUPER + ALT + Space",
         "Print", "ALT + Print", "SHIFT + Print", "SUPER + Print",
         "XF86AudioMicMute", "SUPER + SHIFT + M",
         "XF86AudioRaiseVolume", "XF86AudioLowerVolume", "XF86AudioMute",
         "XF86MonBrightnessUp", "XF86MonBrightnessDown",
         "XF86AudioPlay", "XF86AudioPause", "XF86AudioNext", "XF86AudioPrev",
     }
-    for i = 1, 9 do
-        table.insert(keys, "SUPER + " .. i)
-        table.insert(keys, "SUPER + SHIFT + " .. i)
-    end
     for _, k in ipairs(keys) do
         bind(k)
     end
@@ -652,40 +649,164 @@ test("launchers run the scripts repo's helpers through runenv", function()
     truthy(bind("SUPER + Space").target.args:find("runenv", 1, true), "launcher through runenv")
 end)
 
-test("Super+1..9 go to a workspace; Shift sends the window without following", function()
+-- The bar's order (tide SPEC.md §6.5): the standing workspaces, home
+-- first, made or not, then the others in the order they were made, then
+-- numbered ones.
+local function named(...)
+    local out = {}
+    for i, name in ipairs({ ... }) do
+        table.insert(out, { id = -1337 - i, name = name })
+    end
+    return out
+end
+local STANDING = [[return { home = "in", standing = { "in", "re", "oc", "me" }, in_apps = {} }]]
+
+test("Super+1…9 and Super+Shift+1…9 are gone: workspaces have names", function()
     load()
     for i = 1, 9 do
-        local go = bind("SUPER + " .. i).target
-        truthy(is_dsp(go, "focus"), "Super+" .. i)
-        eq(i, go.args.workspace)
-        local send = bind("SUPER + SHIFT + " .. i).target
-        truthy(is_dsp(send, "window.move"), "Super+Shift+" .. i)
-        eq(i, send.args.workspace)
-        eq(false, send.args.follow)
+        eq(nil, S.binds["|SUPER + " .. i], "Super+" .. i)
+        eq(nil, S.binds["|SUPER + SHIFT + " .. i], "Super+Shift+" .. i)
     end
 end)
 
-test("Super+Left/Right step through workspaces 1-9 and stop at the ends", function()
-    load()
-    S.active_workspace = { id = 3 }
+test("Super+Left/Right and PgUp/PgDn step through the bar's order and stop at the ends", function()
+    load({ workspaces = STANDING })
+    S.workspace_list = named("in", "PR-12", "re", "docs")
+    table.insert(S.workspace_list, { id = 2, name = "2" })
+    table.insert(S.workspace_list, { id = -98, name = "special:scratch" })
+    -- in, re, oc, me, PR-12, docs, 2
+    S.active_workspace = { id = -1338, name = "in" }
     local d = run("SUPER + Right")
     eq(1, #d)
     truthy(is_dsp(d[1], "focus"))
-    eq(4, d[1].args.workspace)
-    d = run("SUPER + Left")
-    eq(2, d[1].args.workspace)
-    d = run("SUPER + Page_Down")
-    eq(4, d[1].args.workspace, "PgDn is next")
-    d = run("SUPER + Page_Up")
-    eq(2, d[1].args.workspace, "PgUp is previous")
-    S.active_workspace = { id = 9 }
-    eq(0, #run("SUPER + Right"), "past 9")
-    S.active_workspace = { id = 1 }
-    eq(0, #run("SUPER + Left"), "before 1")
-    S.active_workspace = { id = -98 }
+    eq("name:re", d[1].args.workspace, "a standing workspace comes next")
+    eq(0, #run("SUPER + Left"), "nothing before home")
+    S.active_workspace = { id = -1340, name = "re" }
+    eq("name:oc", run("SUPER + Page_Down")[1].args.workspace, "PgDn is next, made or not")
+    eq("name:in", run("SUPER + Page_Up")[1].args.workspace, "PgUp is previous")
+    S.active_workspace = { id = -1339, name = "PR-12" }
+    eq("name:me", run("SUPER + Left")[1].args.workspace, "back past the made ones")
+    eq("name:docs", run("SUPER + Right")[1].args.workspace)
+    S.active_workspace = { id = 2, name = "2" }
+    eq(0, #run("SUPER + Right"), "past the last")
+    S.active_workspace = { id = -98, name = "special:scratch" }
     eq(0, #run("SUPER + Right"), "from a special workspace")
     S.active_workspace = nil
     eq(0, #run("SUPER + Right"), "with no workspace")
+end)
+
+test("Super+Shift+Left/Right carry the window there and follow it", function()
+    load({ workspaces = STANDING })
+    S.workspace_list = named("in")
+    S.active_workspace = { id = -1338, name = "in" }
+    local d = run("SUPER + SHIFT + Right")
+    truthy(is_dsp(d[1], "window.move"))
+    eq("name:re", d[1].args.workspace)
+    eq(true, d[1].args.follow)
+    eq(0, #run("SUPER + SHIFT + Left"), "nothing before home")
+end)
+
+test("a standing name matches a workspace made in another case, as the bar's does", function()
+    load({ workspaces = STANDING })
+    S.workspace_list = named("in", "RE")
+    S.active_workspace = { id = -1338, name = "in" }
+    eq("name:RE", run("SUPER + Right")[1].args.workspace)
+end)
+
+test("Super+Home goes home, whatever it's called", function()
+    load({ workspaces = [[return { home = "mail", standing = { "mail" }, in_apps = {} }]] })
+    local d = run("SUPER + Home")
+    eq(1, #d)
+    eq("name:mail", d[1].args.workspace)
+end)
+
+test("Super+Tab flips between home and the last other workspace", function()
+    load({ workspaces = STANDING })
+    S.workspace_list = named("in", "PR-12", "docs")
+    S.active_workspace = { id = -1338, name = "in" }
+    eq(0, #run("SUPER + Tab"), "from home with nowhere used yet, nothing")
+    fire("workspace.active", { id = -1339, name = "PR-12" })
+    fire("workspace.active", { id = -1338, name = "in" })
+    fire("workspace.active", { id = -1340, name = "docs" })
+    S.active_workspace = { id = -1340, name = "docs" }
+    eq("name:in", run("SUPER + Tab")[1].args.workspace, "to home")
+    fire("workspace.active", { id = -1338, name = "in" })
+    S.active_workspace = { id = -1338, name = "in" }
+    eq("name:docs", run("SUPER + Tab")[1].args.workspace, "and back")
+    -- docs is removed since: from home, the one before it.
+    S.workspace_list = named("in", "PR-12")
+    eq("name:PR-12", run("SUPER + Tab")[1].args.workspace, "skipping a removed one")
+    S.workspace_list = named("in")
+    eq(0, #run("SUPER + Tab"), "and nothing when all are gone")
+    -- A standing workspace is always there to go back to.
+    fire("workspace.active", { id = -1341, name = "oc" })
+    eq("name:oc", run("SUPER + Tab")[1].args.workspace, "a standing one, emptied and gone, made again")
+end)
+
+test("a workspace that becomes home is left out of Super+Tab's and Super+End's history", function()
+    load({ workspaces = STANDING })
+    S.workspace_list = named("in", "PR-12", "docs")
+    fire("workspace.active", { id = -1339, name = "PR-12" })
+    fire("workspace.active", { id = -1340, name = "docs" })
+    -- The settings name docs home now.
+    write(TIDE_WORKSPACES, [[return { home = "docs", standing = { "docs" }, in_apps = {} }]])
+    conf_workspaces.reload()
+    S.active_workspace = { id = -1340, name = "docs" }
+    eq("name:PR-12", run("SUPER + Tab")[1].args.workspace, "from the new home, not to it")
+    S.active_workspace = { id = -1339, name = "PR-12" }
+    eq(0, #run("SUPER + End"), "Super+End has nowhere but home to go")
+end)
+
+test("Super+End toggles between the last two workspaces other than home", function()
+    load({ workspaces = STANDING })
+    S.workspace_list = named("in", "PR-12", "docs")
+    fire("workspace.active", { id = -1339, name = "PR-12" })
+    fire("workspace.active", { id = -1338, name = "in" })
+    fire("workspace.active", { id = -1340, name = "docs" })
+    S.active_workspace = { id = -1340, name = "docs" }
+    eq("name:PR-12", run("SUPER + End")[1].args.workspace, "the one before")
+    fire("workspace.active", { id = -1339, name = "PR-12" })
+    S.active_workspace = { id = -1339, name = "PR-12" }
+    eq("name:docs", run("SUPER + End")[1].args.workspace, "and back, never home")
+    S.active_workspace = { id = -1338, name = "in" }
+    eq("name:PR-12", run("SUPER + End")[1].args.workspace, "from home, where Super+Tab goes")
+end)
+
+test("Super+Return opens tide's name prompt, and says so when there's no shell", function()
+    load()
+    local t = bind("SUPER + Return").target
+    truthy(t.args:find("qs -c tide ipc call prompt move", 1, true), t.args)
+    truthy(t.args:find("|| notify-send -a tide 'No name prompt'", 1, true), t.args)
+    local script = tmp .. "/super-return.sh"
+    local f = assert(io.open(script, "w"))
+    f:write(t.args, "\n")
+    f:close()
+    truthy(os.execute("sh -n '" .. script .. "'"), "the command parses as sh")
+end)
+
+test("Alt+Tab swaps with the master, and Super+Return no longer does", function()
+    load({ layout = FAKE_LAYOUT })
+    eq(_G.fake_layout.swap_with_master, bind("ALT + Tab").target)
+    load()
+    eq("swapwithmaster master", bind("ALT + Tab").target.args)
+end)
+
+test("a broken standing list is reported", function()
+    for _, text in ipairs({
+        [[return { home = "in", standing = {} }]],
+        [[return { home = "in", standing = { "re", "in" } }]],
+        [[return { home = "in", standing = { "in", 3 } }]],
+        [[return { home = "in", standing = "in" }]],
+    }) do
+        load({ workspaces = text })
+        eq(1, #S.notifications, text)
+        truthy(S.notifications[1].text:find("standing", 1, true), S.notifications[1].text)
+        eq("in", conf_workspaces.standing()[1], text)
+    end
+    -- A file from before standing workspaces names home alone.
+    load({ workspaces = [[return { home = "in", in_apps = {} }]] })
+    eq(0, #S.notifications)
+    eq("in", table.concat(conf_workspaces.standing(), " "))
 end)
 
 test("a failed workspace lookup is reported, not silently ignored", function()
@@ -697,17 +818,6 @@ test("a failed workspace lookup is reported, not silently ignored", function()
     S.active_workspace = nil
     run("SUPER + Right")
     eq(1, #S.notifications, "no workspace at all is quiet")
-end)
-
-test("Super+Shift+Left/Right carry the window and follow it", function()
-    load()
-    S.active_workspace = { id = 5 }
-    local d = run("SUPER + SHIFT + Left")
-    truthy(is_dsp(d[1], "window.move"))
-    eq(4, d[1].args.workspace)
-    eq(true, d[1].args.follow)
-    S.active_workspace = { id = 9 }
-    eq(0, #run("SUPER + SHIFT + Right"), "past 9")
 end)
 
 test("maximize, fullscreen and restore", function()
@@ -766,7 +876,7 @@ test("every binding says what it does, for tide's Keys page", function()
     end
     eq("Terminal", bind("SUPER + T").opts.description)
     eq("Taller", bind("J", "resize").opts.description)
-    eq("Send the window to workspace 3", bind("SUPER + SHIFT + 3").opts.description)
+    eq("Home workspace", bind("SUPER + Home").opts.description)
     -- Bindings that share an options table each keep their own description,
     -- and the table's options.
     eq("Mute", bind("XF86AudioMute").opts.description)
@@ -774,10 +884,10 @@ test("every binding says what it does, for tide's Keys page", function()
     eq(true, bind("XF86AudioMute").opts.locked)
 end)
 
-test("Super+Tab focuses the urgent or last window without the guard", function()
+test("Super+A focuses the urgent or last window without the guard", function()
     load()
     _G.tide_focus = nil
-    for _, keys in ipairs({ "SUPER + Tab", "SUPER + Home" }) do
+    for _, keys in ipairs({ "SUPER + A" }) do
         local d = run(keys)
         eq(1, #d, keys)
         -- Not urgent_or_last, whose "last" walks every window in 0.56.
@@ -790,17 +900,17 @@ test("Super+Tab focuses the urgent or last window without the guard", function()
     end
 end)
 
-test("Super+Tab goes back when it can't look for an urgent window", function()
+test("Super+A goes back when it can't look for an urgent window", function()
     load()
     _G.tide_focus = nil
     S.urgent_window = "raise"
-    local d = run("SUPER + Tab")
+    local d = run("SUPER + A")
     eq(1, #S.notifications)
     truthy(S.notifications[1].text:find("urgent window", 1, true))
     eq(true, d[1].args.last)
 end)
 
-test("Super+Tab and Super+Home go to the guard's waiting window first", function()
+test("Super+A goes to the guard's waiting window first", function()
     load()
     local waiting = 1
     _G.tide_focus = {
@@ -813,20 +923,20 @@ test("Super+Tab and Super+Home go to the guard's waiting window first", function
             return true
         end,
     }
-    local d = run("SUPER + Tab")
+    local d = run("SUPER + A")
     eq(1, #d)
     eq("guard-focus", d[1].name)
-    d = run("SUPER + Home")
+    d = run("SUPER + A")
     eq(true, d[1].args.last, "none waiting: goes back")
     _G.tide_focus = { focus_attention = function() error("boom") end }
-    d = run("SUPER + Tab")
+    d = run("SUPER + A")
     eq(1, #S.notifications)
     truthy(S.notifications[1].text:find("boom", 1, true))
     eq(true, d[1].args.last, "a failed guard falls back")
     _G.tide_focus = nil
 end)
 
-test("releasing Super ends the guard's Super+Tab cycle, without consuming Super", function()
+test("releasing Super ends the guard's Super+A cycle, without consuming Super", function()
     load()
     local ended = 0
     _G.tide_focus = { end_cycle = function() ended = ended + 1 return true end }
