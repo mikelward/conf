@@ -841,6 +841,12 @@ hl.bind(key("SHIFT + N"), exec("qs -c tide ipc call notifications toggle || sway
 
 -- Session.
 hl.bind(key("BackSpace"), hl.dsp.window.close(), does("Close the window"))
+-- Super+Z: minimize (tide SPEC.md §6.7). tide's shell moves the window to
+-- a special workspace named for its own and shows it in a corner tray, a
+-- click there bringing it back. Without the shell nothing could bring it
+-- back, so the window stays and a notification says why.
+hl.bind(key("Z"), exec("qs -c tide ipc call windows minimize || notify-send -a tide 'No minimize' "
+    .. "'Super+Z minimizes a window in the tide shell, which is not running.'"), does("Minimize the window"))
 hl.bind(key("L"), exec(lock), does("Lock"))
 hl.bind(key("SHIFT + E"), hl.dsp.exit(), does("Quit Hyprland"))
 
