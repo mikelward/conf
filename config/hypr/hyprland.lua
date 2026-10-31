@@ -808,7 +808,7 @@ local function does(description, opts)
 end
 
 -- Applications. The helper scripts live in the scripts repo, on the PATH
--- runenv provides. Super+D and Super+S are left for hyprland.local.lua.
+-- runenv provides. Super+D is left for hyprland.local.lua.
 hl.bind(key("T"), app(terminal, terminal), does("Terminal"))
 hl.bind(key("W"), app(runenv .. " terminal_on_workstation"), does("Terminal on the workstation"))
 hl.bind(key("V"), app(runenv .. " terminal_on_vm"), does("Terminal on the VM"))
@@ -854,6 +854,13 @@ hl.bind(key("BackSpace"), hl.dsp.window.close(), does("Close the window"))
 hl.bind(key("Z"), exec("qs -c tide ipc call windows minimize || notify-send -a tide 'No minimize' "
     .. "'Super+Z minimizes a window in the tide shell, which is not running.'"), does("Minimize the window"))
 hl.bind(key("L"), exec(lock), does("Lock"))
+-- Super+S: keep awake, Super+P: presenter mode, Do not disturb and keep
+-- awake together (tide SPEC.md §10). tide's shell holds both and shows
+-- the OSD; without it nothing could, so a notification says why.
+hl.bind(key("S"), exec("qs -c tide ipc call keepawake toggle || notify-send -a tide 'No keep awake' "
+    .. "'Super+S keeps the screen awake in the tide shell, which is not running.'"), does("Keep awake"))
+hl.bind(key("P"), exec("qs -c tide ipc call presenter toggle || notify-send -a tide 'No presenter mode' "
+    .. "'Super+P turns on presenter mode in the tide shell, which is not running.'"), does("Presenter mode"))
 hl.bind(key("SHIFT + E"), hl.dsp.exit(), does("Quit Hyprland"))
 
 -- Layouts.

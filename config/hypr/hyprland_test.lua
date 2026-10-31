@@ -610,7 +610,7 @@ test("every key in the spec is bound", function()
         "SUPER + Space", "SUPER + T", "SUPER + W", "SUPER + V", "SUPER + G", "SUPER + F",
         "SUPER + SHIFT + G", "SUPER + E", "SUPER + B", "SUPER + C", "SUPER + SHIFT + C",
         "SUPER + H", "SUPER + I", "SUPER + M", "SUPER + N", "SUPER + R", "SUPER + Y",
-        "SUPER + BackSpace", "SUPER + Z", "SUPER + L",
+        "SUPER + BackSpace", "SUPER + Z", "SUPER + L", "SUPER + S", "SUPER + P",
         "SUPER + Left", "SUPER + Right", "SUPER + SHIFT + Left", "SUPER + SHIFT + Right",
         "SUPER + Page_Up", "SUPER + Page_Down",
         "SUPER + J", "SUPER + K", "SUPER + SHIFT + J", "SUPER + SHIFT + K",
@@ -633,9 +633,10 @@ end)
 
 test("the dropped keys stay unbound", function()
     load()
-    -- BSP toggle, pseudo-tile, rotate master, and a tenth workspace.
-    -- Super+O, which rotated the master, is monocle now.
-    for _, k in ipairs({ "SUPER + SHIFT + backslash", "SUPER + P",
+    -- BSP toggle, rotate master, and a tenth workspace. Super+O, which
+    -- rotated the master, is monocle now, and Super+P, which pseudo-tiled,
+    -- presenter mode.
+    for _, k in ipairs({ "SUPER + SHIFT + backslash",
                          "SUPER + SHIFT + O", "SUPER + 0", "SUPER + SHIFT + 0" }) do
         eq(nil, S.binds["|" .. k], k)
     end
@@ -814,6 +815,29 @@ test("Super+C opens tide's picker, says so when there's no shell, and Calendar h
     f:write(t.args, "\n")
     f:close()
     truthy(os.execute("sh -n '" .. script .. "'"), "the command parses as sh")
+end)
+
+for _, case in ipairs({
+    { key = "SUPER + S", call = "keepawake toggle", title = "No keep awake", does = "Keep awake" },
+    { key = "SUPER + P", call = "presenter toggle", title = "No presenter mode", does = "Presenter mode" },
+}) do
+    test(case.key .. " asks tide's shell for " .. case.does:lower() .. ", and says so when there's no shell", function()
+        load()
+        local t = bind(case.key).target
+        truthy(t.args:find("qs -c tide ipc call " .. case.call .. " ||", 1, true), t.args)
+        truthy(t.args:find("|| notify-send -a tide '" .. case.title .. "'", 1, true), t.args)
+        eq(case.does, bind(case.key).opts.description)
+        local script = tmp .. "/super-" .. case.call:gsub(" ", "-") .. ".sh"
+        local f = assert(io.open(script, "w"))
+        f:write(t.args, "\n")
+        f:close()
+        truthy(os.execute("sh -n '" .. script .. "'"), "the command parses as sh")
+    end)
+end
+
+test("Super+D stays free for hyprland.local.lua", function()
+    load()
+    eq(nil, S.binds["|SUPER + D"], "SUPER + D")
 end)
 
 test("Alt+Tab swaps with the master, and Super+Return no longer does", function()

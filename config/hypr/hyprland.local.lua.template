@@ -16,11 +16,10 @@
 -- hl.monitor({ output = "DP-1", mode = "2560x1440@144", position = "0x0", scale = 1 })
 -- hl.monitor({ output = "eDP-1", mode = "1920x1080", position = "2560x0", scale = 1 })
 
--- Extra launchers. Super+D (code) and Super+S (secureshell) are left unbound
--- in the shared config because those helper scripts aren't in the repo.
+-- Extra launchers. Super+D (code) is left unbound in the shared config
+-- because that helper script isn't in the repo. (Super+S is keep awake now.)
 -- runenv puts ~/scripts.local and the dirs named in ~/.env.local on PATH:
 -- hl.bind("SUPER + D", hl.dsp.exec_cmd("~/scripts/runenv code"))
--- hl.bind("SUPER + S", hl.dsp.exec_cmd("~/scripts/runenv secureshell"))
 
 -- Rebinding an already-bound key: unbind the shared bind first, e.g. to
 -- change Super+E's file manager on this machine only:
