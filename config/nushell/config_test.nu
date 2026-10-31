@@ -3069,6 +3069,8 @@ except OSError: pass
         $env.HOME = $d
         cd $d
         hide-env --ignore-errors SHPOOL_SESSION_NAME
+        # Pin the "no backend" fallback: a host with tmux would tag it instead.
+        $env.WANT_TMUX = "0"
         $env.on-production-host = {|| false }
         $env.prompt-info = {|flags| "" }
         $env.auth-info = {|| "SSH" }
