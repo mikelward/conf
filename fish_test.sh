@@ -1410,6 +1410,68 @@ assert_equal "[PR12login:] [PR12login/]
 []
 [mine/]" "$result"
 
+# tilemo SPEC.md §6.3: with TIDE_WORKSPACE unset, a macOS shell reads tilemo's
+# file instead. Mirrors shrc_test.sh.
+_tilemo_home="$_testdir/fish-tilemo-home"
+mkdir -p "$_tilemo_home/Library/Caches/tilemo"
+_tilemo_file="$_tilemo_home/Library/Caches/tilemo/workspace"
+_tilemo_home_q=$(shell_quote "$_tilemo_home")
+
+start_test "fish session_prefix reads tilemo's workspace file when TIDE_WORKSPACE is unset, and a set one wins"
+printf 'PR12login\n' >"$_tilemo_file"
+result="$(_fish_run '
+    set -gx HOME '"$_tilemo_home_q"'
+    set -e SHPOOL_PREFIX; set -e TMUX_PREFIX; set -e TMUX_SEP; set -e TIDE_WORKSPACE
+    echo "[$(session_prefix shpool)] [$(session_prefix tmux)]"
+    set -gx TIDE_WORKSPACE docs
+    echo "[$(session_prefix shpool)]"
+    set -gx TIDE_WORKSPACE ""
+    echo "[$(session_prefix shpool)]"
+')"
+assert_equal "[PR12login:] [PR12login/]
+[docs:]
+[]" "$result"
+
+start_test "fish session_prefix takes tilemo's file without a final newline, and is quiet without one"
+printf 'docs' >"$_tilemo_file"
+result="$(_fish_run '
+    set -gx HOME '"$_tilemo_home_q"'
+    set -e SHPOOL_PREFIX; set -e TIDE_WORKSPACE
+    echo "[$(session_prefix shpool)]"
+' 2>&1)"
+assert_equal "[docs:]" "$result"
+rm -f "$_tilemo_file"
+result="$(_fish_run '
+    set -gx HOME '"$_tilemo_home_q"'
+    set -e SHPOOL_PREFIX; set -e TIDE_WORKSPACE
+    echo "[$(session_prefix shpool)]"
+' 2>&1)"
+assert_equal "[]" "$result"
+
+start_test "fish session_prefix warns about and ignores a name in tilemo's file that isn't letters and digits"
+for _bad in 'my-repo' 'a b' "x'y" 'caf\303\251' '\033]0;x\007'; do
+    printf "$_bad\\n" >"$_tilemo_file"
+    result="$(_fish_run '
+        set -gx HOME '"$_tilemo_home_q"'
+        set -e SHPOOL_PREFIX; set -e TIDE_WORKSPACE
+        echo "[$(session_prefix shpool)]"
+    ' 2>"$_testdir/fish-tilemo.err")"
+    assert_equal "[]" "$result"
+    assert_contains "tilemo: ignoring the workspace in $_tilemo_file" "$(cat "$_testdir/fish-tilemo.err")"
+done
+
+start_test "fish session_prefix warns when tilemo's file can't be read"
+rm -f "$_tilemo_file"
+mkdir "$_tilemo_file"
+result="$(_fish_run '
+    set -gx HOME '"$_tilemo_home_q"'
+    set -e SHPOOL_PREFIX; set -e TIDE_WORKSPACE
+    echo "[$(session_prefix shpool)]"
+' 2>"$_testdir/fish-tilemo.err")"
+assert_equal "[]" "$result"
+assert_contains "tilemo: can't read the workspace from $_tilemo_file" "$(cat "$_testdir/fish-tilemo.err")"
+rmdir "$_tilemo_file"
+
 start_test "fish handoff names the session for the tide workspace without keeping it"
 result="$(_fish_run '
     set -e SHPOOL_PREFIX

@@ -1617,23 +1617,61 @@ session_shell() {
     puts "$_shell -l"
 }
 
+# Set REPLY to tilemo's current workspace on macOS, or empty. A shell from
+# Cmd+N in an already-running kitty has kitty's launch environment, without
+# TIDE_WORKSPACE, so tilemo keeps the name in a file (tilemo SPEC.md §6.3).
+# Read with the builtin, not a command substitution: this runs on every shell
+# start. The path is macOS's cache folder, so it stands in for an OS test,
+# which fish and mesh can't make without forking `uname`. No file is tilemo
+# not installed, or not a Mac, and says nothing; an unreadable file or a name
+# that isn't ASCII letters and digits warns and is ignored. The value isn't
+# echoed in the warning, so a corrupt file can't put escapes on the terminal.
+# Kept in parity across bash/zsh (here), fish, nushell, mesh and Elvish.
+tilemo_workspace() {
+    REPLY=
+    local _file="$HOME/Library/Caches/tilemo/workspace"
+    test -e "$_file" || return 0
+    if test -d "$_file" || test ! -r "$_file"; then
+        warn "tilemo: can't read the workspace from $_file"
+        return 0
+    fi
+    # read is false on a last line with no newline, which still counts.
+    gets REPLY <"$_file" || test -n "$REPLY" || return 0
+    # Spelled out: a range like A-Z can match more than ASCII in some locales.
+    case "$REPLY" in
+        *[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789]*)
+            warn "tilemo: ignoring the workspace in $_file, which isn't just letters and digits"
+            REPLY=
+            ;;
+    esac
+    return 0
+}
+
 # Print the session-name prefix for backend $1 (shpool or tmux), so a terminal
 # opened on a tide workspace gets sessions named for it (tide SPEC.md §6.5):
 # TIDE_WORKSPACE, which tide keeps to ASCII letters and digits, then the
 # launcher's separator (":" for autoshpool, TMUX_SEP or "/" for autotmux).
-# SHPOOL_PREFIX or TMUX_PREFIX, already set, wins. Empty -- and the launcher
-# picks its own project prefix -- outside a tide workspace. Kept in parity
-# across bash/zsh (here), fish, nushell, mesh and Elvish.
+# Unset, tilemo's file on macOS stands in for it; set but empty is a
+# workspace with no usable name. SHPOOL_PREFIX or TMUX_PREFIX, already set,
+# wins. Empty -- and the launcher picks its own project prefix -- outside a
+# tide workspace. Kept in parity across bash/zsh (here), fish, nushell, mesh
+# and Elvish.
 session_prefix() {
-    local _own= _sep=
+    local _own= _sep= _ws="${TIDE_WORKSPACE:-}" REPLY=
     case "$1" in
         shpool) _own="${SHPOOL_PREFIX:-}"; _sep=: ;;
         tmux)   _own="${TMUX_PREFIX:-}"; _sep="${TMUX_SEP:-/}" ;;
     esac
     if test -n "$_own"; then
         puts "$_own"
-    elif test -n "${TIDE_WORKSPACE:-}"; then
-        puts "$TIDE_WORKSPACE$_sep"
+        return 0
+    fi
+    if test -z "${TIDE_WORKSPACE+set}"; then
+        tilemo_workspace
+        _ws="$REPLY"
+    fi
+    if test -n "$_ws"; then
+        puts "$_ws$_sep"
     fi
     return 0
 }
