@@ -1617,13 +1617,35 @@ session_shell() {
     puts "$_shell -l"
 }
 
+# Print the session-name prefix for backend $1 (shpool or tmux), so a terminal
+# opened on a tide workspace gets sessions named for it (tide SPEC.md §6.5):
+# TIDE_WORKSPACE, which tide keeps to ASCII letters and digits, then the
+# launcher's separator (":" for autoshpool, TMUX_SEP or "/" for autotmux).
+# SHPOOL_PREFIX or TMUX_PREFIX, already set, wins. Empty -- and the launcher
+# picks its own project prefix -- outside a tide workspace. Kept in parity
+# across bash/zsh (here), fish, nushell, mesh and Elvish.
+session_prefix() {
+    local _own= _sep=
+    case "$1" in
+        shpool) _own="${SHPOOL_PREFIX:-}"; _sep=: ;;
+        tmux)   _own="${TMUX_PREFIX:-}"; _sep="${TMUX_SEP:-/}" ;;
+    esac
+    if test -n "$_own"; then
+        puts "$_own"
+    elif test -n "${TIDE_WORKSPACE:-}"; then
+        puts "$TIDE_WORKSPACE$_sep"
+    fi
+    return 0
+}
+
 # SESSION_SHELL is set for the launcher alone: an inherited value wins (so
 # SESSION_SHELL=... overrides), and the launchers are external commands, so
-# the assignment never outlives the call.
+# the assignment never outlives the call. The same goes for the prefix; an
+# empty one is the launcher's default.
 maybe_start_session_and_exit() {
     case "$(session_backend)" in
-        shpool) want_shpool && SESSION_SHELL="${SESSION_SHELL:-$(session_shell)}" autoshpool && exit ;;
-        tmux)   want_tmux   && SESSION_SHELL="${SESSION_SHELL:-$(session_shell)}" autotmux   && exit ;;
+        shpool) want_shpool && SESSION_SHELL="${SESSION_SHELL:-$(session_shell)}" SHPOOL_PREFIX="$(session_prefix shpool)" autoshpool && exit ;;
+        tmux)   want_tmux   && SESSION_SHELL="${SESSION_SHELL:-$(session_shell)}" TMUX_PREFIX="$(session_prefix tmux)" autotmux   && exit ;;
     esac
 }
 

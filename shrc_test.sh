@@ -1482,6 +1482,55 @@ _out="$(
 )"
 assert_equal "launcher saw [/opt/other-shell -l]" "$_out"
 
+# A terminal opened on a tide workspace names its sessions for it (tide
+# SPEC.md §6.5): TIDE_WORKSPACE as the launcher's prefix, for that call only.
+start_test "session_prefix is TIDE_WORKSPACE and the launcher's separator"
+_out="$(
+    unset SHPOOL_PREFIX TMUX_PREFIX TMUX_SEP
+    TIDE_WORKSPACE=PR12login
+    puts "[$(session_prefix shpool)] [$(session_prefix tmux)]"
+    TMUX_SEP=-
+    puts "[$(session_prefix tmux)]"
+)"
+assert_equal "[PR12login:] [PR12login/]
+[PR12login-]" "$_out"
+
+start_test "session_prefix is empty outside a tide workspace, and a set prefix wins"
+_out="$(
+    unset SHPOOL_PREFIX TMUX_PREFIX TIDE_WORKSPACE
+    puts "[$(session_prefix shpool)] [$(session_prefix tmux)]"
+    TIDE_WORKSPACE=
+    puts "[$(session_prefix shpool)]"
+    TIDE_WORKSPACE=docs SHPOOL_PREFIX=mine: TMUX_PREFIX=mine/
+    puts "[$(session_prefix shpool)] [$(session_prefix tmux)]"
+)"
+assert_equal "[] []
+[]
+[mine:] [mine/]" "$_out"
+
+mkdir -p "$_testdir/prefix-bin"
+printf '%s\n' '#!/bin/sh' 'printf "launcher saw prefix [%s]\n" "$SHPOOL_PREFIX"' 'exit 1' >"$_testdir/prefix-bin/autoshpool"
+printf '%s\n' '#!/bin/sh' 'printf "launcher saw prefix [%s]\n" "$TMUX_PREFIX"' 'exit 1' >"$_testdir/prefix-bin/autotmux"
+chmod +x "$_testdir/prefix-bin/autoshpool" "$_testdir/prefix-bin/autotmux"
+
+start_test "handoff names the session for the tide workspace without keeping it"
+_out="$(
+    SHLVL=2
+    unset SHPOOL_PREFIX TMUX_PREFIX TMUX_SEP
+    TIDE_WORKSPACE=PR12login
+    PATH="$_testdir/prefix-bin:$PATH"
+    want_shpool() { true; }
+    want_tmux() { true; }
+    session_backend() { puts shpool; }
+    maybe_start_session_and_exit
+    session_backend() { puts tmux; }
+    maybe_start_session_and_exit
+    puts "after [${SHPOOL_PREFIX-unset}] [${TMUX_PREFIX-unset}]"
+)"
+assert_equal "launcher saw prefix [PR12login:]
+launcher saw prefix [PR12login/]
+after [unset] [unset]" "$_out"
+
 # want_tmux mirrors want_shpool but gates on both the tmux and autotmux
 # binaries. Reuse the in_shpool / inside_tmux / stdin_is_tty stubs from
 # above; only the looked-up command names differ.

@@ -1396,6 +1396,33 @@ result="$(_fish_run '
 assert_contains "launcher saw own shell" "$result"
 assert_contains "after []" "$result"
 
+start_test "fish session_prefix is TIDE_WORKSPACE and the launcher's separator, unless a prefix is set"
+result="$(_fish_run '
+    set -e SHPOOL_PREFIX; set -e TMUX_PREFIX; set -e TMUX_SEP
+    set -gx TIDE_WORKSPACE PR12login
+    echo "[$(session_prefix shpool)] [$(session_prefix tmux)]"
+    set -gx TIDE_WORKSPACE ""
+    echo "[$(session_prefix shpool)]"
+    set -gx TIDE_WORKSPACE docs; set -gx TMUX_PREFIX mine/
+    echo "[$(session_prefix tmux)]"
+')"
+assert_equal "[PR12login:] [PR12login/]
+[]
+[mine/]" "$result"
+
+start_test "fish handoff names the session for the tide workspace without keeping it"
+result="$(_fish_run '
+    set -e SHPOOL_PREFIX
+    set -gx TIDE_WORKSPACE PR12login
+    function session_backend; echo shpool; end
+    function want_shpool; return 0; end
+    function autoshpool; echo "launcher saw [$SHPOOL_PREFIX]"; return 1; end
+    maybe_start_session_and_exit
+    set -q SHPOOL_PREFIX; and echo kept; or echo "after unset"
+')"
+assert_contains "launcher saw [PR12login:]" "$result"
+assert_contains "after unset" "$result"
+
 SHLVL="$_saved_shlvl"
 
 ###############

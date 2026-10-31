@@ -1715,6 +1715,26 @@ assert_contains "launcher saw [" "$result"
 assert_contains " -l]" "$result"
 assert_contains "after []" "$result"
 
+start_test "mesh session-prefix is TIDE_WORKSPACE and the launcher's separator, unless a prefix is set"
+result="$(_mesh_run_config '' '
+    $env.SHPOOL_PREFIX = ""
+    $env.TMUX_PREFIX = ""
+    $env.TMUX_SEP = ""
+    $env.TIDE_WORKSPACE = "PR12login"
+    a = session-prefix(shpool)
+    b = session-prefix(tmux)
+    puts "[$a] [$b]"
+    $env.TIDE_WORKSPACE = ""
+    c = session-prefix(shpool)
+    puts "[$c]"
+    $env.TMUX_PREFIX = "mine/"
+    d = session-prefix(tmux)
+    puts "[$d]"
+')"
+assert_equal "[PR12login:] [PR12login/]
+[]
+[mine/]" "$result"
+
 ###############
 # TEST: applydiff only replaces the file when the command succeeded
 

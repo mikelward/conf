@@ -994,16 +994,41 @@ function session_shell
     echo "$(status fish-path) -l"
 end
 
+# The session-name prefix for backend $argv[1] (shpool or tmux), from the
+# tide workspace the terminal was opened on (tide SPEC.md §6.5). Mirrors
+# shrc's session_prefix.
+function session_prefix --argument-names backend
+    set -l own
+    set -l sep
+    switch $backend
+    case shpool
+        set own "$SHPOOL_PREFIX"
+        set sep :
+    case tmux
+        set own "$TMUX_PREFIX"
+        set sep /
+        test -n "$TMUX_SEP"; and set sep "$TMUX_SEP"
+    end
+    if test -n "$own"
+        echo $own
+    else if test -n "$TIDE_WORKSPACE"
+        echo "$TIDE_WORKSPACE$sep"
+    end
+    return 0
+end
+
 function maybe_start_session_and_exit
     switch (session_backend)
     case shpool
         if want_shpool
             set -lx SESSION_SHELL "$(session_shell)"
+            set -lx SHPOOL_PREFIX "$(session_prefix shpool)"
             autoshpool; and exit
         end
     case tmux
         if want_tmux
             set -lx SESSION_SHELL "$(session_shell)"
+            set -lx TMUX_PREFIX "$(session_prefix tmux)"
             autotmux; and exit
         end
     end

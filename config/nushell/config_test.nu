@@ -1322,6 +1322,26 @@ except OSError: pass
         assert equal (session-shell) ""
     })
 
+    # session-prefix names a terminal's sessions for the tide workspace it
+    # was opened on (tide SPEC.md §6.5), unless a prefix is set already.
+    (run-test "nu session-prefix is TIDE_WORKSPACE and the launcher's separator" {
+        hide-env --ignore-errors SHPOOL_PREFIX TMUX_PREFIX TMUX_SEP
+        $env.TIDE_WORKSPACE = "PR12login"
+        assert equal (session-prefix shpool) "PR12login:"
+        assert equal (session-prefix tmux) "PR12login/"
+        $env.TMUX_SEP = "-"
+        assert equal (session-prefix tmux) "PR12login-"
+    })
+    (run-test "nu session-prefix is empty outside a tide workspace, and a set prefix wins" {
+        hide-env --ignore-errors SHPOOL_PREFIX TMUX_PREFIX TIDE_WORKSPACE
+        assert equal (session-prefix shpool) ""
+        $env.TIDE_WORKSPACE = ""
+        assert equal (session-prefix tmux) ""
+        $env.TIDE_WORKSPACE = "docs"
+        $env.SHPOOL_PREFIX = "mine:"
+        assert equal (session-prefix shpool) "mine:"
+    })
+
     ###############
     # want-tmux gating (mirrors want-shpool but on the tmux binary)
     (run-test "nu want-tmux true when remote" {
