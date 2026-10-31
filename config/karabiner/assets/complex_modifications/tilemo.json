@@ -2,7 +2,7 @@
     "title": "tilemo",
     "rules": [
         {
-            "description": "tilemo: Win+key and Win+click send Ctrl+Option+Command, and a lone Win tap opens the launcher (alongside the setup-macos modifier rotation)",
+            "description": "tilemo: Win+key and Win+click send Ctrl+Option+Command, a lone Win tap opens the workspace list, and Alt+Tab swaps with the master (alongside the setup-macos modifier rotation)",
             "manipulators": [
                 {
                     "type": "basic",
@@ -21,7 +21,7 @@
                     ],
                     "to_if_alone": [
                         {
-                            "key_code": "spacebar",
+                            "key_code": "f20",
                             "modifiers": [
                                 "left_option",
                                 "left_command",
@@ -1442,6 +1442,27 @@
                                 "left_option",
                                 "left_command",
                                 "left_control"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "tab",
+                        "modifiers": {
+                            "mandatory": [
+                                "left_option"
+                            ]
+                        }
+                    },
+                    "to": [
+                        {
+                            "key_code": "tab",
+                            "modifiers": [
+                                "left_option",
+                                "left_command",
+                                "shift"
                             ]
                         }
                     ]
