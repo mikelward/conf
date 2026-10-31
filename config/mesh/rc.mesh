@@ -1242,25 +1242,52 @@ str func session-shell() {
   return "$exe -l"
 }
 
+# The session-name prefix for a backend (shpool or tmux), from the tide
+# workspace the terminal was opened on (tide SPEC.md §6.5). Mirrors shrc's
+# session_prefix.
+str func session-prefix(backend) {
+  ws = $env:get(TIDE_WORKSPACE, "")
+  if $backend == "tmux" {
+    own = $env:get(TMUX_PREFIX, "")
+    return $own if $own != ""
+    return "" if $ws == ""
+    sep = $env:get(TMUX_SEP, "")
+    slash = "/"
+    return "$ws$slash" if $sep == ""
+    return "$ws$sep"
+  }
+  own = $env:get(SHPOOL_PREFIX, "")
+  return $own if $own != ""
+  return "" if $ws == ""
+  colon = ":"
+  return "$ws$colon"
+}
+
 func maybe-start-session-and-exit() {
   match session-backend() {
     shpool => {
       return unless want-shpool()
       # Scoped by hand: set for the launcher, restored when it fails (an
-      # empty SESSION_SHELL reads as unset everywhere it is consulted), so a
-      # failed handoff does not leave this shell's identity for later nested
-      # shells to inherit.
+      # empty SESSION_SHELL or prefix reads as unset everywhere it is
+      # consulted), so a failed handoff does not leave this shell's identity
+      # for later nested shells to inherit.
       prev = $env:get(SESSION_SHELL, "")
+      prev_prefix = $env:get(SHPOOL_PREFIX, "")
       $env.SESSION_SHELL = session-shell()
+      $env.SHPOOL_PREFIX = session-prefix(shpool)
       autoshpool && exit
       $env.SESSION_SHELL = $prev
+      $env.SHPOOL_PREFIX = $prev_prefix
     }
     tmux => {
       return unless want-tmux()
       prev = $env:get(SESSION_SHELL, "")
+      prev_prefix = $env:get(TMUX_PREFIX, "")
       $env.SESSION_SHELL = session-shell()
+      $env.TMUX_PREFIX = session-prefix(tmux)
       autotmux && exit
       $env.SESSION_SHELL = $prev
+      $env.TMUX_PREFIX = $prev_prefix
     }
   }
 }

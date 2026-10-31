@@ -5,6 +5,17 @@
 Calls autopilot made without asking, each one chosen for being cheap to undo.
 Delete an entry once you have agreed with it or reversed it.
 
+- [ ] **A tide workspace names its shell sessions as a prefix, not a whole
+      name.** A terminal opened on tide's `PR-12 login` workspace
+      (`TIDE_WORKSPACE=PR12login`) starts sessions `PR12login:1`,
+      `PR12login:2` … under shpool and `PR12login/1` … under tmux, passing
+      `SHPOOL_PREFIX` / `TMUX_PREFIX` to autoshpool and autotmux, which
+      already take them, in place of the project prefix. The alternative,
+      one session named `PR12login` that every terminal on the workspace
+      shares, would need the scripts repo's launchers to change. Undoing it
+      is `session_prefix` in each shell (shrc, fish, nushell, mesh,
+      Elvish).
+
 - [ ] **The mouse wheel's default speed is 3.** On the first tide
       session, 1.5 was too slow; 2.5 was "a lot closer, maybe a bit more", so
       `apply-input.sh` now defaults to 3. A different number is a one-line

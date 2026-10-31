@@ -1622,13 +1622,31 @@ fn session-shell {
 # SESSION_SHELL is set for the launcher alone and put back when it fails, so a
 # failed handoff does not leave this shell's identity for later nested shells to
 # inherit.
+# The session-name prefix for a backend (shpool or tmux), from the tide
+# workspace the terminal was opened on (tide SPEC.md §6.5). Mirrors shrc's
+# session_prefix.
+fn session-prefix {|backend|
+    var own = (env-or SHPOOL_PREFIX '')
+    var sep = ':'
+    if (==s $backend tmux) {
+        set own = (env-or TMUX_PREFIX '')
+        set sep = (env-or TMUX_SEP '')
+        if (==s $sep '') { set sep = '/' }
+    }
+    if (not-eq $own '') { put $own; return }
+    var ws = (env-or TIDE_WORKSPACE '')
+    if (==s $ws '') { put ''; return }
+    put $ws$sep
+}
+
 fn maybe-start-session-and-exit {
     var backend = (session-backend)
     var launcher = ''
-    if (and (==s $backend shpool) (want-shpool)) { set launcher = autoshpool }
-    if (and (==s $backend tmux) (want-tmux)) { set launcher = autotmux }
+    var prefix = ''
+    if (and (==s $backend shpool) (want-shpool)) { set launcher = autoshpool; set prefix = SHPOOL_PREFIX }
+    if (and (==s $backend tmux) (want-tmux)) { set launcher = autotmux; set prefix = TMUX_PREFIX }
     if (==s $launcher '') { return }
-    if ?(env-run [SESSION_SHELL (session-shell)] $launcher) { exit }
+    if ?(env-run [SESSION_SHELL (session-shell) $prefix (session-prefix $backend)] $launcher) { exit }
 }
 
 ##############################

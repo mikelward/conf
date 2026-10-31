@@ -443,17 +443,30 @@ def session-shell [] {
     $"($nu.current-exe) -l"
 }
 
+# The session-name prefix for a backend (shpool or tmux), from the tide
+# workspace the terminal was opened on (tide SPEC.md §6.5). Mirrors shrc's
+# session_prefix.
+def session-prefix [backend: string] {
+    let own = if $backend == "shpool" { $env.SHPOOL_PREFIX? | default "" } else { $env.TMUX_PREFIX? | default "" }
+    if $own != "" { return $own }
+    let ws = ($env.TIDE_WORKSPACE? | default "")
+    if $ws == "" { return "" }
+    let tmux_sep = ($env.TMUX_SEP? | default "")
+    let sep = if $backend == "shpool" { ":" } else if $tmux_sep != "" { $tmux_sep } else { "/" }
+    $"($ws)($sep)"
+}
+
 def maybe-start-session-and-exit [] {
     match (session-backend) {
         "shpool" => {
             if (want-shpool) {
-                let ok = (try { with-env {SESSION_SHELL: (session-shell)} { autoshpool }; true } catch { false })
+                let ok = (try { with-env {SESSION_SHELL: (session-shell), SHPOOL_PREFIX: (session-prefix shpool)} { autoshpool }; true } catch { false })
                 if $ok { exit }
             }
         }
         "tmux" => {
             if (want-tmux) {
-                let ok = (try { with-env {SESSION_SHELL: (session-shell)} { autotmux }; true } catch { false })
+                let ok = (try { with-env {SESSION_SHELL: (session-shell), TMUX_PREFIX: (session-prefix tmux)} { autotmux }; true } catch { false })
                 if $ok { exit }
             }
         }

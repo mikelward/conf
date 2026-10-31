@@ -500,6 +500,16 @@ start_test "elvish session-shell keeps an inherited value"
 result="$(_elvish_run 'set-env SESSION_SHELL "/bin/bash -l"' 'echo (session-shell)')"
 assert_equal "/bin/bash -l" "$result"
 
+start_test "elvish session-prefix is TIDE_WORKSPACE and the launcher's separator"
+result="$(_elvish_run 'unset-env SHPOOL_PREFIX; unset-env TMUX_PREFIX; unset-env TMUX_SEP; set-env TIDE_WORKSPACE PR12login' 'echo "["(session-prefix shpool)"] ["(session-prefix tmux)"]"')"
+assert_equal "[PR12login:] [PR12login/]" "$result"
+
+start_test "elvish session-prefix is empty outside a tide workspace, and a set prefix wins"
+result="$(_elvish_run 'unset-env SHPOOL_PREFIX; unset-env TIDE_WORKSPACE' 'echo "["(session-prefix shpool)"]"')"
+assert_equal "[]" "$result"
+result="$(_elvish_run 'set-env TIDE_WORKSPACE docs; set-env TMUX_PREFIX mine/' 'echo "["(session-prefix tmux)"]"')"
+assert_equal "[mine/]" "$result"
+
 start_test "elvish session-name reports the shpool session"
 result="$(_elvish_run 'set-env SHPOOL_SESSION_NAME work' 'echo (session-name)')"
 assert_equal "work" "$result"
