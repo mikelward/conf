@@ -1272,12 +1272,23 @@ local function lid_open()
         -- couldn't be written): turn on an internal panel that is off.
         local all = hl.get_monitors({ all = true })
         local candidate = internal_panel(all)
+        local listed = false
         for _, m in ipairs(all) do
-            if m.name == candidate and m.enabled == false then
-                panel = candidate
-                lid.panel = panel
+            if m.name == candidate then
+                listed = true
+                if m.enabled == false then
+                    panel = candidate
+                end
             end
         end
+        -- Hyprland 0.56.2 lists only the monitors that are on, whatever it's
+        -- passed, so a panel off is never listed. Named by
+        -- $HYPR_INTERNAL_OUTPUT, it needs no listing: missing means off.
+        local override = os.getenv("HYPR_INTERNAL_OUTPUT")
+        if not listed and override and override ~= "" then
+            panel = candidate
+        end
+        lid.panel = panel
         if not panel then
             return
         end

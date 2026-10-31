@@ -343,7 +343,10 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   tide's or `hyprland.local.lua`'s settings for it if any, and moves
   those workspaces back, even across a config reload in between. The panel
   is auto-detected (first eDP/LVDS/DSI
-  output; override with `HYPR_INTERNAL_OUTPUT`). If an old
+  output; override with `HYPR_INTERNAL_OUTPUT`). Set it on a dock: if the
+  lid closed with no record of it (before this config, say), Hyprland lists
+  no panel that's off, so only a name lets opening the lid turn it back on.
+  If an old
   `HandleLidSwitch=ignore` logind drop-in from the retired `setup-hypr` is
   still installed, remove it, or an undocked lid close won't suspend.
 - **Automatic light/dark by time of day.** `theme-daemon.sh` (autostarted)
