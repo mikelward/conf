@@ -1102,11 +1102,16 @@ hl.bind(key("End"), function()
     end
 end, does("The last workspace other than home"))
 
--- Super+Return: the name prompt for the focused window (tide SPEC.md
--- §6.5), which moves it to the workspace named. It needs tide's shell; a
--- notification says so when there's none.
-hl.bind(key("Return"), exec("qs -c tide ipc call prompt move || notify-send -a tide 'No name prompt' "
-    .. "'Super+Return moves a window through the name prompt in the tide shell, which is not running.'"),
+-- Super+Return: tide's name prompt (tide SPEC.md §6.5), to go to the
+-- workspace named, moving no window, so it works with none focused.
+-- Super+Shift+Return: the same prompt for the focused window, which moves
+-- it there. Both need tide's shell; a notification says so when there's
+-- none.
+hl.bind(key("Return"), exec("qs -c tide ipc call prompt go || notify-send -a tide 'No name prompt' "
+    .. "'Super+Return goes to a workspace through the name prompt in the tide shell, which is not running.'"),
+    does("Go to a workspace"))
+hl.bind(key("SHIFT + Return"), exec("qs -c tide ipc call prompt move || notify-send -a tide 'No name prompt' "
+    .. "'Super+Shift+Return moves a window through the name prompt in the tide shell, which is not running.'"),
     does("Move the window to a workspace"))
 
 -- The windows wanting attention (§14): tide's switcher on its Attention
