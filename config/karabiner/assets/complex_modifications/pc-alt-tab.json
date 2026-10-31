@@ -1,39 +1,9 @@
 {
-    "title": "PC keyboard Alt+Tab",
+    "title": "PC keyboard Ctrl+Tab",
     "rules": [
         {
-            "description": "Alt+Tab switches applications (PC muscle memory, alongside the setup-macos modifier rotation)",
+            "description": "Ctrl+Tab goes to the next tab, not the application switcher (PC muscle memory, alongside the setup-macos modifier rotation; Alt+Tab is tilemo's)",
             "manipulators": [
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "tab",
-                        "modifiers": {
-                            "mandatory": ["left_option", "shift"]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "tab",
-                            "modifiers": ["left_control", "shift"]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "tab",
-                        "modifiers": {
-                            "mandatory": ["left_option"]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "tab",
-                            "modifiers": ["left_control"]
-                        }
-                    ]
-                },
                 {
                     "type": "basic",
                     "from": {

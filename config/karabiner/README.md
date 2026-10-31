@@ -2,8 +2,8 @@
 
 Four complex-modification rules for a PC keyboard:
 
-- `assets/complex_modifications/pc-alt-tab.json` puts application switching
-  back under the physical Alt key.
+- `assets/complex_modifications/pc-alt-tab.json` puts the next tab back on
+  physical Ctrl+Tab; physical Alt+Tab is tilemo's.
 - `assets/complex_modifications/pc-arrows.json` makes physical Ctrl+Left/Right
   move by word, Win+Left/Right switch Spaces and Win+Shift+Left/Right move the
   window a Space; see
@@ -34,67 +34,54 @@ survives:
 That works because macOS uses Command wherever Linux uses Control —
 `Ctrl+C`, `Ctrl+V`, `Ctrl+T`, `Ctrl+W` all stay under the same physical key.
 
-Tab is the one exception. macOS switches applications with `Cmd+Tab`, which
-Linux does with `Alt+Tab`, so the rotation lands app switching on the physical
-Ctrl key and leaves `Ctrl+Tab` (next tab) on the physical Alt key — the two
-swap round. This rule swaps them back.
-
-Both directions are mapped, which matters: remapping only Alt+Tab would move
-app switching onto the physical Alt key while leaving it on the physical Ctrl
-key too, and next-tab would then have no physical keys at all. So the rule is
-a genuine swap.
+Tab is the one exception. macOS switches applications with `Cmd+Tab`, so the
+rotation lands app switching on physical Ctrl+Tab, where Linux has the next
+tab. This rule puts the next tab back there.
 
 | Physical keys | Without this rule | With it |
 | --- | --- | --- |
-| Alt+Tab | next tab | **switch applications** |
 | Ctrl+Tab | switch applications | **next tab** |
+| Shift+Ctrl+Tab | switch applications, backwards | **previous tab** |
 
-Shift variants are mapped alongside each, so `Shift+Alt+Tab` cycles the
-switcher backwards and `Shift+Ctrl+Tab` goes to the previous tab.
+**Physical Alt+Tab is tilemo's**, swap with the master, in tilemo's rule
+below (tilemo SPEC.md §7.2). This rule used to swap the two both ways, making
+Alt+Tab switch applications; it gave that up when tilemo took the key. The
+switcher's Windows tab stands in for the application switcher, and a Mac
+keyboard's own Cmd+Tab still works. **Without tilemo's rule**, physical
+Alt+Tab is left to the rotation, as Ctrl+Tab, the next tab too, so a PC
+keyboard has no application switcher key.
 
-## Why the rule outputs left_control
+## Why the rule outputs left_option
 
-The rule maps `left_option`+Tab to **`left_control`**+Tab, which looks wrong
+The rule maps `left_control`+Tab to **`left_option`**+Tab, which looks wrong
 until you account for the layering: Karabiner grabs the keyboard and sees the
 *physical* key, and its virtual keyboard's output then passes through the
 `hidutil` rotation. So the output has to name the key that the rotation turns
-into Command, and that's left Control.
+into Control, and that's left Option.
 
-Chain: physical Alt → Karabiner sees `left_option` → emits `left_control` →
-`hidutil` maps Control to Command → `Cmd+Tab`.
-
-The reciprocal runs the same way: physical Ctrl → Karabiner sees
-`left_control` → emits `left_option` → `hidutil` maps Alt to Control →
-`Ctrl+Tab`. Karabiner doesn't feed its own output back through its
-manipulators, so the two mappings don't chase each other.
+Chain: physical Ctrl → Karabiner sees `left_control` → emits `left_option` →
+`hidutil` maps Alt to Control → `Ctrl+Tab`.
 
 ### If the layering is the other way round
 
 On a macOS version where Karabiner sees the *rotated* key rather than the
-physical one, this rule is wrong in a way that shows up immediately: physical
-Alt arrives as `left_control`, which matches the reciprocal manipulator and is
-rewritten to `left_option` — so Alt+Tab produces Option+Tab, which does nothing,
-rather than switching applications. Physical Ctrl+Tab arrives as
-`left_command`, matches nothing, and keeps switching applications.
-
-**Alt+Tab doing nothing at all is the symptom.** It is not a silent no-op: the
-rule is remapping, just from the wrong starting point.
+physical one, physical Ctrl arrives as `left_command`, matches nothing, and
+keeps switching applications. **Ctrl+Tab still switching applications is the
+symptom.**
 
 To correct it, shift every modifier name one step along the rotation —
 `left_option` becomes `left_control`, and `left_control` becomes `left_command`.
 Do it as one substitution rather than in sequence, or the first rename feeds
-the second. The four manipulators become:
+the second. The two manipulators become:
 
 | # | `from` | `to` |
 | --- | --- | --- |
-| 1 | `left_control` + `shift` | `left_command` + `shift` |
-| 2 | `left_control` | `left_command` |
-| 3 | `left_command` + `shift` | `left_control` + `shift` |
-| 4 | `left_command` | `left_control` |
+| 1 | `left_command` + `shift` | `left_control` + `shift` |
+| 2 | `left_command` | `left_control` |
 
 If you would rather back the whole thing out, disabling the rule in Karabiner
-restores the rotation's own behavior — application switching on physical
-Ctrl+Tab, next tab on physical Alt+Tab.
+restores the rotation's own behavior: application switching on physical
+Ctrl+Tab.
 
 ## Arrow keys
 
@@ -137,7 +124,7 @@ same one-step shift as above, applied as one substitution: `left_control` →
 `left_command`, `left_command` → `left_option`, `left_option` →
 `left_control`.
 
-Only left Ctrl and left Win are mapped, matching the Alt+Tab rule. Home and End
+Only left Ctrl and left Win are mapped, matching the Ctrl+Tab rule. Home and End
 still reach the line ends.
 
 ## Terminals
@@ -159,7 +146,7 @@ same layering as above. Copy and paste are kitty's, from conf's `kitty.conf`,
 the same file Linux uses, so Ctrl+C there copies a selection and otherwise
 sends the interrupt.
 
-- **Left to the rotation:** Tab, which the Alt+Tab rule swaps; Space, since
+- **Left to the rotation:** Tab, which the Ctrl+Tab rule and tilemo's take; Space, since
   Control+Space is macOS's input source switch; and Ctrl+Up and Down, which
   are Mission Control. Right Ctrl and right Alt are left alone, so right Ctrl
   still reaches kitty's Command shortcuts (Cmd+Q, Cmd+,).
@@ -187,11 +174,19 @@ Ctrl+Option+Command+key, and tilemo binds that (tilemo SPEC.md §7.1).
 | Win+key, for each key tilemo binds | `left_option`+`left_command`+`left_control`+key | Ctrl+Option+Command+key |
 | Win+Shift+key | the same, plus `shift` | Ctrl+Option+Command+Shift+key |
 | Win+click, Win+right-click, Win+middle-click | the same modifiers, on the button | Super+drag and Super+middle-click in tilemo |
-| Win, tapped alone | `spacebar` with the same modifiers | tilemo's launcher |
+| Win, tapped alone | `f20` with the same modifiers | tilemo's switcher, on its workspace list |
+| Alt+Tab | `left_option`+`left_command`+`shift`+`tab` | Ctrl+Option+Shift+Tab: tilemo's swap with the master |
 
 The outputs name the keys the rotation turns into Control, Option and
 Command, by the same layering as the rules above. A key tilemo doesn't bind,
 such as Win+Q, is left alone and stays Option.
+
+- **The lone tap is Super+F20,** a key no PC keyboard here has, so tilemo
+  tells it from Super+Space: the tap opens its workspace list, Super+Space
+  its launcher (tilemo SPEC.md §7.2, §9).
+- **Alt+Tab is Ctrl+Option+Shift+Tab,** without Command, so no Win
+  combination makes it. Physical Alt+Shift+Tab is left to the rotation, as
+  Shift+Ctrl+Tab, the previous tab.
 
 - **Enable it above the arrow rule.** Both match Win+Left/Right, and
   Karabiner uses the first rule that matches, with newly added rules at the
@@ -216,8 +211,8 @@ such as Win+Q, is left alone and stays Option.
 ## Enabling it
 
 Karabiner does not enable assets automatically. In Karabiner-Elements
-Settings > Complex Modifications > Add rule, enable "Alt+Tab switches
-applications", "Ctrl+Left/Right moves by word, Win+Left/Right switches
+Settings > Complex Modifications > Add rule, enable "Ctrl+Tab goes to the
+next tab", "Ctrl+Left/Right moves by word, Win+Left/Right switches
 Spaces, Win+Shift+Left/Right moves the window a Space" and then "Ctrl is
 Control and Alt is Meta in kitty", so it sits above the arrow rule, and, with
 tilemo, the "tilemo:" rule last, so it sits above them all. `setup-macos` installs
@@ -233,8 +228,9 @@ permission granted, both prompted for on first launch.
 
 ## Scope
 
-Only left Alt is mapped. Right Alt is left alone so it stays available as a
-plain modifier, and the rotation still sends it to right Control.
+Only left Ctrl, and in tilemo's rule left Alt, are mapped. Right Alt is left
+alone so it stays available as a plain modifier, and the rotation still sends
+it to right Control.
 
 ## Modifier names
 
@@ -242,5 +238,5 @@ Karabiner's canonical name for the Alt modifier is `left_option`, not
 `left_alt`, and that is what the rule uses throughout — `left_alt` is at best
 an alias, and an unrecognized modifier name in a `mandatory` block is not an
 error Karabiner reports. It simply never matches, which looks identical to the
-rule not being enabled. The test asserts `left_option` in both the trigger and
-output positions for that reason.
+rule not being enabled. The test asserts `left_option` in both the trigger
+(tilemo's Alt+Tab) and output positions for that reason.
