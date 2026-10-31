@@ -63,6 +63,7 @@ local LOCAL = ".config/hypr/hyprland.local.lua"
 local TIDE_INPUT = ".config/hypr/tide-input.lua"
 local TIDE_OUTPUTS = ".config/hypr/tide-outputs.lua"
 local TIDE_APPEARANCE = ".config/hypr/tide-appearance.lua"
+local TIDE_POWER = ".config/hypr/tide-power.lua"
 local TIDE_WORKSPACES = ".config/hypr/tide-workspaces.lua"
 local LID_FILE = "run/hypr/sig1/tide-lid"
 
@@ -304,7 +305,7 @@ end
 -- (whose lid state file survives).
 local function load(setup)
     if not (setup and setup.keep_files) then
-        assert(os.execute("rm -rf '" .. tmp .. "/" .. LAYOUT .. "' '" .. tmp .. "/" .. LOCAL .. "' '" .. tmp .. "/" .. TIDE_INPUT .. "' '" .. tmp .. "/" .. TIDE_OUTPUTS .. "' '" .. tmp .. "/" .. TIDE_APPEARANCE .. "' '" .. tmp .. "/" .. TIDE_WORKSPACES .. "'"))
+        assert(os.execute("rm -rf '" .. tmp .. "/" .. LAYOUT .. "' '" .. tmp .. "/" .. LOCAL .. "' '" .. tmp .. "/" .. TIDE_INPUT .. "' '" .. tmp .. "/" .. TIDE_OUTPUTS .. "' '" .. tmp .. "/" .. TIDE_APPEARANCE .. "' '" .. tmp .. "/" .. TIDE_WORKSPACES .. "' '" .. tmp .. "/" .. TIDE_POWER .. "'"))
     end
     if not (setup and setup.reload) then
         -- rm -rf, since a failed test can leave a directory in its place.
@@ -334,6 +335,9 @@ local function load(setup)
     end
     if setup and setup.workspaces then
         write(TIDE_WORKSPACES, setup.workspaces)
+    end
+    if setup and setup.power then
+        write(TIDE_POWER, setup.power)
     end
     env_overrides = { XDG_RUNTIME_DIR = tmp .. "/run", HYPRLAND_INSTANCE_SIGNATURE = "sig1", XDG_CURRENT_DESKTOP = false }
     for k, v in pairs((setup and setup.env) or {}) do
@@ -1094,6 +1098,54 @@ test("docked lid close disables the panel; open restores it and its workspaces",
     fire("monitor.added", { name = "eDP-1" })
     eq(0, #S.dispatched, "only once")
     eq(false, exists(LID_FILE), "the saved state is gone once restored")
+end)
+
+local function undocked()
+    S.monitor_list = { { name = "eDP-1" } }
+    S.workspace_list = { { id = 1, monitor = S.monitor_list[1] } }
+end
+
+test("undocked, closing the lid leaves the panel to logind's suspend by default", function()
+    load({ env = TIDE })
+    undocked()
+    lid("on")
+    eq(0, #S.dispatched, "nothing locks here")
+    eq(0, #S.monitors, "the panel is left alone")
+end)
+
+test("undocked, tide's Lock locks as the lid closes", function()
+    load({ env = TIDE, power = [[return { lid_close = "lock" }]] })
+    undocked()
+    lid("on")
+    eq(1, #S.dispatched)
+    eq("exec_cmd", S.dispatched[1].dsp)
+    eq("loginctl lock-session", S.dispatched[1].args)
+    eq(0, #S.monitors, "the panel is left alone")
+end)
+
+test("undocked, tide's Do nothing does nothing", function()
+    load({ env = TIDE, power = [[return { lid_close = "nothing" }]] })
+    undocked()
+    lid("on")
+    eq(0, #S.dispatched)
+end)
+
+test("docked, the lid turns the panel off whatever tide's Power page says", function()
+    load({ monitors = { { name = "eDP-1" }, { name = "DP-1" } }, power = [[return { lid_close = "lock" }]] })
+    docked()
+    lid("on")
+    eq(0, #S.dispatched, "no lock")
+    eq(true, S.monitors[1].disabled)
+end)
+
+test("a bad tide-power.lua is reported and taken as suspend", function()
+    load({ env = TIDE, power = [[return { lid_close = "hibernate" }]] })
+    undocked()
+    S.notifications = {}
+    lid("on")
+    eq(0, #S.dispatched)
+    truthy(S.notifications[1] and S.notifications[1].text:find("lid_close should be suspend, lock or nothing, not hibernate", 1, true),
+        S.notifications[1] and S.notifications[1].text)
 end)
 
 test("a reload with the lid closed keeps the panel off, and opening restores it", function()
