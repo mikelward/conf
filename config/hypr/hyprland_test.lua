@@ -884,79 +884,39 @@ test("every binding says what it does, for tide's Keys page", function()
     eq(true, bind("XF86AudioMute").opts.locked)
 end)
 
-test("Super+A focuses the urgent or last window without the guard", function()
+test("Super+A opens tide's switcher on its Attention tab", function()
     load()
-    _G.tide_focus = nil
-    for _, keys in ipairs({ "SUPER + A" }) do
-        local d = run(keys)
-        eq(1, #d, keys)
-        -- Not urgent_or_last, whose "last" walks every window in 0.56.
-        eq(true, d[1].args.last, keys .. ": none urgent goes back")
-        S.urgent_window = { address = "0xabc" }
-        d = run(keys)
-        eq(1, #d, keys)
-        eq("address:0xabc", d[1].args.window, keys .. ": the urgent window")
-        S.urgent_window = nil
-    end
+    local t = bind("SUPER + A").target
+    truthy(t.args:find("qs -c tide ipc call switcher toggle attention", 1, true), t.args)
+    truthy(t.args:find("notify-send -a tide 'No Attention tab'", 1, true), "says so without the shell")
+    truthy(t.args:find("hyprctl eval 'conf_attention.without_shell()'", 1, true), "and falls back")
+    local script = tmp .. "/super-a.sh"
+    local f = assert(io.open(script, "w"))
+    f:write(t.args, "\n")
+    f:close()
+    truthy(os.execute("sh -n '" .. script .. "'"), "the command parses as sh")
+    -- The attention cycle and its Super release are gone.
+    eq(nil, S.binds["|SUPER + Super_L"], "no release binding")
+    eq(nil, S.binds["|SUPER + Super_R"], "no release binding")
 end)
 
-test("Super+A goes back when it can't look for an urgent window", function()
+test("without the shell, Super+A brings up the urgent window, or the last one", function()
     load()
-    _G.tide_focus = nil
+    S.urgent_window = nil
+    S.dispatched = {}
+    conf_attention.without_shell()
+    eq(true, S.dispatched[1].args.last, "none urgent goes back")
+    S.urgent_window = { address = "0xabc" }
+    S.dispatched = {}
+    conf_attention.without_shell()
+    eq("address:0xabc", S.dispatched[1].args.window, "the urgent window")
     S.urgent_window = "raise"
-    local d = run("SUPER + A")
+    S.dispatched = {}
+    conf_attention.without_shell()
     eq(1, #S.notifications)
     truthy(S.notifications[1].text:find("urgent window", 1, true))
-    eq(true, d[1].args.last)
-end)
-
-test("Super+A goes to the guard's waiting window first", function()
-    load()
-    local waiting = 1
-    _G.tide_focus = {
-        focus_attention = function()
-            if waiting == 0 then
-                return false
-            end
-            waiting = waiting - 1
-            hl.dispatch({ name = "guard-focus" })
-            return true
-        end,
-    }
-    local d = run("SUPER + A")
-    eq(1, #d)
-    eq("guard-focus", d[1].name)
-    d = run("SUPER + A")
-    eq(true, d[1].args.last, "none waiting: goes back")
-    _G.tide_focus = { focus_attention = function() error("boom") end }
-    d = run("SUPER + A")
-    eq(1, #S.notifications)
-    truthy(S.notifications[1].text:find("boom", 1, true))
-    eq(true, d[1].args.last, "a failed guard falls back")
-    _G.tide_focus = nil
-end)
-
-test("releasing Super ends the guard's Super+A cycle, without consuming Super", function()
-    load()
-    local ended = 0
-    _G.tide_focus = { end_cycle = function() ended = ended + 1 return true end }
-    for _, keys in ipairs({ "SUPER + Super_L", "SUPER + Super_R" }) do
-        eq(true, bind(keys).opts.release, keys .. " on release")
-        eq(true, bind(keys).opts.non_consuming, keys .. " passes Super on")
-        run(keys)
-    end
-    eq(2, ended)
-    -- A guard from before cycling, or none, is left alone.
-    _G.tide_focus = { focus_attention = function() return false end }
-    run("SUPER + Super_L")
-    _G.tide_focus = nil
-    run("SUPER + Super_L")
-    eq(0, #S.notifications)
-    _G.tide_focus = { end_cycle = function() error("boom") end }
-    run("SUPER + Super_L")
-    eq(1, #S.notifications)
-    truthy(S.notifications[1].text:find("boom", 1, true))
-    _G.tide_focus = nil
+    eq(true, S.dispatched[1].args.last, "a failed lookup goes back")
+    S.urgent_window = nil
 end)
 
 test("tide's notification popups are blacked out of screen shares", function()

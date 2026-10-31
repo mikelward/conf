@@ -10,10 +10,6 @@ Delete an entry once you have agreed with it or reversed it.
       again, so the history keeps them; a workspace that isn't standing is
       skipped once it's removed, as tide SPEC.md §6.6 says. Treating standing
       ones like the rest is `still_there` in `hyprland.lua`.
-- [ ] **The way to a window waiting for attention is on Super+A for now.**
-      Super+Tab and Super+Home went to workspaces, and tide's switcher,
-      whose Attention tab Super+A is to open, isn't built yet; until then
-      Super+A runs the old cycle. Its binding moves to the switcher with it.
 - [ ] **Super+Tab's history starts afresh on a config reload.** It's kept
       in Lua from `workspace.active`, and a reload is a new Lua state.
       Keeping it in a file, as the lid's state is, would be the
