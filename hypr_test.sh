@@ -27,6 +27,7 @@ _waybar_cfg="$_srcdir/config/waybar/config.jsonc"
 _waybar_css="$_srcdir/config/waybar/style.css"
 _fuzzel="$_srcdir/config/fuzzel/fuzzel.ini"
 _swaync_cfg="$_srcdir/config/swaync/config.json"
+_tide_workspaces="$_srcdir/config/tide/workspaces.json"
 _swaync_css="$_srcdir/config/swaync/style.css"
 
 ################################################################################
@@ -680,6 +681,19 @@ if command -v python3 >/dev/null 2>&1; then
 
     start_test "swaync config.json parses as JSON"
     if python3 -c 'import sys,json; json.load(sys.stdin)' < "$_swaync_cfg" 2>/dev/null; then
+        assert_true true
+    else
+        assert_true false
+    fi
+
+    # tide's Workspaces settings (tide SPEC.md §6.5, §16): home is the first
+    # standing workspace, and its apps are mail, chat, calendar and music.
+    start_test "tide workspaces.json has the standing workspaces, home first, and home's apps"
+    if python3 -c 'import sys, json
+s = json.load(sys.stdin)
+assert set(s) <= {"standing", "inApps", "namePatterns"}, s
+assert s["standing"][0] == "in" and len(s["standing"]) == len({n.lower() for n in s["standing"]})
+assert s["inApps"] == ["mail.google.com", "chat.google.com", "calendar.google.com", "music.youtube.com"]' < "$_tide_workspaces"; then
         assert_true true
     else
         assert_true false

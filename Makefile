@@ -401,6 +401,7 @@ $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
                           config/hypr/scripts/theme.sh \
                           config/hypr/scripts/theme-daemon.sh \
                           config/tide/appearance-hook \
+                          config/tide/workspaces.json \
                           config/hypr/scripts/launch-fuzzel.sh \
                           config/waybar/config.jsonc \
                           config/waybar/scripts/power-menu.sh \
