@@ -657,6 +657,7 @@ test("every key in the spec is bound", function()
         "SUPER + Up", "SUPER + SHIFT + Up", "SUPER + Down",
         "SUPER + SHIFT + F", "SUPER + Insert", "SUPER + SHIFT + R",
         "SUPER + Tab", "SUPER + Home", "SUPER + End", "SUPER + A", "ALT + Tab",
+        "SUPER + 1", "SUPER + 5", "SUPER + 9", "SUPER + SHIFT + 1", "SUPER + SHIFT + 9",
         "SUPER + SHIFT + N", "SUPER + ALT + Space",
         "Print", "ALT + Print", "SHIFT + Print", "SUPER + Print",
         "XF86AudioMicMute", "SUPER + SHIFT + M",
@@ -700,12 +701,40 @@ local function named(...)
 end
 local STANDING = [[return { home = "in", standing = { "in", "re", "oc", "me" }, in_apps = {} }]]
 
-test("Super+1…9 and Super+Shift+1…9 are gone: workspaces have names", function()
-    load()
-    for i = 1, 9 do
-        eq(nil, S.binds["|SUPER + " .. i], "Super+" .. i)
-        eq(nil, S.binds["|SUPER + SHIFT + " .. i], "Super+Shift+" .. i)
-    end
+test("Super+1…9 go to the Nth workspace on the bar, Super+1 home", function()
+    load({ workspaces = STANDING })
+    S.workspace_list = named("in", "PR-12", "re", "docs")
+    table.insert(S.workspace_list, { id = 2, name = "2" })
+    table.insert(S.workspace_list, { id = -98, name = "special:scratch" })
+    -- in, re, oc, me, PR-12, docs, 2
+    S.active_workspace = { id = -1340, name = "re" }
+    local d = run("SUPER + 1")
+    eq(1, #d)
+    truthy(is_dsp(d[1], "focus"))
+    eq("name:in", d[1].args.workspace, "Super+1 is home, as Super+Home is")
+    eq("name:oc", run("SUPER + 3")[1].args.workspace, "a standing one, made or not")
+    eq("name:PR-12", run("SUPER + 5")[1].args.workspace, "then the made ones")
+    eq("name:2", run("SUPER + 7")[1].args.workspace)
+    eq(0, #run("SUPER + 8"), "past the last, nothing")
+    eq(0, #run("SUPER + 9"))
+end)
+
+test("Super+1 goes home whatever it's called", function()
+    load({ workspaces = [[return { home = "mail", standing = { "mail" }, in_apps = {} }]] })
+    eq("name:mail", run("SUPER + 1")[1].args.workspace)
+end)
+
+test("Super+Shift+1…9 send the window to the Nth workspace and stay", function()
+    load({ workspaces = STANDING })
+    S.workspace_list = named("in", "docs")
+    S.active_workspace = { id = -1338, name = "in" }
+    local d = run("SUPER + SHIFT + 2")
+    eq(1, #d)
+    truthy(is_dsp(d[1], "window.move"))
+    eq("name:re", d[1].args.workspace)
+    eq(false, d[1].args.follow)
+    eq("name:docs", run("SUPER + SHIFT + 5")[1].args.workspace)
+    eq(0, #run("SUPER + SHIFT + 6"), "past the last, nothing")
 end)
 
 test("Super+Left/Right and PgUp/PgDn step through the bar's order and stop at the ends", function()

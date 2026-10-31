@@ -934,8 +934,7 @@ hl.define_submap("resize", function()
     hl.bind("Return", hl.dsp.submap("reset"), does("Leave resize mode"))
 end)
 
--- Workspaces by name (tide SPEC.md §6.5, §6.6): no Super+1…9. The bar's
--- order is the standing workspaces, home first, then the rest in the
+-- Workspaces by name (tide SPEC.md §6.5, §6.6). The bar's order is the standing workspaces, home first, then the rest in the
 -- order they were made (falling IDs), then numbered ones, as tide's bar
 -- has it (shell/lib/workspaces.mjs's workspaceOrder). A standing one is
 -- in the order whether it's made yet or not, and going there makes it.
@@ -1042,6 +1041,27 @@ hl.bind(key("Page_Up"), step_workspace(-1, false), does("Previous workspace"))
 hl.bind(key("Page_Down"), step_workspace(1, false), does("Next workspace"))
 hl.bind(key("SHIFT + Left"), step_workspace(-1, true), does("Move the window to the previous workspace"))
 hl.bind(key("SHIFT + Right"), step_workspace(1, true), does("Move the window to the next workspace"))
+
+-- Super+1…9: the Nth workspace in the bar's order, so Super+1 is home, as
+-- Super+Home is. Super+Shift+1…9 sends the focused window there and stays,
+-- as KDE does. Past the last workspace, nothing.
+local function nth_workspace(n, send_window)
+    return function()
+        local target = bar_order()[n]
+        if not target then
+            return
+        end
+        if send_window then
+            hl.dispatch(hl.dsp.window.move({ workspace = "name:" .. target, follow = false }))
+        else
+            go(target)
+        end
+    end
+end
+for n = 1, 9 do
+    hl.bind(key(tostring(n)), nth_workspace(n, false), does("Workspace " .. n .. " on the bar"))
+    hl.bind(key("SHIFT + " .. n), nth_workspace(n, true), does("Send the window to workspace " .. n .. " on the bar"))
+end
 
 -- The workspaces other than home, the one used last first, for Super+Tab
 -- and Super+End. Kept from Hyprland's workspace.active, so a config reload
