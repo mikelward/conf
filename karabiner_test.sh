@@ -249,14 +249,15 @@ assert_contains '"pointing_button": "button3"' "$_tilemo"
 start_test "tilemo's rule doesn't use the left_alt spelling"
 assert_not_contains '"left_alt"' "$_tilemo"
 
-# --- Terminals: Ctrl is Control and Alt is Meta in kitty ---
+# --- Terminals: Ctrl is Control and Alt is Meta in kitty and Ghostty ---
 #
 # The rotation makes physical Ctrl Command everywhere, so in a terminal Ctrl+U,
 # Ctrl+K and Ctrl+R never reach the shell. In kitty this rule gives Ctrl back
 # to Control by emitting left_option, which the rotation turns into Control,
 # and Alt back to Meta by emitting left_command, which it turns into Option
 # (kitty's macos_option_as_alt). Copy and paste on Ctrl+C and Ctrl+V are
-# kitty's own maps, as on Linux.
+# kitty's own maps, as on Linux. Ghostty gets the same, with the same keys in
+# its own config.
 _terminal_file="$_srcdir/config/karabiner/assets/complex_modifications/pc-terminal.json"
 
 start_test "the terminal rule exists"
@@ -281,7 +282,7 @@ if command -v python3 >/dev/null 2>&1; then
 import json, sys
 for m in json.load(open(sys.argv[1]))["rules"][0]["manipulators"]:
     f, (t,) = m["from"], m["to"]
-    if m.get("conditions") != [{"type": "frontmost_application_if", "bundle_identifiers": ["^net\\.kovidgoyal\\.kitty$"]}]:
+    if m.get("conditions") != [{"type": "frontmost_application_if", "bundle_identifiers": ["^net\\.kovidgoyal\\.kitty$", "^com\\.mitchellh\\.ghostty$"]}]:
         print("BAD condition", m.get("conditions"))
     if f["modifiers"].get("optional") != ["shift"] or len(f["modifiers"]["mandatory"]) != 1:
         print("BAD from", f)
@@ -290,7 +291,7 @@ for m in json.load(open(sys.argv[1]))["rules"][0]["manipulators"]:
     print(f["modifiers"]["mandatory"][0], f["key_code"], "->", t["modifiers"][0])
 PY
 )
-    start_test "every manipulator is kitty's, keeps Shift and the key, and swaps one modifier"
+    start_test "every manipulator is kitty's and Ghostty's, keeps Shift and the key, and swaps one modifier"
     assert_not_contains "BAD" "$_terminal_pairs"
 
     start_test "Ctrl+U, Ctrl+K and Ctrl+F reach kitty as Control"
@@ -320,6 +321,14 @@ PY
     assert_true grep -Eq '^map ctrl\+v +paste_from_clipboard$' "$_kitty_conf"
     start_test "kitty treats left Option as Alt"
     assert_true grep -Eq '^macos_option_as_alt +left$' "$_kitty_conf"
+
+    # Ghostty, the rule's other terminal, has kitty's keys in its own config.
+    _ghostty_conf="$_srcdir/config/ghostty/config"
+    start_test "Ghostty copies on Ctrl+C, letting it through without a selection, and pastes on Ctrl+V"
+    assert_true grep -Eq '^keybind = performable:ctrl\+c=copy_to_clipboard$' "$_ghostty_conf"
+    assert_true grep -Eq '^keybind = ctrl\+v=paste_from_clipboard$' "$_ghostty_conf"
+    start_test "Ghostty treats left Option as Alt"
+    assert_true grep -Eq '^macos-option-as-alt = left$' "$_ghostty_conf"
 
     start_test "Tab, Space and Ctrl+Up/Down are left to the rotation"
     assert_not_contains " tab " "$_terminal_pairs"

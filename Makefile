@@ -384,6 +384,7 @@ $(CACHE)/test-karabiner.stamp: \
                           config/karabiner/assets/complex_modifications/tilemo.json \
                           config/karabiner/assets/complex_modifications/pc-terminal.json \
                           config/kitty/kitty.conf \
+                          config/ghostty/config \
                           karabiner_test.sh shrc_test_lib.sh | $(CACHE)
 	@bash karabiner_test.sh
 	@touch $@

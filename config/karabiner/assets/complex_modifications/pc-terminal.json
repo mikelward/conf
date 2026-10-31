@@ -2,7 +2,7 @@
     "title": "PC keyboard terminals",
     "rules": [
         {
-            "description": "Ctrl is Control and Alt is Meta in kitty (PC muscle memory, alongside the setup-macos modifier rotation)",
+            "description": "Ctrl is Control and Alt is Meta in kitty and Ghostty (PC muscle memory, alongside the setup-macos modifier rotation)",
             "manipulators": [
                 {
                     "type": "basic",
@@ -29,7 +29,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -59,7 +60,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -89,7 +91,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -119,7 +122,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -149,7 +153,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -179,7 +184,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -209,7 +215,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -239,7 +246,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -269,7 +277,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -299,7 +308,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -329,7 +339,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -359,7 +370,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -389,7 +401,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -419,7 +432,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -449,7 +463,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -479,7 +494,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -509,7 +525,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -539,7 +556,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -569,7 +587,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -599,7 +618,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -629,7 +649,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -659,7 +680,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -689,7 +711,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -719,7 +742,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -749,7 +773,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -779,7 +804,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -809,7 +835,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -839,7 +866,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -869,7 +897,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -899,7 +928,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -929,7 +959,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -959,7 +990,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -989,7 +1021,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1019,7 +1052,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1049,7 +1083,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1079,7 +1114,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1109,7 +1145,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1139,7 +1176,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1169,7 +1207,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1199,7 +1238,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1229,7 +1269,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1259,7 +1300,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1289,7 +1331,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1319,7 +1362,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1349,7 +1393,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1379,7 +1424,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1409,7 +1455,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1439,7 +1486,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1469,7 +1517,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1499,7 +1548,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1529,7 +1579,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1559,7 +1610,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1589,7 +1641,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1619,7 +1672,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1649,7 +1703,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1679,7 +1734,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1709,7 +1765,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1739,7 +1796,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1769,7 +1827,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1799,7 +1858,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1829,7 +1889,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1859,7 +1920,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1889,7 +1951,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1919,7 +1982,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1949,7 +2013,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -1979,7 +2044,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2009,7 +2075,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2039,7 +2106,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2069,7 +2137,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2099,7 +2168,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2129,7 +2199,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2159,7 +2230,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2189,7 +2261,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2219,7 +2292,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2249,7 +2323,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2279,7 +2354,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2309,7 +2385,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2339,7 +2416,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2369,7 +2447,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2399,7 +2478,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2429,7 +2509,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2459,7 +2540,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2489,7 +2571,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2519,7 +2602,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2549,7 +2633,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2579,7 +2664,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2609,7 +2695,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2639,7 +2726,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2669,7 +2757,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2699,7 +2788,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2729,7 +2819,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2759,7 +2850,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2789,7 +2881,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2819,7 +2912,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2849,7 +2943,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2879,7 +2974,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2909,7 +3005,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2939,7 +3036,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2969,7 +3067,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -2999,7 +3098,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -3029,7 +3129,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -3059,7 +3160,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -3089,7 +3191,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -3119,7 +3222,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -3149,7 +3253,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -3179,7 +3284,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -3209,7 +3315,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -3239,7 +3346,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -3269,7 +3377,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]
@@ -3299,7 +3408,8 @@
                         {
                             "type": "frontmost_application_if",
                             "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$"
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.mitchellh\\.ghostty$"
                             ]
                         }
                     ]

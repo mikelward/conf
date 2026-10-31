@@ -1,0 +1,15 @@
+# Ghostty, given kitty's keys (config/kitty/kitty.conf), so either terminal
+# works the same; on a Mac, Karabiner's pc-terminal rule makes physical Ctrl
+# and Alt arrive as Control and Option here, as it does in kitty.
+#
+# Named `config`, not 1.3's `config.ghostty`: every Ghostty reads this name
+# from ~/.config/ghostty, on macOS too, and 1.3 still does.
+
+# Copy a selection, or with nothing selected let Ctrl+C through as the
+# interrupt, like kitty's copy_or_interrupt. performable: needs 1.1.
+keybind = performable:ctrl+c=copy_to_clipboard
+keybind = ctrl+v=paste_from_clipboard
+
+# Left Option is Meta, so Alt+B and Alt+F move by word; right Option still
+# types accents, like kitty's macos_option_as_alt left.
+macos-option-as-alt = left
