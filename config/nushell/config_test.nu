@@ -2388,6 +2388,26 @@ except OSError: pass
     })
 
     ###############
+    # vm: reads ~/.vm file, caches in $env.VM
+    (run-test "nu vm returns file contents" {
+        hide-env --ignore-errors VM
+        "host1" | save --force ([$env.HOME ".vm"] | path join)
+        assert equal (vm) "host1"
+    })
+    (run-test "nu vm returns empty when file missing" {
+        hide-env --ignore-errors VM
+        let vm_file = ([$env.HOME ".vm"] | path join)
+        if ($vm_file | path exists) { ^rm $vm_file }
+        assert equal (vm) ""
+    })
+    (run-test "nu vm caches in VM env var" {
+        hide-env --ignore-errors VM
+        "cached" | save --force ([$env.HOME ".vm"] | path join)
+        vm | ignore
+        assert equal $env.VM "cached"
+    })
+
+    ###############
     # on-my-machine: true when workstation or laptop
     (run-test "nu on-my-machine true on workstation" {
         $env.HOSTNAME = "mikel-workstation"

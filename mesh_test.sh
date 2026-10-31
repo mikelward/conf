@@ -2230,7 +2230,8 @@ e = one-line("a  b"); e = projectname(); e = projectroot(); e = prompt-line("")
 e = prompt-project-name(); e = prompt-session-name(); e = publish-jobs-file()
 e = red("x"); e = rootdir(); e = session-backend(); e = session-name()
 e = session-prefix("shpool"); e = session-shell(); e = short-hostname(); e = ssh-client-host(); e = tilde-pwd()
-e = tilemo-workspace(); e = title-text(); e = unquoted-head("\"x\""); e = workstation(); e = yellow("x")
+e = tilemo-workspace(); e = title-text(); e = unquoted-head("\"x\""); e = vm(); e = workstation()
+e = yellow("x")
 f = age("/etc/hostname")
 '
 
@@ -2938,6 +2939,21 @@ result="$(_mesh_run '
     puts on-production-host()
 ')"
 assert_equal "true" "$result"
+
+start_test "mesh vm prints the name in ~/.vm"
+printf 'host1\n' > "$_fakehome/.vm"
+result="$(_mesh_run '
+    puts vm()
+')"
+rm -f "$_fakehome/.vm"
+assert_equal "host1" "$result"
+
+start_test "mesh vm prints nothing without ~/.vm"
+rm -f "$_fakehome/.vm"
+result="$(_mesh_run '
+    puts "[$(puts vm())]"
+')"
+assert_equal "[]" "$result"
 
 start_test "mesh on-my-workstation matches ~/.workstation"
 printf 'ws1\n' > "$_fakehome/.workstation"

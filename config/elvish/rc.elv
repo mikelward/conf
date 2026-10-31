@@ -663,6 +663,20 @@ fn workstation {
     put (env-or WORKSTATION '')
 }
 
+# print my VM's name, per ~/.vm; empty when there is none. Cached like
+# workstation.
+fn vm {
+    if (==s (env-or VM_CACHED '') '') {
+        set-env VM_CACHED 1
+        if (os:exists $E:HOME/.vm) {
+            set-env VM (capture-word cat $E:HOME/.vm)
+        } else {
+            set-env VM ''
+        }
+    }
+    put (env-or VM '')
+}
+
 # return true if this machine is my workstation
 fn on-my-workstation {
     var host = (env-or HOSTNAME '')

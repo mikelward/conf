@@ -399,6 +399,20 @@ start_test "elvish short-hostname drops the domain and the username prefix"
 result="$(_elvish_run 'set-env HOSTNAME bob-desktop.example.com' 'echo (short-hostname)')"
 assert_equal "desktop" "$result"
 
+start_test "elvish vm prints the name in ~/.vm, cached"
+printf 'host1\n' > "$_fakehome/.vm"
+result="$(_elvish_run '' 'echo (vm); echo host2 > $E:HOME/.vm; echo (vm)')"
+rm -f "$_fakehome/.vm"
+assert_equal "host1
+host1" "$result"
+
+start_test "elvish vm prints nothing without ~/.vm, and caches that too"
+rm -f "$_fakehome/.vm"
+result="$(_elvish_run '' 'echo "["(vm)"]"; echo host1 > $E:HOME/.vm; echo "["(vm)"]"')"
+rm -f "$_fakehome/.vm"
+assert_equal "[]
+[]" "$result"
+
 start_test "elvish on-my-workstation matches ~/.workstation"
 result="$(_elvish_run 'set-env WORKSTATION_CACHED 1; set-env WORKSTATION host1' \
     'echo (to-string (on-my-workstation))')"

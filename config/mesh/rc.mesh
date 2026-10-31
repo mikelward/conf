@@ -220,6 +220,21 @@ str func workstation() {
   return $env:get(WORKSTATION, "")
 }
 
+# print my VM's name, per ~/.vm; empty when there is none. Cached like
+# workstation().
+str func vm() {
+  if $env:get(VM_CACHED, "") == "" {
+    export VM_CACHED = 1
+    file = "$env.HOME/.vm"
+    if $file:read {
+      export VM = $(cat $file)
+    } else {
+      export VM = ""
+    }
+  }
+  return $env:get(VM, "")
+}
+
 # return true if this machine is my workstation
 bool func on-my-workstation() {
   host = $env:get(HOSTNAME, "")

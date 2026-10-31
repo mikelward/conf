@@ -610,6 +610,19 @@ def --env workstation [] {
     $env.WORKSTATION
 }
 
+# print the contents of ~/.vm (cached in $env.VM); empty when there is none
+def --env vm [] {
+    if not ("VM" in $env) {
+        let f = ([$env.HOME ".vm"] | path join)
+        $env.VM = (if ($f | path exists) {
+            open --raw $f | str trim
+        } else {
+            ""
+        })
+    }
+    $env.VM
+}
+
 # return true if this machine is my workstation
 def --env on-my-workstation [] {
     let host = ($env.HOSTNAME? | default "")
