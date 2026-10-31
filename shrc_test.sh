@@ -3853,4 +3853,30 @@ XDG_CURRENT_DESKTOP=$_qs_saved_desktop
 unset FAKE_LOG
 rm -rf "$_qs_dir"
 
+start_test "vm prints the name in ~/.vm"
+_vm_home=$(mktemp -d)
+_vm_saved_home=$HOME
+HOME=$_vm_home
+printf 'host1\n' > "$HOME/.vm"
+unset VM
+assert_equal "host1" "$(vm)"
+
+start_test "vm caches the name in VM"
+unset VM
+vm >/dev/null
+printf 'host2\n' > "$HOME/.vm"
+assert_equal "host1" "$(vm)"
+
+start_test "vm prints nothing without ~/.vm, and caches that too"
+rm -f "$HOME/.vm"
+unset VM
+assert_equal "" "$(vm)"
+vm >/dev/null
+printf 'host1\n' > "$HOME/.vm"
+assert_equal "" "$(vm)"
+
+HOME=$_vm_saved_home
+unset VM
+rm -rf "$_vm_home"
+
 test_summary "$_real_shell shrc_test"

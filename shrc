@@ -520,6 +520,19 @@ workstation() {
     puts "$WORKSTATION"
 }
 
+# print my VM's name, per ~/.vm; empty when there is none
+vm() {
+    # cache null result too.
+    if test "${VM-unset}" = "unset"; then
+        if test -e "$HOME"/.vm; then
+            VM="$(cat "$HOME"/.vm)"
+        else
+            VM=
+        fi
+    fi
+    puts "$VM"
+}
+
 # return true if this machine is my workstation
 on_my_workstation() {
     case "$HOSTNAME" in

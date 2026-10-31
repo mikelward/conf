@@ -175,6 +175,19 @@ function workstation
     echo $WORKSTATION
 end
 
+# print my VM's name, per ~/.vm; empty when there is none
+function vm
+    # cache null result too.
+    if not set --query VM
+        if test -e $HOME/.vm
+            set --global VM (cat $HOME/.vm)
+        else
+            set --global VM
+        end
+    end
+    echo $VM
+end
+
 # return true if this machine is my workstation
 function on_my_workstation
     switch $HOSTNAME

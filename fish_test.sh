@@ -130,6 +130,33 @@ target
 assert_equal "$expected" "$result"
 
 ###############
+# TEST: vm reads ~/.vm, caching the result
+
+start_test "fish vm prints the name in ~/.vm, cached"
+result="$(_fish_run '
+    printf "host1\n" >$HOME/.vm
+    set --erase VM
+    vm
+    printf "host2\n" >$HOME/.vm
+    vm
+    rm -f $HOME/.vm
+')"
+assert_equal "host1
+host1" "$result"
+
+start_test "fish vm prints nothing without ~/.vm, and caches that too"
+result="$(_fish_run '
+    rm -f $HOME/.vm
+    set --erase VM
+    echo "[$(vm)]"
+    printf "host1\n" >$HOME/.vm
+    echo "[$(vm)]"
+    rm -f $HOME/.vm
+')"
+assert_equal "[]
+[]" "$result"
+
+###############
 # TEST: set_up_ssh_aliases parses ~/.ssh/config and defines functions
 
 start_test "fish set_up_ssh_aliases defines foo"
