@@ -130,6 +130,7 @@ test-all: \
 	test-install-ci-shells \
 	test-amethyst \
 	test-karabiner \
+	test-kitty \
 	test-hypr \
 	test-sway
 
@@ -384,6 +385,12 @@ $(CACHE)/test-karabiner.stamp: \
 	@touch $@
 test-karabiner: $(CACHE)/test-karabiner.stamp
 
+$(CACHE)/test-kitty.stamp: config/kitty/kitty.conf config/kitty/macos.conf \
+                          kitty_test.sh shrc_test_lib.sh | $(CACHE)
+	@sh kitty_test.sh
+	@touch $@
+test-kitty: $(CACHE)/test-kitty.stamp
+
 # The Hyprland desktop: hyprland.lua under a stub of Hyprland's Lua API, plus
 # presence/parse and script checks. Depends on every file it validates so
 # editing any of them re-runs.
@@ -449,5 +456,5 @@ test-sway: $(CACHE)/test-sway.stamp
 	test-dash test-ksh test-bash test-zsh test-prompt test-prompt-zsh test-prompt-perf \
 	test-vcs test-vcs-zsh \
 	test-fish test-nu test-mesh test-elvish test-lint \
-	test-env test-gitconfig test-makefile test-amethyst test-karabiner \
+	test-env test-gitconfig test-makefile test-amethyst test-karabiner test-kitty \
 	test-hypr test-sway
