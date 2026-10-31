@@ -1538,13 +1538,49 @@ printf 'docs' >"$_tilemo_file"
 _out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_tilemo_home" session_prefix shpool 2>&1)"
 assert_equal "docs:" "$_out"
 
+start_test "session_prefix says nothing when tilemo's file holds a blank line"
+printf '\n' >"$_tilemo_file"
+_out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_tilemo_home" session_prefix shpool 2>&1)"
+assert_equal "" "$_out"
+
 start_test "session_prefix says nothing when tilemo's file is missing"
 rm -f "$_tilemo_file"
 _out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_tilemo_home" session_prefix shpool 2>&1)"
 assert_equal "" "$_out"
 
+start_test "session_prefix takes letters and digits in any script from tilemo's file, whatever the locale"
+# é composed, Cyrillic, CJK, Arabic-Indic digits, a Roman numeral.
+for _good in 'caf\303\251' '\320\227\320\260\320\274\320\265\321\202\320\272\320\2700' \
+    '\346\227\245\346\234\254\350\252\236' 'build\331\241\331\242' '\342\205\253'; do
+    printf "$_good\\n" >"$_tilemo_file"
+    _want="$(printf "$_good"):"
+    for _locale in C C.UTF-8; do
+        _out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; LC_ALL=$_locale; HOME="$_tilemo_home" session_prefix shpool 2>&1)"
+        assert_equal "$_want" "$_out"
+    done
+done
+
+start_test "is_letters_and_digits leaves the locale as it was"
+_out="$(LC_ALL=C.UTF-8; is_letters_and_digits "$(printf 'caf\303\251')"; puts "$LC_ALL")"
+assert_equal "C.UTF-8" "$_out"
+
+start_test "is_letters_and_digits' table is python3's letters and digits, where its Unicode matches"
+if command -v python3 >/dev/null 2>&1 &&
+    test "$(python3 -c 'import unicodedata; print(unicodedata.unidata_version)')" = 15.1.0; then
+    _want="$(python3 -c 'import unicodedata as u; r=[]; [r[-1].__setitem__(1, c) if r and r[-1][1] == c - 1 else r.append([c, c]) for c in range(0x110000) if u.category(chr(c))[0] in "LN"]; print(*(n for p in r for n in p))')"
+    # The table's words, one line, as python3 prints them.
+    _got="$(set -f; set -- $_shrc_letters_digits; puts "$*")"
+    assert_equal "$_want" "$_got"
+else
+    puts "SKIP: no python3 with Unicode 15.1.0 to check the table against"
+fi
+
 start_test "session_prefix warns about and ignores a name in tilemo's file that isn't letters and digits"
-for _bad in 'my-repo' 'a b' "x'y" 'caf\303\251' '\033]0;x\007'; do
+# Punctuation, a space, a quote, a decomposed é (a combining mark), an emoji,
+# a tab, bytes that aren't UTF-8 (a lone lead byte, an overlong /, a
+# surrogate), and a terminal escape.
+for _bad in 'my-repo' 'a b' "x'y" 'cafe\314\201' '\360\237\232\200' 'a\tb' 'a\303' '\300\257' \
+    '\355\240\200' '\033]0;x\007'; do
     printf "$_bad\\n" >"$_tilemo_file"
     _out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_tilemo_home" session_prefix shpool 2>"$_testdir/tilemo.err")"
     assert_equal "" "$_out"

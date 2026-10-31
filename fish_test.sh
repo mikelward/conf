@@ -1475,8 +1475,28 @@ result="$(_fish_run '
 ' 2>&1)"
 assert_equal "[]" "$result"
 
+start_test "fish session_prefix takes letters and digits in any script from tilemo's file, whatever the locale"
+# é composed, Cyrillic, CJK, Arabic-Indic digits, a Roman numeral.
+for _good in 'caf\303\251' '\320\227\320\260\320\274\320\265\321\202\320\272\320\2700' \
+    '\346\227\245\346\234\254\350\252\236' 'build\331\241\331\242' '\342\205\253'; do
+    printf "$_good\\n" >"$_tilemo_file"
+    for _locale in C C.UTF-8; do
+        result="$(_fish_run '
+            set -gx LC_ALL '"$_locale"'
+            set -gx HOME '"$_tilemo_home_q"'
+            set -e SHPOOL_PREFIX; set -e TIDE_WORKSPACE
+            echo "[$(session_prefix shpool)]"
+        ' 2>&1)"
+        assert_equal "[$(printf "$_good"):]" "$result"
+    done
+done
+
 start_test "fish session_prefix warns about and ignores a name in tilemo's file that isn't letters and digits"
-for _bad in 'my-repo' 'a b' "x'y" 'caf\303\251' '\033]0;x\007'; do
+# Punctuation, a space, a quote, a decomposed é (a combining mark), an emoji,
+# a tab, bytes that aren't UTF-8 (a lone lead byte, an overlong /, a
+# surrogate), and a terminal escape.
+for _bad in 'my-repo' 'a b' "x'y" 'cafe\314\201' '\360\237\232\200' 'a\tb' 'a\303' '\300\257' \
+    '\355\240\200' '\033]0;x\007'; do
     printf "$_bad\\n" >"$_tilemo_file"
     result="$(_fish_run '
         set -gx HOME '"$_tilemo_home_q"'

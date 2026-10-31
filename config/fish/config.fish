@@ -1021,7 +1021,10 @@ function tilemo_workspace
     # read is false on a last line with no newline, which still counts.
     read ws <"$file"
     test -n "$ws"; or return 0
-    if not string match -qr '^[A-Za-z0-9]+$' -- "$ws"
+    # PCRE2's \p{L} and \p{N}: Unicode's letters and digits, in any script.
+    # fish 4 reads the file as UTF-8 whatever the locale; fish 3 in a
+    # non-UTF-8 locale doesn't, and rejects a name past ASCII, which is safe.
+    if not string match -qr '^[\p{L}\p{N}]+$' -- "$ws"
         warn "tilemo: ignoring the workspace in $file, which isn't just letters and digits"
         return 0
     end

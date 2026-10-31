@@ -1274,7 +1274,8 @@ str func tilemo-workspace() {
   ws = ""
   gets ws < $file || ws = "-"
   return "" if $ws == ""
-  valid = $ws ~ /^[A-Za-z0-9]+$/
+  # Unicode's letters and digits, in any script, whatever the locale.
+  valid = $ws ~ /^[\p{L}\p{N}]+$/
   if not $valid {
     warn "tilemo: ignoring the workspace in $file, which isn't just letters and digits"
     return ""

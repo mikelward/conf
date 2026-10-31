@@ -1370,21 +1370,42 @@ except OSError: pass
         assert equal ($out.stdout | str trim) ""
         assert equal $out.stderr ""
     })
+    (run-test "nu tilemo-workspace takes letters and digits in any script, whatever the locale" {
+        let home = (mktemp -d)
+        let dir = ($home | path join "Library" "Caches" "tilemo")
+        mkdir $dir
+        let file = ($dir | path join "workspace")
+        # é composed, Cyrillic, CJK, Arabic-Indic digits, a Roman numeral.
+        for good in ["caf\u{e9}" "Заметки0" "日本語" "build١٢" "Ⅻ"] {
+            $"($good)\n" | save --force $file
+            for locale in ["C" "C.UTF-8"] {
+                let out = (with-env { LC_ALL: $locale } {
+                    nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tilemo-workspace" | complete
+                })
+                assert equal ($out.stdout | str trim) $good
+                assert equal $out.stderr ""
+            }
+        }
+    })
     (run-test "nu tilemo-workspace warns about and ignores a name that isn't letters and digits" {
         let home = (mktemp -d)
         let dir = ($home | path join "Library" "Caches" "tilemo")
         mkdir $dir
         let file = ($dir | path join "workspace")
-        for bad in ["my-repo" "a b" "x'y" "café" $"(char -u '1b')]0;x(char bel)"] {
+        # Punctuation, a space, a quote, a decomposed é (a combining mark), an
+        # emoji, a tab, and a terminal escape; bytes that aren't UTF-8 below.
+        for bad in ["my-repo" "a b" "x'y" "cafe\u{301}" "\u{1f680}" "a\tb" $"(char -u '1b')]0;x(char bel)"] {
             $"($bad)\n" | save --force $file
             let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tilemo-workspace" | complete)
             assert equal ($out.stdout | str trim) ""
             assert str contains $out.stderr $"tilemo: ignoring the workspace in ($file)"
         }
-        0x[ff fe 0a] | save --force $file
-        let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tilemo-workspace" | complete)
-        assert equal ($out.stdout | str trim) ""
-        assert str contains $out.stderr $"tilemo: ignoring the workspace in ($file)"
+        for raw in [0x[ff fe 0a] 0x[61 c3 0a] 0x[c0 af 0a] 0x[ed a0 80 0a]] {
+            $raw | save --force $file
+            let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tilemo-workspace" | complete)
+            assert equal ($out.stdout | str trim) ""
+            assert str contains $out.stderr $"tilemo: ignoring the workspace in ($file)"
+        }
     })
     (run-test "nu tilemo-workspace warns when the file can't be read" {
         let home = (mktemp -d)
