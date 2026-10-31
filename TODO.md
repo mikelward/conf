@@ -15,11 +15,6 @@ Delete an entry once you have agreed with it or reversed it.
       `ID_INPUT_POINTINGSTICK`); udev wouldn't call the touchpad's `-mouse`
       node a touchpad either, and the name rule needs no sysfs lookup. It's
       `is_touchpad` here and `deviceKind` in tide's `input.mjs`.
-- [ ] **Sway and xbindkeys leave Super+C unbound.** Their Google Calendar
-      binding went with Hyprland's, so the key means the same everywhere,
-      but only tide's shell has the picker, so there it does nothing. The
-      alternative was keeping Calendar on Super+C outside tide. It's one
-      line back in `config/sway/config` and two in `xbindkeysrc`.
 - [ ] **Super+Tab and Super+End go back to a standing workspace even once
       it's gone.** tide's bar always lists them, and going there makes one
       again, so the history keeps them; a workspace that isn't standing is
@@ -157,6 +152,15 @@ Delete an entry once you have agreed with it or reversed it.
       there would need another idle inhibitor and DND per session (swayidle's
       inhibit, swaync's `--dnd-on`). *Reversible:* one bind each in
       `config/sway/config` and `xbindkeysrc`.
+
+## Bind Super+C to a clipboard manager under sway and X
+
+Super+C opens tide's clipboard and characters picker, but sway
+(`config/sway/config`) and an X session (`xbindkeysrc`) leave it unbound,
+since neither runs tide's shell. Bind it in both to a clipboard manager, so
+the key means the same everywhere. Which manager is still to choose: one
+that works on Wayland (sway) and X11, or one per session, and what scripts'
+`setup` would install for it.
 
 ## Add Ghostty alongside kitty
 
