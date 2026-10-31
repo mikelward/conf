@@ -145,7 +145,8 @@ bindsym $mod+Shift+g exec browser3
 bindsym $mod+f exec browser2
 bindsym $mod+b exec bluetooth-connect
 bindsym $mod+Shift+b exec pulseprofile.py
-bindsym $mod+c exec google-calendar
+# $mod+c is tide's clipboard and characters picker there, which sway has no
+# equivalent for. Google Calendar has no key: the launcher finds it.
 bindsym $mod+Shift+c exec google-chat
 bindsym $mod+h exec home
 bindsym $mod+i exec irc
