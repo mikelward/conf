@@ -201,7 +201,8 @@ description, which tide's settings panel lists on its Keys page;
 | `SUPER + End` | The last workspace other than home and this one, so presses toggle between two |
 | `SUPER + Left` / `SUPER + Right`, `SUPER + PgUp` / `SUPER + PgDn` | Previous / next workspace in the bar's order, stopping at the ends |
 | `SUPER + Shift + Left` / `SUPER + Shift + Right` | Move the window to the previous / next workspace |
-| `SUPER + Return` | Move the window to a workspace, through tide's name prompt |
+| `SUPER + Return` | Go to a workspace, through tide's name prompt, moving no window |
+| `SUPER + SHIFT + Return` | Move the window to a workspace, through tide's name prompt |
 | `SUPER + A` | tide's switcher on its Attention tab: every window wanting attention, the latest first (without the tide shell, the urgent window or the last one) |
 
 Workspaces have names, not numbers (tide SPEC.md §6.5), so there's no

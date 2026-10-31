@@ -652,7 +652,7 @@ test("every key in the spec is bound", function()
         "SUPER + Left", "SUPER + Right", "SUPER + SHIFT + Left", "SUPER + SHIFT + Right",
         "SUPER + Page_Up", "SUPER + Page_Down",
         "SUPER + J", "SUPER + K", "SUPER + SHIFT + J", "SUPER + SHIFT + K",
-        "SUPER + Return", "SUPER + backslash", "SUPER + slash", "SUPER + equal", "SUPER + minus",
+        "SUPER + Return", "SUPER + SHIFT + Return", "SUPER + backslash", "SUPER + slash", "SUPER + equal", "SUPER + minus",
         "SUPER + period", "SUPER + comma", "SUPER + grave", "SUPER + O",
         "SUPER + Up", "SUPER + SHIFT + Up", "SUPER + Down",
         "SUPER + SHIFT + F", "SUPER + Insert", "SUPER + SHIFT + R",
@@ -811,16 +811,22 @@ test("Super+End toggles between the last two workspaces other than home", functi
     eq("name:PR-12", run("SUPER + End")[1].args.workspace, "from home, where Super+Tab goes")
 end)
 
-test("Super+Return opens tide's name prompt, and says so when there's no shell", function()
+test("Super+Return goes to a workspace through tide's name prompt, and Super+Shift+Return moves the window", function()
     load()
-    local t = bind("SUPER + Return").target
-    truthy(t.args:find("qs -c tide ipc call prompt move", 1, true), t.args)
-    truthy(t.args:find("|| notify-send -a tide 'No name prompt'", 1, true), t.args)
-    local script = tmp .. "/super-return.sh"
-    local f = assert(io.open(script, "w"))
-    f:write(t.args, "\n")
-    f:close()
-    truthy(os.execute("sh -n '" .. script .. "'"), "the command parses as sh")
+    for keys, want in pairs({
+        ["SUPER + Return"] = { "qs -c tide ipc call prompt go ", "Go to a workspace" },
+        ["SUPER + SHIFT + Return"] = { "qs -c tide ipc call prompt move ", "Move the window to a workspace" },
+    }) do
+        local t = bind(keys).target
+        truthy(t.args:find(want[1], 1, true), t.args)
+        truthy(t.args:find("|| notify-send -a tide 'No name prompt'", 1, true), t.args)
+        eq(want[2], bind(keys).opts.description, keys)
+        local script = tmp .. "/super-return.sh"
+        local f = assert(io.open(script, "w"))
+        f:write(t.args, "\n")
+        f:close()
+        truthy(os.execute("sh -n '" .. script .. "'"), keys .. ": the command parses as sh")
+    end
 end)
 
 test("Super+Z asks tide's shell to minimize the window, and says so when there's no shell", function()
