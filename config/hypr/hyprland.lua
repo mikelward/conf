@@ -1237,6 +1237,41 @@ local function internal_panel(monitors)
     return nil
 end
 
+-- What closing the lid does with no other monitor, as tide's Power page
+-- (tide SPEC.md §16) writes it to tide-power.lua beside this file:
+-- { lid_close = "suspend" | "lock" | "nothing" }. Suspend, the default, is
+-- logind's; for the other two tide holds logind's lid switch, and Lock is
+-- done here. Read as data at each close, as tide-appearance.lua is; a bad
+-- file is reported and taken as suspend, which logind does anyway.
+local LID_ACTIONS = { suspend = true, lock = true, nothing = true }
+
+local function tide_lid_close()
+    local path = home .. "/.config/hypr/tide-power.lua"
+    local text = read_optional(path, "tide-power.lua", 64 * 1024)
+    if not text then
+        return "suspend"
+    end
+    local chunk, err = load(text, "@" .. path, "t", {})
+    if not chunk then
+        notify_error("tide-power.lua (none of it applied): " .. tostring(err))
+        return "suspend"
+    end
+    local ok, value = pcall(chunk)
+    if not ok or type(value) ~= "table" then
+        notify_error("tide-power.lua (none of it applied): expected a table, not " .. (ok and type(value) or tostring(value)))
+        return "suspend"
+    end
+    for k, v in pairs(value) do
+        if k ~= "lid_close" then
+            notify_error("tide-power.lua: unknown setting " .. tostring(k))
+        elseif not LID_ACTIONS[v] then
+            notify_error("tide-power.lua: lid_close should be suspend, lock or nothing, not " .. tostring(v))
+            return "suspend"
+        end
+    end
+    return value.lid_close or "suspend"
+end
+
 local function lid_close()
     local monitors = hl.get_monitors()
     local panel = internal_panel(monitors)
@@ -1249,8 +1284,12 @@ local function lid_close()
             external = true
         end
     end
-    -- Undocked: leave the panel alone; logind suspends and hypridle locks.
+    -- Undocked: leave the panel alone. logind suspends and hypridle locks,
+    -- unless tide's Power page says Lock, which locks here, or Do nothing.
     if not external then
+        if tide_lid_close() == "lock" then
+            hl.dispatch(exec(lock))
+        end
         return
     end
     lid.panel = panel

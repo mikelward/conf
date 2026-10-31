@@ -349,6 +349,11 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   If an old
   `HandleLidSwitch=ignore` logind drop-in from the retired `setup-hypr` is
   still installed, remove it, or an undocked lid close won't suspend.
+  tide's Power page can make an undocked close lock or do nothing instead:
+  it holds logind's lid switch (`tide-lid-inhibit.service`) and writes
+  `~/.config/hypr/tide-power.lua` (`{ lid_close = "lock" }`), which
+  `hyprland.lua` reads at each close, running `loginctl lock-session` for
+  Lock. A bad file is reported and taken as suspend.
 - **Automatic light/dark by time of day.** `theme-daemon.sh` (autostarted)
   applies **light 07:00–19:00 and dark otherwise**, and re-applies at each
   boundary. `theme.sh` drives the whole desktop: it sets the freedesktop
