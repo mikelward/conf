@@ -499,7 +499,7 @@ hl.config({
         disable_hyprland_logo = true,
         disable_splash_rendering = true,
         -- Nothing steals focus: an app asking for it is marked urgent
-        -- instead (Super+Tab goes there).
+        -- instead (Super+A goes there).
         focus_on_activate = false,
         -- uwsm sets XDG_CURRENT_DESKTOP to tide:Hyprland on purpose.
         disable_xdg_env_checks = true,
@@ -855,7 +855,10 @@ hl.bind(key("backslash"), act.grow, does("Grow the master", { repeating = true }
 hl.bind(key("slash"), act.shrink, does("Shrink the master", { repeating = true }))
 hl.bind(key("equal"), act.add_master, does("Add a master"))
 hl.bind(key("minus"), act.remove_master, does("Remove a master"))
-hl.bind(key("Return"), act.swap_master, does("Swap with the master"))
+-- dwm's zoom on Alt+Tab (tide SPEC.md §6.6); on the master, the tide
+-- layout swaps back with the master before it. Hyprland takes a bound key
+-- from every app, so Alt+Tab no longer reaches one.
+hl.bind("ALT + Tab", act.swap_master, does("Swap with the master"))
 hl.bind(key("J"), act.focus_next, does("Focus down the stack"))
 hl.bind(key("K"), act.focus_prev, does("Focus up the stack"))
 hl.bind(key("SHIFT + J"), act.move_next, does("Move down the stack"))
@@ -896,29 +899,104 @@ hl.define_submap("resize", function()
     hl.bind("Return", hl.dsp.submap("reset"), does("Leave resize mode"))
 end)
 
--- Workspaces 1-9, one shared pool across monitors.
-for i = 1, 9 do
-    hl.bind(key(tostring(i)), hl.dsp.focus({ workspace = i }), does("Workspace " .. i))
-    hl.bind(key("SHIFT + " .. i), hl.dsp.window.move({ workspace = i, follow = false }), does("Send the window to workspace " .. i))
+-- Workspaces by name (tide SPEC.md §6.5, §6.6): no Super+1…9. The bar's
+-- order is the standing workspaces, home first, then the rest in the
+-- order they were made (falling IDs), then numbered ones, as tide's bar
+-- has it (shell/lib/workspaces.mjs's workspaceOrder). A standing one is
+-- in the order whether it's made yet or not, and going there makes it.
+local function bar_order()
+    local listed = query("couldn't list the workspaces", hl.get_workspaces) or {}
+    local real = {}
+    for _, ws in ipairs(listed) do
+        local name = ws.name or ""
+        if type(ws.id) == "number" and name ~= "" and not name:find("^special:") then
+            table.insert(real, { id = ws.id, name = name })
+        end
+    end
+    local taken, out = {}, {}
+    for _, name in ipairs(conf_workspaces.standing()) do
+        local found
+        for _, exact in ipairs({ true, false }) do
+            for _, w in ipairs(real) do
+                if not found and not taken[w.id] and (exact and w.name == name or not exact and w.name:lower() == name:lower()) then
+                    found = w
+                end
+            end
+        end
+        if found then
+            taken[found.id] = true
+        end
+        table.insert(out, found and found.name or name)
+    end
+    local named, numbered = {}, {}
+    for _, w in ipairs(real) do
+        if not taken[w.id] then
+            table.insert(w.id < 0 and named or numbered, w)
+        end
+    end
+    table.sort(named, function(a, b) return a.id > b.id end)
+    table.sort(numbered, function(a, b) return a.id < b.id end)
+    for _, list in ipairs({ named, numbered }) do
+        for _, w in ipairs(list) do
+            table.insert(out, w.name)
+        end
+    end
+    return out
 end
 
--- Previous / next workspace, as in KDE and on the Mac, stopping at 1 and 9.
+-- Whether a workspace named `name` is there to go back to: made now, or
+-- standing, which is always on the bar and made by going there.
+local function still_there(name)
+    for _, s in ipairs(conf_workspaces.standing()) do
+        if s:lower() == name:lower() then
+            return true
+        end
+    end
+    for _, ws in ipairs(query("couldn't list the workspaces", hl.get_workspaces) or {}) do
+        if ws.name == name then
+            return true
+        end
+    end
+    return false
+end
+
+local function active_name()
+    local ws = query("couldn't read the active workspace", hl.get_active_workspace)
+    local name = ws and ws.name
+    if type(name) ~= "string" or name == "" or name:find("^special:") then
+        return nil
+    end
+    return name
+end
+
+local function go(name)
+    hl.dispatch(hl.dsp.focus({ workspace = "name:" .. name }))
+end
+
+-- Previous / next workspace in the bar's order, as in KDE and on the Mac,
+-- stopping at either end; with carry_window, taking the focused window
+-- there.
 local function step_workspace(delta, carry_window)
     return function()
-        local ws = query("couldn't read the active workspace", hl.get_active_workspace)
-        local id = ws and ws.id
-        -- Special workspaces have negative ids; there's no "next" from one.
-        if type(id) ~= "number" or id < 1 then
-            return
+        local name = active_name()
+        if not name then
+            return -- a special workspace, or none, has no neighbors
         end
-        local target = math.max(1, math.min(9, id + delta))
-        if target == id then
+        local order = bar_order()
+        local at
+        for i, n in ipairs(order) do
+            if n == name then
+                at = i
+            end
+        end
+        local target = at and order[at + delta]
+        if not target then
             return
         end
         if carry_window then
-            hl.dispatch(hl.dsp.window.move({ workspace = target, follow = true }))
+            hl.dispatch(hl.dsp.window.move({ workspace = "name:" .. target, follow = true }))
         else
-            hl.dispatch(hl.dsp.focus({ workspace = target }))
+            go(target)
         end
     end
 end
@@ -930,11 +1008,78 @@ hl.bind(key("Page_Down"), step_workspace(1, false), does("Next workspace"))
 hl.bind(key("SHIFT + Left"), step_workspace(-1, true), does("Move the window to the previous workspace"))
 hl.bind(key("SHIFT + Right"), step_workspace(1, true), does("Move the window to the next workspace"))
 
+-- The workspaces other than home, the one used last first, for Super+Tab
+-- and Super+End. Kept from Hyprland's workspace.active, so a config reload
+-- starts it afresh.
+local workspace_history = {}
+hl.on("workspace.active", function(ws)
+    local name = ws and ws.name
+    if type(name) ~= "string" or name == "" or name:find("^special:") or name == conf_workspaces.home() then
+        return
+    end
+    for i = #workspace_history, 1, -1 do
+        if workspace_history[i] == name then
+            table.remove(workspace_history, i)
+        end
+    end
+    table.insert(workspace_history, 1, name)
+    while #workspace_history > 50 do
+        table.remove(workspace_history)
+    end
+end)
+
+-- The workspace used last other than home and `except`, still there.
+-- Home is left out here as well as when recording: a reload of the
+-- workspace settings can name a workspace already in the history home.
+local function last_used(except)
+    local home_name = conf_workspaces.home()
+    for _, name in ipairs(workspace_history) do
+        if name ~= except and name ~= home_name and still_there(name) then
+            return name
+        end
+    end
+    return nil
+end
+
+-- Super+Tab: from any other workspace to home, and from home back to the
+-- last other one, so presses toggle. From home with none, nothing.
+hl.bind(key("Tab"), function()
+    local here, home_name = active_name(), conf_workspaces.home()
+    if here ~= home_name then
+        go(home_name)
+        return
+    end
+    local back = last_used(nil)
+    if back then
+        go(back)
+    end
+end, does("Home, or back to the last workspace"))
+hl.bind(key("Home"), function()
+    go(conf_workspaces.home())
+end, does("Home workspace"))
+-- Super+End: the last workspace other than home and this one; from home,
+-- where Super+Tab goes. So presses toggle between two, never home.
+hl.bind(key("End"), function()
+    local here = active_name()
+    local back = last_used(here)
+    if back then
+        go(back)
+    end
+end, does("The last workspace other than home"))
+
+-- Super+Return: the name prompt for the focused window (tide SPEC.md
+-- §6.5), which moves it to the workspace named. It needs tide's shell; a
+-- notification says so when there's none.
+hl.bind(key("Return"), exec("qs -c tide ipc call prompt move || notify-send -a tide 'No name prompt' "
+    .. "'Super+Return moves a window through the name prompt in the tide shell, which is not running.'"),
+    does("Move the window to a workspace"))
+
 -- The way to a window that wanted focus and didn't get it (§14). Lua can't
 -- mark a window urgent, so tide's focus guard keeps the ones it held
 -- back; otherwise it's Hyprland's urgent window, or the last one. So with
 -- one window marked, a press goes there and the next comes back.
--- Super+Tab and Super+Home both do it, on trial until one sticks.
+-- Super+A does it until tide's switcher has its Attention tab (tide
+-- SPEC.md §8.1), which replaces it.
 --
 -- Not `urgent_or_last`: in 0.56 its "last" reads the focus history from the
 -- oldest end, so pressing it again walked through every window. `last`
@@ -944,12 +1089,12 @@ local function focus_attention()
     if guard and guard.focus_attention then
         local ok, went = pcall(guard.focus_attention)
         if not ok then
-            notify_error("Super+Tab: the focus guard failed: " .. tostring(went))
+            notify_error("Super+A: the focus guard failed: " .. tostring(went))
         elseif went then
             return
         end
     end
-    local urgent = query("Super+Tab: couldn't look for an urgent window", function()
+    local urgent = query("Super+A: couldn't look for an urgent window", function()
         local w = hl.get_urgent_window()
         return w and w.address
     end)
@@ -959,9 +1104,8 @@ local function focus_attention()
         hl.dispatch(hl.dsp.focus({ last = true }))
     end
 end
-hl.bind(key("Tab"), focus_attention, does("The window waiting for attention"))
-hl.bind(key("Home"), focus_attention, does("The window waiting for attention"))
--- Pressed again while Super is held, Super+Tab steps to the next marked
+hl.bind(key("A"), focus_attention, does("The window waiting for attention"))
+-- Pressed again while Super is held, Super+A steps to the next marked
 -- window, Alt+Tab style, and releasing Super clears only the one it landed
 -- on. Releasing Super ends the guard's cycle, and does nothing outside one,
 -- which is every other release. Non-consuming, so apps still see Super.
@@ -973,11 +1117,11 @@ local function end_cycle()
     end
     local ok, err = pcall(guard.end_cycle)
     if not ok then
-        notify_error("Super+Tab: the focus guard failed to finish: " .. tostring(err))
+        notify_error("Super+A: the focus guard failed to finish: " .. tostring(err))
     end
 end
 for _, super in ipairs({ "Super_L", "Super_R" }) do
-    hl.bind(mod .. " + " .. super, end_cycle, does("End Super+Tab's cycle", { release = true, non_consuming = true }))
+    hl.bind(mod .. " + " .. super, end_cycle, does("End Super+A's cycle", { release = true, non_consuming = true }))
 end
 
 -- Screenshots to the clipboard as PNG, with a notification, through the
@@ -1434,7 +1578,9 @@ end)
 -- tide's first standing workspace, `in` by default, is made at login, kept
 -- when it's empty, and its apps' windows open there. Its name and the
 -- classes sent there come from tide-workspaces.lua, which tide's shell
--- writes from workspaces.json as { home = "in", in_apps = { "RE2", ... } }:
+-- writes from workspaces.json as { home = "in", standing = { "in", ... },
+-- in_apps = { "RE2", ... } }, the standing workspaces being the bar's first,
+-- in order, for the workspace keys:
 -- read as data, as tide-appearance.lua is. With no file yet (a first
 -- login, before the shell has written one), home is `in` and has no apps.
 -- conf_workspaces.reload() is how the shell applies a change.
@@ -1444,7 +1590,7 @@ local DEFAULT_HOME = "in"
 local MAX_HOME_APPS = 64
 
 local function read_tide_workspaces()
-    local none = { home = DEFAULT_HOME, in_apps = {} }
+    local none = { home = DEFAULT_HOME, standing = { DEFAULT_HOME }, in_apps = {} }
     local path = home .. "/.config/hypr/tide-workspaces.lua"
     local text = read_optional(path, "tide-workspaces.lua", 64 * 1024)
     if not text then
@@ -1466,7 +1612,7 @@ local function read_tide_workspaces()
         return wrong("expected a table, not " .. type(value))
     end
     for k in pairs(value) do
-        if k ~= "home" and k ~= "in_apps" then
+        if k ~= "home" and k ~= "standing" and k ~= "in_apps" then
             return wrong("unknown setting " .. tostring(k))
         end
     end
@@ -1490,14 +1636,28 @@ local function read_tide_workspaces()
             return wrong("in_apps should list patterns, with no gaps; " .. i .. " is " .. tostring(apps[i]))
         end
     end
-    return { home = name, in_apps = apps }
+    -- A file from before the shell wrote standing workspaces names home
+    -- alone.
+    local standing = value.standing or { name }
+    if type(standing) ~= "table" or #standing == 0 then
+        return wrong("standing should list workspaces' names, home first")
+    end
+    for i, n in ipairs(standing) do
+        if type(n) ~= "string" or not n:find("%S") or n:find("[\r\n]") then
+            return wrong("standing should list workspaces' names; " .. i .. " is " .. tostring(n))
+        end
+    end
+    if standing[1] ~= name then
+        return wrong("standing should start with home, " .. name .. ", not " .. tostring(standing[1]))
+    end
+    return { home = name, standing = standing, in_apps = apps }
 end
 
 -- home: its name; rule: the handle hl.workspace_rule gave for it, to turn
 -- it off when home is renamed (adding a rule for the same workspace merges
 -- into it, and the merge keeps the old rule on); monitor: the one home is
 -- the default of; apps: how many app rules there are.
-local tide_workspaces = { home = nil, rule = nil, monitor = nil, apps = 0 }
+local tide_workspaces = { home = DEFAULT_HOME, standing = { DEFAULT_HOME }, rule = nil, monitor = nil, apps = 0 }
 
 -- The first monitor, by Hyprland's ID, or nil before any has connected. A
 -- `default` rule is matched to a monitor by name (getDefaultWorkspaceFor),
@@ -1534,7 +1694,7 @@ local function apply_tide_workspaces()
     for i = #ws.in_apps + 1, before.apps do
         hl.window_rule({ name = "tide-home-app-" .. i, enabled = false, match = { class = "^$" } })
     end
-    tide_workspaces = { home = ws.home, rule = rule, monitor = monitor, apps = #ws.in_apps }
+    tide_workspaces = { home = ws.home, standing = ws.standing, rule = rule, monitor = monitor, apps = #ws.in_apps }
 end
 
 -- At login the config may load before any monitor connects, so the first
@@ -1552,9 +1712,13 @@ end)
 apply_tide_workspaces()
 _G.conf_workspaces = {
     reload = apply_tide_workspaces,
-    -- The home workspace's name, for the workspace keys.
+    -- The home workspace's name, and the standing workspaces' in order,
+    -- home first, for the workspace keys.
     home = function()
         return tide_workspaces.home
+    end,
+    standing = function()
+        return tide_workspaces.standing
     end,
 }
 

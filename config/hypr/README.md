@@ -191,10 +191,18 @@ description, which tide's settings panel lists on its Keys page;
 
 | Keys | Action |
 |------|--------|
-| `SUPER + 1..9` / `SUPER + Shift + 1..9` | Go to / send window to workspace 1–9 |
-| `SUPER + Left` / `SUPER + Right`, `SUPER + PgUp` / `SUPER + PgDn` | Previous / next workspace |
+| `SUPER + Home` | Home (tide's first standing workspace, `in` by default) |
+| `SUPER + Tab` | Home, or from home back to the last other workspace, so presses toggle |
+| `SUPER + End` | The last workspace other than home and this one, so presses toggle between two |
+| `SUPER + Left` / `SUPER + Right`, `SUPER + PgUp` / `SUPER + PgDn` | Previous / next workspace in the bar's order, stopping at the ends |
 | `SUPER + Shift + Left` / `SUPER + Shift + Right` | Move the window to the previous / next workspace |
-| `SUPER + Tab`, `SUPER + Home` | Focus the most recent urgent window, or the last one (both on trial) |
+| `SUPER + Return` | Move the window to a workspace, through tide's name prompt |
+| `SUPER + A` | Focus the most recent window waiting for attention, or the last one (until tide's switcher has its Attention tab) |
+
+Workspaces have names, not numbers (tide SPEC.md §6.5), so there's no
+`SUPER + 1..9`. The bar's order is tide's: the standing workspaces from
+`tide-workspaces.lua`, home first, then the rest in the order they were
+made.
 
 ### Layouts and windows
 
@@ -202,7 +210,7 @@ description, which tide's settings panel lists on its Keys page;
 |------|--------|
 | `SUPER + J` / `SUPER + K` | Focus next / previous in the stack |
 | `SUPER + Shift + J` / `SUPER + Shift + K` | Move window down / up the stack |
-| `SUPER + Return` | Swap the focused window with the master |
+| `ALT + Tab` | Make the focused window the master; on the master, swap back with the one before it |
 | `SUPER + \` / `SUPER + /` | Grow / shrink the master area (mfact ±0.025) |
 | `SUPER + =` / `SUPER + -` | Add / remove a master |
 | `SUPER + .` / `SUPER + ,` | Next / previous layout |
