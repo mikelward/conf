@@ -610,7 +610,7 @@ test("every key in the spec is bound", function()
         "SUPER + Space", "SUPER + T", "SUPER + W", "SUPER + G", "SUPER + F",
         "SUPER + SHIFT + G", "SUPER + E", "SUPER + B", "SUPER + C", "SUPER + SHIFT + C",
         "SUPER + H", "SUPER + I", "SUPER + M", "SUPER + N", "SUPER + R", "SUPER + Y",
-        "SUPER + BackSpace", "SUPER + L",
+        "SUPER + BackSpace", "SUPER + Z", "SUPER + L",
         "SUPER + Left", "SUPER + Right", "SUPER + SHIFT + Left", "SUPER + SHIFT + Right",
         "SUPER + Page_Up", "SUPER + Page_Down",
         "SUPER + J", "SUPER + K", "SUPER + SHIFT + J", "SUPER + SHIFT + K",
@@ -778,6 +778,19 @@ test("Super+Return opens tide's name prompt, and says so when there's no shell",
     truthy(t.args:find("qs -c tide ipc call prompt move", 1, true), t.args)
     truthy(t.args:find("|| notify-send -a tide 'No name prompt'", 1, true), t.args)
     local script = tmp .. "/super-return.sh"
+    local f = assert(io.open(script, "w"))
+    f:write(t.args, "\n")
+    f:close()
+    truthy(os.execute("sh -n '" .. script .. "'"), "the command parses as sh")
+end)
+
+test("Super+Z asks tide's shell to minimize the window, and says so when there's no shell", function()
+    load()
+    local t = bind("SUPER + Z").target
+    truthy(t.args:find("qs -c tide ipc call windows minimize", 1, true), t.args)
+    truthy(t.args:find("|| notify-send -a tide 'No minimize'", 1, true), t.args)
+    eq("Minimize the window", bind("SUPER + Z").opts.description)
+    local script = tmp .. "/super-z.sh"
     local f = assert(io.open(script, "w"))
     f:write(t.args, "\n")
     f:close()

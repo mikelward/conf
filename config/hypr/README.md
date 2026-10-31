@@ -176,6 +176,7 @@ description, which tide's settings panel lists on its Keys page;
 | `SUPER + Alt + Space` | Next keyboard layout, once `kb_layout` has two, on every keyboard and on the lock screen (`next-layout.sh`) |
 | `SUPER + Shift + N` | Notification center (swaync) |
 | `SUPER + Backspace` | Close the current window |
+| `SUPER + Z` | Minimize the current window into tide's corner tray; a click there restores it (needs the tide shell) |
 | `SUPER + L` | Lock (tide-lock in the tide session, hyprlock otherwise) |
 | `SUPER + Shift + E` | Exit Hyprland (log out) |
 | `Print` / `Alt + Print` / `Shift + Print`, `SUPER + Print` | Screenshot: screen / window / region → clipboard |
