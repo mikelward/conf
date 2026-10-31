@@ -166,7 +166,8 @@ description, which tide's settings panel lists on its Keys page;
 | `SUPER + Shift + G` | Browser 3 |
 | `SUPER + E` | File manager (yazi in a terminal) |
 | `SUPER + B` / `SUPER + Shift + B` | Bluetooth connect / audio profile |
-| `SUPER + C` / `SUPER + Shift + C` | Calendar / Chat |
+| `SUPER + C` | Clipboard history and special characters: tide's picker (needs the tide shell) |
+| `SUPER + Shift + C` | Chat |
 | `SUPER + H` | Home |
 | `SUPER + I` | IRC |
 | `SUPER + M` | Meet |

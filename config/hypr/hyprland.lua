@@ -817,7 +817,6 @@ hl.bind(key("SHIFT + G"), app(runenv .. " browser3"), does("Browser, third profi
 hl.bind(key("F"), app(runenv .. " browser2"), does("Browser, second profile"))
 hl.bind(key("B"), exec(runenv .. " bluetooth-connect"), does("Connect the headphones"))
 hl.bind(key("SHIFT + B"), exec(runenv .. " pulseprofile.py"), does("Next audio profile"))
-hl.bind(key("C"), app(runenv .. " google-calendar"), does("Google Calendar"))
 hl.bind(key("SHIFT + C"), app(runenv .. " google-chat"), does("Google Chat"))
 hl.bind(key("H"), app(runenv .. " home"), does("Home folder"))
 hl.bind(key("I"), app(runenv .. " irc"), does("IRC"))
@@ -839,6 +838,12 @@ hl.bind(key("ALT + Space"), exec(scripts .. "/next-layout.sh"), does("Next keybo
 -- notification server; the call fails otherwise (no shell, or the server not
 -- opted in), and swaync's panel opens instead.
 hl.bind(key("SHIFT + N"), exec("qs -c tide ipc call notifications toggle || swaync-client -t -sw"), does("Notification center"))
+-- Super+C: tide's clipboard and characters picker (tide SPEC.md §8.4), C
+-- for clipboard and characters. It was Google Calendar, which has no key
+-- now: it's one of home's apps, and the launcher finds it. Without the
+-- shell there's no picker, so a notification says why.
+hl.bind(key("C"), exec("qs -c tide ipc call picker toggle clipboard || notify-send -a tide 'No picker' "
+    .. "'Super+C opens the clipboard and characters picker in the tide shell, which is not running.'"), does("Clipboard and characters"))
 
 -- Session.
 hl.bind(key("BackSpace"), hl.dsp.window.close(), does("Close the window"))

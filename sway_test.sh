@@ -109,11 +109,14 @@ start_test "terminal-on-workstation and terminal-on-VM bound to SUPER+W and SUPE
 assert_contains "bindsym \$mod+w exec terminal_on_workstation" "$_sway_body"
 assert_contains "bindsym \$mod+v exec terminal_on_vm" "$_sway_body"
 
-for _app in browser1 browser2 browser3 home irc google-calendar google-chat \
+for _app in browser1 browser2 browser3 home irc google-chat \
             google-meet notepad bluetooth-connect remote-desktop youtube-music; do
     start_test "app-launch bind present: $_app"
     assert_contains "exec $_app" "$_sway_body"
 done
+
+start_test "Google Calendar has no key (Super+C is tide's picker)"
+assert_not_contains "google-calendar" "$_sway_body"
 
 start_test "launcher bind uses the shared theme-aware fuzzel wrapper"
 assert_contains "bindsym \$mod+space exec ~/.config/hypr/scripts/launch-fuzzel.sh" "$_sway_body"

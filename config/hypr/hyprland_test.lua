@@ -797,6 +797,25 @@ test("Super+Z asks tide's shell to minimize the window, and says so when there's
     truthy(os.execute("sh -n '" .. script .. "'"), "the command parses as sh")
 end)
 
+test("Super+C opens tide's picker, says so when there's no shell, and Calendar has no key", function()
+    load()
+    local t = bind("SUPER + C").target
+    truthy(t.args:find("qs -c tide ipc call picker toggle clipboard", 1, true), t.args)
+    truthy(t.args:find("|| notify-send -a tide 'No picker'", 1, true), t.args)
+    eq("Clipboard and characters", bind("SUPER + C").opts.description)
+    for k, b in pairs(S.binds) do
+        local args = type(b.target) == "table" and b.target.args or ""
+        eq(nil, tostring(args):find("google-calendar", 1, true), "Calendar is bound on " .. k)
+    end
+    eq(true, bind("SUPER + SHIFT + C").target.args:find("google-chat", 1, true) ~= nil, "Super+Shift+C is still Chat")
+    eq(true, bind("SUPER + H").target.args:find(" home", 1, true) ~= nil, "Super+H is still home")
+    local script = tmp .. "/super-c.sh"
+    local f = assert(io.open(script, "w"))
+    f:write(t.args, "\n")
+    f:close()
+    truthy(os.execute("sh -n '" .. script .. "'"), "the command parses as sh")
+end)
+
 test("Alt+Tab swaps with the master, and Super+Return no longer does", function()
     load({ layout = FAKE_LAYOUT })
     eq(_G.fake_layout.swap_with_master, bind("ALT + Tab").target)
