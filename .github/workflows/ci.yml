@@ -116,6 +116,10 @@ jobs:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+      # Here rather than in the test job, which a docs-only diff skips, and
+      # docs-only diffs are the ones that grow the rule files.
+      - name: rule files fit Antigravity's 24 KB cap
+        run: ./scripts/check-rule-size.sh
       - uses: mikelward/lanes@main
         with:
           mode: gate

@@ -131,6 +131,7 @@ test-all: \
 	test-amethyst \
 	test-karabiner \
 	test-kitty \
+	test-rule-size \
 	test-hypr \
 	test-sway
 
@@ -301,11 +302,14 @@ $(CACHE)/test-lint.stamp: shrc shrc.vcs bashrc.fuzzycomplete profile exitrc \
                           gittemplates/hooks/post-rewrite \
                           gittemplates/hooks/reload-hyprland \
                           scripts/unshallow.sh \
+                          scripts/check-rule-size.sh \
                           .claude/hooks/session-start.sh | $(CACHE)
 	@shellcheck -s bash -S error .claude/hooks/session-start.sh
 	@bash -n .claude/hooks/session-start.sh
 	@shellcheck -s sh -S error scripts/unshallow.sh
 	@dash -n scripts/unshallow.sh
+	@shellcheck -s sh -S error scripts/check-rule-size.sh
+	@dash -n scripts/check-rule-size.sh
 	@shellcheck -s bash -S error shrc
 	@shellcheck -s bash -S error shrc.vcs
 	@shellcheck -s bash -S error bashrc.fuzzycomplete
@@ -391,6 +395,13 @@ $(CACHE)/test-kitty.stamp: config/kitty/kitty.conf config/kitty/macos.conf \
 	@touch $@
 test-kitty: $(CACHE)/test-kitty.stamp
 
+$(CACHE)/test-rule-size.stamp: scripts/check-rule-size.sh AGENTS.md agents/AGENTS.md \
+                          .github/workflows/ci.yml \
+                          check_rule_size_test.sh shrc_test_lib.sh | $(CACHE)
+	@sh check_rule_size_test.sh
+	@touch $@
+test-rule-size: $(CACHE)/test-rule-size.stamp
+
 # The Hyprland desktop: hyprland.lua under a stub of Hyprland's Lua API, plus
 # presence/parse and script checks. Depends on every file it validates so
 # editing any of them re-runs.
@@ -457,4 +468,4 @@ test-sway: $(CACHE)/test-sway.stamp
 	test-vcs test-vcs-zsh \
 	test-fish test-nu test-mesh test-elvish test-lint \
 	test-env test-gitconfig test-makefile test-amethyst test-karabiner test-kitty \
-	test-hypr test-sway
+	test-rule-size test-hypr test-sway

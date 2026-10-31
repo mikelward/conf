@@ -417,10 +417,6 @@ the line. zsh only. Remaining:
       waits on forever) — the posture piloted in mikelward/lanes and
       mikelward/ci-commit-artifact. `repo-rules mikelward/conf` with
       no arguments applies the standard `lanes codex zizmor` set.
-- [ ] **Check `AGENTS.md` < 24,000 bytes in CI** (mikelward/stopdash#932):
-      add `test "$(wc -c < AGENTS.md)" -lt 24000` (and the same for
-      `agents/AGENTS.md`) to the docs path so neither can silently grow
-      past Antigravity's 24,000-byte per-file rule cap.
 - [ ] Add a CI gate (`ci.yml`) running whatever checks this repository
       supports, so the ruleset has a test gate to require — or record
       here that there is deliberately nothing to run.
