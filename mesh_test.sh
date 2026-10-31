@@ -2162,7 +2162,7 @@ e = format-duration(5000); e = green("x"); e = host-info(); e = job-info()
 e = one-line("a  b"); e = projectname(); e = projectroot(); e = prompt-line("")
 e = prompt-project-name(); e = prompt-session-name(); e = publish-jobs-file()
 e = red("x"); e = rootdir(); e = session-backend(); e = session-name()
-e = session-shell(); e = short-hostname(); e = ssh-client-host(); e = tilde-pwd()
+e = session-prefix("shpool"); e = session-shell(); e = short-hostname(); e = ssh-client-host(); e = tilde-pwd()
 e = title-text(); e = unquoted-head("\"x\""); e = workstation(); e = yellow("x")
 f = age("/etc/hostname")
 '
@@ -2712,8 +2712,11 @@ assert_equal "0" "$(_session_wrapper_status msp 0)"
 start_test "mesh cs does nothing and succeeds with no backend at all"
 # Matches config.nu, whose `if (skip-session-script $backend) { return }` also
 # reports success on the nothing-to-do path.
+# Neither backend, whatever this host has installed.
 result="$(_mesh_run_config '
     func changesession(...args) { puts "changesession ran" }
+    bool func shpool-available() { return false }
+    bool func tmux-available() { return false }
 ' '
     cs
     puts $sh.status
