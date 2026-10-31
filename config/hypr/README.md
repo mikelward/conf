@@ -233,8 +233,17 @@ shape) and `` ` `` or `O` maximizes the window.
 | Action | Result |
 |--------|--------|
 | `SUPER + drag left button` | Move window |
-| `SUPER + drag right button` | Resize window |
+| `SUPER + drag right button` | Resize a floating window (a tile doesn't resize this way under the tide layout) |
+| Drag a floating window's edge or corner | Resize it, from the 8 px just outside it, with a resize cursor there |
+| Drag the edge between master and stack | Resize the master (mfact), as `SUPER + \` / `SUPER + /` do; tide layout only |
 | `SUPER + middle click` | Maximize the window; click again to put it back in its tile |
+
+No key is held for the edge drags. The tide layout takes a plain left
+press only within 4 px of the master/stack edge, and not over a floating
+window, a popover or a notification; anywhere else the click reaches the
+window as usual. There's no resize cursor on that edge: Hyprland 0.56.2
+shows one only for its own `resize_on_border`, which doesn't reach between
+two tiles with no gaps, and its Lua can't set one (tide SPEC.md §6.6).
 
 Focus follows the mouse when it crosses into a window, and never warps the
 pointer. An app that asks for focus is marked urgent instead of taking it

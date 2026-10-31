@@ -438,7 +438,13 @@ hl.config({
         gaps_in = 0,
         gaps_out = 0,
         border_size = 0,
+        -- Drag a floating window's edge or corner to resize it, with a
+        -- resize cursor there: the 8 px just outside it, smaller than
+        -- Hyprland's 15 so less of what's below is taken (tide SPEC.md
+        -- §6.4). The tide layout drags the tiled edges itself (below).
         resize_on_border = true,
+        extend_border_grab_area = 8,
+        hover_icon_on_border = true,
         allow_tearing = false,
     },
     -- Master is the fallback layout. New windows join the end of the stack.
@@ -897,6 +903,16 @@ hl.bind(key("SHIFT + F"), hl.dsp.window.float({ action = "toggle" }), does("Floa
 hl.bind(key("Insert"), hl.dsp.window.float({ action = "toggle" }), does("Float or tile"))
 hl.bind(key("mouse:272"), hl.dsp.window.drag(), does("Move the window", { mouse = true }))
 hl.bind(key("mouse:273"), hl.dsp.window.resize(), does("Resize the window", { mouse = true }))
+-- Drag the master/stack edge with no key held (tide SPEC.md §6.6). The
+-- press is the layout's only on an edge; anywhere else it goes on to the
+-- window. The release ignores modifiers and the lock, so a drag always
+-- ends. An older layout without these just doesn't get them.
+if qs and type(qs.drag_press) == "function" and type(qs.drag_release) == "function" then
+    hl.bind("mouse:272", qs.drag_press, does("Drag the master's edge"))
+    hl.bind("mouse:272", qs.drag_release, does("End an edge drag", {
+        release = true, non_consuming = true, ignore_mods = true, locked = true,
+    }))
+end
 -- There are no title bars to double-click, so Super+middle-click toggles
 -- maximize, and a second click puts the window back in its tile. It acts on
 -- the focused window, which focus-follows-mouse makes the one under the
