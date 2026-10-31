@@ -45,11 +45,19 @@ tab. This rule puts the next tab back there.
 
 **Physical Alt+Tab is tilemo's**, swap with the master, in tilemo's rule
 below (tilemo SPEC.md §7.2). This rule used to swap the two both ways, making
-Alt+Tab switch applications; it gave that up when tilemo took the key. The
-switcher's Windows tab stands in for the application switcher, and a Mac
-keyboard's own Cmd+Tab still works. **Without tilemo's rule**, physical
-Alt+Tab is left to the rotation, as Ctrl+Tab, the next tab too, so a PC
-keyboard has no application switcher key.
+Alt+Tab switch applications; it gave that up when tilemo took the key.
+**Without tilemo's rule**, physical Alt+Tab is left to the rotation, as
+Ctrl+Tab, the next tab too.
+
+What still switches applications:
+
+- **Physical right Ctrl+Tab,** on a keyboard that has a right Ctrl. The
+  rotation makes it Cmd+Tab, and this rule only takes left Ctrl (see
+  [Scope](#scope)).
+- **tilemo's switcher,** with tilemo: its Windows tab stands in for the
+  application switcher.
+- **Not a Mac keyboard's Cmd+Tab.** `setup-macos` applies the rotation to
+  every keyboard, the built-in one included, so its Command key sends Option.
 
 ## Why the rule outputs left_option
 
