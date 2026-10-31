@@ -8,8 +8,8 @@ Four complex-modification rules for a PC keyboard:
   move by word, Win+Left/Right switch Spaces and Win+Shift+Left/Right move the
   window a Space; see
   [Arrow keys](#arrow-keys).
-- `assets/complex_modifications/pc-terminal.json` gives kitty its Ctrl and
-  Alt back, as Control and Meta; see [Terminals](#terminals).
+- `assets/complex_modifications/pc-terminal.json` gives kitty and Ghostty
+  their Ctrl and Alt back, as Control and Meta; see [Terminals](#terminals).
 - `assets/complex_modifications/tilemo.json` gives
   [tilemo](https://github.com/mikelward/tilemo) its Super key; see
   [tilemo](#tilemo).
@@ -140,33 +140,35 @@ still reach the line ends.
 The rotation's trade, Ctrl for Command, is wrong in a terminal: Ctrl+U,
 Ctrl+K, Ctrl+R and the rest arrive as Cmd+U and so on, which the terminal
 takes as its own shortcuts, and never reach the shell. Alt arrives as
-Control, so Alt+B and Alt+F don't move by word either. In kitty, this rule
-gives both keys back, as on Linux:
+Control, so Alt+B and Alt+F don't move by word either. In kitty and Ghostty,
+this rule gives both keys back, as on Linux:
 
-| Physical keys | Emits | kitty sees | Does |
+| Physical keys | Emits | The terminal sees | Does |
 | --- | --- | --- | --- |
 | Ctrl+key, Ctrl+Shift+key | `left_option`+key | Control+key | the shell's Ctrl+U, Ctrl+K, …; kitty's Ctrl+Shift shortcuts |
-| Ctrl+C, Ctrl+V | `left_option`+C, V | Control+C, V | kitty's `kitty.conf` maps: copy (or interrupt, with nothing selected) and paste |
-| Alt+key, Alt+Shift+key | `left_command`+key | Option+key | Meta, through kitty's `macos_option_as_alt left` |
+| Ctrl+C, Ctrl+V | `left_option`+C, V | Control+C, V | the terminal's config: copy (or interrupt, with nothing selected) and paste |
+| Alt+key, Alt+Shift+key | `left_command`+key | Option+key | Meta, through kitty's `macos_option_as_alt left` or Ghostty's `macos-option-as-alt = left` |
 
 The outputs name the keys the rotation turns into Control and Option, by the
-same layering as above. Copy and paste are kitty's, from conf's `kitty.conf`,
-the same file Linux uses, so Ctrl+C there copies a selection and otherwise
-sends the interrupt.
+same layering as above. Copy and paste are the terminal's, from conf's
+`config/kitty/kitty.conf` or `config/ghostty/config`, the same files Linux
+uses, so Ctrl+C there copies a selection and otherwise sends the interrupt
+(in Ghostty, a `performable:` binding, from Ghostty 1.1).
 
 - **Left to the rotation:** Tab, which the Ctrl+Tab rule and tilemo's take; Space, since
   Control+Space is macOS's input source switch; and Ctrl+Up and Down, which
   are Mission Control. Right Ctrl and right Alt are left alone, so right Ctrl
-  still reaches kitty's Command shortcuts (Cmd+Q, Cmd+,).
+  still reaches the terminal's Command shortcuts (Cmd+Q, Cmd+,).
 - **Enable it after the arrow rule,** so it sits above it: both match
   Ctrl+Left/Right, and in kitty this one should win, as Control+arrow, which
   the shell takes as a word move and Ctrl+Shift+Left/Right as kitty's previous
   and next tab. Otherwise Ctrl+Left/Right still moves by word, as Option+arrow,
   but Ctrl+Shift+Left/Right reaches the shell as Alt+Shift+arrow instead of
   switching tabs.
-- **kitty only, for now.** Each manipulator names kitty's bundle ID, and
-  another terminal needs its own copy and paste on Ctrl+C and Ctrl+V before
-  it can join; Ghostty is the next (`TODO.md`).
+- **kitty and Ghostty only.** Each manipulator names both bundle IDs
+  (`net.kovidgoyal.kitty`, `com.mitchellh.ghostty`). Another terminal needs
+  its own copy and paste on Ctrl+C and Ctrl+V, and Option as Alt, before it
+  can join.
 
 ## tilemo
 

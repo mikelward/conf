@@ -160,13 +160,10 @@ Delete an entry once you have agreed with it or reversed it.
 
 Ghostty is to try next to kitty, on macOS first. Not urgent on Linux.
 
-- **macOS:** add Ghostty's bundle ID (`com.mitchellh.ghostty`) to the
-  Karabiner terminal rule (`config/karabiner/README.md`, "Terminals"), once
-  conf has a Ghostty config giving it kitty's keys: `keybind =
-  performable:ctrl+c=copy_to_clipboard` (copy a selection, else the
-  interrupt), `keybind = ctrl+v=paste_from_clipboard` and `macos-option-as-alt
-  = left`. scripts' `setup` would install it with `brew install --cask
-  ghostty`, and tilemo's Super+T could open either terminal.
+- **macOS:** conf has a Ghostty config with kitty's keys
+  (`config/ghostty/config`), and the Karabiner terminal rule covers it. Left:
+  scripts' `setup` would install it with `brew install --cask ghostty`, and
+  tilemo's Super+T could open either terminal.
 - **Linux:** Debian and Ubuntu don't package it *(unverified for their newest
   releases)*. When it matters, the choices are a community package or
   building it from source, which needs Zig.
