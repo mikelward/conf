@@ -15,6 +15,18 @@ Delete an entry once you have agreed with it or reversed it.
       shares, would need the scripts repo's launchers to change. Undoing it
       is `session_prefix` in each shell (shrc, fish, nushell, mesh,
       Elvish).
+- [ ] **Home's apps are the four Google sites conf's scripts open as
+      `--app` windows**: Gmail, Chat, Calendar and YouTube Music, in
+      `config/tide/workspaces.json`'s `inApps`. Meet isn't one, since a call
+      is work you'd name a workspace for. The list is one file's to change.
+- [ ] **Home is the default of the first monitor, and is shown on it as it
+      connects.** Hyprland matches a `default` rule to a monitor by name, so
+      `hyprland.lua` names the monitor with the lowest ID when the config
+      loads, or else the first to connect, and focuses home there then, in
+      case Hyprland chose its workspace before the rule had a monitor. A
+      second monitor gets a numbered workspace, as before, until tide's
+      multi-display redesign. Dropping the focus is one line if a live
+      session shows Hyprland already picks home.
 
 - [ ] **The mouse wheel's default speed is 3.** On the first tide
       session, 1.5 was too slow; 2.5 was "a lot closer, maybe a bit more", so
