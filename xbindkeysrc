@@ -74,6 +74,9 @@
 "terminal_on_workstation"
     Mod4 + w
 
+"terminal_on_vm"
+    Mod4 + v
+
 "workspaces"
     Mod4 + Shift + w
 
