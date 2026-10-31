@@ -201,14 +201,16 @@ description, which tide's settings panel lists on its Keys page;
 | `SUPER + End` | The last workspace other than home and this one, so presses toggle between two |
 | `SUPER + Left` / `SUPER + Right`, `SUPER + PgUp` / `SUPER + PgDn` | Previous / next workspace in the bar's order, stopping at the ends |
 | `SUPER + Shift + Left` / `SUPER + Shift + Right` | Move the window to the previous / next workspace |
+| `SUPER + 1..9` | The Nth workspace in the bar's order, so `SUPER + 1` is home; past the last, nothing |
+| `SUPER + Shift + 1..9` | Send the window to the Nth workspace in the bar's order, staying where you are |
 | `SUPER + Return` | Go to a workspace, through tide's name prompt, moving no window |
 | `SUPER + SHIFT + Return` | Move the window to a workspace, through tide's name prompt |
 | `SUPER + A` | tide's switcher on its Attention tab: every window wanting attention, the latest first (without the tide shell, the urgent window or the last one) |
 
-Workspaces have names, not numbers (tide SPEC.md §6.5), so there's no
-`SUPER + 1..9`. The bar's order is tide's: the standing workspaces from
-`tide-workspaces.lua`, home first, then the rest in the order they were
-made.
+Workspaces have names, not numbers (tide SPEC.md §6.5), so `SUPER + 1..9`
+count along the bar rather than naming a workspace. The bar's order is
+tide's: the standing workspaces from `tide-workspaces.lua`, home first, then
+the rest in the order they were made.
 
 ### Layouts and windows
 
