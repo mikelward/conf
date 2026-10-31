@@ -82,7 +82,8 @@ local function helper(name)
     return function(...) table.insert(M.calls, { name, ... }) end
 end
 for _, n in ipairs({ "cycle_next", "cycle_prev", "toggle_monocle", "grow", "shrink",
-                     "add_master", "remove_master", "swap_with_master", "focus", "move" }) do
+                     "add_master", "remove_master", "swap_with_master", "focus", "move",
+                     "drag_press", "drag_release" }) do
     M[n] = helper(n)
 end
 function M.setup(opts) M.setup_opts = opts end
@@ -221,7 +222,9 @@ local function new_hl()
             if target == nil then
                 error("hl.bind(" .. keys .. "): no dispatcher", 2)
             end
-            local id = submap .. "|" .. keys
+            -- Hyprland keeps a key's press and release binds apart, so the
+            -- stub files a release bind under "release:KEYS".
+            local id = submap .. "|" .. ((opts or {}).release and "release:" or "") .. keys
             if S.binds[id] then
                 error("hl.bind(" .. keys .. "): bound twice", 2)
             end
@@ -533,6 +536,37 @@ test("with the tide layout: lua:tide and its helpers", function()
     eq(1, qs.calls[1][2])
     eq("move", qs.calls[2][1])
     eq(-1, qs.calls[2][2])
+end)
+
+test("floating windows resize from an 8 px zone outside their edges", function()
+    load()
+    local g = S.config.general
+    eq(true, g.resize_on_border, "resize_on_border")
+    eq(8, g.extend_border_grab_area, "extend_border_grab_area")
+    eq(true, g.hover_icon_on_border, "a resize cursor on hover")
+end)
+
+test("with the tide layout, a plain left-drag on a split edge is the layout's", function()
+    load({ layout = FAKE_LAYOUT })
+    local qs = _G.fake_layout
+    local press, release = bind("mouse:272"), bind("release:mouse:272")
+    eq(qs.drag_press, press.target, "press")
+    eq(nil, press.opts.non_consuming, "the press is taken only when drag_press says so")
+    eq(qs.drag_release, release.target, "release")
+    eq(true, release.opts.release, "on release")
+    eq(true, release.opts.non_consuming, "a release never takes a click")
+    eq(true, release.opts.ignore_mods, "Shift pressed mid-drag still ends it")
+    eq(true, release.opts.locked, "so does locking mid-drag")
+    eq(qs.grow, bind("SUPER + backslash").target, "the keys still resize too")
+end)
+
+test("without the drag helpers, the plain left button stays unbound", function()
+    load()
+    eq(nil, S.binds["|mouse:272"], "master fallback")
+    load({ layout = FAKE_LAYOUT:gsub('"drag_press", "drag_release" ', "") })
+    eq("lua:tide", S.config.general.layout, "an older layout still loads")
+    eq(nil, S.binds["|mouse:272"], "older layout: press")
+    eq(nil, S.binds["|release:mouse:272"], "older layout: release")
 end)
 
 test("a broken tide layout falls back to master and says so", function()
