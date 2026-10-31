@@ -607,7 +607,7 @@ end)
 test("every key in the spec is bound", function()
     load({ layout = FAKE_LAYOUT })
     local keys = {
-        "SUPER + Space", "SUPER + T", "SUPER + W", "SUPER + G", "SUPER + F",
+        "SUPER + Space", "SUPER + T", "SUPER + W", "SUPER + V", "SUPER + G", "SUPER + F",
         "SUPER + SHIFT + G", "SUPER + E", "SUPER + B", "SUPER + C", "SUPER + SHIFT + C",
         "SUPER + H", "SUPER + I", "SUPER + M", "SUPER + N", "SUPER + R", "SUPER + Y",
         "SUPER + BackSpace", "SUPER + Z", "SUPER + L",

@@ -811,6 +811,7 @@ end
 -- runenv provides. Super+D and Super+S are left for hyprland.local.lua.
 hl.bind(key("T"), app(terminal, terminal), does("Terminal"))
 hl.bind(key("W"), app(runenv .. " terminal_on_workstation"), does("Terminal on the workstation"))
+hl.bind(key("V"), app(runenv .. " terminal_on_vm"), does("Terminal on the VM"))
 hl.bind(key("G"), app(runenv .. " browser1"), does("Browser"))
 hl.bind(key("SHIFT + G"), app(runenv .. " browser3"), does("Browser, third profile"))
 hl.bind(key("F"), app(runenv .. " browser2"), does("Browser, second profile"))

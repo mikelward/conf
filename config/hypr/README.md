@@ -161,6 +161,7 @@ description, which tide's settings panel lists on its Keys page;
 |------|--------|
 | `SUPER + T` | Terminal (kitty) |
 | `SUPER + W` | Terminal on workstation |
+| `SUPER + V` | Terminal on VM |
 | `SUPER + G` / `SUPER + F` | Browser 1 / Browser 2 |
 | `SUPER + Shift + G` | Browser 3 |
 | `SUPER + E` | File manager (yazi in a terminal) |

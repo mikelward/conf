@@ -139,6 +139,7 @@ exec blueman-applet
 # --- helper scripts live in the scripts repo on $PATH) ---
 bindsym $mod+t exec $term
 bindsym $mod+w exec terminal_on_workstation
+bindsym $mod+v exec terminal_on_vm
 bindsym $mod+g exec browser1
 bindsym $mod+Shift+g exec browser3
 bindsym $mod+f exec browser2
