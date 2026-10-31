@@ -63,6 +63,7 @@ local LOCAL = ".config/hypr/hyprland.local.lua"
 local TIDE_INPUT = ".config/hypr/tide-input.lua"
 local TIDE_OUTPUTS = ".config/hypr/tide-outputs.lua"
 local TIDE_APPEARANCE = ".config/hypr/tide-appearance.lua"
+local TIDE_WORKSPACES = ".config/hypr/tide-workspaces.lua"
 local LID_FILE = "run/hypr/sig1/tide-lid"
 
 local function exists(rel)
@@ -154,7 +155,7 @@ local function new_hl()
         -- The monitor rules as Hyprland keeps them, which monitors above
         -- doesn't (tests clear it); see rule_for.
         monitor_rules = {},
-        rules = {}, layer_rules = {},
+        rules = {}, layer_rules = {}, workspace_rules = {},
         -- What the getters return; set per test.
         active_workspace = nil,
         active_window = nil,
@@ -190,6 +191,25 @@ local function new_hl()
         curve = function(n, t) record("curve", n) end,
         animation = function(t) record("animation", t) end,
         window_rule = function(t) record("window_rule", t); S.rules[t.name] = t end,
+        -- As Hyprland 0.56.2 keeps them (WorkspaceRuleManager's
+        -- replaceOrAdd): a rule for a workspace that has an enabled one is
+        -- merged into it, its fields over the old ones', except `enabled`,
+        -- which the merge doesn't copy. Each call returns the rule's
+        -- handle, whose set_enabled turns it on or off.
+        workspace_rule = function(t)
+            record("workspace_rule", t)
+            local rule = S.workspace_rules[t.workspace]
+            if not rule or rule.enabled == false then
+                rule = { enabled = t.enabled ~= false }
+                S.workspace_rules[t.workspace] = rule
+            end
+            for k, v in pairs(t) do
+                if k ~= "enabled" then
+                    rule[k] = v
+                end
+            end
+            return { set_enabled = function(_, on) rule.enabled = on end }
+        end,
         layer_rule = function(t) record("layer_rule", t); S.layer_rules[t.name] = t end,
         on = function(ev, fn)
             record("on", ev)
@@ -284,7 +304,7 @@ end
 -- (whose lid state file survives).
 local function load(setup)
     if not (setup and setup.keep_files) then
-        assert(os.execute("rm -rf '" .. tmp .. "/" .. LAYOUT .. "' '" .. tmp .. "/" .. LOCAL .. "' '" .. tmp .. "/" .. TIDE_INPUT .. "' '" .. tmp .. "/" .. TIDE_OUTPUTS .. "' '" .. tmp .. "/" .. TIDE_APPEARANCE .. "'"))
+        assert(os.execute("rm -rf '" .. tmp .. "/" .. LAYOUT .. "' '" .. tmp .. "/" .. LOCAL .. "' '" .. tmp .. "/" .. TIDE_INPUT .. "' '" .. tmp .. "/" .. TIDE_OUTPUTS .. "' '" .. tmp .. "/" .. TIDE_APPEARANCE .. "' '" .. tmp .. "/" .. TIDE_WORKSPACES .. "'"))
     end
     if not (setup and setup.reload) then
         -- rm -rf, since a failed test can leave a directory in its place.
@@ -312,12 +332,19 @@ local function load(setup)
     if setup and setup.appearance then
         write(TIDE_APPEARANCE, setup.appearance)
     end
+    if setup and setup.workspaces then
+        write(TIDE_WORKSPACES, setup.workspaces)
+    end
     env_overrides = { XDG_RUNTIME_DIR = tmp .. "/run", HYPRLAND_INSTANCE_SIGNATURE = "sig1", XDG_CURRENT_DESKTOP = false }
     for k, v in pairs((setup and setup.env) or {}) do
         env_overrides[k] = v
     end
     _G.fake_layout = nil
     _G.hl = new_hl()
+    -- Monitors already connected as the config loads, as on a reload.
+    if setup and setup.monitors then
+        S.monitor_list = setup.monitors
+    end
     dofile(config_path)
     return S
 end
@@ -915,7 +942,9 @@ test("lid binds work on the lock screen", function()
 end)
 
 test("docked lid close disables the panel; open restores it and its workspaces", function()
-    load()
+    -- Docked as the config loads, so home's monitor is known (a
+    -- monitor.added then is a monitor coming back, not the first).
+    load({ monitors = { { name = "eDP-1" }, { name = "DP-1" } } })
     docked()
     lid("on")
     eq(1, #S.monitors)
@@ -942,12 +971,14 @@ test("docked lid close disables the panel; open restores it and its workspaces",
 end)
 
 test("a reload with the lid closed keeps the panel off, and opening restores it", function()
-    load()
+    -- Docked as the config loads, so home's monitor is known (a
+    -- monitor.added then is a monitor coming back, not the first).
+    load({ monitors = { { name = "eDP-1" }, { name = "DP-1" } } })
     docked()
     lid("on")
     truthy(exists(LID_FILE), "the closed lid is saved")
     -- A reload: a new Lua state, the same Hyprland instance.
-    load({ reload = true })
+    load({ reload = true, monitors = { { name = "eDP-1", enabled = false }, { name = "DP-1" } } })
     eq(2, #S.monitors, "the catch-all plus the panel's disabled rule")
     eq("eDP-1", S.monitors[2].output)
     eq(true, S.monitors[2].disabled)
@@ -982,7 +1013,9 @@ test("a lid state that can't be written is reported and not left behind", functi
 end)
 
 test("a failed lid-state write never truncates the saved state", function()
-    load()
+    -- Docked as the config loads, so home's monitor is known (a
+    -- monitor.added then is a monitor coming back, not the first).
+    load({ monitors = { { name = "eDP-1" }, { name = "DP-1" } } })
     docked()
     lid("on")
     local f = assert(io.open(tmp .. "/" .. LID_FILE))
@@ -1000,7 +1033,9 @@ test("a failed lid-state write never truncates the saved state", function()
 end)
 
 test("a lid state that can't be cleared is reported", function()
-    load()
+    -- Docked as the config loads, so home's monitor is known (a
+    -- monitor.added then is a monitor coming back, not the first).
+    load({ monitors = { { name = "eDP-1" }, { name = "DP-1" } } })
     docked()
     lid("on")
     lid("off")
@@ -1039,7 +1074,9 @@ test("a malformed lid state is reported and discarded", function()
 end)
 
 test("a new session ignores another instance's saved lid", function()
-    load()
+    -- Docked as the config loads, so home's monitor is known (a
+    -- monitor.added then is a monitor coming back, not the first).
+    load({ monitors = { { name = "eDP-1" }, { name = "DP-1" } } })
     docked()
     lid("on")
     load({ reload = true, env = { HYPRLAND_INSTANCE_SIGNATURE = "sig2" } })
@@ -1887,6 +1924,77 @@ test("a broken or wrong tide-appearance.lua is reported and leaves the config's 
         eq(1, #S.notifications, text)
         truthy(S.notifications[1].text:find("tide-appearance.lua", 1, true), S.notifications[1].text)
         eq(0.07, S.config.decoration.dim_strength, text)
+    end
+end)
+
+test("home is in, kept and the first monitor's default, until tide names another", function()
+    load()
+    local rule = S.workspace_rules["name:in"]
+    truthy(rule, "a rule for name:in")
+    eq(true, rule.persistent, "kept when empty")
+    eq(true, rule.default, "a monitor's default")
+    eq(nil, rule.monitor, "none yet: no monitor has connected")
+    eq(0, #S.notifications)
+    eq("in", conf_workspaces.home())
+end)
+
+test("home is the default of the first monitor, whenever that connects", function()
+    load()
+    eq(nil, S.workspace_rules["name:in"].monitor)
+    fire("monitor.added", { name = "eDP-1", id = 0 })
+    eq("eDP-1", S.workspace_rules["name:in"].monitor, "the first to connect")
+    local last = S.dispatched[#S.dispatched]
+    truthy(last and is_dsp(last, "focus"), "and it shows home")
+    fire("monitor.added", { name = "DP-1", id = 1 })
+    eq("eDP-1", S.workspace_rules["name:in"].monitor, "not a second")
+end)
+
+test("home is the first monitor's default when monitors are there as the config loads", function()
+    load({ monitors = { { name = "DP-2", id = 1 }, { name = "eDP-1", id = 0 } } })
+    eq("eDP-1", S.workspace_rules["name:in"].monitor, "by Hyprland's ID")
+end)
+
+test("tide-workspaces.lua names home and sends its apps there without switching", function()
+    load({ workspaces = [[return { home = "mail", in_apps = { "(?i)(.*\\.)?thunderbird", "(?i)spotify" } }]] })
+    eq(nil, S.workspace_rules["name:in"], "no rule for in")
+    eq(true, S.workspace_rules["name:mail"].persistent)
+    eq("(?i)(.*\\.)?thunderbird", S.rules["tide-home-app-1"].match.class)
+    eq("name:mail silent", S.rules["tide-home-app-1"].workspace)
+    eq("(?i)spotify", S.rules["tide-home-app-2"].match.class)
+    eq(nil, S.rules["tide-home-app-3"])
+    eq("mail", conf_workspaces.home())
+    eq(0, #S.notifications)
+end)
+
+test("conf_workspaces.reload follows a new home and fewer apps", function()
+    load({ workspaces = 'return { home = "in", in_apps = { "a", "b" } }' })
+    write(TIDE_WORKSPACES, 'return { home = "home", in_apps = { "c" } }')
+    conf_workspaces.reload()
+    eq(false, S.workspace_rules["name:in"].enabled, "the old home's rule is off, through its handle")
+    eq(true, S.workspace_rules["name:home"].persistent)
+    eq("c", S.rules["tide-home-app-1"].match.class)
+    eq("name:home silent", S.rules["tide-home-app-1"].workspace)
+    eq(false, S.rules["tide-home-app-2"].enabled, "the rule a shorter list doesn't need is off")
+    eq("home", conf_workspaces.home())
+end)
+
+test("a broken or wrong tide-workspaces.lua is reported, and home is in with no apps", function()
+    for _, text in ipairs({
+        "return {",
+        "return 5",
+        "return { home = 3 }",
+        'return { home = "  " }',
+        'return { home = "a\\nb" }',
+        'return { home = "in", in_apps = "x" }',
+        'return { home = "in", in_apps = { 1 } }',
+        'return { home = "in", apps = {} }',
+        'os.execute("true") return { home = "in" }',
+    }) do
+        load({ workspaces = text })
+        eq(1, #S.notifications, text)
+        truthy(S.notifications[1].text:find("tide-workspaces.lua", 1, true), S.notifications[1].text)
+        truthy(S.workspace_rules["name:in"], text)
+        eq(nil, S.rules["tide-home-app-1"], text)
     end
 end)
 

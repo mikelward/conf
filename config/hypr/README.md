@@ -243,6 +243,15 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   a broken file or an unknown setting, and tide applies a change with
   `conf_appearance.reload()`. A strength tide stops setting goes back to
   0.07, and one `hyprland.local.lua` sets through `hl.config()` still wins.
+- **The home workspace** (tide SPEC.md §6.5), `in` by default, is made at
+  login and kept when empty, by a `persistent`, `default` workspace rule,
+  and its apps' windows open there without switching. tide's shell writes
+  its name and the classes it holds to `~/.config/hypr/tide-workspaces.lua`
+  (`{ home = "in", in_apps = { "(?i)..." } }`) from
+  `~/.config/tide/workspaces.json`, which conf ships: standing workspaces
+  `in`, `re`, `oc` and `me`, and Gmail, Chat, Calendar and YouTube Music
+  on home. `hyprland.lua` reads it as data, reporting a broken file, and
+  tide applies a change with `conf_workspaces.reload()`.
 - **Dialogs float, centered**: modal windows, pavucontrol,
   nm-connection-editor, blueman-manager, portal file choosers, "Open
   File" / "Save File" / "Save As" titles, and windows with neither an app

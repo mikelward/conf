@@ -1428,6 +1428,136 @@ hl.on("monitor.added", function()
         restack_monitors(nil, lid.panel)
     end
 end)
+--------------------------------------------------------------------------------
+-- THE HOME WORKSPACE (tide SPEC.md §6.5)
+--------------------------------------------------------------------------------
+-- tide's first standing workspace, `in` by default, is made at login, kept
+-- when it's empty, and its apps' windows open there. Its name and the
+-- classes sent there come from tide-workspaces.lua, which tide's shell
+-- writes from workspaces.json as { home = "in", in_apps = { "RE2", ... } }:
+-- read as data, as tide-appearance.lua is. With no file yet (a first
+-- login, before the shell has written one), home is `in` and has no apps.
+-- conf_workspaces.reload() is how the shell applies a change.
+local DEFAULT_HOME = "in"
+-- The most in_apps window rules there can be, so a reload can turn off the
+-- ones a shorter list no longer needs (Hyprland can't drop a rule).
+local MAX_HOME_APPS = 64
+
+local function read_tide_workspaces()
+    local none = { home = DEFAULT_HOME, in_apps = {} }
+    local path = home .. "/.config/hypr/tide-workspaces.lua"
+    local text = read_optional(path, "tide-workspaces.lua", 64 * 1024)
+    if not text then
+        return none
+    end
+    local function wrong(what)
+        notify_error("tide-workspaces.lua (none of it applied, so home is " .. DEFAULT_HOME .. " with no apps): " .. what)
+        return none
+    end
+    local chunk, err = load(text, "@" .. path, "t", {})
+    if not chunk then
+        return wrong(tostring(err))
+    end
+    local ok, value = pcall(chunk)
+    if not ok then
+        return wrong(tostring(value))
+    end
+    if type(value) ~= "table" then
+        return wrong("expected a table, not " .. type(value))
+    end
+    for k in pairs(value) do
+        if k ~= "home" and k ~= "in_apps" then
+            return wrong("unknown setting " .. tostring(k))
+        end
+    end
+    local name = value.home
+    if type(name) ~= "string" or not name:find("%S") or name:find("[\r\n]") then
+        return wrong("home should be a workspace's name, not " .. tostring(name))
+    end
+    local apps = value.in_apps or {}
+    if type(apps) ~= "table" then
+        return wrong("in_apps should be a list of patterns, not " .. type(apps))
+    end
+    local count = 0
+    for _ in pairs(apps) do
+        count = count + 1
+    end
+    if count > MAX_HOME_APPS then
+        return wrong("in_apps lists " .. count .. " patterns, more than " .. MAX_HOME_APPS)
+    end
+    for i = 1, count do
+        if type(apps[i]) ~= "string" or apps[i] == "" then
+            return wrong("in_apps should list patterns, with no gaps; " .. i .. " is " .. tostring(apps[i]))
+        end
+    end
+    return { home = name, in_apps = apps }
+end
+
+-- home: its name; rule: the handle hl.workspace_rule gave for it, to turn
+-- it off when home is renamed (adding a rule for the same workspace merges
+-- into it, and the merge keeps the old rule on); monitor: the one home is
+-- the default of; apps: how many app rules there are.
+local tide_workspaces = { home = nil, rule = nil, monitor = nil, apps = 0 }
+
+-- The first monitor, by Hyprland's ID, or nil before any has connected. A
+-- `default` rule is matched to a monitor by name (getDefaultWorkspaceFor),
+-- so naming none would make home nobody's default.
+local function first_monitor()
+    local monitors = query("couldn't list the monitors for the home workspace", hl.get_monitors) or {}
+    local first
+    for _, m in ipairs(monitors) do
+        if m.name and (not first or (m.id or 0) < (first.id or 0)) then
+            first = m
+        end
+    end
+    return first and first.name
+end
+
+local function apply_tide_workspaces()
+    local ws = read_tide_workspaces()
+    local before = tide_workspaces
+    if before.rule and before.home ~= ws.home then
+        -- The old home keeps no rule of its own: it goes once it's empty.
+        before.rule:set_enabled(false)
+    end
+    -- Only the first monitor has home as its default: another that
+    -- connects gets a numbered workspace (tide SPEC.md §6.5, Monitors).
+    local monitor = before.monitor or first_monitor()
+    local rule = hl.workspace_rule({ workspace = "name:" .. ws.home, persistent = true, default = true, monitor = monitor })
+    for i, pattern in ipairs(ws.in_apps) do
+        hl.window_rule({
+            name = "tide-home-app-" .. i,
+            match = { class = pattern },
+            workspace = "name:" .. ws.home .. " silent",
+        })
+    end
+    for i = #ws.in_apps + 1, before.apps do
+        hl.window_rule({ name = "tide-home-app-" .. i, enabled = false, match = { class = "^$" } })
+    end
+    tide_workspaces = { home = ws.home, rule = rule, monitor = monitor, apps = #ws.in_apps }
+end
+
+-- At login the config may load before any monitor connects, so the first
+-- to connect takes home as its default then, and shows it.
+hl.on("monitor.added", function(m)
+    if tide_workspaces.monitor or not (m and m.name) then
+        return
+    end
+    tide_workspaces.monitor = m.name
+    tide_workspaces.rule = hl.workspace_rule({
+        workspace = "name:" .. tide_workspaces.home, persistent = true, default = true, monitor = m.name,
+    })
+    hl.dispatch(hl.dsp.focus({ workspace = "name:" .. tide_workspaces.home }))
+end)
+apply_tide_workspaces()
+_G.conf_workspaces = {
+    reload = apply_tide_workspaces,
+    -- The home workspace's name, for the workspace keys.
+    home = function()
+        return tide_workspaces.home
+    end,
+}
+
 do
     local path = home .. "/.config/hypr/hyprland.local.lua"
     local text = read_optional(path, "hyprland.local.lua", 1024 * 1024)
