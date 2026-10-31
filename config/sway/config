@@ -154,8 +154,10 @@ bindsym $mod+m exec google-meet
 bindsym $mod+n exec notepad
 bindsym $mod+r exec remote-desktop
 bindsym $mod+y exec youtube-music
-# NOTE: SUPER+D (code) and SUPER+S (secureshell) are intentionally left
-# unbound, matching the Hyprland build -- add them in config.local.
+# NOTE: SUPER+D (code) is intentionally left unbound, matching the Hyprland
+# build -- add it in config.local. SUPER+S (keep awake) and SUPER+P
+# (presenter mode) are tide's under Hyprland; sway has no tide shell to do
+# them, so they're unbound here too.
 bindsym $mod+e exec $term -e yazi
 bindsym $mod+space exec ~/.config/hypr/scripts/launch-fuzzel.sh
 bindsym $mod+BackSpace kill

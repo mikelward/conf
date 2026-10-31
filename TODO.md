@@ -139,6 +139,13 @@ Delete an entry once you have agreed with it or reversed it.
       follow with their own inline-message mechanisms. *Reversible:* it's an
       additive per-shell feature, and it's opt-in and off by default meanwhile.
 
+- [ ] **Super+S and Super+P stay unbound under sway, and xbindkeys keeps
+      Super+S for `secureshell`.** Keep awake and presenter mode live in
+      tide's shell, which neither sway nor an X11 session runs. Binding them
+      there would need another idle inhibitor and DND per session (swayidle's
+      inhibit, swaync's `--dnd-on`). *Reversible:* one bind each in
+      `config/sway/config` and `xbindkeysrc`.
+
 ## Add Ghostty alongside kitty
 
 Ghostty is to try next to kitty, on macOS first. Not urgent on Linux.

@@ -180,14 +180,16 @@ description, which tide's settings panel lists on its Keys page;
 | `SUPER + Backspace` | Close the current window |
 | `SUPER + Z` | Minimize the current window into tide's corner tray; a click there restores it (needs the tide shell) |
 | `SUPER + L` | Lock (tide-lock in the tide session, hyprlock otherwise) |
+| `SUPER + S` | Keep awake on or off, with an OSD (needs the tide shell) |
+| `SUPER + P` | Presenter mode on or off: Do not disturb and keep awake together, each put back as it was when it goes off (needs the tide shell) |
 | `SUPER + Shift + E` | Exit Hyprland (log out) |
 | `Print` / `Alt + Print` / `Shift + Print`, `SUPER + Print` | Screenshot: screen / window / region → clipboard |
 | `XF86AudioMicMute`, `SUPER + Shift + M` | Toggle microphone mute |
 | `XF86Audio*` / `XF86MonBrightness*` | Volume, play/pause/next/prev, brightness |
 
 > Launchers run the helper scripts of the same name from the scripts repo (on
-> `$PATH`). `SUPER + D` (code) and `SUPER + S` (secureshell) are **left unbound**
-> — those scripts aren't in this repo; add them in
+> `$PATH`). `SUPER + D` (code) is **left unbound** — that script isn't in
+> this repo; add it in
 > `~/.config/hypr/hyprland.local.lua`.
 
 ### Workspaces
@@ -362,8 +364,8 @@ pointer. An app that asks for focus is marked urgent instead of taking it
 - **Multi-machine.** The same configs run everywhere unchanged — input
   handedness and the laptop's internal panel are auto-detected, and Hyprland
   auto-places monitors. Nothing is machine-specific. When a machine *does*
-  need something of its own (pinned monitor layout, the unbound `SUPER+D`/
-  `SUPER+S` launchers, device tweaks), it goes in
+  need something of its own (pinned monitor layout, the unbound `SUPER+D`
+  launcher, device tweaks), it goes in
   **`~/.config/hypr/hyprland.local.lua`** — the same name plus `.local`,
   like `.shrc.local` — which `hyprland.lua` loads last so it overrides the
   shared defaults. (Binds are the exception: Hyprland runs every bind on a
