@@ -1222,6 +1222,28 @@ test("with no saved state, opening the lid turns on an internal panel that is of
     eq(0, #S.monitors, "an enabled panel is left alone")
 end)
 
+test("with no saved state, opening the lid turns on HYPR_INTERNAL_OUTPUT's panel, which Hyprland doesn't list while it's off", function()
+    load({ env = { XDG_RUNTIME_DIR = "", HYPR_INTERNAL_OUTPUT = "eDP-1" } })
+    S.on_only = true
+    S.monitor_list = { { name = "eDP-1", enabled = false }, { name = "DP-1" } }
+    lid("off")
+    eq(1, #S.monitors)
+    eq("eDP-1", S.monitors[1].output)
+    eq(false, S.monitors[1].disabled == true, "on")
+    fire("monitor.added", { name = "eDP-1" })
+    S.monitor_list[1].enabled = true
+    lid("off")
+    eq(0, #S.monitors, "a panel that is on is left alone")
+end)
+
+test("with no saved state and no HYPR_INTERNAL_OUTPUT, a panel Hyprland doesn't list stays as it is", function()
+    load({ env = { XDG_RUNTIME_DIR = "" } })
+    S.on_only = true
+    S.monitor_list = { { name = "eDP-1", enabled = false }, { name = "DP-1" } }
+    lid("off")
+    eq(0, #S.monitors, "nothing names the panel")
+end)
+
 test("undocked lid close leaves suspend to logind", function()
     load()
     S.monitor_list = { { name = "eDP-1" } }
