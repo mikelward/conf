@@ -899,8 +899,21 @@ hl.bind(key("Down"), function()
 end, does("Restore"))
 
 -- Floating.
-hl.bind(key("SHIFT + F"), hl.dsp.window.float({ action = "toggle" }), does("Float or tile"))
-hl.bind(key("Insert"), hl.dsp.window.float({ action = "toggle" }), does("Float or tile"))
+-- Super+Shift+F and Super+Insert toggle floating. When the toggle leaves
+-- the window floating, they tell tide's shell
+-- (custom>>tide-floated>>ADDRESS), which asks whether to always float its
+-- app (tide SPEC.md §6.4). Hyprland's own changefloatingmode can't say
+-- that: a Super+drag floats a tiled window for the drag alone, and tide's
+-- shell floats windows a new rule covers.
+local function toggle_float()
+    hl.dispatch(hl.dsp.window.float({ action = "toggle" }))
+    local w = query("couldn't see whether the window floats now", hl.get_active_window)
+    if w and w.floating and w.address then
+        hl.dispatch(hl.dsp.event("tide-floated>>" .. w.address))
+    end
+end
+hl.bind(key("SHIFT + F"), toggle_float, does("Float or tile"))
+hl.bind(key("Insert"), toggle_float, does("Float or tile"))
 -- Super+Alt+F: a floating rule for this window (tide SPEC.md §6.4): tide's
 -- shell opens its Floating settings with a rule filled in for the focused
 -- window, to trim and add; without the shell, a notification says why
