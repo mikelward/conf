@@ -199,8 +199,8 @@ description, which tide's settings panel lists on its Keys page;
 | `SUPER + Home` | Home (tide's first standing workspace, `in` by default) |
 | `SUPER + Tab` | Home, or from home back to the last other workspace, so presses toggle |
 | `SUPER + End` | The last workspace other than home and this one, so presses toggle between two |
-| `SUPER + Left` / `SUPER + Right`, `SUPER + PgUp` / `SUPER + PgDn` | Previous / next workspace in the bar's order, stopping at the ends |
-| `SUPER + Shift + Left` / `SUPER + Shift + Right` | Move the window to the previous / next workspace |
+| `SUPER + PgUp` / `SUPER + PgDn` | Previous / next workspace in the bar's order, stopping at the ends |
+| `SUPER + Shift + PgUp` / `SUPER + Shift + PgDn` | Move the window to the previous / next workspace, and follow it |
 | `SUPER + 1..9` | The Nth workspace in the bar's order, so `SUPER + 1` is home; past the last, nothing |
 | `SUPER + Shift + 1..9` | Send the window to the Nth workspace in the bar's order, staying where you are |
 | `SUPER + Return` | Go to a workspace, through tide's name prompt, moving no window |
@@ -216,6 +216,8 @@ the rest in the order they were made.
 
 | Keys | Action |
 |------|--------|
+| `SUPER + Left` / `SUPER + Right` | Focus the window to the left / right; at a monitor's edge, the nearest window on the next monitor that way; past the last monitor, nothing |
+| `SUPER + Shift + Left` / `SUPER + Shift + Right` | Move the window the same way: a swap on its monitor, or onto the next monitor at the edge, keeping focus |
 | `SUPER + J` / `SUPER + K` | Focus next / previous in the stack |
 | `SUPER + Shift + J` / `SUPER + Shift + K` | Move window down / up the stack |
 | `ALT + Tab` | Make the focused window the master; on the master, swap back with the one before it |
@@ -230,7 +232,9 @@ the rest in the order they were made.
 
 Without the tide layout, the layout keys drive Hyprland's master layout
 instead: `.` / `,` rotate the master orientation (center is the three-column
-shape) and `` ` `` or `O` maximizes the window.
+shape) and `` ` `` or `O` maximizes the window. `SUPER + Left` / `Right`
+and their `Shift` twins are Hyprland's `movefocus` and `movewindow`, which
+cross monitors too.
 
 ### Mouse
 
