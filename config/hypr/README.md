@@ -225,6 +225,7 @@ the rest in the order they were made.
 | `SUPER + \`` (backtick), `SUPER + O` | Toggle monocle |
 | `SUPER + Up` / `SUPER + Shift + Up` / `SUPER + Down` | Maximize (bar stays) / fullscreen / restore |
 | `SUPER + Shift + F` / `SUPER + Insert` | Toggle floating |
+| `SUPER + Alt + F` | Always float the focused window's app: a rule on tide's Floating settings page, and a notification saying how it went (needs the tide shell) |
 | `SUPER + Shift + R` | **Resize** mode (h/j/k/l or arrows; Esc/Enter to exit) |
 
 Without the tide layout, the layout keys drive Hyprland's master layout
@@ -282,6 +283,15 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   File" / "Save File" / "Save As" titles, and windows with neither an app
   ID nor a title, such as Chrome's own notification popups.
   Picture-in-picture floats pinned in the bottom-right corner.
+- **Your own floating rules** (tide SPEC.md §6.4, §16) add to those:
+  tide's Floating settings page writes them, from
+  `~/.config/tide/floating.local.json`, to `~/.config/hypr/tide-floating.lua`
+  (`{ rules = { { class = "(?i)...", title = ".*" } } }`), which
+  `hyprland.lua` reads as data, reporting a broken file, and tide applies a
+  change with `conf_floating.reload()`. Each is a `tide-float-N` window
+  rule; Hyprland 0.56 can't drop one, so a shorter list turns the rest off,
+  and a rule only floats a window as it opens, so tide's shell floats the
+  open windows a new rule covers. conf ships no `floating.json`.
 - **Per-device handedness and speed (auto).** Global default is
   right-handed so **trackpads keep the left button primary**.
   `apply-input.sh` (autostarted) enumerates the pointers at login,

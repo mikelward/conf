@@ -65,6 +65,7 @@ local TIDE_OUTPUTS = ".config/hypr/tide-outputs.lua"
 local TIDE_APPEARANCE = ".config/hypr/tide-appearance.lua"
 local TIDE_POWER = ".config/hypr/tide-power.lua"
 local TIDE_WORKSPACES = ".config/hypr/tide-workspaces.lua"
+local TIDE_FLOATING = ".config/hypr/tide-floating.lua"
 local LID_FILE = "run/hypr/sig1/tide-lid"
 
 local function exists(rel)
@@ -192,7 +193,30 @@ local function new_hl()
         gesture = function(t) record("gesture", t); S.gesture = t end,
         curve = function(n, t) record("curve", n) end,
         animation = function(t) record("animation", t) end,
-        window_rule = function(t) record("window_rule", t); S.rules[t.name] = t end,
+        -- As Hyprland 0.56.2 keeps them (hlWindowRule): a rule given a name
+        -- it has merges into that one. Each match given replaces the old
+        -- one, a match not given stays, `enabled` is set (true unless
+        -- given false), and each effect is added again, which `added`
+        -- counts.
+        window_rule = function(t)
+            record("window_rule", t)
+            local rule = S.rules[t.name]
+            if not rule then
+                rule = { match = {}, added = {} }
+                S.rules[t.name] = rule
+            end
+            rule.name = t.name
+            rule.enabled = t.enabled ~= false
+            for k, v in pairs(t.match or {}) do
+                rule.match[k] = v
+            end
+            for k, v in pairs(t) do
+                if k ~= "name" and k ~= "enabled" and k ~= "match" then
+                    rule[k] = v
+                    rule.added[k] = (rule.added[k] or 0) + 1
+                end
+            end
+        end,
         -- As Hyprland 0.56.2 keeps them (WorkspaceRuleManager's
         -- replaceOrAdd): a rule for a workspace that has an enabled one is
         -- merged into it, its fields over the old ones', except `enabled`,
@@ -308,7 +332,7 @@ end
 -- (whose lid state file survives).
 local function load(setup)
     if not (setup and setup.keep_files) then
-        assert(os.execute("rm -rf '" .. tmp .. "/" .. LAYOUT .. "' '" .. tmp .. "/" .. LOCAL .. "' '" .. tmp .. "/" .. TIDE_INPUT .. "' '" .. tmp .. "/" .. TIDE_OUTPUTS .. "' '" .. tmp .. "/" .. TIDE_APPEARANCE .. "' '" .. tmp .. "/" .. TIDE_WORKSPACES .. "' '" .. tmp .. "/" .. TIDE_POWER .. "'"))
+        assert(os.execute("rm -rf '" .. tmp .. "/" .. LAYOUT .. "' '" .. tmp .. "/" .. LOCAL .. "' '" .. tmp .. "/" .. TIDE_INPUT .. "' '" .. tmp .. "/" .. TIDE_OUTPUTS .. "' '" .. tmp .. "/" .. TIDE_APPEARANCE .. "' '" .. tmp .. "/" .. TIDE_WORKSPACES .. "' '" .. tmp .. "/" .. TIDE_POWER .. "' '" .. tmp .. "/" .. TIDE_FLOATING .. "'"))
     end
     if not (setup and setup.reload) then
         -- rm -rf, since a failed test can leave a directory in its place.
@@ -341,6 +365,9 @@ local function load(setup)
     end
     if setup and setup.power then
         write(TIDE_POWER, setup.power)
+    end
+    if setup and setup.floating then
+        write(TIDE_FLOATING, setup.floating)
     end
     env_overrides = { XDG_RUNTIME_DIR = tmp .. "/run", HYPRLAND_INSTANCE_SIGNATURE = "sig1", XDG_CURRENT_DESKTOP = false }
     for k, v in pairs((setup and setup.env) or {}) do
@@ -2265,6 +2292,99 @@ test("a broken or wrong tide-workspaces.lua is reported, and home is in with no 
         truthy(S.workspace_rules["name:in"], text)
         eq(nil, S.rules["tide-home-app-1"], text)
     end
+end)
+
+test("with no tide-floating.lua only the dialogs float, and conf_floating is defined", function()
+    load()
+    eq(nil, S.rules["tide-float-1"])
+    eq("function", type(conf_floating.reload))
+    eq(0, #S.notifications)
+end)
+
+test("tide-floating.lua's rules float their windows, after the dialog rules, which stand", function()
+    load({ floating = [[return { rules = {
+        { class = "(?i)org\\.gnome\\.Calculator", title = ".*" },
+        { class = "(?i)firefox", title = ".*(?:^Library$).*" },
+    } }]] })
+    local r = S.rules["tide-float-1"]
+    eq("(?i)org\\.gnome\\.Calculator", r.match.class)
+    eq(".*", r.match.title)
+    eq(true, r.float)
+    eq(true, r.enabled)
+    eq(".*(?:^Library$).*", S.rules["tide-float-2"].match.title)
+    eq(nil, S.rules["tide-float-3"])
+    eq(true, S.rules["float-pavucontrol"].float, "conf's own rules stand")
+    local order = {}
+    for i, c in ipairs(S.calls) do
+        if c[1] == "window_rule" then
+            order[c[2].name] = i
+        end
+    end
+    truthy(order["float-unnamed"] < order["tide-float-1"], "the dialogs' rules come first")
+    eq(0, #S.notifications)
+end)
+
+test("conf_floating.reload replaces each rule's class and title, adds float once, and turns off what a shorter list drops", function()
+    load({ floating = [[return { rules = {
+        { class = "(?i)a", title = ".*(?:x).*" },
+        { class = "(?i)b", title = ".*" },
+    } }]] })
+    write(TIDE_FLOATING, [[return { rules = { { class = "(?i)c", title = ".*" } } }]])
+    conf_floating.reload()
+    local r = S.rules["tide-float-1"]
+    eq("(?i)c", r.match.class)
+    eq(".*", r.match.title, "the old title pattern doesn't linger")
+    eq(true, r.enabled)
+    eq(1, r.added.float, "float is added once, not again at each reload")
+    eq(false, S.rules["tide-float-2"].enabled, "the rule a shorter list doesn't need is off")
+    write(TIDE_FLOATING, [[return { rules = {
+        { class = "(?i)c", title = ".*" },
+        { class = "(?i)d", title = ".*" },
+    } }]])
+    conf_floating.reload()
+    eq(true, S.rules["tide-float-2"].enabled, "turned on again")
+    eq("(?i)d", S.rules["tide-float-2"].match.class)
+    eq(1, S.rules["tide-float-2"].added.float)
+    eq(0, #S.notifications)
+end)
+
+test("a broken or wrong tide-floating.lua is reported, and only the dialogs float", function()
+    local many = {}
+    for i = 1, 65 do
+        many[i] = '{ class = "c' .. i .. '", title = ".*" }'
+    end
+    for _, text in ipairs({
+        "return {",
+        "return 5",
+        "return { rules = 5 }",
+        "return { rule = {} }",
+        'return { rules = { "x" } }',
+        'return { rules = { { class = "x" } } }',
+        'return { rules = { { class = "x", title = "" } } }',
+        'return { rules = { { class = "x", title = ".*", workspace = "2" } } }',
+        'return { rules = { [2] = { class = "x", title = ".*" } } }',
+        "return { rules = { " .. table.concat(many, ", ") .. " } }",
+        'os.execute("true") return { rules = {} }',
+    }) do
+        load({ floating = text })
+        eq(1, #S.notifications, text)
+        truthy(S.notifications[1].text:find("tide-floating.lua", 1, true), S.notifications[1].text)
+        eq(nil, S.rules["tide-float-1"], text)
+        eq(true, S.rules["float-modal"].float, text)
+    end
+end)
+
+test("Super+Alt+F asks tide's shell to always float the app, and says so when there's no shell", function()
+    load()
+    local b = bind("SUPER + ALT + F")
+    truthy(b.target.args:find("qs -c tide ipc call floating remember", 1, true), b.target.args)
+    truthy(b.target.args:find("|| notify-send -a tide 'No floating rules'", 1, true), b.target.args)
+    eq("Always float this app", b.opts.description)
+    local script = tmp .. "/super-alt-f.sh"
+    local f = assert(io.open(script, "w"))
+    f:write(b.target.args, "\n")
+    f:close()
+    truthy(os.execute("sh -n '" .. script .. "'"), "the command parses as sh")
 end)
 
 test("an unreadable hyprland.local.lua is reported, not taken as absent", function()

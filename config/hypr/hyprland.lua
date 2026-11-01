@@ -901,6 +901,11 @@ end, does("Restore"))
 -- Floating.
 hl.bind(key("SHIFT + F"), hl.dsp.window.float({ action = "toggle" }), does("Float or tile"))
 hl.bind(key("Insert"), hl.dsp.window.float({ action = "toggle" }), does("Float or tile"))
+-- Super+Alt+F: always float this app (tide SPEC.md §6.4): tide's shell adds
+-- a rule for the focused window's class and says how it went; without the
+-- shell, a notification says why nothing happened.
+hl.bind(key("ALT + F"), exec("qs -c tide ipc call floating remember || notify-send -a tide 'No floating rules' "
+    .. "'Super+Alt+F adds a floating rule in the tide shell, which is not running.'"), does("Always float this app"))
 hl.bind(key("mouse:272"), hl.dsp.window.drag(), does("Move the window", { mouse = true }))
 hl.bind(key("mouse:273"), hl.dsp.window.resize(), does("Resize the window", { mouse = true }))
 -- Drag the master/stack edge with no key held (tide SPEC.md §6.6). The
@@ -1451,6 +1456,100 @@ for _, rule in ipairs(dialogs) do
     rule.center = true
     hl.window_rule(rule)
 end
+
+-- Your own rules float more (tide SPEC.md §6.4, §16), adding to the dialogs
+-- above: tide's Floating page writes them to tide-floating.lua beside this
+-- file as { rules = { { class = "(?i)org\\.gnome\\.Calculator", title =
+-- ".*" }, ... } }, each a whole-text pattern Hyprland matches. It's read
+-- as data, as tide-workspaces.lua is, and a file that's wrong is reported
+-- and none of it applied. conf_floating.reload() is how tide applies a
+-- change.
+-- The most rules there can be, as tide's MAX_RULES, so a reload can turn
+-- off the ones a shorter list no longer needs (Hyprland can't drop a rule).
+local MAX_FLOAT_RULES = 64
+
+local function read_tide_floating()
+    local path = home .. "/.config/hypr/tide-floating.lua"
+    local text = read_optional(path, "tide-floating.lua", 64 * 1024)
+    if not text then
+        return {}
+    end
+    local function wrong(what)
+        notify_error("tide-floating.lua (none of it applied, so only dialogs float): " .. what)
+        return {}
+    end
+    local chunk, err = load(text, "@" .. path, "t", {})
+    if not chunk then
+        return wrong(tostring(err))
+    end
+    local ok, value = pcall(chunk)
+    if not ok then
+        return wrong(tostring(value))
+    end
+    if type(value) ~= "table" then
+        return wrong("expected a table, not " .. type(value))
+    end
+    for k in pairs(value) do
+        if k ~= "rules" then
+            return wrong("unknown setting " .. tostring(k))
+        end
+    end
+    local rules = value.rules or {}
+    if type(rules) ~= "table" then
+        return wrong("rules should be a list, not " .. type(rules))
+    end
+    local count = 0
+    for _ in pairs(rules) do
+        count = count + 1
+    end
+    if count > MAX_FLOAT_RULES then
+        return wrong("rules lists " .. count .. ", more than " .. MAX_FLOAT_RULES)
+    end
+    for i = 1, count do
+        local r = rules[i]
+        if type(r) ~= "table" then
+            return wrong("rules should list { class, title } with no gaps; " .. i .. " is " .. tostring(r))
+        end
+        for k, v in pairs(r) do
+            if k ~= "class" and k ~= "title" then
+                return wrong("rule " .. i .. " has an unknown field " .. tostring(k))
+            end
+            if type(v) ~= "string" or v == "" then
+                return wrong("rule " .. i .. "'s " .. k .. " should be a pattern, not " .. tostring(v))
+            end
+        end
+        if not r.class or not r.title then
+            return wrong("rule " .. i .. " needs both a class and a title pattern")
+        end
+    end
+    return rules
+end
+
+-- count: how many tide-float-N rules are on; made: the names Hyprland has.
+-- Hyprland 0.56.2 merges a rule given a name it has into that one
+-- (hlWindowRule): each match given replaces the old, one not given stays,
+-- and each effect is added again. So both matches are given every time,
+-- and float only once per name.
+local tide_floating = { count = 0, made = {} }
+
+local function apply_tide_floating()
+    local rules = read_tide_floating()
+    for i, r in ipairs(rules) do
+        local name = "tide-float-" .. i
+        local rule = { name = name, enabled = true, match = { class = r.class, title = r.title } }
+        if not tide_floating.made[name] then
+            rule.float = true
+            tide_floating.made[name] = true
+        end
+        hl.window_rule(rule)
+    end
+    for i = #rules + 1, tide_floating.count do
+        hl.window_rule({ name = "tide-float-" .. i, enabled = false })
+    end
+    tide_floating.count = #rules
+end
+apply_tide_floating()
+_G.conf_floating = { reload = apply_tide_floating }
 
 -- Picture-in-picture floats, pinned on every workspace, bottom right.
 hl.window_rule({
