@@ -2374,12 +2374,12 @@ test("a broken or wrong tide-floating.lua is reported, and only the dialogs floa
     end
 end)
 
-test("Super+Alt+F asks tide's shell to always float the app, and says so when there's no shell", function()
+test("Super+Alt+F asks tide's shell for a floating rule for the window, and says so when there's no shell", function()
     load()
     local b = bind("SUPER + ALT + F")
     truthy(b.target.args:find("qs -c tide ipc call floating remember", 1, true), b.target.args)
     truthy(b.target.args:find("|| notify-send -a tide 'No floating rules'", 1, true), b.target.args)
-    eq("Always float this app", b.opts.description)
+    eq("Floating rule for this window", b.opts.description)
     local script = tmp .. "/super-alt-f.sh"
     local f = assert(io.open(script, "w"))
     f:write(b.target.args, "\n")

@@ -225,7 +225,7 @@ the rest in the order they were made.
 | `SUPER + \`` (backtick), `SUPER + O` | Toggle monocle |
 | `SUPER + Up` / `SUPER + Shift + Up` / `SUPER + Down` | Maximize (bar stays) / fullscreen / restore |
 | `SUPER + Shift + F` / `SUPER + Insert` | Toggle floating |
-| `SUPER + Alt + F` | Always float the focused window's app: a rule on tide's Floating settings page, and a notification saying how it went (needs the tide shell) |
+| `SUPER + Alt + F` | Open tide's Floating settings with a rule filled in for the focused window, its class and exact title, to trim and add with Enter (needs the tide shell) |
 | `SUPER + Shift + R` | **Resize** mode (h/j/k/l or arrows; Esc/Enter to exit) |
 
 Without the tide layout, the layout keys drive Hyprland's master layout
