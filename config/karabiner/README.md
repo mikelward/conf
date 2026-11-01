@@ -212,7 +212,7 @@ such as Win+Q, is left alone and stays Option.
   dangling; delete it.
 - **The mouse needs enabling too.** Karabiner leaves mouse devices alone by
   default, so Win+click, Win+drag and Win+middle-click only carry Super once
-  the mouse or trackpad is turned on under Settings > Devices
+  Modify events is turned on beside the mouse or trackpad under Devices
   ([Karabiner's mouse button docs](https://karabiner-elements.pqrs.org/docs/help/how-to/mouse-button/)).
   Until then, tilemo's mouse gestures see plain Option.
 - Whether a click while Win is held cancels the lone tap, as a key does, is
@@ -220,21 +220,32 @@ such as Win+Q, is left alone and stays Option.
 
 ## Enabling it
 
-Karabiner does not enable assets automatically. In Karabiner-Elements
-Settings > Complex Modifications > Add rule, enable "Ctrl+Tab goes to the
-next tab", "Ctrl+Left/Right moves by word, Win+Left/Right switches
-Spaces, Win+Shift+Left/Right moves the window a Space" and then "Ctrl is
-Control and Alt is Meta in kitty", so it sits above the arrow rule, and, with
-tilemo, the "tilemo:" rule last, so it sits above them all. `setup-macos` installs
-Karabiner and says this, but the enabling step is a GUI action that can't be
-scripted.
+Karabiner does not enable assets automatically. In Karabiner-Elements, click
+Complex Modifications in the sidebar, then **Add predefined rule** (not "Add
+your own rule", which opens an editor). Each file here is listed under its
+`title`, with an Enable button beside each rule; the box at the top filters
+the list. Enable, in this order:
+
+1. under "PC keyboard Ctrl+Tab", "Ctrl+Tab goes to the next tab";
+2. under "PC keyboard arrows", "Ctrl+Left/Right moves by word, …";
+3. under "PC keyboard terminals", "Ctrl is Control and Alt is Meta in kitty
+   and Ghostty", so it sits above the arrow rule;
+4. with tilemo, under "tilemo", the "tilemo:" rule last, so it sits above
+   them all.
+
+Karabiner puts each rule you enable at the top of the Complex Modifications
+list, and uses the first that matches a key. `setup-macos` installs Karabiner
+and lists these steps at the end of its run, but enabling is a GUI action that
+can't be scripted.
 
 Enabling a rule copies it into `karabiner.json`, and Karabiner runs that copy,
 so a change to an asset doesn't reach a rule that's already enabled. After
-pulling one, remove the rule under Complex Modifications and add it again.
+pulling one, click the trash icon beside the rule under Complex Modifications,
+then enable it again as above.
 
-Karabiner also needs its driver extension approved and Input Monitoring
-permission granted, both prompted for on first launch.
+Karabiner also needs its driver extension, background services and input
+capture allowed: its Setup page, in the sidebar, lists each with a button to
+the System Settings page for it.
 
 ## Scope
 

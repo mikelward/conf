@@ -176,7 +176,7 @@ start_test "tilemo's rule exists"
 assert_true test -f "$_tilemo_file"
 
 # The rule was timo.json before the repo was renamed; a copy left behind
-# would list the same rule twice in Karabiner's Add rule dialog.
+# would list the same rule twice in Karabiner's Add predefined rule list.
 start_test "the old timo.json rule is gone"
 assert_false test -e "$_srcdir/config/karabiner/assets/complex_modifications/timo.json"
 
