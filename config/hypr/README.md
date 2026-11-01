@@ -212,6 +212,14 @@ count along the bar rather than naming a workspace. The bar's order is
 tide's: the standing workspaces from `tide-workspaces.lua`, home first, then
 the rest in the order they were made.
 
+With tide's `span.lua` installed beside the layout and more than one monitor,
+a workspace spans them all (tide SPEC.md §6.5, Monitors): each monitor shows
+its own part of it, `NAME` on the monitor home is on and `NAME@OUT` on each
+other, and every workspace key switches them together, keeping focus on the
+monitor it was on. Moving a window to a workspace puts it in that workspace's
+part on its own monitor. Without `span.lua`, the keys switch the focused
+monitor alone.
+
 ### Layouts and windows
 
 | Keys | Action |
