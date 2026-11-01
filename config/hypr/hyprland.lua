@@ -437,6 +437,31 @@ end
 -- last monitor. Without them (master, or an older tide layout), Hyprland's
 -- movefocus and movewindow, which cross monitors too; under an older tide
 -- layout movewindow swaps in Hyprland's order and stays on the monitor.
+-- Hyprland 0.56's movewindow only pushes a floating window to its own
+-- monitor's edge (CDefaultFloatingAlgorithm::moveTargetInDirection), so a
+-- float goes to the monitor that way instead, as movewindow mon:l / mon:r
+-- would, still floating; past the last monitor, nothing.
+local function move_side(dir)
+    local tiled = hl.dsp.window.move({ direction = dir })
+    local mon = dir:sub(1, 1)
+    return function()
+        local ok, w = pcall(hl.get_active_window)
+        if not ok then
+            notify_error("couldn't see whether the window floats: " .. tostring(w))
+            return
+        end
+        if not (w and w.floating) then
+            hl.dispatch(tiled)
+            return
+        end
+        local ok_mon, that_way = pcall(hl.get_monitor, mon)
+        if not ok_mon then
+            notify_error("couldn't find the monitor " .. dir .. " of this one: " .. tostring(that_way))
+        elseif that_way then
+            hl.dispatch(hl.dsp.window.move({ monitor = mon, follow = true }))
+        end
+    end
+end
 local side
 if qs and type(qs.focus_side) == "function" and type(qs.move_side) == "function" then
     side = {
@@ -449,8 +474,8 @@ else
     side = {
         focus_left = hl.dsp.focus({ direction = "left" }),
         focus_right = hl.dsp.focus({ direction = "right" }),
-        move_left = hl.dsp.window.move({ direction = "left" }),
-        move_right = hl.dsp.window.move({ direction = "right" }),
+        move_left = move_side("left"),
+        move_right = move_side("right"),
     }
 end
 
