@@ -311,6 +311,10 @@ local function new_hl()
             return S.active_workspace
         end,
         get_active_monitor = function() return S.active_monitor end,
+        -- By "address:0x…", from S.windows_by_address.
+        get_window = function(selector)
+            return (S.windows_by_address or {})[(selector or ""):gsub("^address:", "")]
+        end,
         get_active_window = function()
             if S.active_window == "raise" then error("window gone") end
             return S.active_window
@@ -945,6 +949,33 @@ test("conf_workspaces.go is the workspace keys' switch, for tide's bar", functio
     local ok, err = pcall(conf_workspaces.go, "")
     eq(false, ok)
     truthy(tostring(err):find("takes a workspace's name", 1, true))
+end)
+
+test("conf_workspaces.move puts a window in its workspace's part on its own monitor", function()
+    load({ workspaces = STANDING, span = FAKE_SPAN })
+    two_monitors()
+    S.windows_by_address = { ["0xabc"] = { address = "0xabc", monitor = { name = "DP-2" } } }
+    S.dispatched = {}
+    conf_workspaces.move("0xabc", "docs", true)
+    eq("window.move name:docs@DP-2, focus name:docs@DP-2, focus name:docs, focus address:0xabc", targets(S.dispatched))
+    S.dispatched = {}
+    conf_workspaces.move("0xabc", "re", false)
+    eq("window.move name:re@DP-2", targets(S.dispatched), "without follow it stays")
+    eq("address:0xabc", S.dispatched[1].args.window)
+    eq(false, (pcall(conf_workspaces.move, "abc", "re")), "an address is 0x and hex")
+    eq(false, (pcall(conf_workspaces.move, "0xabc", "")), "a name is needed")
+end)
+
+test("on one monitor, conf_workspaces.move is Hyprland's own move", function()
+    load({ workspaces = STANDING, span = FAKE_SPAN })
+    S.monitor_list = { { id = 0, name = "eDP-1" } }
+    S.active_monitor = { name = "eDP-1" }
+    S.workspace_list = named("in")
+    S.dispatched = {}
+    conf_workspaces.move("0xabc", "re", true)
+    eq("window.move name:re", targets(S.dispatched))
+    eq(true, S.dispatched[1].args.follow)
+    eq("address:0xabc", S.dispatched[1].args.window)
 end)
 
 test("with span.lua on one monitor, the workspace keys are as before", function()
