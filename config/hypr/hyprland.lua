@@ -431,9 +431,36 @@ else
     }
 end
 
+-- Super+Left / Right and Super+Shift+Left / Right (tide SPEC.md §6.6):
+-- focus or move the window that way, going on to the next monitor at the
+-- edge. The tide layout's helpers share one rule and do nothing past the
+-- last monitor. Without them (master, or an older tide layout), Hyprland's
+-- movefocus and movewindow, which cross monitors too; under an older tide
+-- layout movewindow swaps in Hyprland's order and stays on the monitor.
+local side
+if qs and type(qs.focus_side) == "function" and type(qs.move_side) == "function" then
+    side = {
+        focus_left = function() qs.focus_side(-1) end,
+        focus_right = function() qs.focus_side(1) end,
+        move_left = function() qs.move_side(-1) end,
+        move_right = function() qs.move_side(1) end,
+    }
+else
+    side = {
+        focus_left = hl.dsp.focus({ direction = "left" }),
+        focus_right = hl.dsp.focus({ direction = "right" }),
+        move_left = hl.dsp.window.move({ direction = "left" }),
+        move_right = hl.dsp.window.move({ direction = "right" }),
+    }
+end
+
 hl.config({
     general = {
         layout = qs and "lua:tide" or "master",
+        -- Past the last monitor, movefocus does nothing rather than wrap to
+        -- the far side of this one, as the tide layout's Super+Left and
+        -- Right do.
+        no_focus_fallback = true,
         -- The focus cue is the dim alone: no gaps, no borders.
         gaps_in = 0,
         gaps_out = 0,
@@ -1026,10 +1053,10 @@ local function go(name)
     hl.dispatch(hl.dsp.focus({ workspace = "name:" .. name }))
 end
 
--- Previous / next workspace in the bar's order, as in KDE and on the Mac,
--- stopping at either end; with carry_window, taking the focused window
--- there.
-local function step_workspace(delta, carry_window)
+-- Previous / next workspace in the bar's order, as in GNOME, stopping at
+-- either end; with move_window, moving the focused window there and
+-- following it.
+local function step_workspace(delta, move_window)
     return function()
         local name = active_name()
         if not name then
@@ -1046,20 +1073,22 @@ local function step_workspace(delta, carry_window)
         if not target then
             return
         end
-        if carry_window then
+        if move_window then
             hl.dispatch(hl.dsp.window.move({ workspace = "name:" .. target, follow = true }))
         else
             go(target)
         end
     end
 end
-hl.bind(key("Left"), step_workspace(-1, false), does("Previous workspace"))
-hl.bind(key("Right"), step_workspace(1, false), does("Next workspace"))
--- The same, where GNOME has them.
 hl.bind(key("Page_Up"), step_workspace(-1, false), does("Previous workspace"))
 hl.bind(key("Page_Down"), step_workspace(1, false), does("Next workspace"))
-hl.bind(key("SHIFT + Left"), step_workspace(-1, true), does("Move the window to the previous workspace"))
-hl.bind(key("SHIFT + Right"), step_workspace(1, true), does("Move the window to the next workspace"))
+hl.bind(key("SHIFT + Page_Up"), step_workspace(-1, true), does("Move the window to the previous workspace"))
+hl.bind(key("SHIFT + Page_Down"), step_workspace(1, true), does("Move the window to the next workspace"))
+-- Left and right are windows, across monitors, as in tilemo (above).
+hl.bind(key("Left"), side.focus_left, does("Focus the window to the left"))
+hl.bind(key("Right"), side.focus_right, does("Focus the window to the right"))
+hl.bind(key("SHIFT + Left"), side.move_left, does("Move the window left"))
+hl.bind(key("SHIFT + Right"), side.move_right, does("Move the window right"))
 
 -- Super+1…9: the Nth workspace in the bar's order, so Super+1 is home, as
 -- Super+Home is. Super+Shift+1…9 sends the focused window there and stays,

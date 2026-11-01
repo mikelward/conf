@@ -85,7 +85,7 @@ local function helper(name)
 end
 for _, n in ipairs({ "cycle_next", "cycle_prev", "toggle_monocle", "grow", "shrink",
                      "add_master", "remove_master", "swap_with_master", "focus", "move",
-                     "drag_press", "drag_release" }) do
+                     "focus_side", "move_side", "drag_press", "drag_release" }) do
     M[n] = helper(n)
 end
 function M.setup(opts) M.setup_opts = opts end
@@ -677,7 +677,7 @@ test("every key in the spec is bound", function()
         "SUPER + H", "SUPER + I", "SUPER + M", "SUPER + N", "SUPER + R", "SUPER + Y",
         "SUPER + BackSpace", "SUPER + Z", "SUPER + L", "SUPER + S", "SUPER + P",
         "SUPER + Left", "SUPER + Right", "SUPER + SHIFT + Left", "SUPER + SHIFT + Right",
-        "SUPER + Page_Up", "SUPER + Page_Down",
+        "SUPER + Page_Up", "SUPER + Page_Down", "SUPER + SHIFT + Page_Up", "SUPER + SHIFT + Page_Down",
         "SUPER + J", "SUPER + K", "SUPER + SHIFT + J", "SUPER + SHIFT + K",
         "SUPER + Return", "SUPER + SHIFT + Return", "SUPER + backslash", "SUPER + slash", "SUPER + equal", "SUPER + minus",
         "SUPER + period", "SUPER + comma", "SUPER + grave", "SUPER + O",
@@ -764,48 +764,80 @@ test("Super+Shift+1…9 send the window to the Nth workspace and stay", function
     eq(0, #run("SUPER + SHIFT + 6"), "past the last, nothing")
 end)
 
-test("Super+Left/Right and PgUp/PgDn step through the bar's order and stop at the ends", function()
+test("Super+PgUp/PgDn step through the bar's order and stop at the ends", function()
     load({ workspaces = STANDING })
     S.workspace_list = named("in", "PR-12", "re", "docs")
     table.insert(S.workspace_list, { id = 2, name = "2" })
     table.insert(S.workspace_list, { id = -98, name = "special:scratch" })
     -- in, re, oc, me, PR-12, docs, 2
     S.active_workspace = { id = -1338, name = "in" }
-    local d = run("SUPER + Right")
+    local d = run("SUPER + Page_Down")
     eq(1, #d)
     truthy(is_dsp(d[1], "focus"))
     eq("name:re", d[1].args.workspace, "a standing workspace comes next")
-    eq(0, #run("SUPER + Left"), "nothing before home")
+    eq(0, #run("SUPER + Page_Up"), "nothing before home")
     S.active_workspace = { id = -1340, name = "re" }
-    eq("name:oc", run("SUPER + Page_Down")[1].args.workspace, "PgDn is next, made or not")
-    eq("name:in", run("SUPER + Page_Up")[1].args.workspace, "PgUp is previous")
+    eq("name:oc", run("SUPER + Page_Down")[1].args.workspace, "next, made or not")
+    eq("name:in", run("SUPER + Page_Up")[1].args.workspace, "previous")
     S.active_workspace = { id = -1339, name = "PR-12" }
-    eq("name:me", run("SUPER + Left")[1].args.workspace, "back past the made ones")
-    eq("name:docs", run("SUPER + Right")[1].args.workspace)
+    eq("name:me", run("SUPER + Page_Up")[1].args.workspace, "back past the made ones")
+    eq("name:docs", run("SUPER + Page_Down")[1].args.workspace)
     S.active_workspace = { id = 2, name = "2" }
-    eq(0, #run("SUPER + Right"), "past the last")
+    eq(0, #run("SUPER + Page_Down"), "past the last")
     S.active_workspace = { id = -98, name = "special:scratch" }
-    eq(0, #run("SUPER + Right"), "from a special workspace")
+    eq(0, #run("SUPER + Page_Down"), "from a special workspace")
     S.active_workspace = nil
-    eq(0, #run("SUPER + Right"), "with no workspace")
+    eq(0, #run("SUPER + Page_Down"), "with no workspace")
 end)
 
-test("Super+Shift+Left/Right carry the window there and follow it", function()
+test("Super+Shift+PgUp/PgDn move the window there and follow it", function()
     load({ workspaces = STANDING })
     S.workspace_list = named("in")
     S.active_workspace = { id = -1338, name = "in" }
-    local d = run("SUPER + SHIFT + Right")
+    local d = run("SUPER + SHIFT + Page_Down")
     truthy(is_dsp(d[1], "window.move"))
     eq("name:re", d[1].args.workspace)
     eq(true, d[1].args.follow)
-    eq(0, #run("SUPER + SHIFT + Left"), "nothing before home")
+    eq(0, #run("SUPER + SHIFT + Page_Up"), "nothing before home")
+end)
+
+test("Super+Left/Right and Super+Shift+Left/Right are the tide layout's window keys", function()
+    load({ layout = FAKE_LAYOUT })
+    local qs = _G.fake_layout
+    run("SUPER + Left")
+    run("SUPER + Right")
+    run("SUPER + SHIFT + Left")
+    run("SUPER + SHIFT + Right")
+    eq("focus_side -1", qs.calls[1][1] .. " " .. qs.calls[1][2])
+    eq("focus_side 1", qs.calls[2][1] .. " " .. qs.calls[2][2])
+    eq("move_side -1", qs.calls[3][1] .. " " .. qs.calls[3][2])
+    eq("move_side 1", qs.calls[4][1] .. " " .. qs.calls[4][2])
+    eq("Focus the window to the left", bind("SUPER + Left").opts.description)
+    eq("Move the window right", bind("SUPER + SHIFT + Right").opts.description)
+end)
+
+test("without them, Super+Left/Right are Hyprland's movefocus and movewindow", function()
+    for _, layout in ipairs({ false, (FAKE_LAYOUT:gsub('"focus_side", "move_side", ', "")) }) do
+        load(layout and { layout = layout } or nil)
+        local what = layout and "an older tide layout" or "master"
+        local l, r = bind("SUPER + Left").target, bind("SUPER + Right").target
+        truthy(is_dsp(l, "focus"), what)
+        eq("left", l.args.direction, what)
+        eq("right", r.args.direction, what)
+        local ml, mr = bind("SUPER + SHIFT + Left").target, bind("SUPER + SHIFT + Right").target
+        truthy(is_dsp(ml, "window.move"), what)
+        eq("left", ml.args.direction, what)
+        eq("right", mr.args.direction, what)
+    end
+    -- So movefocus stops past the last monitor rather than wrapping.
+    eq(true, S.config.general.no_focus_fallback, "no_focus_fallback")
 end)
 
 test("a standing name matches a workspace made in another case, as the bar's does", function()
     load({ workspaces = STANDING })
     S.workspace_list = named("in", "RE")
     S.active_workspace = { id = -1338, name = "in" }
-    eq("name:RE", run("SUPER + Right")[1].args.workspace)
+    eq("name:RE", run("SUPER + Page_Down")[1].args.workspace)
 end)
 
 test("Super+Home goes home, whatever it's called", function()
@@ -968,11 +1000,11 @@ end)
 test("a failed workspace lookup is reported, not silently ignored", function()
     load()
     S.active_workspace = "raise"
-    eq(0, #run("SUPER + Right"), "nothing dispatched")
+    eq(0, #run("SUPER + Page_Down"), "nothing dispatched")
     eq(1, #S.notifications, "notifications")
     truthy(S.notifications[1].text:find("active workspace", 1, true), S.notifications[1].text)
     S.active_workspace = nil
-    run("SUPER + Right")
+    run("SUPER + Page_Down")
     eq(1, #S.notifications, "no workspace at all is quiet")
 end)
 

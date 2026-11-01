@@ -200,7 +200,8 @@ such as Win+Q, is left alone and stays Option.
 
 - **Enable it above the arrow rule.** Both match Win+Left/Right, and
   Karabiner uses the first rule that matches, with newly added rules at the
-  top. tilemo's workspace keys take Win+arrow over the Spaces shortcut.
+  top. tilemo's window keys (Win+Left/Right to select a window, Win+Shift+Left/Right
+  to move it, across displays) take Win+arrow over the Spaces shortcut.
 - **tilemo finds it by its description,** which starts `tilemo:`. Without it,
   tilemo puts its keys on plain Option and says so once.
 - **A rule enabled before the rename still works.** tilemo was called timo,
