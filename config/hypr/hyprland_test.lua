@@ -993,10 +993,34 @@ test("maximize, fullscreen and restore", function()
     truthy(modes.maximized and modes.fullscreen, "both modes unset")
 end)
 
-test("float toggles on Super+Shift+F and Super+Insert", function()
-    load()
-    truthy(is_dsp(bind("SUPER + SHIFT + F").target, "window.float"))
-    truthy(is_dsp(bind("SUPER + Insert").target, "window.float"))
+test("float toggles on Super+Shift+F and Super+Insert, telling tide's shell when the window floats now", function()
+    for _, keys in ipairs({ "SUPER + SHIFT + F", "SUPER + Insert" }) do
+        load()
+        local fn = bind(keys).target
+        eq("function", type(fn), keys)
+        -- Floated by the toggle.
+        S.active_window = { address = "0x55aa01", floating = true }
+        fn()
+        truthy(is_dsp(S.dispatched[1], "window.float"), keys)
+        eq("toggle", S.dispatched[1].args.action)
+        truthy(is_dsp(S.dispatched[2], "event"), keys .. ": an event")
+        eq("tide-floated>>0x55aa01", S.dispatched[2].args)
+        -- Tiled by it: nothing to ask.
+        S.dispatched = {}
+        S.active_window = { address = "0x55aa01", floating = false }
+        fn()
+        eq(1, #S.dispatched, keys .. ": the toggle alone")
+        -- No window, or one going away: the toggle, and no question.
+        S.dispatched = {}
+        S.active_window = nil
+        fn()
+        eq(1, #S.dispatched)
+        S.dispatched = {}
+        S.active_window = "raise"
+        fn()
+        eq(1, #S.dispatched)
+        eq(1, #S.notifications, "a failed query is reported")
+    end
     truthy(bind("SUPER + mouse:272").opts.mouse, "drag is a mouse bind")
 end)
 

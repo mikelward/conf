@@ -224,7 +224,7 @@ the rest in the order they were made.
 | `SUPER + .` / `SUPER + ,` | Next / previous layout |
 | `SUPER + \`` (backtick), `SUPER + O` | Toggle monocle |
 | `SUPER + Up` / `SUPER + Shift + Up` / `SUPER + Down` | Maximize (bar stays) / fullscreen / restore |
-| `SUPER + Shift + F` / `SUPER + Insert` | Toggle floating |
+| `SUPER + Shift + F` / `SUPER + Insert` | Toggle floating; floating a window no rule covers has tide's shell ask, once a session for each app, whether to always float it |
 | `SUPER + Alt + F` | Open tide's Floating settings with a rule filled in for the focused window, its class and exact title, to trim and add with Enter (needs the tide shell) |
 | `SUPER + Shift + R` | **Resize** mode (h/j/k/l or arrows; Esc/Enter to exit) |
 
