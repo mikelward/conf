@@ -1221,6 +1221,144 @@ local function send(name, follow)
     end
 end
 
+-- Each window's monitor, by address, for the session (tide SPEC.md §6.5,
+-- Monitors): where it goes back to when that monitor comes back after
+-- going away. A window's monitor is the one its part is meant for, noted
+-- as it opens and each time it moves to a workspace, the moves the handoff
+-- makes itself apart. Hyprland moving whole workspaces to another monitor
+-- moves no window, so it changes nothing here.
+local homes = {}
+local handing_off = false
+
+-- A config reload starts a fresh Lua state, so the windows' monitors are
+-- also kept in a file in this Hyprland instance's runtime directory, as the
+-- lid's state is: a reload while a monitor is away still knows where its
+-- windows go back to. One "ADDRESS OUTPUT" per line.
+local homes_file
+do
+    local dir = os.getenv("XDG_RUNTIME_DIR")
+    local sig = os.getenv("HYPRLAND_INSTANCE_SIGNATURE")
+    if dir and dir ~= "" and sig and sig ~= "" then
+        homes_file = dir .. "/hypr/" .. sig .. "/tide-homes"
+    end
+end
+
+if homes_file then
+    local f = io.open(homes_file)
+    if f then
+        for line in f:lines() do
+            local address, output = line:match("^(0x%x+) (%S+)$")
+            if address then
+                homes[address] = output
+            end
+        end
+        f:close()
+    end
+end
+
+-- Written beside the file and renamed over it, so a reload only reads a
+-- whole one. Not fatal: only a reload while a monitor is away loses it.
+local function save_homes()
+    if not homes_file then
+        return
+    end
+    local lines = {}
+    for address, output in pairs(homes) do
+        table.insert(lines, address .. " " .. output)
+    end
+    table.sort(lines)
+    local tmp = homes_file .. ".tmp"
+    local f, err = io.open(tmp, "w")
+    local ok = f ~= nil
+    if f then
+        ok, err = f:write(table.concat(lines, "\n"), "\n")
+        local closed, close_err = f:close()
+        if ok and not closed then
+            ok, err = false, close_err
+        end
+    end
+    if ok then
+        ok, err = os.rename(tmp, homes_file)
+    end
+    if not ok then
+        os.remove(tmp)
+        notify_error("monitor handoff: couldn't save the windows' monitors: " .. tostring(err))
+    end
+end
+
+local function note_window(w, ws)
+    -- An older span.lua, from before the handoff, has no output_of.
+    if not (span and type(span.output_of) == "function") or handing_off or not (w and w.address) then
+        return
+    end
+    local name = (ws and ws.name) or (w.workspace and w.workspace.name)
+    local main = main_output()
+    local output = main and type(name) == "string" and span.output_of(name, main)
+    if not output then
+        return
+    end
+    for _, o in ipairs(outputs()) do
+        if o == output then
+            if homes[w.address] ~= output then
+                homes[w.address] = output
+                save_homes()
+            end
+            return
+        end
+    end
+end
+hl.on("window.open", function(w) note_window(w) end)
+hl.on("window.move_to_workspace", function(w, ws) note_window(w, ws) end)
+hl.on("window.close", function(w)
+    if w and w.address and homes[w.address] then
+        homes[w.address] = nil
+        save_homes()
+    end
+end)
+
+-- After a monitor goes away (`gone`, its name) or comes back: each window
+-- to its workspace's part on its own monitor, or on the main monitor while
+-- its own isn't there (span.handoff). Hyprland has moved the workspaces by
+-- the time either event fires (CMonitor::onDisconnect, onConnect), and the
+-- lid's handler, added before this one, has moved the panel's back.
+local function handoff(gone)
+    if not (span and type(span.handoff) == "function" and type(span.output_of) == "function") then
+        return
+    end
+    local outs = {}
+    for _, o in ipairs(outputs()) do
+        if o ~= gone then
+            table.insert(outs, o)
+        end
+    end
+    local main = main_output()
+    if #outs == 0 or not main then
+        return
+    end
+    local windows = {}
+    for _, w in ipairs(query("couldn't list the windows for the monitor handoff", hl.get_windows) or {}) do
+        if w.address and w.workspace and type(w.workspace.name) == "string" then
+            table.insert(windows, { address = w.address, workspace = w.workspace.name })
+        end
+    end
+    local moves = span.handoff(homes, windows, outs, main)
+    save_homes() -- the handoff notes windows it hadn't seen
+    handing_off = true
+    local ok, err = pcall(function()
+        for _, m in ipairs(moves) do
+            local name = span.split((m.workspace:gsub("^name:", "")))
+            if name then
+                spanning(name) -- binds the part to its monitor before it's made
+            end
+            hl.dispatch(hl.dsp.window.move({ workspace = m.workspace, follow = false, window = "address:" .. m.address }))
+        end
+    end)
+    handing_off = false
+    if not ok then
+        notify_error("monitor handoff: couldn't move the windows to their monitors: " .. tostring(err))
+    end
+end
+
 -- Previous / next workspace in the bar's order, as in GNOME, stopping at
 -- either end; with move_window, moving the focused window there and
 -- following it.
@@ -1641,6 +1779,12 @@ hl.on("monitor.added", function(m)
     end
     forget_lid()
 end)
+
+-- The windows' handoff between monitors (tide SPEC.md §6.5), after the
+-- lid's handler above has moved the panel's workspaces back, since
+-- handlers run in the order they were added.
+hl.on("monitor.removed", function(m) handoff(m and m.name) end)
+hl.on("monitor.added", function() handoff(nil) end)
 
 hl.bind("switch:on:Lid Switch", lid_close, does("Lid closed", locked))
 hl.bind("switch:off:Lid Switch", lid_open, does("Lid opened", locked))

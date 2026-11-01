@@ -219,7 +219,10 @@ other, and every workspace key switches them together, keeping focus on the
 monitor it was on. Moving a window to a workspace puts it in that workspace's
 part on its own monitor. Without `span.lua`, the keys switch the focused
 monitor alone. tide's shell calls the same switch and move through
-`conf_workspaces.go(name)` and `conf_workspaces.move(address, name, follow)`.
+`conf_workspaces.go(name)` and `conf_workspaces.move(address, name, follow)`. When a
+monitor goes away, such as the lid closing on a desk or a cable pulled, its
+windows move into the main monitor's parts, and when it comes back they go
+back to its own, each window's monitor noted as it opens and as you move it.
 
 ### Layouts and windows
 
