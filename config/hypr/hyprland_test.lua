@@ -68,6 +68,7 @@ local TIDE_POWER = ".config/hypr/tide-power.lua"
 local TIDE_WORKSPACES = ".config/hypr/tide-workspaces.lua"
 local TIDE_FLOATING = ".config/hypr/tide-floating.lua"
 local LID_FILE = "run/hypr/sig1/tide-lid"
+local HOMES_FILE = "run/hypr/sig1/tide-homes"
 
 local function exists(rel)
     local f = io.open(tmp .. "/" .. rel)
@@ -114,6 +115,16 @@ function M.rules(name, outputs, main)
         table.insert(out, { workspace = "name:" .. M.part(name, o, main), monitor = o })
     end
     return out
+end
+function M.output_of(n, main)
+    local name, output = M.split(n)
+    if not name then return nil end
+    return output or main
+end
+-- Records what it's given, and returns _G.span_moves.
+function M.handoff(homes, windows, outputs, main)
+    _G.handoff_args = { homes = homes, windows = windows, outputs = outputs, main = main }
+    return _G.span_moves or {}
 end
 function M.switch(name, outputs, main, focused)
     local out = {}
@@ -338,6 +349,7 @@ local function new_hl()
             return out
         end,
         get_workspaces = function() return S.workspace_list end,
+        get_windows = function() return S.window_list or {} end,
         -- By name, or desc: and the start of the short description or the
         -- full one (`full_description`, which hl.get_monitors doesn't give),
         -- as Hyprland resolves a selector; enabled monitors only. Hyprland
@@ -382,7 +394,7 @@ local function load(setup)
     end
     if not (setup and setup.reload) then
         -- rm -rf, since a failed test can leave a directory in its place.
-        assert(os.execute("rm -rf '" .. tmp .. "/" .. LID_FILE .. "'"))
+        assert(os.execute("rm -rf '" .. tmp .. "/" .. LID_FILE .. "' '" .. tmp .. "/" .. HOMES_FILE .. "'"))
     end
     if setup and setup.layout then
         write(LAYOUT, setup.layout)
@@ -978,6 +990,90 @@ test("on one monitor, conf_workspaces.move is Hyprland's own move", function()
     eq("address:0xabc", S.dispatched[1].args.window)
 end)
 
+test("each window's monitor is noted as it opens and moves, and forgotten as it closes", function()
+    load({ workspaces = STANDING, span = FAKE_SPAN })
+    two_monitors()
+    fire("window.open", { address = "0xa", workspace = { name = "re" } })
+    fire("window.open", { address = "0xb", workspace = { name = "re@DP-2" } })
+    fire("window.open", { address = "0xc", workspace = { name = "special:minimized:re" } })
+    fire("window.open", { address = "0xd", workspace = { name = "re@DP-9" } })
+    fire("window.move_to_workspace", { address = "0xa", workspace = { name = "re" } }, { name = "oc@DP-2" })
+    fire("window.close", { address = "0xb" })
+    _G.handoff_args = nil
+    fire("monitor.added", { name = "DP-2" })
+    local homes = _G.handoff_args.homes
+    eq("DP-2", homes["0xa"], "moved to DP-2's part, it belongs there")
+    eq(nil, homes["0xb"], "a closed window is forgotten")
+    eq(nil, homes["0xc"], "a minimized window has no part")
+    eq(nil, homes["0xd"], "a part whose monitor isn't there says nothing")
+end)
+
+test("the windows' monitors survive a config reload", function()
+    load({ workspaces = STANDING, span = FAKE_SPAN })
+    two_monitors()
+    fire("window.open", { address = "0xa", workspace = { name = "re@DP-2" } })
+    fire("window.open", { address = "0xb", workspace = { name = "re" } })
+    fire("window.close", { address = "0xb" })
+    truthy(exists(HOMES_FILE), "kept in the runtime directory")
+    -- DP-2 goes, then the config reloads before it comes back.
+    load({ workspaces = STANDING, span = FAKE_SPAN, reload = true })
+    two_monitors()
+    _G.handoff_args = nil
+    fire("monitor.added", { name = "DP-2" })
+    eq("DP-2", _G.handoff_args.homes["0xa"], "a reload still knows where 0xa goes")
+    eq(nil, _G.handoff_args.homes["0xb"], "a closed window stays forgotten")
+    -- A new session starts afresh.
+    load({ workspaces = STANDING, span = FAKE_SPAN })
+    two_monitors()
+    fire("monitor.added", { name = "DP-2" })
+    eq(nil, _G.handoff_args.homes["0xa"])
+end)
+
+test("an older span.lua with no handoff leaves windows alone, without errors", function()
+    local older = FAKE_SPAN:gsub("function M%.output_of", "local function no_output_of"):gsub("function M%.handoff", "local function no_handoff")
+    load({ workspaces = STANDING, span = older })
+    two_monitors()
+    S.window_list = { { address = "0xa", workspace = { name = "re@DP-2" } } }
+    S.dispatched = {}
+    fire("window.open", { address = "0xa", workspace = { name = "re" } })
+    fire("window.move_to_workspace", { address = "0xa" }, { name = "re@DP-2" })
+    fire("monitor.removed", { name = "DP-2" })
+    eq(0, #S.dispatched, "nothing moves")
+    eq("focus name:re@DP-2, focus name:re", targets(run("SUPER + 2")), "the keys still span both")
+end)
+
+test("when a monitor goes, the handoff moves the windows span.lua says, binding each part first", function()
+    load({ workspaces = STANDING, span = FAKE_SPAN })
+    two_monitors()
+    S.window_list = {
+        { address = "0xa", workspace = { name = "re@DP-2" } },
+        { address = "0xb", workspace = { name = "re" } },
+        { address = "0xc" },
+    }
+    _G.span_moves = { { address = "0xa", workspace = "name:re" } }
+    S.dispatched = {}
+    fire("monitor.removed", { name = "DP-2" })
+    _G.span_moves = nil
+    local a = _G.handoff_args
+    eq("eDP-1", table.concat(a.outputs, ","), "the monitor gone isn't one left")
+    eq("eDP-1", a.main)
+    eq(2, #a.windows, "a window on no workspace is left out")
+    eq("re@DP-2", a.windows[1].workspace)
+    eq("window.move name:re", targets(S.dispatched))
+    eq("address:0xa", S.dispatched[1].args.window)
+    eq(false, S.dispatched[1].args.follow)
+    -- Its own moves change no window's monitor.
+    fire("window.move_to_workspace", { address = "0xa" }, { name = "re" })
+    fire("window.open", { address = "0xe", workspace = { name = "re" } })
+    _G.span_moves = { { address = "0xa", workspace = "name:re@DP-2" } }
+    S.dispatched = {}
+    fire("monitor.added", { name = "DP-2" })
+    _G.span_moves = nil
+    eq("eDP-1", _G.handoff_args.homes["0xe"], "a window opened meanwhile is noted")
+    eq("window.move name:re@DP-2", targets({ S.dispatched[1] }), "and it goes back")
+    eq("DP-2", S.workspace_rules["name:re@DP-2"].monitor, "to a part bound to DP-2 before it's made")
+end)
+
 test("with span.lua on one monitor, the workspace keys are as before", function()
     load({ workspaces = STANDING, span = FAKE_SPAN })
     S.monitor_list = { { id = 0, name = "eDP-1" } }
@@ -1472,6 +1568,20 @@ test("docked lid close disables the panel; open restores it and its workspaces",
     fire("monitor.added", { name = "eDP-1" })
     eq(0, #S.dispatched, "only once")
     eq(false, exists(LID_FILE), "the saved state is gone once restored")
+end)
+
+test("the handoff runs after the lid's handler has moved the panel's workspaces back", function()
+    load({ workspaces = STANDING, span = FAKE_SPAN, monitors = { { name = "eDP-1" }, { name = "DP-1" } } })
+    docked()
+    lid("on")
+    lid("off")
+    S.window_list = { { address = "0xa", workspace = { name = "re" } } }
+    _G.span_moves = { { address = "0xa", workspace = "name:re@DP-1" } }
+    S.dispatched = {}
+    fire("monitor.added", { name = "eDP-1" })
+    _G.span_moves = nil
+    eq("workspace.move", S.dispatched[1].dsp, "the panel's workspaces first")
+    eq("window.move", S.dispatched[#S.dispatched].dsp, "then the windows")
 end)
 
 local function undocked()
