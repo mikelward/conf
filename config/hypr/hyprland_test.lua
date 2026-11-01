@@ -162,6 +162,8 @@ local function new_hl()
         -- What the getters return; set per test.
         active_workspace = nil,
         active_window = nil,
+        -- hl.get_monitor("l") and ("r"): { l = monitor, r = monitor }.
+        monitor_that_way = nil,
         monitor_list = {},
         workspace_list = {},
     }
@@ -308,6 +310,12 @@ local function new_hl()
                 local u = io.tmpfile()
                 debug.setmetatable(u, { __index = function(_, k) return m[k] end })
                 return u
+            end
+            -- A direction, from the focused monitor: S.monitor_that_way.
+            if selector == "l" or selector == "r" then
+                if S.monitor_that_way == "raise" then error("monitors gone") end
+                local m = (S.monitor_that_way or {})[selector]
+                return m and userdata(m)
             end
             local desc = selector:match("^desc:%s*(.-)%s*$")
             for _, m in ipairs(S.monitor_list) do
@@ -824,13 +832,35 @@ test("without them, Super+Left/Right are Hyprland's movefocus and movewindow", f
         truthy(is_dsp(l, "focus"), what)
         eq("left", l.args.direction, what)
         eq("right", r.args.direction, what)
-        local ml, mr = bind("SUPER + SHIFT + Left").target, bind("SUPER + SHIFT + Right").target
-        truthy(is_dsp(ml, "window.move"), what)
-        eq("left", ml.args.direction, what)
-        eq("right", mr.args.direction, what)
+        S.active_window = { address = "0x55aa01", floating = false }
+        local ml, mr = run("SUPER + SHIFT + Left"), run("SUPER + SHIFT + Right")
+        truthy(is_dsp(ml[1], "window.move"), what)
+        eq("left", ml[1].args.direction, what)
+        eq("right", mr[1].args.direction, what)
+        S.active_window = nil
+        eq("left", run("SUPER + SHIFT + Left")[1].args.direction, what .. ", with no window")
     end
     -- So movefocus stops past the last monitor rather than wrapping.
     eq(true, S.config.general.no_focus_fallback, "no_focus_fallback")
+end)
+
+test("without them, Super+Shift+Left/Right move a floating window to the monitor that way", function()
+    load()
+    S.active_window = { address = "0x55aa01", floating = true }
+    S.monitor_that_way = { r = { name = "DP-2" } }
+    local d = run("SUPER + SHIFT + Right")
+    eq(1, #d, "one dispatch")
+    truthy(is_dsp(d[1], "window.move"))
+    eq("r", d[1].args.monitor, "to the monitor on the right")
+    eq(true, d[1].args.follow, "keeping focus")
+    eq(nil, d[1].args.direction, "not movewindow's push to the edge")
+    eq(0, #run("SUPER + SHIFT + Left"), "past the last monitor, nothing")
+    S.monitor_that_way = "raise"
+    eq(0, #run("SUPER + SHIFT + Right"), "nothing when the monitors can't be read")
+    eq(1, #S.notifications, "and says so")
+    S.active_window = "raise"
+    eq(0, #run("SUPER + SHIFT + Right"), "nothing when the window can't be read")
+    eq(2, #S.notifications, "and says so")
 end)
 
 test("a standing name matches a workspace made in another case, as the bar's does", function()
