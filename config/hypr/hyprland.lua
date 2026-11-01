@@ -1188,22 +1188,36 @@ local function go(name)
     end
 end
 
--- Moves the focused window to workspace `name`, into its part on the
--- window's own monitor, which is the focused one; with follow, goes there
--- too, and keeps the window focused.
-local function send(name, follow)
+-- Moves the window at `address` (0x… hex) to workspace `name`, into its
+-- part on the window's own monitor; with follow, goes there too, on every
+-- monitor, and focuses the window. Without span.lua or with one monitor,
+-- it's Hyprland's own move.
+local function move_window(address, name, follow)
+    local selector = "address:" .. address
     local s = spanning(name)
     if not s then
+        hl.dispatch(hl.dsp.window.move({ workspace = "name:" .. name, follow = follow, window = selector }))
+        return
+    end
+    local w = query("couldn't read the window to move", function() return hl.get_window(selector) end)
+    local output = (w and w.monitor and w.monitor.name) or s.focused
+    hl.dispatch(hl.dsp.window.move({ workspace = "name:" .. span.part(name, output, s.main), follow = false, window = selector }))
+    if follow then
+        go(name)
+        hl.dispatch(hl.dsp.focus({ window = selector }))
+    end
+end
+
+-- Moves the focused window to workspace `name`, as move_window does; with
+-- one monitor, Hyprland's own move of the focused window.
+local function send(name, follow)
+    if not spanning(name) then
         hl.dispatch(hl.dsp.window.move({ workspace = "name:" .. name, follow = follow }))
         return
     end
-    local w = follow and query("couldn't read the focused window", hl.get_active_window)
-    hl.dispatch(hl.dsp.window.move({ workspace = "name:" .. span.part(name, s.focused, s.main), follow = false }))
-    if follow then
-        go(name)
-        if w and w.address then
-            hl.dispatch(hl.dsp.focus({ window = "address:" .. w.address }))
-        end
+    local w = query("couldn't read the focused window", hl.get_active_window)
+    if w and w.address then
+        move_window(w.address, name, follow)
     end
 end
 
@@ -2117,6 +2131,18 @@ _G.conf_workspaces = {
             error("conf_workspaces.go takes a workspace's name, got " .. tostring(name), 2)
         end
         go(name)
+    end,
+    -- Moves the window at `address` to the workspace named, into its part
+    -- on the window's own monitor, and with `follow` goes there: how tide's
+    -- name prompt and launches on a named workspace move a window.
+    move = function(address, name, follow)
+        if type(address) ~= "string" or not address:match("^0x%x+$") then
+            error("conf_workspaces.move takes a window's address, 0x and hex, got " .. tostring(address), 2)
+        end
+        if type(name) ~= "string" or name == "" then
+            error("conf_workspaces.move takes a workspace's name, got " .. tostring(name), 2)
+        end
+        move_window(address, name, follow == true)
     end,
 }
 
