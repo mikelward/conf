@@ -901,11 +901,12 @@ end, does("Restore"))
 -- Floating.
 hl.bind(key("SHIFT + F"), hl.dsp.window.float({ action = "toggle" }), does("Float or tile"))
 hl.bind(key("Insert"), hl.dsp.window.float({ action = "toggle" }), does("Float or tile"))
--- Super+Alt+F: always float this app (tide SPEC.md §6.4): tide's shell adds
--- a rule for the focused window's class and says how it went; without the
--- shell, a notification says why nothing happened.
+-- Super+Alt+F: a floating rule for this window (tide SPEC.md §6.4): tide's
+-- shell opens its Floating settings with a rule filled in for the focused
+-- window, to trim and add; without the shell, a notification says why
+-- nothing opened.
 hl.bind(key("ALT + F"), exec("qs -c tide ipc call floating remember || notify-send -a tide 'No floating rules' "
-    .. "'Super+Alt+F adds a floating rule in the tide shell, which is not running.'"), does("Always float this app"))
+    .. "'Super+Alt+F opens the floating rules in the tide shell, which is not running.'"), does("Floating rule for this window"))
 hl.bind(key("mouse:272"), hl.dsp.window.drag(), does("Move the window", { mouse = true }))
 hl.bind(key("mouse:273"), hl.dsp.window.resize(), does("Resize the window", { mouse = true }))
 -- Drag the master/stack edge with no key held (tide SPEC.md §6.6). The
