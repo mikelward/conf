@@ -59,6 +59,7 @@ end
 
 local LAYOUT = ".config/hypr/tide/layout.lua"
 local FOCUS = ".config/hypr/tide/focus.lua"
+local SPAN = ".config/hypr/tide/span.lua"
 local LOCAL = ".config/hypr/hyprland.local.lua"
 local TIDE_INPUT = ".config/hypr/tide-input.lua"
 local TIDE_OUTPUTS = ".config/hypr/tide-outputs.lua"
@@ -90,6 +91,38 @@ for _, n in ipairs({ "cycle_next", "cycle_prev", "toggle_monocle", "grow", "shri
 end
 function M.setup(opts) M.setup_opts = opts end
 _G.fake_layout = M
+return M
+]]
+
+-- A stand-in for tide's span.lua (tide SPEC.md §6.5, Monitors), to its
+-- contract: NAME on the main monitor, NAME@OUT on the others, and a switch
+-- showing the focused monitor's part last.
+local FAKE_SPAN = [[
+local M = {}
+function M.part(name, output, main)
+    return output == main and name or name .. "@" .. output
+end
+function M.split(n)
+    if n == "" or n:find("^special:") then return nil end
+    local name, output = n:match("^(.+)@([^@]+)$")
+    if name then return name, output end
+    return n, nil
+end
+function M.rules(name, outputs, main)
+    local out = {}
+    for _, o in ipairs(outputs) do
+        table.insert(out, { workspace = "name:" .. M.part(name, o, main), monitor = o })
+    end
+    return out
+end
+function M.switch(name, outputs, main, focused)
+    local out = {}
+    for _, o in ipairs(outputs) do
+        if o ~= focused then table.insert(out, { output = o, workspace = "name:" .. M.part(name, o, main) }) end
+    end
+    table.insert(out, { output = focused, workspace = "name:" .. M.part(name, focused, main) })
+    return out
+end
 return M
 ]]
 
@@ -277,6 +310,7 @@ local function new_hl()
             if S.active_workspace == "raise" then error("workspace gone") end
             return S.active_workspace
         end,
+        get_active_monitor = function() return S.active_monitor end,
         get_active_window = function()
             if S.active_window == "raise" then error("window gone") end
             return S.active_window
@@ -351,6 +385,10 @@ local function load(setup)
     end
     if not (setup and setup.keep_files) then
         os.remove(tmp .. "/" .. FOCUS)
+        os.remove(tmp .. "/" .. SPAN)
+    end
+    if setup and setup.span then
+        write(SPAN, setup.span)
     end
     if setup and setup.focus then
         write(FOCUS, setup.focus)
@@ -807,6 +845,129 @@ test("Super+Shift+PgUp/PgDn move the window there and follow it", function()
     eq("name:re", d[1].args.workspace)
     eq(true, d[1].args.follow)
     eq(0, #run("SUPER + SHIFT + Page_Up"), "nothing before home")
+end)
+
+-- Two monitors, the laptop panel main (home's there) and DP-2 focused
+-- unless a test says otherwise.
+local function two_monitors()
+    S.monitor_list = { { id = 0, name = "eDP-1" }, { id = 1, name = "DP-2" } }
+    S.active_monitor = { name = "eDP-1" }
+    S.workspace_list = {
+        { id = -1338, name = "in", monitor = { name = "eDP-1" } },
+        { id = -1339, name = "in@DP-2", monitor = { name = "DP-2" } },
+        { id = -1340, name = "re", monitor = { name = "eDP-1" } },
+        { id = -1341, name = "docs@DP-2", monitor = { name = "DP-2" } },
+    }
+    S.active_workspace = { id = -1338, name = "in" }
+end
+
+local function targets(d)
+    local out = {}
+    for _, x in ipairs(d) do
+        table.insert(out, x.dsp .. " " .. tostring(x.args.workspace or x.args.window))
+    end
+    return table.concat(out, ", ")
+end
+
+test("with span.lua on two monitors, a workspace key shows the workspace on both", function()
+    load({ workspaces = STANDING, span = FAKE_SPAN })
+    two_monitors()
+    eq("focus name:re@DP-2, focus name:re", targets(run("SUPER + Page_Down")),
+        "the other monitor's part first, the focused one's last")
+    truthy(S.workspace_rules["name:re@DP-2"], "a rule binds its part to DP-2")
+    eq("DP-2", S.workspace_rules["name:re@DP-2"].monitor)
+    eq("eDP-1", S.workspace_rules["name:re"].monitor, "and the main part to the main monitor")
+    S.active_monitor = { name = "DP-2" }
+    eq("focus name:in, focus name:in@DP-2", targets(run("SUPER + Home")), "focus stays on DP-2")
+    -- The lid closes on a third monitor's desk: DP-2 now shows home, so
+    -- it's main, and the plain part's rule follows it.
+    S.monitor_list = { { id = 1, name = "DP-2" }, { id = 2, name = "DP-3" } }
+    S.workspace_list[1].monitor = { name = "DP-2" }
+    S.active_monitor = { name = "DP-2" }
+    run("SUPER + Page_Down")
+    eq("DP-2", S.workspace_rules["name:re"].monitor, "the plain part's rule moves to the new main")
+end)
+
+test("with span.lua, each monitor's part is one workspace on the bar's order", function()
+    load({ workspaces = STANDING, span = FAKE_SPAN })
+    two_monitors()
+    -- in, re, oc, me, docs: docs is listed once, from its part on DP-2.
+    eq("focus name:docs@DP-2, focus name:docs", targets(run("SUPER + 5")))
+    eq(0, #run("SUPER + 6"), "no workspace past docs")
+    S.active_workspace = { id = -1341, name = "docs@DP-2" }
+    S.active_monitor = { name = "DP-2" }
+    eq("focus name:me, focus name:me@DP-2", targets(run("SUPER + Page_Up")),
+        "a part's neighbors are its workspace's")
+end)
+
+test("with span.lua, a moved window goes to its own monitor's part and keeps focus", function()
+    load({ workspaces = STANDING, span = FAKE_SPAN })
+    two_monitors()
+    S.active_monitor = { name = "DP-2" }
+    S.active_workspace = { id = -1339, name = "in@DP-2" }
+    S.active_window = { address = "0xabc" }
+    eq("window.move name:re@DP-2, focus name:re, focus name:re@DP-2, focus address:0xabc",
+        targets(run("SUPER + SHIFT + Page_Down")))
+    eq("window.move name:oc@DP-2", targets(run("SUPER + SHIFT + 3")), "Super+Shift+N stays")
+end)
+
+test("with span.lua, Super+Tab's history counts a workspace once, whichever part", function()
+    load({ workspaces = STANDING, span = FAKE_SPAN })
+    two_monitors()
+    fire("workspace.active", { name = "re@DP-2" })
+    fire("workspace.active", { name = "re" })
+    fire("workspace.active", { name = "in@DP-2" })
+    eq("focus name:re@DP-2, focus name:re", targets(run("SUPER + Tab")), "home back to re")
+end)
+
+test("after home changes, going back to the old home binds its part to the main monitor again", function()
+    load({ workspaces = STANDING, span = FAKE_SPAN })
+    two_monitors()
+    S.active_workspace = { id = -1340, name = "re" }
+    run("SUPER + Home")
+    eq(true, S.workspace_rules["name:in"].enabled)
+    -- The settings name re home now, which turns in's rule off.
+    write(TIDE_WORKSPACES, [[return { home = "re", standing = { "re", "in" }, in_apps = {} }]])
+    conf_workspaces.reload()
+    eq(false, S.workspace_rules["name:in"].enabled, "the old home's rule is off")
+    S.workspace_list[3].monitor = { name = "eDP-1" }
+    run("SUPER + 2")
+    eq(true, S.workspace_rules["name:in"].enabled, "a fresh rule binds in again")
+    eq("eDP-1", S.workspace_rules["name:in"].monitor)
+end)
+
+test("conf_workspaces.go is the workspace keys' switch, for tide's bar", function()
+    load({ workspaces = STANDING, span = FAKE_SPAN })
+    two_monitors()
+    S.dispatched = {}
+    conf_workspaces.go("docs")
+    eq("focus name:docs@DP-2, focus name:docs", targets(S.dispatched))
+    local ok, err = pcall(conf_workspaces.go, "")
+    eq(false, ok)
+    truthy(tostring(err):find("takes a workspace's name", 1, true))
+end)
+
+test("with span.lua on one monitor, the workspace keys are as before", function()
+    load({ workspaces = STANDING, span = FAKE_SPAN })
+    S.monitor_list = { { id = 0, name = "eDP-1" } }
+    S.active_monitor = { name = "eDP-1" }
+    S.workspace_list = named("in")
+    S.active_workspace = { id = -1338, name = "in" }
+    eq("focus name:re", targets(run("SUPER + Page_Down")))
+    eq(nil, S.workspace_rules["name:re@DP-2"], "no rule for a part")
+end)
+
+test("a span.lua missing a function is reported, and the keys switch one monitor", function()
+    load({ workspaces = STANDING, span = "return { part = function() end }" })
+    two_monitors()
+    local found
+    for _, n in ipairs(S.notifications) do
+        if tostring(n.text):find("span model failed to load", 1, true) then
+            found = true
+        end
+    end
+    truthy(found, "a notification says so")
+    eq("focus name:re", targets(run("SUPER + Page_Down")))
 end)
 
 test("Super+Left/Right and Super+Shift+Left/Right are the tide layout's window keys", function()

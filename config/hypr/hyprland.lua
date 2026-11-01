@@ -396,6 +396,36 @@ if tide_session then
     end
 end
 
+-- tide's model of a workspace spanning every monitor (tide SPEC.md §6.5,
+-- Monitors), installed beside the layout: each monitor's part of a
+-- workspace is a Hyprland workspace of its own, NAME on the main monitor
+-- and NAME@OUT on each other. Without it, or with one monitor, the
+-- workspace keys switch the focused monitor alone, as Hyprland does.
+local span
+do
+    local path = home .. "/.config/hypr/tide/span.lua"
+    local text = read_optional(path, "tide span model", 1024 * 1024)
+    if text then
+        local ok, result = pcall(function()
+            local m = assert(load(text, "@" .. path))()
+            if type(m) ~= "table" then
+                error("span.lua returned " .. type(m) .. ", not a module")
+            end
+            for _, name in ipairs({ "part", "split", "rules", "switch" }) do
+                if type(m[name]) ~= "function" then
+                    error("span.lua has no " .. name .. "()")
+                end
+            end
+            return m
+        end)
+        if ok then
+            span = result
+        else
+            notify_error("tide span model failed to load, switching one monitor at a time: " .. tostring(result))
+        end
+    end
+end
+
 -- Each layout action as a bind target, from tide or from master.
 local act
 if qs then
@@ -1005,17 +1035,88 @@ hl.define_submap("resize", function()
     hl.bind("Return", hl.dsp.submap("reset"), does("Leave resize mode"))
 end)
 
+-- The workspace a Hyprland workspace's name is a part of: NAME@OUT is
+-- NAME's part on OUT (tide SPEC.md §6.5, Monitors).
+local function plain(name)
+    if span and type(name) == "string" then
+        return span.split(name) or name
+    end
+    return name
+end
+
+-- The monitors on, by name, in Hyprland's order.
+local function outputs()
+    local out = {}
+    for _, m in ipairs(query("couldn't list the monitors", hl.get_monitors) or {}) do
+        if m.name then
+            table.insert(out, m.name)
+        end
+    end
+    return out
+end
+
+-- The main monitor: the one showing the parts with plain names, which is
+-- where home is. Hyprland moves home to another monitor when its own goes.
+local function main_output()
+    for _, ws in ipairs(query("couldn't list the workspaces", hl.get_workspaces) or {}) do
+        if ws.name == conf_workspaces.home() and ws.monitor and ws.monitor.name then
+            return ws.monitor.name
+        end
+    end
+    return conf_workspaces.monitor()
+end
+
+local function focused_output()
+    local m = query("couldn't read the focused monitor", hl.get_active_monitor)
+    return m and m.name
+end
+
+-- When a workspace spans more than one monitor now: { outputs, main,
+-- focused }, with each part bound to its monitor by a workspace rule, so
+-- Hyprland makes it there whatever has focus. A rule is added again when
+-- its monitor changes, as the plain parts' does with a new main. Else nil.
+local ruled = {}
+local function spanning(name)
+    if not span then
+        return nil
+    end
+    local outs = outputs()
+    if #outs < 2 then
+        return nil
+    end
+    local main, focused = main_output(), focused_output()
+    if not main or not focused then
+        return nil
+    end
+    for _, rule in ipairs(span.rules(name, outs, main)) do
+        if ruled[rule.workspace] ~= rule.monitor then
+            hl.workspace_rule(rule)
+            ruled[rule.workspace] = rule.monitor
+        end
+    end
+    return { outputs = outs, main = main, focused = focused }
+end
+
 -- Workspaces by name (tide SPEC.md §6.5, §6.6). The bar's order is the standing workspaces, home first, then the rest in the
 -- order they were made (falling IDs), then numbered ones, as tide's bar
 -- has it (shell/lib/workspaces.mjs's workspaceOrder). A standing one is
 -- in the order whether it's made yet or not, and going there makes it.
 local function bar_order()
     local listed = query("couldn't list the workspaces", hl.get_workspaces) or {}
-    local real = {}
+    -- Each monitor's part of a workspace is listed once, as the workspace,
+    -- at the place of its part made first (the highest ID).
+    local real, seen = {}, {}
     for _, ws in ipairs(listed) do
-        local name = ws.name or ""
+        local name = plain(ws.name or "")
         if type(ws.id) == "number" and name ~= "" and not name:find("^special:") then
-            table.insert(real, { id = ws.id, name = name })
+            local w = seen[name]
+            if not w then
+                w = { id = ws.id, name = name }
+                seen[name] = w
+                table.insert(real, w)
+            elseif ws.id > w.id then
+                w.id = ws.id
+            end
         end
     end
     local taken, out = {}, {}
@@ -1058,7 +1159,7 @@ local function still_there(name)
         end
     end
     for _, ws in ipairs(query("couldn't list the workspaces", hl.get_workspaces) or {}) do
-        if ws.name == name then
+        if plain(ws.name) == name then
             return true
         end
     end
@@ -1071,11 +1172,39 @@ local function active_name()
     if type(name) ~= "string" or name == "" or name:find("^special:") then
         return nil
     end
-    return name
+    return plain(name)
 end
 
+-- Goes to workspace `name`: on every monitor at once when it spans more
+-- than one, the focused monitor's part last so focus stays on it.
 local function go(name)
-    hl.dispatch(hl.dsp.focus({ workspace = "name:" .. name }))
+    local s = spanning(name)
+    if not s then
+        hl.dispatch(hl.dsp.focus({ workspace = "name:" .. name }))
+        return
+    end
+    for _, step in ipairs(span.switch(name, s.outputs, s.main, s.focused)) do
+        hl.dispatch(hl.dsp.focus({ workspace = step.workspace }))
+    end
+end
+
+-- Moves the focused window to workspace `name`, into its part on the
+-- window's own monitor, which is the focused one; with follow, goes there
+-- too, and keeps the window focused.
+local function send(name, follow)
+    local s = spanning(name)
+    if not s then
+        hl.dispatch(hl.dsp.window.move({ workspace = "name:" .. name, follow = follow }))
+        return
+    end
+    local w = follow and query("couldn't read the focused window", hl.get_active_window)
+    hl.dispatch(hl.dsp.window.move({ workspace = "name:" .. span.part(name, s.focused, s.main), follow = false }))
+    if follow then
+        go(name)
+        if w and w.address then
+            hl.dispatch(hl.dsp.focus({ window = "address:" .. w.address }))
+        end
+    end
 end
 
 -- Previous / next workspace in the bar's order, as in GNOME, stopping at
@@ -1099,7 +1228,7 @@ local function step_workspace(delta, move_window)
             return
         end
         if move_window then
-            hl.dispatch(hl.dsp.window.move({ workspace = "name:" .. target, follow = true }))
+            send(target, true)
         else
             go(target)
         end
@@ -1125,7 +1254,7 @@ local function nth_workspace(n, send_window)
             return
         end
         if send_window then
-            hl.dispatch(hl.dsp.window.move({ workspace = "name:" .. target, follow = false }))
+            send(target, false)
         else
             go(target)
         end
@@ -1141,7 +1270,7 @@ end
 -- starts it afresh.
 local workspace_history = {}
 hl.on("workspace.active", function(ws)
-    local name = ws and ws.name
+    local name = plain(ws and ws.name)
     if type(name) ~= "string" or name == "" or name:find("^special:") or name == conf_workspaces.home() then
         return
     end
@@ -1932,6 +2061,11 @@ local function apply_tide_workspaces()
         -- The old home keeps no rule of its own: it goes once it's empty.
         before.rule:set_enabled(false)
     end
+    -- The parts' rules are added afresh at the next switch: home's, turned
+    -- off above or merged into below, may be one of them.
+    for k in pairs(ruled) do
+        ruled[k] = nil
+    end
     -- Only the first monitor has home as its default: another that
     -- connects gets a numbered workspace (tide SPEC.md §6.5, Monitors).
     local monitor = before.monitor or first_monitor()
@@ -1971,6 +2105,18 @@ _G.conf_workspaces = {
     end,
     standing = function()
         return tide_workspaces.standing
+    end,
+    -- The monitor home is the default of.
+    monitor = function()
+        return tide_workspaces.monitor
+    end,
+    -- Goes to the workspace named, on every monitor when it spans them, as
+    -- the workspace keys do: how tide's bar and switcher switch.
+    go = function(name)
+        if type(name) ~= "string" or name == "" then
+            error("conf_workspaces.go takes a workspace's name, got " .. tostring(name), 2)
+        end
+        go(name)
     end,
 }
 
