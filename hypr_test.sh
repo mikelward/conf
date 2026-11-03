@@ -507,6 +507,18 @@ assert_contains "\"network\"" "$_waybar_body"
 start_test "waybar exposes a volume/sound module"
 assert_contains "\"pulseaudio\"" "$_waybar_body"
 
+# Workspaces by name: Hyprland gives a named workspace an ID of its own,
+# -1337 and down, which is what "{id}" showed.
+start_test "waybar labels Hyprland's workspaces by name, not ID"
+_ws_block=$(sed -n '/"hyprland\/workspaces": {/,/}/p' "$_waybar_cfg")
+assert_contains '"format": "{name}"' "$_ws_block"
+assert_not_contains '{id}' "$_ws_block"
+
+# The icons are Nerd Font symbols, so a font that has them is in the list:
+# Symbols Nerd Font, the icons-only one setup-tide installs.
+start_test "waybar's font list ends in Symbols Nerd Font for the icons"
+assert_contains '"Symbols Nerd Font"' "$(cat "$_srcdir/config/waybar/common.css")"
+
 # waybar and swaync are launched by theme.sh (with the light/dark style), not
 # by their own autostart lines.
 _theme_body=$(cat "$_theme")

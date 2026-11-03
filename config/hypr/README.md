@@ -63,7 +63,9 @@ Debian/Ubuntu the hypr* tools may need a backport or manual build):
     polkit-gnome                          # GUI privilege prompts
     xdg-desktop-portal-gtk glib2          # gsettings + colour-scheme portal
                                           #   (light/dark theming; kitty + GTK)
-    a JetBrains Mono Nerd Font            # glyphs in waybar/fuzzel/lock
+    a Nerd Font: Symbols Nerd Font        # glyphs in waybar/fuzzel/lock
+      (fonts-nerd-symbols on Debian testing and Ubuntu 26.10+,
+      ttf-nerd-fonts-symbols on Arch), or JetBrains Mono Nerd Font
 
 The screenshot tools are small local packages: no network, no cost, and no
 work until Print is pressed. Without `notify-send` a shot still reaches the

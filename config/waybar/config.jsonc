@@ -22,7 +22,8 @@
 
     "hyprland/workspaces": {
         "on-click": "activate",
-        "format": "{id}",
+        // By name: a named workspace's ID is Hyprland's own, -1337 and down.
+        "format": "{name}",
         "sort-by-number": true
     },
 
