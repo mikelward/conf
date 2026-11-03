@@ -214,6 +214,23 @@ PY
     assert_equal "" "$_tilemo_bad"
 fi
 
+if command -v python3 >/dev/null 2>&1; then
+    # tilemo binds by character in the current layout, so every key of the
+    # typing block has to be mapped, by physical position, for its keys to
+    # work in any layout: on Dvorak, / is the physical [ key and S the ;.
+    _tilemo_missing=$(python3 - "$_tilemo_file" <<'PY'
+import json, sys, string
+have = {m["from"].get("key_code") for m in json.load(open(sys.argv[1]))["rules"][0]["manipulators"]}
+block = set(string.ascii_lowercase) | set(string.digits) | {
+    "grave_accent_and_tilde", "hyphen", "equal_sign", "open_bracket", "close_bracket",
+    "backslash", "semicolon", "quote", "comma", "period", "slash"}
+print(" ".join(sorted(block - have)))
+PY
+)
+    start_test "every key of the typing block is tilemo's, so Super works in any layout"
+    assert_equal "" "$_tilemo_missing"
+fi
+
 start_test "tilemo's rule matches the physical Win key, left_command"
 assert_contains '"mandatory": [' "$_tilemo"
 assert_contains '"left_command"' "$_tilemo"

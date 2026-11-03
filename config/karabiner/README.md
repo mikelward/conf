@@ -206,8 +206,15 @@ Ctrl+Option+Command+key, and tilemo binds that (tilemo SPEC.md §7.1).
 | Alt+Tab | `left_option`+`left_command`+`shift`+`tab` | Ctrl+Option+Shift+Tab: tilemo's swap with the master |
 
 The outputs name the keys the rotation turns into Control, Option and
-Command, by the same layering as the rules above. A key tilemo doesn't bind,
-such as Win+Q, is left alone and stays Option.
+Command, by the same layering as the rules above.
+
+- **Every key of the typing block is mapped, by physical position:** the
+  letters, digits and all the punctuation keys, whether tilemo binds what's
+  on them in U.S. layout or not. tilemo binds its keys by character in the
+  current layout (`hs.hotkey`), so on Dvorak, Super+/ is the physical `[`
+  key and Super+S the physical `;`; a key missing here would type its
+  character instead. Keys off that block that tilemo doesn't bind, such as
+  the function keys, are left alone and stay Option.
 
 - **The lone tap is Super+F20,** a key no PC keyboard here has, so tilemo
   tells it from Super+Space: the tap opens its workspace list, Super+Space
