@@ -4,8 +4,11 @@
  * this file only references the @-named colours, never defines them. It is
  * @import-ed by style.css (dark) and style-light.css (light). */
 
+/* The icons are Nerd Font symbols: from JetBrains Mono Nerd Font where it's
+ * installed, else from Symbols Nerd Font, the icons-only font (setup-tide
+ * installs it where the distro packages it), with the text in DejaVu Sans. */
 * {
-    font-family: "JetBrainsMono Nerd Font", "DejaVu Sans", sans-serif;
+    font-family: "JetBrainsMono Nerd Font", "DejaVu Sans", "Symbols Nerd Font", sans-serif;
     font-size: 13px;
     min-height: 0;
 }
