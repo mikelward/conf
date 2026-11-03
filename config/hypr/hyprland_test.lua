@@ -2312,6 +2312,29 @@ test("a device tide's settings name gets its own over its kind's", function()
     eq(false, S.config.input.touchpad.tap_to_click, "every other touchpad keeps tide's")
 end)
 
+test("a mouse takes tide's acceleration curve, every mouse's or its own, and goes back to adaptive without", function()
+    load({ input = [[
+return {
+    mouse = { accel_profile = "custom 0.05 0 0.05 0.1" },
+    devices = { ["logitech-usb-receiver"] = { sensitivity = 0.5, accel_profile = "custom 0.05 0 0.06 0.12" } },
+}
+]] })
+    eq(0, #S.notifications)
+    S.calls = {}
+    conf_input.mouse("other-mouse", 3)
+    conf_input.mouse("logitech-usb-receiver", 3)
+    conf_input.touchpad("synps/2-synaptics-touchpad")
+    local d = devices()
+    eq("custom 0.05 0 0.05 0.1", d[1].accel_profile, "every mouse's curve")
+    eq("custom 0.05 0 0.06 0.12", d[2].accel_profile, "its own")
+    eq(nil, d[3].accel_profile, "a touchpad keeps libinput's own curve")
+    write(TIDE_INPUT, "return { mouse = {} }")
+    conf_input.reload()
+    S.calls = {}
+    conf_input.mouse("other-mouse", 3)
+    eq("adaptive", devices()[1].accel_profile, "the config's once tide stops setting one")
+end)
+
 test("a mouse takes only a mouse's settings of its own, so none stays set once gone", function()
     load({ input = 'return { devices = { trackball = { tap_to_click = false, disable_while_typing = false, sensitivity = 0.5 } } }' })
     eq(0, #S.notifications)
