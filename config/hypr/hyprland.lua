@@ -663,7 +663,11 @@ hl.config({ input = copy(INPUT) })
 -- stand. It's read as data, with nothing in scope, and a value of the wrong
 -- type, or an unknown section or setting, is reported and left out.
 local TIDE_INPUT_TYPES = {
-    mouse = { sensitivity = "number", scroll_factor = "number", natural_scroll = "boolean", left_handed = "boolean" },
+    -- A mouse's accel_profile is tide's acceleration as a custom curve.
+    mouse = {
+        sensitivity = "number", accel_profile = "string", scroll_factor = "number", natural_scroll = "boolean",
+        left_handed = "boolean",
+    },
     touchpad = {
         sensitivity = "number", scroll_factor = "number", natural_scroll = "boolean", left_handed = "boolean",
         tap_to_click = "boolean", disable_while_typing = "boolean",
@@ -674,7 +678,7 @@ local TIDE_INPUT_TYPES = {
 -- name hyprctl devices gives it: one name can be a mouse and a keyboard both,
 -- as a wireless receiver is.
 local TIDE_DEVICE_TYPES = {}
-for _, kind in ipairs({ "touchpad", "keyboard" }) do
+for _, kind in ipairs({ "mouse", "touchpad", "keyboard" }) do
     for k, t in pairs(TIDE_INPUT_TYPES[kind]) do
         TIDE_DEVICE_TYPES[k] = t
     end
@@ -2015,6 +2019,7 @@ _G.conf_input = {
             left_handed = true,
             scroll_factor = scroll_factor,
             sensitivity = input_default("sensitivity"),
+            accel_profile = input_default("accel_profile"),
             natural_scroll = input_default("natural_scroll"),
         }
         for k, v in pairs(tide_input.mouse) do
