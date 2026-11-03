@@ -133,8 +133,23 @@ same one-step shift as above, applied as one substitution: `left_control` →
 `left_command`, `left_command` → `left_option`, `left_option` →
 `left_control`.
 
-Only left Ctrl and left Win are mapped, matching the Ctrl+Tab rule. Home and End
-still reach the line ends.
+Only left Ctrl and left Win are mapped, matching the Ctrl+Tab rule.
+
+### Home and End
+
+On a Mac, Home and End scroll to the top and bottom of the document and leave
+the cursor where it is. A second rule in the same file makes them go to the
+line's start and end, as on a PC, everywhere but the terminals, which take
+Home and End themselves (kitty, Ghostty, Terminal and iTerm2):
+
+| Physical keys | Emits | macOS sees | Does |
+| --- | --- | --- | --- |
+| Home, End | `left_control`+Left, Right | Command+Left, Right | the line's start, end |
+| Shift+Home, End | the same, plus `shift` | Command+Shift+Left, Right | select to there |
+| Ctrl+Home, End | `left_control`+Up, Down | Command+Up, Down | the document's start, end |
+
+It's its own rule, "Home and End go to the line's start and end", enabled on
+its own.
 
 ## Terminals
 

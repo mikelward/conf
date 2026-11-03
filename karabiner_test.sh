@@ -120,51 +120,73 @@ import json, sys
 for rule in json.load(open(sys.argv[1]))["rules"]:
     for m in rule["manipulators"]:
         f, t = m["from"], m["to"][0]
-        print(f["key_code"], "+".join(f["modifiers"]["mandatory"]), "->", "+".join(t["modifiers"]))
+        print(f["key_code"], "+".join(f["modifiers"].get("mandatory", [])) or "-", "->", t["key_code"], "+".join(t["modifiers"]))
 ' "$_arrow_file")
 
     start_test "Ctrl+arrow emits Option+arrow (word movement) after the rotation"
-    assert_contains "left_arrow left_control -> left_command" "$_pairs"
-    assert_contains "right_arrow left_control -> left_command" "$_pairs"
+    assert_contains "left_arrow left_control -> left_arrow left_command" "$_pairs"
+    assert_contains "right_arrow left_control -> right_arrow left_command" "$_pairs"
 
     # Ctrl+Shift+arrow selects by word on Linux. A mandatory-modifier match
     # fails when shift is held too, so each arrow needs its own manipulator.
     start_test "Ctrl+Shift+arrow emits Option+Shift+arrow (select by word)"
-    assert_contains "left_arrow left_control+shift -> left_command+shift" "$_pairs"
-    assert_contains "right_arrow left_control+shift -> left_command+shift" "$_pairs"
+    assert_contains "left_arrow left_control+shift -> left_arrow left_command+shift" "$_pairs"
+    assert_contains "right_arrow left_control+shift -> right_arrow left_command+shift" "$_pairs"
 
     # Win+Shift+arrow moves the window a Space (Amethyst's throw-space-left/
     # right, on mod3 in amethyst.yml). Its own chord, Control+Option+Shift:
     # left to the rotation it would be Option+Shift+arrow, select-by-word.
     start_test "Win+Shift+arrow emits Control+Option+Shift+arrow, Amethyst's throw"
-    assert_contains "left_arrow left_command+shift -> left_option+left_command+shift" "$_pairs"
-    assert_contains "right_arrow left_command+shift -> left_option+left_command+shift" "$_pairs"
+    assert_contains "left_arrow left_command+shift -> left_arrow left_option+left_command+shift" "$_pairs"
+    assert_contains "right_arrow left_command+shift -> right_arrow left_option+left_command+shift" "$_pairs"
 
     # Alt+arrow moves by word too, as Option does on a Mac keyboard. Left to
     # the rotation it's Control+arrow, which jumps to the line ends.
     start_test "Alt+arrow emits Option+arrow, word movement, rather than Control+arrow"
-    assert_contains "left_arrow left_option -> left_command" "$_pairs"
-    assert_contains "right_arrow left_option -> left_command" "$_pairs"
+    assert_contains "left_arrow left_option -> left_arrow left_command" "$_pairs"
+    assert_contains "right_arrow left_option -> right_arrow left_command" "$_pairs"
     start_test "Alt+Shift+arrow emits Option+Shift+arrow (select by word)"
-    assert_contains "left_arrow left_option+shift -> left_command+shift" "$_pairs"
-    assert_contains "right_arrow left_option+shift -> left_command+shift" "$_pairs"
+    assert_contains "left_arrow left_option+shift -> left_arrow left_command+shift" "$_pairs"
+    assert_contains "right_arrow left_option+shift -> right_arrow left_command+shift" "$_pairs"
 
     start_test "Win+arrow emits Control+Option+arrow, the Space shortcut"
-    assert_contains "left_arrow left_command -> left_option+left_command" "$_pairs"
-    assert_contains "right_arrow left_command -> left_option+left_command" "$_pairs"
+    assert_contains "left_arrow left_command -> left_arrow left_option+left_command" "$_pairs"
+    assert_contains "right_arrow left_command -> right_arrow left_option+left_command" "$_pairs"
 
     # The collision this layout exists to avoid: Win's Space chord and the
     # word movement must stay apart, so only Ctrl and Alt produce bare
     # Option+arrow, and Ctrl doesn't produce the Space chord.
     start_test "only Ctrl and Alt emit bare Option+arrow"
-    assert_equal "4" "$(printf '%s\n' "$_pairs" | grep -c -- '-> left_command$')"
-    assert_equal "0" "$(printf '%s\n' "$_pairs" | grep -- '-> left_command$' | grep -vc -e ' left_control ' -e ' left_option ')"
+    assert_equal "4" "$(printf '%s\n' "$_pairs" | grep -c -- '_arrow left_command$')"
+    assert_equal "0" "$(printf '%s\n' "$_pairs" | grep -- '_arrow left_command$' | grep -vc -e ' left_control ' -e ' left_option ')"
     start_test "Ctrl+arrow does not emit the Space chord"
-    assert_not_contains "left_control -> left_option" "$_pairs"
+    assert_not_contains "left_control -> left_arrow left_option" "$_pairs"
+    assert_not_contains "left_control -> right_arrow left_option" "$_pairs"
+
+    # On a Mac, Home and End scroll the document and leave the cursor where
+    # it is. Outside terminals, which take Home and End themselves, they go
+    # to the line's start and end as on a PC: Command+Left and Right, emitted
+    # as left_control for the rotation. Ctrl+Home and End go to the
+    # document's ends, Command+Up and Down. Shift passes through to select.
+    start_test "Home and End go to the line's start and end, Ctrl+Home/End the document's"
+    assert_contains "home - -> left_arrow left_control" "$_pairs"
+    assert_contains "end - -> right_arrow left_control" "$_pairs"
+    assert_contains "home left_control -> up_arrow left_control" "$_pairs"
+    assert_contains "end left_control -> down_arrow left_control" "$_pairs"
+    _home=$(python3 -c '
+import json, sys
+r = json.load(open(sys.argv[1]))["rules"][1]
+print(r["description"][:35])
+for m in r["manipulators"]:
+    print(m["from"]["modifiers"].get("optional"), json.dumps(m["conditions"]))
+' "$_arrow_file")
+    start_test "the Home and End rule keeps Shift, and leaves the terminals alone"
+    assert_contains "Home and End go to the line's start" "$_home"
+    assert_equal "4" "$(printf '%s\n' "$_home" | grep -c "\['shift'\].*frontmost_application_unless.*kitty.*ghostty.*Terminal.*iterm2")"
 fi
 
-start_test "twelve manipulators: Ctrl, Alt and Win, with and without Shift, per arrow"
-assert_equal "12" "$(grep -c '"type": "basic"' "$_arrow_file")"
+start_test "twelve arrow manipulators: Ctrl, Alt and Win, with and without Shift, per arrow"
+assert_equal "12" "$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["rules"][0]["manipulators"]))' "$_arrow_file")"
 
 # tilemo's rule (mikelward/tilemo SPEC.md §7.1): physical Win+key becomes
 # Ctrl+Option+Command+key, which tilemo registers, so Option keeps its own
