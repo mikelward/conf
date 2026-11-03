@@ -330,6 +330,26 @@ PY
     start_test "Ghostty treats left Option as Alt"
     assert_true grep -Eq '^macos-option-as-alt = left$' "$_ghostty_conf"
 
+    # Terminal and iTerm2 copy on Command+C, which the rotation puts on
+    # physical Ctrl+C, so that stays copy there; the second rule puts the
+    # interrupt, Control+C, on physical Ctrl+Shift+C, as Linux terminals
+    # copy on Ctrl+Shift+C and interrupt on Ctrl+C.
+    _interrupt=$(python3 - "$_terminal_file" <<'PY'
+import json, sys
+rules = json.load(open(sys.argv[1]))["rules"]
+print(len(rules))
+for m in rules[1]["manipulators"] if len(rules) > 1 else []:
+    print(json.dumps([m["from"], m["to"], m["conditions"]], sort_keys=True))
+PY
+)
+    start_test "Ctrl+Shift+C in Terminal and iTerm2 is Control+C, the interrupt"
+    assert_equal "2
+$(python3 -c 'import json; print(json.dumps([{"key_code": "c", "modifiers": {"mandatory": ["left_control", "shift"]}}, [{"key_code": "c", "modifiers": ["left_option"]}], [{"type": "frontmost_application_if", "bundle_identifiers": ["^com\\.apple\\.Terminal$", "^com\\.googlecode\\.iterm2$"]}]], sort_keys=True))')" "$_interrupt"
+    start_test "the interrupt rule names Ctrl+Shift+C first, for setup-macos to find"
+    assert_equal "Ctrl+Shift+C interrupts in Terminal and iTerm2" "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["rules"][1]["description"][:46])' "$_terminal_file")"
+    start_test "Ctrl+C itself is left to the rotation in Terminal and iTerm2, as copy"
+    assert_not_contains "iterm2" "$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))["rules"][0]))' "$_terminal_file")"
+
     start_test "Tab, Space and Ctrl+Up/Down are left to the rotation"
     assert_not_contains " tab " "$_terminal_pairs"
     assert_not_contains " spacebar " "$_terminal_pairs"
