@@ -3415,6 +3415,40 @@
                     ]
                 }
             ]
+        },
+        {
+            "description": "Ctrl+Shift+C interrupts in Terminal and iTerm2, as Control+C, and Ctrl+C stays copy (PC muscle memory, alongside the setup-macos modifier rotation)",
+            "manipulators": [
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "c",
+                        "modifiers": {
+                            "mandatory": [
+                                "left_control",
+                                "shift"
+                            ]
+                        }
+                    },
+                    "to": [
+                        {
+                            "key_code": "c",
+                            "modifiers": [
+                                "left_option"
+                            ]
+                        }
+                    ],
+                    "conditions": [
+                        {
+                            "type": "frontmost_application_if",
+                            "bundle_identifiers": [
+                                "^com\\.apple\\.Terminal$",
+                                "^com\\.googlecode\\.iterm2$"
+                            ]
+                        }
+                    ]
+                }
+            ]
         }
     ]
 }

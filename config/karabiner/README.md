@@ -1,6 +1,6 @@
 # Karabiner-Elements
 
-Four complex-modification rules for a PC keyboard:
+Complex-modification rules for a PC keyboard, in four files:
 
 - `assets/complex_modifications/pc-alt-tab.json` puts the next tab back on
   physical Ctrl+Tab; physical Alt+Tab is tilemo's.
@@ -9,7 +9,8 @@ Four complex-modification rules for a PC keyboard:
   window a Space; see
   [Arrow keys](#arrow-keys).
 - `assets/complex_modifications/pc-terminal.json` gives kitty and Ghostty
-  their Ctrl and Alt back, as Control and Meta; see [Terminals](#terminals).
+  their Ctrl and Alt back, as Control and Meta, and puts the interrupt on
+  Ctrl+Shift+C in Terminal and iTerm2; see [Terminals](#terminals).
 - `assets/complex_modifications/tilemo.json` gives
   [tilemo](https://github.com/mikelward/tilemo) its Super key; see
   [tilemo](#tilemo).
@@ -169,6 +170,23 @@ uses, so Ctrl+C there copies a selection and otherwise sends the interrupt
   (`net.kovidgoyal.kitty`, `com.mitchellh.ghostty`). Another terminal needs
   its own copy and paste on Ctrl+C and Ctrl+V, and Option as Alt, before it
   can join.
+
+### Terminal and iTerm2
+
+Terminal and iTerm2 copy on Command+C, which the rotation already puts on
+physical Ctrl+C, as Linux's copy key; they're not in the rule above. What they
+lack is the interrupt, Control+C, which the rotation puts on physical Alt+C.
+A second rule in the same file puts it on physical Ctrl+Shift+C, where a Linux
+terminal's copy and interrupt keys sit together:
+
+| Physical keys | Emits | The terminal sees | Does |
+| --- | --- | --- | --- |
+| Ctrl+C | (left to the rotation) | Command+C | copy |
+| Ctrl+Shift+C | `left_option`+C | Control+C | interrupt (`^C`) |
+
+It's its own rule, "Ctrl+Shift+C interrupts in Terminal and iTerm2", enabled
+on its own (`com.apple.Terminal`, `com.googlecode.iterm2`). kitty and Ghostty
+keep Ctrl+Shift+C as copy, through the rule above.
 
 ## tilemo
 
