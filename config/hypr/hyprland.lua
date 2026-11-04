@@ -961,6 +961,22 @@ hl.bind(key("E"), app(terminal .. " -e yazi", terminal), does("Files"))
 -- otherwise (no shell), and fuzzel opens instead, through runenv so its app
 -- list sees the user's scripts.
 hl.bind(key("Space"), exec("qs -c tide ipc call launcher toggle || " .. runenv .. " " .. scripts .. "/launch-fuzzel.sh"), does("Launcher"))
+-- A bare Super tap opens tide's launcher too, through the shell's
+-- tide:launcher global shortcut (tide SPEC.md §8.2), which is quicker than a
+-- qs call per tap. Only from Hyprland 0.57: before it, a release bind on
+-- SUPER_L fires after every Super chord, Super+T and Super+drag included
+-- (the fix is hyprwm/Hyprland#15568 and #15904, in 0.57.0).
+local function at_least(version, major, minor)
+    local ma, mi = tostring(version or ""):match("^v?(%d+)%.(%d+)")
+    ma, mi = tonumber(ma), tonumber(mi)
+    if not ma then
+        return false
+    end
+    return ma > major or (ma == major and mi >= minor)
+end
+if type(hl.version) == "function" and at_least(hl.version(), 0, 57) then
+    hl.bind("SUPER + SUPER_L", hl.dsp.global("tide:launcher"), does("Launcher", { release = true }))
+end
 -- The next keyboard layout, once there are two (kb_layout "us,de", say, from
 -- tide's Keyboard page), on every keyboard so they stay in step
 -- (next-layout.sh). Locked too, so a password can be typed in the other
