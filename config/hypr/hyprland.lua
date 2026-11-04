@@ -584,7 +584,7 @@ hl.config({
 --------------------------------------------------------------------------------
 -- The inactive dim's strength, unless tide's Appearance page sets one
 -- (apply_tide_appearance below).
-local DIM_STRENGTH = 0.07
+local DIM_STRENGTH = 0.12
 
 hl.config({
     decoration = {
@@ -606,8 +606,9 @@ hl.config({
         active_opacity = 1.0,
         inactive_opacity = 1.0,
         -- Hyprland's dim looks stronger than KDE's dim-inactive effect at
-        -- the same number, so 0.07. If a dark app next to a dark app is hard
-        -- to tell apart, try 0.1, on tide's Appearance page.
+        -- the same number, so 0.12, below KDE's 0.15: 0.07 was too faint to
+        -- tell which window had the focus. Change it on tide's Appearance
+        -- page.
         dim_inactive = true,
         dim_strength = DIM_STRENGTH,
         dim_special = 0.2,

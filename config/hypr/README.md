@@ -280,14 +280,15 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   `xmodmaprc` did under X11, on trial here. espanso's `keyboard_layout` names
   the same options, since it types through them.
 - **The focus cue is the dim alone.** No gaps and no borders;
-  `dim_inactive` with `dim_strength = 0.07`: Hyprland's dim looks stronger
-  than KDE's "dim inactive" effect at the same number, so 0.15 was too much.
+  `dim_inactive` with `dim_strength = 0.12`: Hyprland's dim looks stronger
+  than KDE's "dim inactive" effect at the same number, so KDE's 0.15 was too
+  much, and 0.07 too faint to tell which window had the focus.
   A lone window, video and picture-in-picture never dim. tide's Appearance
   page sets the strength: it writes `~/.config/hypr/tide-appearance.lua`
   (`{ dim_strength = 0.1 }`), which `hyprland.lua` reads as data, reporting
   a broken file or an unknown setting, and tide applies a change with
   `conf_appearance.reload()`. A strength tide stops setting goes back to
-  0.07, and one `hyprland.local.lua` sets through `hl.config()` still wins.
+  0.12, and one `hyprland.local.lua` sets through `hl.config()` still wins.
 - **The home workspace** (tide SPEC.md §6.5), `in` by default, is made at
   login and kept when empty, by a `persistent`, `default` workspace rule,
   and its apps' windows open there without switching. tide's shell writes
