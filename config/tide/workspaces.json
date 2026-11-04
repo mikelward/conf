@@ -5,5 +5,11 @@
     "google-chat",
     "google-calendar",
     "youtube-music"
-  ]
+  ],
+  "workspaceSettings": {
+    "in": {
+      "askForName": true,
+      "pinnedApps": ["gmail", "google-chat", "google-calendar"]
+    }
+  }
 }
