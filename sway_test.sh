@@ -105,9 +105,9 @@ assert_contains "xkb_options compose:caps" "$_kbd_block"
 start_test "terminal launcher bound to SUPER+T"
 assert_contains "bindsym \$mod+t exec \$term" "$_sway_body"
 
-start_test "terminal-on-workstation and terminal-on-VM bound to SUPER+W and SUPER+V"
+start_test "terminal-on-workstation bound to SUPER+W; terminal-on-VM has no key"
 assert_contains "bindsym \$mod+w exec terminal_on_workstation" "$_sway_body"
-assert_contains "bindsym \$mod+v exec terminal_on_vm" "$_sway_body"
+assert_not_contains "terminal_on_vm" "$_sway_body"
 
 for _app in browser1 browser2 browser3 home irc google-chat \
             google-meet notepad bluetooth-connect remote-desktop youtube-music; do
@@ -115,8 +115,9 @@ for _app in browser1 browser2 browser3 home irc google-chat \
     assert_contains "exec $_app" "$_sway_body"
 done
 
-start_test "Google Calendar has no key (Super+C is tide's picker)"
-assert_not_contains "google-calendar" "$_sway_body"
+start_test "Super+C is Google Chat, and Super+Shift+C Google Calendar"
+assert_contains "bindsym \$mod+c exec google-chat" "$_sway_body"
+assert_contains "bindsym \$mod+Shift+c exec google-calendar" "$_sway_body"
 
 start_test "launcher bind uses the shared theme-aware fuzzel wrapper"
 assert_contains "bindsym \$mod+space exec ~/.config/hypr/scripts/launch-fuzzel.sh" "$_sway_body"

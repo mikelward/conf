@@ -163,13 +163,12 @@ description, which tide's settings panel lists on its Keys page;
 |------|--------|
 | `SUPER + T` | Terminal (kitty) |
 | `SUPER + W` | Terminal on workstation |
-| `SUPER + V` | Terminal on VM |
 | `SUPER + G` / `SUPER + F` | Browser 1 / Browser 2 |
 | `SUPER + Shift + G` | Browser 3 |
 | `SUPER + E` | File manager (yazi in a terminal) |
 | `SUPER + B` / `SUPER + Shift + B` | Bluetooth connect / audio profile |
-| `SUPER + C` | Clipboard history and special characters: tide's picker (needs the tide shell) |
-| `SUPER + Shift + C` | Chat |
+| `SUPER + V` | Clipboard history and special characters: tide's picker, where Enter pastes (needs the tide shell) |
+| `SUPER + C` / `SUPER + Shift + C` | Chat / Calendar |
 | `SUPER + H` | Home |
 | `SUPER + I` | IRC |
 | `SUPER + M` | Meet |
