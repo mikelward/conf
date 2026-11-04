@@ -426,6 +426,46 @@ do
     end
 end
 
+-- tide's pinned apps (tide SPEC.md §6.5), installed beside the layout: a
+-- window whose app a workspace pins stays open on it. Super+Backspace and an
+-- app's own close and quit keys (Ctrl+W, Ctrl+Shift+W, Ctrl+Q, Alt+F4)
+-- leave it open, and say why; every other window closes, or gets the key,
+-- as before. The list comes from tide-workspaces.lua, below. Without the
+-- module, Super+Backspace is Hyprland's own close and the app's keys stay
+-- unbound.
+local pinned
+do
+    local path = home .. "/.config/hypr/tide/pinned.lua"
+    local text = read_optional(path, "tide pinned apps", 1024 * 1024)
+    if text then
+        local ok, result = pcall(function()
+            local m = assert(load(text, "@" .. path))()
+            if type(m) ~= "table" then
+                error("pinned.lua returned " .. type(m) .. ", not a module")
+            end
+            for _, name in ipairs({ "set", "close", "shortcut" }) do
+                if type(m[name]) ~= "function" then
+                    error("pinned.lua has no " .. name .. "()")
+                end
+            end
+            if type(m.shortcuts) ~= "table" then
+                error("pinned.lua has no shortcuts list")
+            end
+            for i, keys in ipairs(m.shortcuts) do
+                if type(keys) ~= "string" or keys == "" then
+                    error("pinned.lua's shortcuts should list keys; " .. i .. " is " .. tostring(keys))
+                end
+            end
+            return m
+        end)
+        if ok then
+            pinned = result
+        else
+            notify_error("tide pinned apps failed to load, so any window closes: " .. tostring(result))
+        end
+    end
+end
+
 -- Each layout action as a bind target, from tide or from master.
 local act
 if qs then
@@ -938,7 +978,19 @@ hl.bind(key("V"), exec("qs -c tide ipc call picker toggle clipboard || notify-se
     .. "'Super+V opens the clipboard and characters picker in the tide shell, which is not running.'"), does("Clipboard and characters"))
 
 -- Session.
-hl.bind(key("BackSpace"), hl.dsp.window.close(), does("Close the window"))
+-- Unless tide pins the window where it is (tide SPEC.md §6.5); then a
+-- notification says so. tide's pinned.lua also takes an app's own close and
+-- quit keys from a pinned window, passing them on to any other: a bind
+-- can't be conditional on the window, so it's bound for all, and returns
+-- { pass_event = true } for one that isn't pinned.
+if pinned then
+    hl.bind(key("BackSpace"), pinned.close, does("Close the window, unless it's pinned"))
+    for _, keys in ipairs(pinned.shortcuts) do
+        hl.bind(keys, pinned.shortcut, does("The app's own, unless its window is pinned"))
+    end
+else
+    hl.bind(key("BackSpace"), hl.dsp.window.close(), does("Close the window"))
+end
 -- Super+Z: minimize (tide SPEC.md §6.7). tide's shell moves the window to
 -- a special workspace named for its own and shows it in a corner tray, a
 -- click there bringing it back. Without the shell nothing could bring it
@@ -2123,8 +2175,11 @@ end)
 -- when it's empty, and its apps' windows open there. Its name and the
 -- classes sent there come from tide-workspaces.lua, which tide's shell
 -- writes from workspaces.json as { home = "in", standing = { "in", ... },
--- in_apps = { "RE2", ... } }, the standing workspaces being the bar's first,
--- in order, for the workspace keys:
+-- in_apps = { "RE2", ... }, ask_for_name = { "in", ... }, pinned = { {
+-- workspace = "in", classes = { ... }, sites = { ... } }, ... } }, the
+-- standing workspaces being the bar's first, in order, for the workspace
+-- keys; ask_for_name is `tide launch`'s, and pinned is handed to tide's
+-- pinned.lua (above):
 -- read as data, as tide-appearance.lua is. With no file yet (a first
 -- login, before the shell has written one), home is `in` and has no apps.
 -- conf_workspaces.reload() is how the shell applies a change.
@@ -2134,7 +2189,7 @@ local DEFAULT_HOME = "in"
 local MAX_HOME_APPS = 64
 
 local function read_tide_workspaces()
-    local none = { home = DEFAULT_HOME, standing = { DEFAULT_HOME }, in_apps = {} }
+    local none = { home = DEFAULT_HOME, standing = { DEFAULT_HOME }, in_apps = {}, pinned = {} }
     local path = home .. "/.config/hypr/tide-workspaces.lua"
     local text = read_optional(path, "tide-workspaces.lua", 64 * 1024)
     if not text then
@@ -2156,7 +2211,7 @@ local function read_tide_workspaces()
         return wrong("expected a table, not " .. type(value))
     end
     for k in pairs(value) do
-        if k ~= "home" and k ~= "standing" and k ~= "in_apps" then
+        if k ~= "home" and k ~= "standing" and k ~= "in_apps" and k ~= "ask_for_name" and k ~= "pinned" then
             return wrong("unknown setting " .. tostring(k))
         end
     end
@@ -2194,7 +2249,11 @@ local function read_tide_workspaces()
     if standing[1] ~= name then
         return wrong("standing should start with home, " .. name .. ", not " .. tostring(standing[1]))
     end
-    return { home = name, standing = standing, in_apps = apps }
+    -- Its entries are pinned.lua's to check, as it takes them.
+    if value.pinned ~= nil and type(value.pinned) ~= "table" then
+        return wrong("pinned should be a list of workspaces' pinned apps, not " .. type(value.pinned))
+    end
+    return { home = name, standing = standing, in_apps = apps, pinned = value.pinned or {} }
 end
 
 -- home: its name; rule: the handle hl.workspace_rule gave for it, to turn
@@ -2244,6 +2303,12 @@ local function apply_tide_workspaces()
         hl.window_rule({ name = "tide-home-app-" .. i, enabled = false, match = { class = "^$" } })
     end
     tide_workspaces = { home = ws.home, standing = ws.standing, rule = rule, monitor = monitor, apps = #ws.in_apps }
+    if pinned then
+        local ok, err = pcall(pinned.set, ws.pinned)
+        if not ok then
+            notify_error("tide-workspaces.lua (its pinned apps not applied, so the last ones stay): " .. tostring(err))
+        end
+    end
 end
 
 -- At login the config may load before any monitor connects, so the first

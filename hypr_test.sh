@@ -712,13 +712,16 @@ if command -v python3 >/dev/null 2>&1; then
 
     # tide's Workspaces settings (tide SPEC.md §6.5, §16): home is the first
     # standing workspace, and its apps are scripts' launchers for mail,
-    # chat, calendar and music, which tide starts there at login.
-    start_test "tide workspaces.json has the standing workspaces, home first, and home's apps"
+    # chat, calendar and music, which tide starts there at login. A new
+    # window on home asks for a workspace, and mail, chat and calendar are
+    # pinned there, so tide's close keys leave them open.
+    start_test "tide workspaces.json has the standing workspaces, home first, home's apps and its pinned ones"
     if python3 -c 'import sys, json
 s = json.load(sys.stdin)
-assert set(s) <= {"standing", "inApps", "namePatterns"}, s
+assert set(s) <= {"standing", "inApps", "namePatterns", "workspaceSettings"}, s
 assert s["standing"][0] == "in" and len(s["standing"]) == len({n.lower() for n in s["standing"]})
-assert s["inApps"] == ["gmail", "google-chat", "google-calendar", "youtube-music"]' < "$_tide_workspaces"; then
+assert s["inApps"] == ["gmail", "google-chat", "google-calendar", "youtube-music"]
+assert s["workspaceSettings"] == {"in": {"askForName": True, "pinnedApps": ["gmail", "google-chat", "google-calendar"]}}, s' < "$_tide_workspaces"; then
         assert_true true
     else
         assert_true false

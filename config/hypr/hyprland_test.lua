@@ -60,6 +60,7 @@ end
 local LAYOUT = ".config/hypr/tide/layout.lua"
 local FOCUS = ".config/hypr/tide/focus.lua"
 local SPAN = ".config/hypr/tide/span.lua"
+local PINNED = ".config/hypr/tide/pinned.lua"
 local LOCAL = ".config/hypr/hyprland.local.lua"
 local TIDE_INPUT = ".config/hypr/tide-input.lua"
 local TIDE_OUTPUTS = ".config/hypr/tide-outputs.lua"
@@ -133,6 +134,42 @@ function M.switch(name, outputs, main, focused)
     end
     table.insert(out, { output = focused, workspace = "name:" .. M.part(name, focused, main) })
     return out
+end
+return M
+]]
+
+-- A stand-in for tide's pinned.lua (tide SPEC.md §6.5), to its contract:
+-- set() takes the list, refusing one whose entry names no workspace, and
+-- close() and shortcut() say what they'd do for the focused window, whose
+-- class is pinned when the list has it for that window's workspace.
+local FAKE_PINNED = [[
+local M = { shortcuts = { "CTRL + W", "CTRL + SHIFT + W", "CTRL + Q", "ALT + F4" } }
+_G.fake_pinned = { sets = {} }
+local list = {}
+function M.set(l)
+    for _, p in ipairs(l) do
+        if type(p.workspace) ~= "string" then error("tide pinned.set: entry should name its workspace") end
+    end
+    list = l
+    table.insert(_G.fake_pinned.sets, l)
+end
+local function pinned_here()
+    local w = hl.get_active_window()
+    if not w then return false end
+    for _, p in ipairs(list) do
+        if p.workspace == w.workspace.name then
+            for _, c in ipairs(p.classes or {}) do
+                if c == w.class then return true end
+            end
+        end
+    end
+    return false
+end
+function M.close()
+    if not pinned_here() then hl.dispatch(hl.dsp.window.close()) end
+end
+function M.shortcut()
+    if not pinned_here() then return { pass_event = true } end
 end
 return M
 ]]
@@ -402,7 +439,12 @@ local function load(setup)
     if not (setup and setup.keep_files) then
         os.remove(tmp .. "/" .. FOCUS)
         os.remove(tmp .. "/" .. SPAN)
+        os.remove(tmp .. "/" .. PINNED)
     end
+    if setup and setup.pinned then
+        write(PINNED, setup.pinned)
+    end
+    _G.fake_pinned = nil
     if setup and setup.span then
         write(SPAN, setup.span)
     end
@@ -2704,6 +2746,79 @@ test("a broken or wrong tide-workspaces.lua is reported, and home is in with no 
         truthy(S.workspace_rules["name:in"], text)
         eq(nil, S.rules["tide-home-app-1"], text)
     end
+end)
+
+--------------------------------------------------------------------------------
+-- Pinned apps (tide SPEC.md §6.5)
+--------------------------------------------------------------------------------
+local PINNED_WORKSPACES = [[return {
+    home = "in",
+    standing = { "in", "re" },
+    in_apps = {},
+    ask_for_name = { "in" },
+    pinned = {
+        { workspace = "in", classes = { "gmail" }, sites = { "chat.google.com" } },
+    },
+}]]
+
+test("tide-workspaces.lua's pinned apps go to tide's pinned.lua, at load and each reload", function()
+    load({ pinned = FAKE_PINNED, workspaces = PINNED_WORKSPACES })
+    eq(0, #S.notifications, "ask_for_name and pinned are settings conf takes")
+    eq(1, #fake_pinned.sets)
+    eq("in", fake_pinned.sets[1][1].workspace)
+    eq("gmail", fake_pinned.sets[1][1].classes[1])
+    write(TIDE_WORKSPACES, 'return { home = "in", in_apps = {}, pinned = {} }')
+    conf_workspaces.reload()
+    eq(2, #fake_pinned.sets)
+    eq(nil, fake_pinned.sets[2][1], "a list with nothing pinned replaces it")
+    write(TIDE_WORKSPACES, 'return { home = "in", in_apps = {} }')
+    conf_workspaces.reload()
+    eq(nil, fake_pinned.sets[3][1], "a file from before pinned apps pins nothing")
+end)
+
+test("Super+Backspace closes a window unless it's pinned there, and an app's close keys reach any other", function()
+    load({ pinned = FAKE_PINNED, workspaces = PINNED_WORKSPACES })
+    S.active_window = { class = "gmail", workspace = { name = "in" }, address = "0x1" }
+    eq(0, #run("SUPER + BackSpace"), "a pinned window stays open")
+    for _, keys in ipairs({ "CTRL + W", "CTRL + SHIFT + W", "CTRL + Q", "ALT + F4" }) do
+        eq(nil, bind(keys).target(), keys .. " never reaches a pinned window")
+    end
+    S.active_window = { class = "firefox", workspace = { name = "in" }, address = "0x2" }
+    local d = run("SUPER + BackSpace")
+    truthy(is_dsp(d[1], "window.close"), "any other closes")
+    eq(true, bind("CTRL + W").target().pass_event, "and gets the app's own keys")
+    truthy(bind("SUPER + BackSpace").opts.description:find("pinned", 1, true), "the Keys page says so")
+end)
+
+test("without tide's pinned.lua, Super+Backspace is Hyprland's close and the app's keys stay unbound", function()
+    load({ workspaces = PINNED_WORKSPACES })
+    truthy(is_dsp(bind("SUPER + BackSpace").target, "window.close"))
+    for _, keys in ipairs({ "CTRL + W", "CTRL + SHIFT + W", "CTRL + Q", "ALT + F4" }) do
+        eq(nil, S.binds["|" .. keys], keys)
+    end
+    eq(0, #S.notifications)
+end)
+
+test("a broken pinned.lua is reported, and any window closes", function()
+    for _, text in ipairs({ "return {", "return 5", "return { set = function() end, close = function() end }",
+                            "return { set = function() end, close = function() end, shortcut = function() end }",
+                            "return { set = function() end, close = function() end, shortcut = function() end, shortcuts = { 1 } }" }) do
+        load({ pinned = text })
+        eq(1, #S.notifications, text)
+        truthy(S.notifications[1].text:find("tide pinned apps", 1, true), S.notifications[1].text)
+        truthy(is_dsp(bind("SUPER + BackSpace").target, "window.close"), text)
+        eq(nil, S.binds["|CTRL + W"], text)
+    end
+end)
+
+test("pinned apps pinned.lua refuses, or a pinned that isn't a list, are reported, and home still applies", function()
+    load({ pinned = FAKE_PINNED, workspaces = 'return { home = "mail", in_apps = {}, pinned = { { classes = {} } } }' })
+    eq(1, #S.notifications)
+    truthy(S.notifications[1].text:find("pinned apps not applied", 1, true), S.notifications[1].text)
+    eq(true, S.workspace_rules["name:mail"].persistent, "the rest of the file applies")
+    load({ pinned = FAKE_PINNED, workspaces = 'return { home = "mail", in_apps = {}, pinned = "gmail" }' })
+    eq(1, #S.notifications)
+    truthy(S.notifications[1].text:find("pinned should be a list", 1, true), S.notifications[1].text)
 end)
 
 test("with no tide-floating.lua only the dialogs float, and conf_floating is defined", function()

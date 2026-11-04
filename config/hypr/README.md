@@ -178,7 +178,8 @@ description, which tide's settings panel lists on its Keys page;
 | `SUPER + Space` | Launcher (tide's, or fuzzel without the tide shell) |
 | `SUPER + Alt + Space` | Next keyboard layout, once `kb_layout` has two, on every keyboard and on the lock screen (`next-layout.sh`) |
 | `SUPER + Shift + N` | Notification center (swaync) |
-| `SUPER + Backspace` | Close the current window |
+| `SUPER + Backspace` | Close the current window, unless tide pins it on its workspace (needs tide's `pinned.lua`) |
+| `CTRL + W`, `CTRL + Shift + W`, `CTRL + Q`, `ALT + F4` | The app's own, passed on to every window but one tide pins on its workspace, which never sees them (bound only with tide's `pinned.lua`) |
 | `SUPER + Z` | Minimize the current window into tide's corner tray; a click there restores it (needs the tide shell) |
 | `SUPER + L` | Lock (tide-lock in the tide session, hyprlock otherwise) |
 | `SUPER + S` | Keep awake on or off, with an OSD (needs the tide shell) |
@@ -295,6 +296,13 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   `in`, `re`, `oc` and `me`, and Gmail, Chat, Calendar and YouTube Music
   on home. `hyprland.lua` reads it as data, reporting a broken file, and
   tide applies a change with `conf_workspaces.reload()`.
+- **Pinned apps** (tide SPEC.md §6.5): a new window on home asks for a
+  workspace, and Gmail, Chat and Calendar are pinned there
+  (`workspaceSettings` in `workspaces.json`). The shell writes each
+  workspace's pinned apps to `tide-workspaces.lua` too, and `hyprland.lua`
+  hands them to tide's `pinned.lua`, which keeps `SUPER + Backspace` and
+  the app's own close and quit keys from closing them. Their windows' own
+  close buttons still close them.
 - **Dialogs float, centered**: modal windows, pavucontrol,
   nm-connection-editor, blueman-manager, portal file choosers, "Open
   File" / "Save File" / "Save As" titles, and windows with neither an app
