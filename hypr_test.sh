@@ -566,20 +566,63 @@ assert_contains "esac" "$_idle_suspend_step"
 assert_contains "esac" "$_idle_suspend_resume"
 
 _ifake=$(mktemp -d)
-for _t in systemctl hyprlock tide loginctl; do
+for _t in hyprlock tide loginctl notify-send; do
     printf '#!/bin/sh\necho "%s $*" >> "%s/log"\n' "$_t" "$_ifake" > "$_ifake/$_t"
     chmod +x "$_ifake/$_t"
 done
-# No lock running, so pidof finds nothing.
-printf '#!/bin/sh\nexit 1\n' > "$_ifake/pidof"
+# systemctl logs its arguments too, and `show` prints tide-lock.service's
+# LoadState from $FAKE_LOADSTATE: loaded unless a test says otherwise, and
+# a failure to reach the user manager when it's "fail".
+cat > "$_ifake/systemctl" <<EOF
+#!/bin/sh
+echo "systemctl \$*" >> "$_ifake/log"
+case "\$*" in
+    *" show "*)
+        if test "\$FAKE_LOADSTATE" = fail; then
+            echo "Failed to connect to bus: No medium found" >&2
+            exit 1
+        fi
+        echo "\${FAKE_LOADSTATE:-loaded}"
+        ;;
+esac
+EOF
+chmod +x "$_ifake/systemctl"
+# No lock running, so pidof finds nothing, unless $FAKE_PIDOF says one is.
+printf '#!/bin/sh\ntest -n "$FAKE_PIDOF"\n' > "$_ifake/pidof"
 chmod +x "$_ifake/pidof"
 _idle_run() {
     : > "$_ifake/log"
-    XDG_CURRENT_DESKTOP="$1" PATH="$_ifake:$PATH" sh -c "$2"
+    XDG_CURRENT_DESKTOP="$1" PATH="$_ifake:$PATH" sh -c "$2" 2>"$_ifake/err"
     cat "$_ifake/log"
 }
+_idle_show="systemctl --user show -p LoadState --value tide-lock.service"
+_idle_notice='notify-send --urgency=critical --app-name=tide The tide lock failed hyprlock locked the session instead. Run tide doctor to see why.'
 start_test "in the tide session, a lock starts tide-lock.service"
-assert_equal "systemctl --user start tide-lock.service" "$(_idle_run tide:Hyprland "$_idle_lock_cmd")"
+assert_equal "$_idle_show
+systemctl --user start tide-lock.service" "$(_idle_run tide:Hyprland "$_idle_lock_cmd")"
+start_test "in the tide session, a lock with tide-lock.service loaded runs no hyprlock"
+assert_not_contains "hyprlock" "$(_idle_run tide:Hyprland "$_idle_lock_cmd")"
+# A unit that isn't installed or is masked never fails, so its OnFailure=
+# never starts the fallback: hyprlock locks from here instead.
+start_test "in the tide session, a lock without tide-lock.service runs hyprlock"
+_out=$(FAKE_LOADSTATE=not-found _idle_run tide:Hyprland "$_idle_lock_cmd")
+assert_contains "hyprlock " "$_out"
+start_test "and doesn't start the missing unit"
+assert_not_contains "start tide-lock.service" "$_out"
+start_test "and says the lock fell back, as the unit's fallback does"
+assert_contains "$_idle_notice" "$_out"
+start_test "and logs why"
+assert_equal "hypridle lock_cmd: tide-lock.service is not-found, so hyprlock locks instead" "$(cat "$_ifake/err")"
+start_test "in the tide session, a lock with tide-lock.service masked runs hyprlock"
+_out=$(FAKE_LOADSTATE=masked _idle_run tide:Hyprland "$_idle_lock_cmd")
+assert_contains "hyprlock " "$_out"
+assert_not_contains "start tide-lock.service" "$_out"
+start_test "in the tide session, a lock that can't ask systemd runs hyprlock"
+_out=$(FAKE_LOADSTATE=fail _idle_run tide:Hyprland "$_idle_lock_cmd")
+assert_contains "hyprlock " "$_out"
+assert_contains "tide-lock.service is Failed to connect to bus: No medium found, so hyprlock locks instead" "$(cat "$_ifake/err")"
+start_test "in the tide session, a lock without tide-lock.service stacks no second hyprlock"
+assert_equal "$_idle_show" "$(FAKE_LOADSTATE=not-found FAKE_PIDOF=1 _idle_run tide:Hyprland "$_idle_lock_cmd")"
 start_test "in the tide session, the idle step runs tide idle-lock"
 assert_equal "tide idle-lock" "$(_idle_run tide:Hyprland "$_idle_lock_step")"
 start_test "in a plain Hyprland login, a lock runs hyprlock"
