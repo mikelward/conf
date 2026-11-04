@@ -1248,19 +1248,20 @@ test("Super+Z asks tide's shell to minimize the window, and says so when there's
     truthy(os.execute("sh -n '" .. script .. "'"), "the command parses as sh")
 end)
 
-test("Super+C opens tide's picker, says so when there's no shell, and Calendar has no key", function()
+test("Super+V opens tide's picker, says so when there's no shell; Super+C is Chat, Super+Shift+C Calendar", function()
     load()
-    local t = bind("SUPER + C").target
+    local t = bind("SUPER + V").target
     truthy(t.args:find("qs -c tide ipc call picker toggle clipboard", 1, true), t.args)
     truthy(t.args:find("|| notify-send -a tide 'No picker'", 1, true), t.args)
-    eq("Clipboard and characters", bind("SUPER + C").opts.description)
+    eq("Clipboard and characters", bind("SUPER + V").opts.description)
     for k, b in pairs(S.binds) do
         local args = type(b.target) == "table" and b.target.args or ""
-        eq(nil, tostring(args):find("google-calendar", 1, true), "Calendar is bound on " .. k)
+        eq(nil, tostring(args):find("terminal_on_vm", 1, true), "Terminal on the VM is bound on " .. k)
     end
-    eq(true, bind("SUPER + SHIFT + C").target.args:find("google-chat", 1, true) ~= nil, "Super+Shift+C is still Chat")
+    eq(true, bind("SUPER + C").target.args:find("google-chat", 1, true) ~= nil, "Super+C is Chat")
+    eq(true, bind("SUPER + SHIFT + C").target.args:find("google-calendar", 1, true) ~= nil, "Super+Shift+C is Calendar")
     eq(true, bind("SUPER + H").target.args:find(" home", 1, true) ~= nil, "Super+H is still home")
-    local script = tmp .. "/super-c.sh"
+    local script = tmp .. "/super-v.sh"
     local f = assert(io.open(script, "w"))
     f:write(t.args, "\n")
     f:close()

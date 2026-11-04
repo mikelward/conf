@@ -903,13 +903,13 @@ end
 -- runenv provides. Super+D is left for hyprland.local.lua.
 hl.bind(key("T"), app(terminal, terminal), does("Terminal"))
 hl.bind(key("W"), app(runenv .. " terminal_on_workstation"), does("Terminal on the workstation"))
-hl.bind(key("V"), app(runenv .. " terminal_on_vm"), does("Terminal on the VM"))
 hl.bind(key("G"), app(runenv .. " browser1"), does("Browser"))
 hl.bind(key("SHIFT + G"), app(runenv .. " browser3"), does("Browser, third profile"))
 hl.bind(key("F"), app(runenv .. " browser2"), does("Browser, second profile"))
 hl.bind(key("B"), exec(runenv .. " bluetooth-connect"), does("Connect the headphones"))
 hl.bind(key("SHIFT + B"), exec(runenv .. " pulseprofile.py"), does("Next audio profile"))
-hl.bind(key("SHIFT + C"), app(runenv .. " google-chat"), does("Google Chat"))
+hl.bind(key("C"), app(runenv .. " google-chat"), does("Google Chat"))
+hl.bind(key("SHIFT + C"), app(runenv .. " google-calendar"), does("Google Calendar"))
 hl.bind(key("H"), app(runenv .. " home"), does("Home folder"))
 hl.bind(key("I"), app(runenv .. " irc"), does("IRC"))
 hl.bind(key("M"), app(runenv .. " google-meet"), does("Google Meet"))
@@ -930,12 +930,12 @@ hl.bind(key("ALT + Space"), exec(scripts .. "/next-layout.sh"), does("Next keybo
 -- notification server; the call fails otherwise (no shell, or the server not
 -- opted in), and swaync's panel opens instead.
 hl.bind(key("SHIFT + N"), exec("qs -c tide ipc call notifications toggle || swaync-client -t -sw"), does("Notification center"))
--- Super+C: tide's clipboard and characters picker (tide SPEC.md §8.4), C
--- for clipboard and characters. It was Google Calendar, which has no key
--- now: it's one of home's apps, and the launcher finds it. Without the
+-- Super+V: tide's clipboard and characters picker (tide SPEC.md §8.4), V
+-- as in paste: Enter pastes the selection where you were. Terminal on the
+-- VM, which it was, has no key now; the launcher finds it. Without the
 -- shell there's no picker, so a notification says why.
-hl.bind(key("C"), exec("qs -c tide ipc call picker toggle clipboard || notify-send -a tide 'No picker' "
-    .. "'Super+C opens the clipboard and characters picker in the tide shell, which is not running.'"), does("Clipboard and characters"))
+hl.bind(key("V"), exec("qs -c tide ipc call picker toggle clipboard || notify-send -a tide 'No picker' "
+    .. "'Super+V opens the clipboard and characters picker in the tide shell, which is not running.'"), does("Clipboard and characters"))
 
 -- Session.
 hl.bind(key("BackSpace"), hl.dsp.window.close(), does("Close the window"))

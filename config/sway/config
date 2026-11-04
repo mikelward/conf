@@ -139,15 +139,15 @@ exec blueman-applet
 # --- helper scripts live in the scripts repo on $PATH) ---
 bindsym $mod+t exec $term
 bindsym $mod+w exec terminal_on_workstation
-bindsym $mod+v exec terminal_on_vm
 bindsym $mod+g exec browser1
 bindsym $mod+Shift+g exec browser3
 bindsym $mod+f exec browser2
 bindsym $mod+b exec bluetooth-connect
 bindsym $mod+Shift+b exec pulseprofile.py
-# $mod+c is tide's clipboard and characters picker there, which sway has no
-# equivalent for. Google Calendar has no key: the launcher finds it.
-bindsym $mod+Shift+c exec google-chat
+# $mod+v is tide's clipboard and characters picker there, which sway has no
+# equivalent for. Terminal on the VM has no key: the launcher finds it.
+bindsym $mod+c exec google-chat
+bindsym $mod+Shift+c exec google-calendar
 bindsym $mod+h exec home
 bindsym $mod+i exec irc
 bindsym $mod+m exec google-meet

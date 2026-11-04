@@ -153,9 +153,9 @@ Delete an entry once you have agreed with it or reversed it.
       inhibit, swaync's `--dnd-on`). *Reversible:* one bind each in
       `config/sway/config` and `xbindkeysrc`.
 
-## Bind Super+C to a clipboard manager under sway and X
+## Bind Super+V to a clipboard manager under sway and X
 
-Super+C opens tide's clipboard and characters picker, but sway
+Super+V opens tide's clipboard and characters picker, but sway
 (`config/sway/config`) and an X session (`xbindkeysrc`) leave it unbound,
 since neither runs tide's shell. Bind it in both to a clipboard manager, so
 the key means the same everywhere. Which manager is still to choose: one
