@@ -217,7 +217,7 @@ Ctrl+Option+Command+key, and tilemo binds that (tilemo SPEC.md §7.1).
 | Win+key, for each key tilemo binds | `left_option`+`left_command`+`left_control`+key | Ctrl+Option+Command+key |
 | Win+Shift+key | the same, plus `shift` | Ctrl+Option+Command+Shift+key |
 | Win+click, Win+right-click, Win+middle-click | the same modifiers, on the button | Super+drag and Super+middle-click in tilemo |
-| Win, tapped alone | `f20` with the same modifiers | tilemo's switcher, on its workspace list |
+| Win, tapped alone | `f20` with the same modifiers | tilemo's launcher, as Super+Space |
 | Alt+Tab | `left_option`+`left_command`+`shift`+`tab` | Ctrl+Option+Shift+Tab: tilemo's swap with the master |
 
 The outputs name the keys the rotation turns into Control, Option and
@@ -232,8 +232,11 @@ Command, by the same layering as the rules above.
   the function keys, are left alone and stay Option.
 
 - **The lone tap is Super+F20,** a key no PC keyboard here has, so tilemo
-  tells it from Super+Space: the tap opens its workspace list, Super+Space
-  its launcher (tilemo SPEC.md §7.2, §9).
+  tells it from Super+Space. Both open its launcher now, as tide's tap and
+  chromeOS's Search tap do (tilemo SPEC.md §7.2, §9). The rule's
+  description still says the workspace list: Tide Settings' Keyboard page
+  knows an enabled rule by its whole description, so changing it would
+  show the rule as off until it's added again.
 - **Alt+Tab is Ctrl+Option+Shift+Tab,** without Command, so no Win
   combination makes it. Physical Alt+Shift+Tab is left to the rotation, as
   Shift+Ctrl+Tab, the previous tab.

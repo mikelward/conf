@@ -350,6 +350,8 @@ local function new_hl()
         exec_cmd = function(cmd) table.insert(S.execs, cmd) end,
         dispatch = function(d) table.insert(S.dispatched, d) end,
         dsp = dsp_namespace(nil),
+        -- The running Hyprland's version, as hl.version() gives it.
+        version = function() return S.version end,
         notification = {
             create = function(t) table.insert(S.notifications, t) end,
         },
@@ -479,6 +481,7 @@ local function load(setup)
     end
     _G.fake_layout = nil
     _G.hl = new_hl()
+    S.version = (setup and setup.version) or "0.56.2"
     -- Monitors already connected as the config loads, as on a reload.
     if setup and setup.monitors then
         S.monitor_list = setup.monitors
@@ -2140,6 +2143,22 @@ test("Super+Shift+N opens tide's notification center, else swaync's", function()
         p:close()
         truthy(out:find("-c tide ipc call notifications toggle", 1, true), "qs called")
         eq(fallback, out:find("fallback", 1, true) ~= nil, "fallback after exit " .. status)
+    end
+end)
+
+test("a bare Super tap opens tide's launcher, from Hyprland 0.57 on", function()
+    for _, v in ipairs({ "0.57.0", "0.57.1", "0.58.0", "1.0.0" }) do
+        load({ version = v })
+        local b = bind("release:SUPER + SUPER_L")
+        eq("global", b.target.dsp, v)
+        eq("tide:launcher", b.target.args, v)
+        eq(true, b.opts.release, v)
+    end
+    -- 0.56's release bind fires after every Super chord (Super+T too), and
+    -- an unreadable version can't be trusted to have the fix.
+    for _, v in ipairs({ "0.56.2", "0.56.0", "garbage" }) do
+        load({ version = v })
+        eq(nil, S.binds["|release:SUPER + SUPER_L"], v)
     end
 end)
 
