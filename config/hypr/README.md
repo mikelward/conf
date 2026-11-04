@@ -202,7 +202,7 @@ description, which tide's settings panel lists on its Keys page;
 | `SUPER + Home` | Home (tide's first standing workspace, `in` by default) |
 | `SUPER + Tab` | Home, or from home back to the last other workspace, so presses toggle |
 | `SUPER + End` | The last workspace other than home and this one, so presses toggle between two |
-| `SUPER + PgUp` / `SUPER + PgDn` | Previous / next workspace in the bar's order, wrapping from the last to home and back |
+| `SUPER + PgUp` / `SUPER + PgDn` | Previous / next workspace with a window, in the bar's order, wrapping from the last to home and back; an empty one is skipped |
 | `SUPER + Shift + PgUp` / `SUPER + Shift + PgDn` | Move the window to the previous / next workspace, and follow it |
 | `SUPER + 1..9` | The Nth workspace in the bar's order, so `SUPER + 1` is home; past the last, nothing |
 | `SUPER + Shift + 1..9` | Send the window to the Nth workspace in the bar's order, staying where you are |

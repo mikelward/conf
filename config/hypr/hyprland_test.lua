@@ -871,12 +871,22 @@ test("Super+Shift+1…9 send the window to the Nth workspace and stay", function
     eq(0, #run("SUPER + SHIFT + 6"), "past the last, nothing")
 end)
 
+-- A window on each workspace named, as Hyprland lists them.
+local function windows_on(...)
+    local out = {}
+    for i, name in ipairs({ ... }) do
+        table.insert(out, { address = string.format("0x%x", i), workspace = { name = name } })
+    end
+    return out
+end
+
 test("Super+PgUp/PgDn step through the bar's order and wrap at the ends", function()
     load({ workspaces = STANDING })
     S.workspace_list = named("in", "PR-12", "re", "docs")
     table.insert(S.workspace_list, { id = 2, name = "2" })
     table.insert(S.workspace_list, { id = -98, name = "special:scratch" })
-    -- in, re, oc, me, PR-12, docs, 2
+    S.window_list = windows_on("in", "re", "oc", "me", "PR-12", "docs", "2")
+    -- in, re, oc, me, PR-12, docs, 2, each with a window
     S.active_workspace = { id = -1338, name = "in" }
     local d = run("SUPER + Page_Down")
     eq(1, #d)
@@ -884,7 +894,7 @@ test("Super+PgUp/PgDn step through the bar's order and wrap at the ends", functi
     eq("name:re", d[1].args.workspace, "a standing workspace comes next")
     eq("name:2", run("SUPER + Page_Up")[1].args.workspace, "before home, the last")
     S.active_workspace = { id = -1340, name = "re" }
-    eq("name:oc", run("SUPER + Page_Down")[1].args.workspace, "next, made or not")
+    eq("name:oc", run("SUPER + Page_Down")[1].args.workspace, "next")
     eq("name:in", run("SUPER + Page_Up")[1].args.workspace, "previous")
     S.active_workspace = { id = -1339, name = "PR-12" }
     eq("name:me", run("SUPER + Page_Up")[1].args.workspace, "back past the made ones")
@@ -895,6 +905,31 @@ test("Super+PgUp/PgDn step through the bar's order and wrap at the ends", functi
     eq(0, #run("SUPER + Page_Down"), "from a special workspace")
     S.active_workspace = nil
     eq(0, #run("SUPER + Page_Down"), "with no workspace")
+end)
+
+test("Super+PgUp/PgDn skip the workspaces with no windows", function()
+    load({ workspaces = STANDING })
+    S.workspace_list = named("in", "PR-12", "re", "docs")
+    table.insert(S.workspace_list, { id = 2, name = "2" })
+    -- in, re, oc, me, PR-12, docs, 2: windows on in, PR-12 and 2, and a
+    -- minimized one, on its special workspace, which counts for none.
+    S.window_list = windows_on("in", "PR-12", "2", "special:minimized")
+    S.active_workspace = { id = -1338, name = "in" }
+    eq("name:PR-12", run("SUPER + Page_Down")[1].args.workspace, "past the empty standing ones")
+    eq("name:2", run("SUPER + Page_Up")[1].args.workspace, "before home, the last with a window")
+    S.active_workspace = { id = -1339, name = "PR-12" }
+    eq("name:2", run("SUPER + Page_Down")[1].args.workspace, "past an empty made one")
+    eq("name:in", run("SUPER + Page_Up")[1].args.workspace)
+    S.active_workspace = { id = 2, name = "2" }
+    eq("name:in", run("SUPER + Page_Down")[1].args.workspace, "wrapping, as before")
+    S.active_workspace = { id = -1340, name = "re" }
+    eq("name:PR-12", run("SUPER + Page_Down")[1].args.workspace, "from an empty one, the next with a window")
+    eq("name:in", run("SUPER + Page_Up")[1].args.workspace)
+    S.window_list = windows_on("in")
+    S.active_workspace = { id = -1338, name = "in" }
+    eq(0, #run("SUPER + Page_Down"), "no other with a window: it stays")
+    eq("name:re", run("SUPER + SHIFT + Page_Down")[1].args.workspace,
+        "moving a window still takes it to the next, empty or not")
 end)
 
 test("Super+Shift+PgUp/PgDn move the window there and follow it", function()
@@ -926,6 +961,7 @@ local function two_monitors()
         { id = -1340, name = "re", monitor = { name = "eDP-1" } },
         { id = -1341, name = "docs@DP-2", monitor = { name = "DP-2" } },
     }
+    S.window_list = windows_on("in", "re", "docs@DP-2")
     S.active_workspace = { id = -1338, name = "in" }
 end
 
@@ -964,8 +1000,8 @@ test("with span.lua, each monitor's part is one workspace on the bar's order", f
     eq(0, #run("SUPER + 6"), "no workspace past docs")
     S.active_workspace = { id = -1341, name = "docs@DP-2" }
     S.active_monitor = { name = "DP-2" }
-    eq("focus name:me, focus name:me@DP-2", targets(run("SUPER + Page_Up")),
-        "a part's neighbors are its workspace's")
+    eq("focus name:re, focus name:re@DP-2", targets(run("SUPER + Page_Up")),
+        "a part's neighbors are its workspace's, past the empty ones")
 end)
 
 test("with span.lua, a moved window goes to its own monitor's part and keeps focus", function()
@@ -1131,6 +1167,7 @@ test("with span.lua on one monitor, the workspace keys are as before", function(
     S.monitor_list = { { id = 0, name = "eDP-1" } }
     S.active_monitor = { name = "eDP-1" }
     S.workspace_list = named("in")
+    S.window_list = windows_on("re")
     S.active_workspace = { id = -1338, name = "in" }
     eq("focus name:re", targets(run("SUPER + Page_Down")))
     eq(nil, S.workspace_rules["name:re@DP-2"], "no rule for a part")
@@ -1206,6 +1243,7 @@ end)
 test("a standing name matches a workspace made in another case, as the bar's does", function()
     load({ workspaces = STANDING })
     S.workspace_list = named("in", "RE")
+    S.window_list = windows_on("RE")
     S.active_workspace = { id = -1338, name = "in" }
     eq("name:RE", run("SUPER + Page_Down")[1].args.workspace)
 end)

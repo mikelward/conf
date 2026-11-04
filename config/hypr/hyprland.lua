@@ -1435,9 +1435,24 @@ local function handoff(gone)
     end
 end
 
--- Previous / next workspace in the bar's order, wrapping from the last to
--- home and back; with move_window, moving the focused window there and
--- following it. With one workspace, nothing.
+-- The workspaces with a window on them, by name: a monitor's part counts
+-- for its workspace, and a special one, such as a minimized window's
+-- (tide SPEC.md §6.7), for none.
+local function with_windows()
+    local out = {}
+    for _, w in ipairs(query("couldn't list the windows", hl.get_windows) or {}) do
+        local name = w.workspace and w.workspace.name
+        if type(name) == "string" and name ~= "" and not name:find("^special:") then
+            out[plain(name)] = true
+        end
+    end
+    return out
+end
+
+-- Super+PgUp/PgDn: the previous or next workspace in the bar's order that
+-- has a window, wrapping from the last to home and back, so an empty one is
+-- never a stop; with none, it stays. With move_window (Super+Shift), the
+-- focused window moves to the very next, empty or not, and focus follows.
 local function step_workspace(delta, move_window)
     return function()
         local name = active_name()
@@ -1454,8 +1469,16 @@ local function step_workspace(delta, move_window)
         if not at then
             return
         end
-        local target = order[(at - 1 + delta) % #order + 1]
-        if target == name then
+        local has = not move_window and with_windows() or nil
+        local target
+        for k = 1, #order - 1 do
+            local n = order[(at - 1 + delta * k) % #order + 1]
+            if not has or has[n] then
+                target = n
+                break
+            end
+        end
+        if not target or target == name then
             return
         end
         if move_window then
