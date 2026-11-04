@@ -871,7 +871,7 @@ test("Super+Shift+1…9 send the window to the Nth workspace and stay", function
     eq(0, #run("SUPER + SHIFT + 6"), "past the last, nothing")
 end)
 
-test("Super+PgUp/PgDn step through the bar's order and stop at the ends", function()
+test("Super+PgUp/PgDn step through the bar's order and wrap at the ends", function()
     load({ workspaces = STANDING })
     S.workspace_list = named("in", "PR-12", "re", "docs")
     table.insert(S.workspace_list, { id = 2, name = "2" })
@@ -882,7 +882,7 @@ test("Super+PgUp/PgDn step through the bar's order and stop at the ends", functi
     eq(1, #d)
     truthy(is_dsp(d[1], "focus"))
     eq("name:re", d[1].args.workspace, "a standing workspace comes next")
-    eq(0, #run("SUPER + Page_Up"), "nothing before home")
+    eq("name:2", run("SUPER + Page_Up")[1].args.workspace, "before home, the last")
     S.active_workspace = { id = -1340, name = "re" }
     eq("name:oc", run("SUPER + Page_Down")[1].args.workspace, "next, made or not")
     eq("name:in", run("SUPER + Page_Up")[1].args.workspace, "previous")
@@ -890,7 +890,7 @@ test("Super+PgUp/PgDn step through the bar's order and stop at the ends", functi
     eq("name:me", run("SUPER + Page_Up")[1].args.workspace, "back past the made ones")
     eq("name:docs", run("SUPER + Page_Down")[1].args.workspace)
     S.active_workspace = { id = 2, name = "2" }
-    eq(0, #run("SUPER + Page_Down"), "past the last")
+    eq("name:in", run("SUPER + Page_Down")[1].args.workspace, "past the last, home")
     S.active_workspace = { id = -98, name = "special:scratch" }
     eq(0, #run("SUPER + Page_Down"), "from a special workspace")
     S.active_workspace = nil
@@ -905,7 +905,14 @@ test("Super+Shift+PgUp/PgDn move the window there and follow it", function()
     truthy(is_dsp(d[1], "window.move"))
     eq("name:re", d[1].args.workspace)
     eq(true, d[1].args.follow)
-    eq(0, #run("SUPER + SHIFT + Page_Up"), "nothing before home")
+    eq("name:me", run("SUPER + SHIFT + Page_Up")[1].args.workspace, "before home, the last")
+end)
+
+test("Super+PgDn with only one workspace stays put", function()
+    load({ workspaces = [[return { home = "in", standing = { "in" }, in_apps = {} }]] })
+    S.workspace_list = named("in")
+    S.active_workspace = { id = -1338, name = "in" }
+    eq(0, #run("SUPER + Page_Down"), "wrapping to itself does nothing")
 end)
 
 -- Two monitors, the laptop panel main (home's there) and DP-2 focused

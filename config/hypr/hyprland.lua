@@ -1435,9 +1435,9 @@ local function handoff(gone)
     end
 end
 
--- Previous / next workspace in the bar's order, as in GNOME, stopping at
--- either end; with move_window, moving the focused window there and
--- following it.
+-- Previous / next workspace in the bar's order, wrapping from the last to
+-- home and back; with move_window, moving the focused window there and
+-- following it. With one workspace, nothing.
 local function step_workspace(delta, move_window)
     return function()
         local name = active_name()
@@ -1451,8 +1451,11 @@ local function step_workspace(delta, move_window)
                 at = i
             end
         end
-        local target = at and order[at + delta]
-        if not target then
+        if not at then
+            return
+        end
+        local target = order[(at - 1 + delta) % #order + 1]
+        if target == name then
             return
         end
         if move_window then
