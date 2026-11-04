@@ -1,6 +1,6 @@
 # Karabiner-Elements
 
-Complex-modification rules for a PC keyboard, in four files:
+Complex-modification rules for a PC keyboard, in five files:
 
 - `assets/complex_modifications/pc-alt-tab.json` puts the next tab back on
   physical Ctrl+Tab; physical Alt+Tab is tilemo's.
@@ -11,6 +11,8 @@ Complex-modification rules for a PC keyboard, in four files:
 - `assets/complex_modifications/pc-terminal.json` gives kitty and Ghostty
   their Ctrl and Alt back, as Control and Meta, and puts the interrupt on
   Ctrl+Shift+C in Terminal and iTerm2; see [Terminals](#terminals).
+- `assets/complex_modifications/pc-lock.json` makes Ctrl+U clear the
+  password at the lock screen, as on Linux; see [Lock screen](#lock-screen).
 - `assets/complex_modifications/tilemo.json` gives
   [tilemo](https://github.com/mikelward/tilemo) its Super key; see
   [tilemo](#tilemo).
@@ -209,6 +211,34 @@ It's its own rule, "Ctrl+Shift+C interrupts in Terminal and iTerm2", enabled
 on its own (`com.apple.Terminal`, `com.googlecode.iterm2`). kitty and Ghostty
 keep Ctrl+Shift+C as copy, through the rule above.
 
+## Lock screen
+
+On Linux, Ctrl+U clears a password field, tide's lock among them. The
+rotation makes physical Ctrl+U Cmd+U, which does nothing in the lock
+screen's password field. This rule makes it select the password and delete
+it:
+
+| Physical keys | Emits | macOS sees | Does |
+| --- | --- | --- | --- |
+| Ctrl+U, either Ctrl | `left_control`+A, then Backspace | Command+A, Backspace | clears the password |
+| Command+U, a Mac keyboard's | the same | the same | the same |
+
+- **Only at the lock screen.** Each manipulator's condition is the
+  frontmost application being `com.apple.loginwindow`, which draws the lock
+  screen; Karabiner's own Escape-at-the-login-window workaround keys on the
+  same name. Everywhere else Ctrl+U is left to the other rules.
+- **A Mac keyboard's Command+U,** for the habit of a Mac's own Command key:
+  to Karabiner it's `left_command`, the PC's Win key, so Win+U clears the
+  password too. tilemo's rule takes Win+U elsewhere, as Super+U; there's
+  nothing of tilemo's at the lock screen.
+- **Not the login window after a restart.** Before you log in, Karabiner
+  runs only what's copied to its system default configuration (Settings,
+  Misc), and the rotation isn't set yet, so Command+A would arrive as
+  Control+A. The rule is for unlocking.
+- **It's a new file:** run `confinst` once after pulling conf, to link it
+  into Karabiner's folder. tilemo then turns it on by itself, at the top;
+  without tilemo, enable it as in [Enabling it](#enabling-it).
+
 ## tilemo
 
 tilemo, the macOS tiling desktop, puts tide's keys on Super, the physical Win
@@ -280,8 +310,10 @@ the list. Enable, in this order:
 2. under "PC keyboard arrows", "Ctrl+Left/Right moves by word, …";
 3. under "PC keyboard terminals", "Ctrl is Control and Alt is Meta in kitty
    and Ghostty", so it sits above the arrow rule;
-4. with tilemo, under "tilemo", the "tilemo:" rule last, so it sits above
-   them all.
+4. with tilemo, under "tilemo", the "tilemo:" rule, so it sits above them;
+5. under "PC keyboard lock screen", "Ctrl+U clears the password at the lock
+   screen", last, above tilemo's, which would otherwise take a Mac
+   keyboard's Command+U there as Super+U.
 
 Karabiner puts each rule you enable at the top of the Complex Modifications
 list, and uses the first that matches a key. `setup-macos` installs Karabiner
@@ -299,9 +331,10 @@ the System Settings page for it.
 
 ## Scope
 
-Only left Ctrl, and in tilemo's rule left Alt, are mapped. Right Alt is left
-alone so it stays available as a plain modifier, and the rotation still sends
-it to right Control.
+Only left Ctrl, and in tilemo's rule left Alt, are mapped, but for the
+arrow rule's Ctrl+arrow and Ctrl+Home/End and the lock screen's Ctrl+U,
+which take right Ctrl too. Right Alt is left alone so it stays available as
+a plain modifier, and the rotation still sends it to right Control.
 
 ## Modifier names
 

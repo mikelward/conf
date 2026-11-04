@@ -409,4 +409,46 @@ $(python3 -c 'import json; print(json.dumps([{"key_code": "c", "modifiers": {"ma
     assert_not_contains "left_control down_arrow" "$_terminal_pairs"
 fi
 
+# The lock screen's password field (loginwindow, frontmost there) clears on
+# Ctrl+U, as tide's lock does. The rotation makes physical Ctrl+U Cmd+U,
+# which does nothing there, so the rule emits Command+A and Backspace:
+# left_control, which the rotation turns into Command, then a bare
+# Backspace. A Mac keyboard's own Command+U does the same.
+_lock_file="$_srcdir/config/karabiner/assets/complex_modifications/pc-lock.json"
+
+start_test "the lock screen rule exists"
+assert_true test -f "$_lock_file"
+
+if command -v python3 >/dev/null 2>&1; then
+    start_test "the lock screen rule is valid JSON"
+    assert_true python3 -m json.tool "$_lock_file" /dev/null
+
+    _lock=$(python3 - "$_lock_file" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+print("title", bool(d.get("title")))
+for r in d["rules"]:
+    print("description", r["description"][:45])
+    for m in r["manipulators"]:
+        f = m["from"]
+        to = " ".join(t["key_code"] + ("+" + "+".join(t["modifiers"]) if t.get("modifiers") else "") for t in m["to"])
+        print(f["key_code"], "+".join(f["modifiers"]["mandatory"]), "->", to, json.dumps(m.get("conditions")))
+PY
+)
+    start_test "the lock screen rule has a title, and says what it does first"
+    assert_contains "title True" "$_lock"
+    assert_contains "description Ctrl+U clears the password at the lock" "$_lock"
+
+    _at_lock='[{"type": "frontmost_application_if", "bundle_identifiers": ["^com\\.apple\\.loginwindow$"]}]'
+    start_test "either Ctrl+U selects all and deletes, at the lock screen only"
+    assert_contains "u left_control -> a+left_control delete_or_backspace $_at_lock" "$_lock"
+    assert_contains "u right_control -> a+left_control delete_or_backspace $_at_lock" "$_lock"
+    start_test "a Mac keyboard's Command+U does the same"
+    assert_contains "u left_command -> a+left_control delete_or_backspace $_at_lock" "$_lock"
+    assert_contains "u right_command -> a+left_control delete_or_backspace $_at_lock" "$_lock"
+    start_test "nothing else: four manipulators, each at the lock screen"
+    assert_equal "4" "$(printf '%s\n' "$_lock" | grep -c -- ' -> ')"
+    assert_equal "4" "$(printf '%s\n' "$_lock" | grep -c -F -- "$_at_lock")"
+fi
+
 test_summary "karabiner_test"
