@@ -992,6 +992,10 @@ hl.bind(key("SHIFT + N"), exec("qs -c tide ipc call notifications toggle || sway
 -- shell there's no picker, so a notification says why.
 hl.bind(key("V"), exec("qs -c tide ipc call picker toggle clipboard || notify-send -a tide 'No picker' "
     .. "'Super+V opens the clipboard and characters picker in the tide shell, which is not running.'"), does("Clipboard and characters"))
+-- Super+Shift+V: the picker's Fill tab (tide SPEC.md §8.4), your snippets
+-- and Bitwarden's logins, one row per field; Enter types it where you were.
+hl.bind(key("SHIFT + V"), exec("qs -c tide ipc call picker toggle fill || notify-send -a tide 'No picker' "
+    .. "'Super+Shift+V opens the snippets and passwords picker in the tide shell, which is not running.'"), does("Snippets and passwords"))
 
 -- Session.
 -- Unless tide pins the window where it is (tide SPEC.md §6.5); then a
