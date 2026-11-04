@@ -4,9 +4,9 @@ Complex-modification rules for a PC keyboard, in four files:
 
 - `assets/complex_modifications/pc-alt-tab.json` puts the next tab back on
   physical Ctrl+Tab; physical Alt+Tab is tilemo's.
-- `assets/complex_modifications/pc-arrows.json` makes physical Ctrl+Left/Right
-  move by word, Win+Left/Right switch Spaces and Win+Shift+Left/Right move the
-  window a Space; see
+- `assets/complex_modifications/pc-arrows.json` makes physical Ctrl+Left/Right,
+  left or right Ctrl, move by word, Win+Left/Right switch Spaces and
+  Win+Shift+Left/Right move the window a Space; see
   [Arrow keys](#arrow-keys).
 - `assets/complex_modifications/pc-terminal.json` gives kitty and Ghostty
   their Ctrl and Alt back, as Control and Meta, and puts the interrupt on
@@ -133,7 +133,12 @@ same one-step shift as above, applied as one substitution: `left_control` →
 `left_command`, `left_command` → `left_option`, `left_option` →
 `left_control`.
 
-Only left Ctrl and left Win are mapped, matching the Ctrl+Tab rule.
+**Either Ctrl moves by word,** as on Linux: right Ctrl+arrow has its own
+manipulators, the same as left Ctrl's. Left to the rotation, right Ctrl is
+Command too, and Cmd+arrow jumps to the line ends. In kitty and Ghostty,
+where the terminal rule below takes only left Ctrl, right Ctrl+arrow reaches
+the shell as Alt+arrow, which conf's `zshrc` and `inputrc` bind to the same
+word moves. Only left Win and left Alt are mapped.
 
 ### Home and End
 
@@ -146,7 +151,7 @@ Home and End themselves (kitty, Ghostty, Terminal and iTerm2):
 | --- | --- | --- | --- |
 | Home, End | `left_control`+Left, Right | Command+Left, Right | the line's start, end |
 | Shift+Home, End | the same, plus `shift` | Command+Shift+Left, Right | select to there |
-| Ctrl+Home, End | `left_control`+Up, Down | Command+Up, Down | the document's start, end |
+| Ctrl+Home, End, either Ctrl | `left_control`+Up, Down | Command+Up, Down | the document's start, end |
 
 It's its own rule, "Home and End go to the line's start and end", enabled on
 its own.
@@ -174,7 +179,8 @@ uses, so Ctrl+C there copies a selection and otherwise sends the interrupt
 - **Left to the rotation:** Tab, which the Ctrl+Tab rule and tilemo's take; Space, since
   Control+Space is macOS's input source switch; and Ctrl+Up and Down, which
   are Mission Control. Right Ctrl and right Alt are left alone, so right Ctrl
-  still reaches the terminal's Command shortcuts (Cmd+Q, Cmd+,).
+  still reaches the terminal's Command shortcuts (Cmd+Q, Cmd+,), but for
+  right Ctrl+arrow, which the arrow rule makes a word move.
 - **Enable it after the arrow rule,** so it sits above it: both match
   Ctrl+Left/Right, and in kitty this one should win, as Control+arrow, which
   the shell takes as a word move and Ctrl+Shift+Left/Right as kitty's previous
