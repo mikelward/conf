@@ -168,6 +168,7 @@ description, which tide's settings panel lists on its Keys page;
 | `SUPER + E` | File manager (yazi in a terminal) |
 | `SUPER + B` / `SUPER + Shift + B` | Bluetooth connect / audio profile |
 | `SUPER + V` | Clipboard history and special characters: tide's picker, where Enter pastes (needs the tide shell) |
+| `SUPER + Shift + V` | Snippets and Bitwarden logins: tide's picker on its Fill tab, where Enter types the field chosen (needs the tide shell, and rbw for Bitwarden) |
 | `SUPER + C` / `SUPER + Shift + C` | Chat / Calendar |
 | `SUPER + H` | Home |
 | `SUPER + I` | IRC |

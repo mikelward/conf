@@ -780,7 +780,7 @@ test("every key in the spec is bound", function()
     load({ layout = FAKE_LAYOUT })
     local keys = {
         "SUPER + Space", "SUPER + T", "SUPER + W", "SUPER + V", "SUPER + G", "SUPER + F",
-        "SUPER + SHIFT + G", "SUPER + E", "SUPER + B", "SUPER + C", "SUPER + SHIFT + C",
+        "SUPER + SHIFT + G", "SUPER + E", "SUPER + B", "SUPER + C", "SUPER + SHIFT + C", "SUPER + SHIFT + V",
         "SUPER + H", "SUPER + I", "SUPER + M", "SUPER + N", "SUPER + R", "SUPER + Y",
         "SUPER + BackSpace", "SUPER + Z", "SUPER + L", "SUPER + S", "SUPER + P",
         "SUPER + Left", "SUPER + Right", "SUPER + SHIFT + Left", "SUPER + SHIFT + Right",
@@ -1305,6 +1305,9 @@ test("Super+V opens tide's picker, says so when there's no shell; Super+C is Cha
     end
     eq(true, bind("SUPER + C").target.args:find("google-chat", 1, true) ~= nil, "Super+C is Chat")
     eq(true, bind("SUPER + SHIFT + C").target.args:find("google-calendar", 1, true) ~= nil, "Super+Shift+C is Calendar")
+    local fill = bind("SUPER + SHIFT + V")
+    truthy(fill.target.args:find("qs -c tide ipc call picker toggle fill", 1, true), fill.target.args)
+    eq("Snippets and passwords", fill.opts.description)
     eq(true, bind("SUPER + H").target.args:find(" home", 1, true) ~= nil, "Super+H is still home")
     local script = tmp .. "/super-v.sh"
     local f = assert(io.open(script, "w"))
