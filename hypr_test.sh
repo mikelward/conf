@@ -21,6 +21,7 @@ _themed="$_srcdir/config/hypr/scripts/theme-daemon.sh"
 _fuzzellaunch="$_srcdir/config/hypr/scripts/launch-fuzzel.sh"
 _powermenu="$_srcdir/config/waybar/scripts/power-menu.sh"
 _apply="$_srcdir/config/hypr/scripts/apply-input.sh"
+_watch="$_srcdir/config/hypr/scripts/watch-input.sh"
 _nextlayout="$_srcdir/config/hypr/scripts/next-layout.sh"
 _sharepicker="$_srcdir/config/hypr/scripts/share-picker.sh"
 _waybar_cfg="$_srcdir/config/waybar/config.jsonc"
@@ -35,7 +36,7 @@ _swaync_css="$_srcdir/config/swaync/style.css"
 # match against empty strings.
 ################################################################################
 for _f in "$_hypr" "$_hypr_test" "$_hypr_tmpl" "$_idle" "$_lock" "$_xdph" \
-          "$_theme" "$_themed" "$_fuzzellaunch" "$_apply" "$_nextlayout" "$_sharepicker" "$_powermenu" \
+          "$_theme" "$_themed" "$_fuzzellaunch" "$_apply" "$_watch" "$_nextlayout" "$_sharepicker" "$_powermenu" \
           "$_waybar_cfg" "$_waybar_css" \
           "$_srcdir/config/waybar/common.css" \
           "$_srcdir/config/waybar/colors-dark.css" \
@@ -497,6 +498,64 @@ rm -rf "$_fakebin"
 start_test "apply-input parses as shell and is executable"
 assert_true sh -n "$_apply"
 assert_true test -x "$_apply"
+
+################################################################################
+# watch-input.sh, against a fake udevadm that prints a plug-in's events and
+# ends, and a fake apply-input.sh that logs each run.
+################################################################################
+_wfake=$(mktemp -d)
+cat > "$_wfake/udevadm" <<'FAKE'
+#!/bin/sh
+printf '%s\n' "$FAKE_EVENTS"
+# A monitor runs until it's stopped; this one, only when asked.
+test -z "$FAKE_MONITOR_STAYS" || exec sleep 1000
+FAKE
+cat > "$_wfake/hyprctl" <<'FAKE'
+#!/bin/sh
+test -z "$FAKE_HYPR_GONE"
+FAKE
+cat > "$_wfake/apply" <<'FAKE'
+#!/bin/sh
+echo ran >> "$FAKE_LOG"
+FAKE
+chmod +x "$_wfake/udevadm" "$_wfake/hyprctl" "$_wfake/apply"
+_watch_run() {
+    : > "$_wfake/log"
+    PATH="$_wfake:$PATH" FAKE_LOG="$_wfake/log" WATCH_INPUT_DELAY=0 \
+        WATCH_INPUT_APPLY="$_wfake/apply" sh "$_watch" 2>"$_wfake/err"
+}
+_plug='KERNEL[100.1] add      /devices/usb1/1-1/input/input23 (input)
+UDEV  [100.2] add      /devices/usb1/1-1/input/input23 (input)
+UDEV  [100.3] add      /devices/usb1/1-1/input/input23/mouse2 (input)
+UDEV  [100.4] add      /devices/usb1/1-1/input/input23/event5 (input)'
+
+start_test "watch-input applies the settings when a mouse is plugged in"
+FAKE_EVENTS="$_plug" _watch_run
+assert_equal "ran" "$(cat "$_wfake/log")"
+
+start_test "watch-input ignores a device that's unplugged"
+FAKE_EVENTS='UDEV  [101.0] remove   /devices/usb1/1-1/input/input23/event5 (input)' _watch_run
+assert_equal "" "$(cat "$_wfake/log")"
+
+start_test "watch-input stops its monitor, saying so, once Hyprland has gone"
+FAKE_HYPR_GONE=1 FAKE_MONITOR_STAYS=1 WATCH_INPUT_POLL=0 FAKE_EVENTS='' _watch_run
+assert_equal 0 "$?"
+assert_contains "Hyprland has gone" "$(cat "$_wfake/err")"
+
+start_test "watch-input refuses a poll that isn't a number"
+PATH="$_wfake:$PATH" WATCH_INPUT_POLL=often sh "$_watch" 2>"$_wfake/err"
+assert_equal 1 "$?"
+assert_contains "WATCH_INPUT_POLL must be a number" "$(cat "$_wfake/err")"
+
+start_test "watch-input refuses a delay that isn't a number"
+PATH="$_wfake:$PATH" WATCH_INPUT_DELAY=soon sh "$_watch" 2>"$_wfake/err"
+assert_equal 1 "$?"
+assert_contains "WATCH_INPUT_DELAY must be a number" "$(cat "$_wfake/err")"
+rm -rf "$_wfake"
+
+start_test "watch-input parses as shell and is executable"
+assert_true sh -n "$_watch"
+assert_true test -x "$_watch"
 
 ################################################################################
 # Tray applets: network + volume/sound.

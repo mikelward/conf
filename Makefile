@@ -417,6 +417,7 @@ $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
                           config/hypr/hyprlock.conf \
                           config/hypr/xdph.conf \
                           config/hypr/scripts/apply-input.sh \
+                          config/hypr/scripts/watch-input.sh \
                           config/hypr/scripts/next-layout.sh \
                           config/hypr/scripts/share-picker.sh \
                           config/hypr/scripts/theme.sh \
