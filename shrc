@@ -558,6 +558,25 @@ error() {
     printf '%s\n' "$*" >&2
 }
 
+# source the per-package completion scripts in directory $1.
+# /etc/bash_completion doesn't work in zsh, but most of the scripts under
+# /etc/bash_completion.d do. Their output is silenced; a script that fails
+# gets a warning and the rest still load.
+source_bash_completions() {
+    local f
+    for f in "$1"/*; do
+        # no matches leaves the pattern itself; skip it and dangling links
+        test -e "$f" || continue
+        # 000_bash_completion_compat.bash requires functions from
+        # /etc/bash_completion, trying to use it will break completion
+        # for `cd`
+        case "$f" in */000_bash_completion_compat.bash)
+            continue;;
+        esac
+        . "$f" >/dev/null 2>&1 || warn "Failed to load completion $f"
+    done
+}
+
 # return true if the argument is a shell builtin that can be invoked
 is_builtin() {
     case "$(type "$1")" in *" shell builtin")
@@ -4355,18 +4374,7 @@ if is_interactive; then
             fi
         }
 
-        # /etc/bash_completion doesn't work in zsh, but most of the scripts
-        # under /etc/bash_completion.d do.  silence the output to ignore the
-        # ones that don't.
-        for f in /etc/bash_completion.d/*; do
-            # 000_bash_completion_compat.bash requires functions from
-            # /etc/bash_completion, trying to use it will break completion
-            # for `cd`
-            case "$f" in */000_bash_completion_compat.bash)
-                continue;;
-            esac
-            . "$f" >/dev/null 2>&1
-        done
+        source_bash_completions /etc/bash_completion.d
         ;;
     esac
 
