@@ -528,6 +528,97 @@ start_test "theme.sh launches swaync"
 assert_contains "swaync --style" "$_theme_body"
 
 ################################################################################
+# swaync's text and buttons are legible in both modes.
+#
+# swaync loads its packaged stylesheet beneath common.css, at the same
+# priority, and it paints a notification's buttons and time dark gray or
+# white whatever the palette. So common.css colors each one itself; coming
+# later, its rules win whatever the packaged selectors (checked on swaync
+# 0.9 under a headless sway). Each pair here must reach 4.5:1 (WCAG AA).
+################################################################################
+
+# The value of PROPERTY in common.css's last rule that lists SELECTOR.
+_swaync_decl() {
+    awk -v sel="$1" -v prop="$2" '
+        { css = css $0 " " }
+        END {
+            while ((i = index(css, "/*")) > 0) {
+                j = index(substr(css, i + 2), "*/")
+                css = substr(css, 1, i - 1) (j ? substr(css, i + j + 3) : "")
+            }
+            n = split(css, rules, "}")
+            for (r = 1; r <= n; r++) {
+                if (!(b = index(rules[r], "{"))) continue
+                ns = split(substr(rules[r], 1, b - 1), sels, ",")
+                hit = 0
+                for (s = 1; s <= ns; s++) {
+                    gsub(/[ \t]+/, " ", sels[s]); gsub(/^ | $/, "", sels[s])
+                    if (sels[s] == sel) hit = 1
+                }
+                if (!hit) continue
+                nd = split(substr(rules[r], b + 1), decls, ";")
+                for (d = 1; d <= nd; d++) {
+                    if (!(c = index(decls[d], ":"))) continue
+                    name = substr(decls[d], 1, c - 1); value = substr(decls[d], c + 1)
+                    gsub(/^[ \t]+|[ \t]+$/, "", name); gsub(/^[ \t]+|[ \t]+$/, "", value)
+                    if (name == prop) found = value
+                }
+            }
+            print found
+        }' "$_srcdir/config/swaync/common.css"
+}
+
+# The hex for @NAME in MODE's palette.
+_swaync_color() {
+    sed -n "s/^@define-color ${1#@}  *\(#[0-9a-fA-F]\{6\}\);.*/\1/p" \
+        "$_srcdir/config/swaync/colors-$2.css"
+}
+
+# Whether the hex colors FG and BG reach 4.5:1.
+_legible() {
+    test -n "$1" && test -n "$2" && awk -v a="$1" -v b="$2" '
+        function lum(h,   i, c, t) {
+            t = 0
+            for (i = 0; i < 3; i++) {
+                c = index("0123456789abcdef", tolower(substr(h, 2 + 2 * i, 1))) - 1
+                c = (c * 16 + index("0123456789abcdef", tolower(substr(h, 3 + 2 * i, 1))) - 1) / 255
+                c = c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ^ 2.4
+                t += (i == 0 ? 0.2126 : i == 1 ? 0.7152 : 0.0722) * c
+            }
+            return t
+        }
+        BEGIN {
+            x = lum(a); y = lum(b)
+            r = x > y ? (x + 0.05) / (y + 0.05) : (y + 0.05) / (x + 0.05)
+            exit !(r >= 4.5)
+        }'
+}
+
+start_test "swaync's contrast check tells white on swaync's gray from white on light gray"
+assert_true _legible "#ffffff" "#303030"
+assert_false _legible "#ffffff" "#d8dee9"
+
+start_test "the notification is a plain button, its own background showing through"
+assert_equal "transparent" "$(_swaync_decl .notification-default-action background)"
+
+_swaync_bg=$(_swaync_decl .notification background)
+for _mode in dark light; do
+    for _sel in .notification-default-action .summary .time; do
+        start_test "swaync's $_sel is legible on the notification in $_mode mode"
+        assert_true _legible "$(_swaync_color "$(_swaync_decl "$_sel" color)" $_mode)" \
+            "$(_swaync_color "$_swaync_bg" $_mode)"
+    done
+    # An action is the button on GTK 3 swaync (0.10 and older), and a
+    # flowbox child holding it on GTK 4 (0.11 on).
+    for _sel in button.notification-action ".notification-action > button" \
+            .inline-reply-button .inline-reply-entry; do
+        start_test "swaync's $_sel is legible in $_mode mode"
+        assert_true _legible "$(_swaync_color "$(_swaync_decl "$_sel" color)" $_mode)" \
+            "$(_swaync_color "$(_swaync_decl "$_sel" background)" $_mode)"
+    done
+done
+
+################################################################################
 # hypridle: dim, lock, and screen-off listeners exist.
 ################################################################################
 _idle_body=$(cat "$_idle")
