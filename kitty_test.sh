@@ -40,6 +40,44 @@ start_test "no Linux file turns remote control on"
 assert_false test -e "$_srcdir/config/kitty/linux.conf"
 assert_false test -e "$_srcdir/config/kitty/bsd.conf"
 
+start_test "on a Mac, a bell runs tide-bell, and nowhere else does"
+assert_true grep -Eq '^command_on_bell +~/\.config/kitty/tide-bell$' "$_macos_conf"
+assert_false grep -Eq '^command_on_bell ' "$_kitty_conf"
+assert_true test -x "$_srcdir/config/kitty/tide-bell"
+
+# A stand-in kitten and open, on PATH, record what tide-bell asks.
+_bin=$(mktemp -d)
+cat >"$_bin/kitten" <<'STUB'
+#!/bin/sh
+echo "$*" >>"$TIDE_BELL_LOG"
+test -n "$KITTEN_FAILS" && exit 1
+printf '[{"id": 1, "platform_window_id": %s, "tabs": [{"windows": [{"id": 7}]}]}]\n' "${PLATFORM_ID:-4242}"
+STUB
+cat >"$_bin/open" <<'STUB'
+#!/bin/sh
+test "$1" = -g && shift
+echo "$1"
+STUB
+chmod +x "$_bin/kitten" "$_bin/open"
+_log=$(mktemp)
+
+start_test "tide-bell asks kitty which macOS window rang, and tells tilemo"
+_out=$(PATH="$_bin:$PATH" TIDE_BELL_LOG="$_log" KITTY_WINDOW_ID=7 TIDE_BELL_OPEN="$_bin/open" \
+    sh "$_srcdir/config/kitty/tide-bell" 2>&1)
+assert_true grep -q '^@ ls --match id:7$' "$_log"
+assert_true test "$_out" = "hammerspoon://tide-bell?window=4242"
+
+start_test "tide-bell fails, saying why, without a window to name"
+: >"$_log"
+_out=$(PATH="$_bin:$PATH" TIDE_BELL_LOG="$_log" TIDE_BELL_OPEN="$_bin/open" sh "$_srcdir/config/kitty/tide-bell" 2>&1)
+assert_true test $? -ne 0
+assert_true test -n "$(printf '%s' "$_out" | grep KITTY_WINDOW_ID)"
+_out=$(PATH="$_bin:$PATH" TIDE_BELL_LOG="$_log" KITTY_WINDOW_ID=7 KITTEN_FAILS=1 TIDE_BELL_OPEN="$_bin/open" \
+    sh "$_srcdir/config/kitty/tide-bell" 2>&1)
+assert_true test -n "$(printf '%s' "$_out" | grep 'kitten @ ls failed')"
+assert_false test -n "$(printf '%s' "$_out" | grep hammerspoon)"
+rm -rf "$_bin" "$_log"
+
 start_test "Ctrl+N opens a new OS window, and nothing else takes it"
 assert_true grep -Eq '^map +ctrl\+n +new_os_window$' "$_kitty_conf"
 assert_true test "$(grep -Ec '^map +ctrl\+n ' "$_kitty_conf" "$_macos_conf" | awk -F: '{ n += $2 } END { print n }')" -eq 1
