@@ -25,7 +25,7 @@ _lines=$(awk '
 
 start_test "every line is a directive tidewm takes"
 _bad=$(printf '%s\n' "$_lines" | grep -v '^  ' | awk '{ print $1 }' | grep -vxE \
-    'set|bindsym|bindswitch|for_window|output|input|mode|single_window|dim_inactive|focus_guard' || true)
+    'set|bindsym|bindswitch|for_window|output|input|mode|single_window|dim_inactive|focus_guard|include' || true)
 assert_equal "" "$_bad"
 
 start_test "the file's blocks are input blocks, which take a setting a line"
@@ -98,6 +98,9 @@ _missing=$(grep -oE 'hl\.bind\(key\("[^"]+"\), exec\("qs -c tide ipc call [a-z ]
     grep -qxF "bindsym $_combo exec $_call" "$_cfg" || printf '%s %s\n' "$_combo" "$_call"
 done)
 assert_equal "" "$_missing"
+
+start_test "the settings tide's shell writes are included, last, so they win"
+assert_equal "include tide-*.conf" "$(printf '%s\n' "$_lines" | tail -n 1)"
 
 start_test "the session locks through logind, as tide's does"
 assert_contains 'bindsym $mod+l exec loginctl lock-session' "$(cat "$_cfg")"
