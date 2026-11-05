@@ -82,6 +82,9 @@ Shared by every mikelward repo and the user-level agent config; canonical in mik
 - **Autopilot**. Drive without asking, logging guesses in `TODO.md` under *Decisions
   needing review*. Still ask before anything irreversible, outside this repo, or private.
 - **Red baseline**. Fix existing failures first, in their own commit.
+- **Lasting fixes**. Fix the cause in a repo. Don't propose a step that lasts only this
+  session (stopping a service, a setting in this container) or a hand edit to a dotfile:
+  neither persists.
 
 ### Quality
 
