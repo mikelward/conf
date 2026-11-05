@@ -2246,7 +2246,7 @@ test("autostart runs on hyprland.start, not at load", function()
     fire("hyprland.start")
     local all = table.concat(S.execs, "\n")
     for _, cmd in ipairs({ "hypridle", "swww-daemon", "runenv ~/.config/hypr/scripts/apply-input.sh",
-        "theme-daemon.sh", "nm-applet" }) do
+        "runenv ~/.config/hypr/scripts/watch-input.sh", "theme-daemon.sh", "nm-applet" }) do
         truthy(all:find(cmd, 1, true), cmd)
     end
 end)

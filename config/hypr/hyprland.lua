@@ -305,6 +305,8 @@ hl.on("hyprland.start", function()
     -- Mice get the right button primary; touchpads keep the default. runenv
     -- brings in ~/.env.local, where HYPR_MOUSE_SCROLL_FACTOR can be set.
     hl.exec_cmd(runenv .. " " .. scripts .. "/apply-input.sh")
+    -- And again for a device plugged in later, such as through a KVM switch.
+    hl.exec_cmd(runenv .. " " .. scripts .. "/watch-input.sh")
     -- Applies the light/dark theme and launches waybar and swaync with it.
     hl.exec_cmd(scripts .. "/theme-daemon.sh")
     hl.exec_cmd("nm-applet --indicator")
