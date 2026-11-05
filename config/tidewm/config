@@ -142,3 +142,9 @@ bindsym --locked XF86AudioPlay exec playerctl play-pause
 bindsym --locked XF86AudioPause exec playerctl play-pause
 bindsym --locked XF86AudioNext exec playerctl next
 bindsym --locked XF86AudioPrev exec playerctl previous
+
+# The settings tide's shell writes (tide SPEC.md §16), as hyprland.lua reads
+# tide-*.lua: the Mouse, Touchpad and Keyboard pages' tide-input.conf, and
+# the pages to come. Last, so they win over the lines above. One the shell
+# hasn't written yet includes nothing.
+include tide-*.conf
