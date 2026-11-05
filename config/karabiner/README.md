@@ -254,6 +254,7 @@ Ctrl+Option+Command+key, and tilemo binds that (tilemo SPEC.md §7.1).
 | Win+Shift+key | the same, plus `shift` | Ctrl+Option+Command+Shift+key |
 | Win+click, Win+right-click, Win+middle-click | the same modifiers, on the button | Super+drag and Super+middle-click in tilemo |
 | Win, tapped alone | `f20` with the same modifiers | tilemo's launcher, as Super+Space |
+| Win+Backspace | `f19` with the same modifiers | tilemo's close, as Super+Backspace: some Macs take Ctrl+Option+Command+Backspace before tilemo sees it |
 | Alt+Tab | `left_option`+`left_command`+`shift`+`tab` | Ctrl+Option+Shift+Tab: tilemo's swap with the master |
 
 The outputs name the keys the rotation turns into Control, Option and
