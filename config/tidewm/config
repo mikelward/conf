@@ -11,11 +11,11 @@ set $mod Mod4
 set $runenv ~/scripts/runenv
 
 # tide's look and focus rules (tide SPEC.md §6.2, §14), as tide's
-# Hyprland config sets them.
+# Hyprland config sets them. A lone window's widths are tidewm's own,
+# tide's, unless the Layouts page sets them in tide-layouts.conf: lines
+# here would add to its, not give way.
 focus_guard enable
 dim_inactive 0.07
-single_window 2.1 0.8
-single_window 3.2 0.6
 
 # US Dvorak; Caps Lock is Compose and Menu a second Super, as setup's
 # XKBOPTIONS and hyprland.lua's INPUT.
