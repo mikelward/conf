@@ -40,4 +40,8 @@ start_test "no Linux file turns remote control on"
 assert_false test -e "$_srcdir/config/kitty/linux.conf"
 assert_false test -e "$_srcdir/config/kitty/bsd.conf"
 
+start_test "Ctrl+N opens a new OS window, and nothing else takes it"
+assert_true grep -Eq '^map +ctrl\+n +new_os_window$' "$_kitty_conf"
+assert_true test "$(grep -Ec '^map +ctrl\+n ' "$_kitty_conf" "$_macos_conf" | awk -F: '{ n += $2 } END { print n }')" -eq 1
+
 test_summary "kitty_test"
