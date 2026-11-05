@@ -3915,4 +3915,39 @@ HOME=$_vm_saved_home
 unset VM
 rm -rf "$_vm_home"
 
+start_test "source_bash_completions skips a missing directory silently"
+_bc_dir=$(mktemp -d)
+result=$(source_bash_completions "$_bc_dir/missing" 2>&1)
+assert_equal "" "$result"
+
+start_test "source_bash_completions skips an empty directory silently"
+result=$(source_bash_completions "$_bc_dir" 2>&1)
+assert_equal "" "$result"
+
+start_test "source_bash_completions loads the scripts and silences them"
+printf 'echo noise; _bc_loaded=yes\n' > "$_bc_dir/good"
+unset _bc_loaded
+result=$(source_bash_completions "$_bc_dir" 2>&1; echo "loaded=$_bc_loaded")
+assert_equal "loaded=yes" "$result"
+
+start_test "source_bash_completions skips dangling links"
+ln -s "$_bc_dir/nowhere" "$_bc_dir/dangling"
+result=$(source_bash_completions "$_bc_dir" 2>&1)
+assert_equal "" "$result"
+
+start_test "source_bash_completions skips the bash_completion compat script"
+printf '_bc_compat=yes\n' > "$_bc_dir/000_bash_completion_compat.bash"
+unset _bc_compat
+result=$(source_bash_completions "$_bc_dir" 2>&1; echo "compat=$_bc_compat")
+assert_equal "compat=" "$result"
+
+start_test "source_bash_completions warns about a failing script and goes on"
+printf 'false\n' > "$_bc_dir/bad"
+printf '_bc_after=yes\n' > "$_bc_dir/later"
+unset _bc_after
+result=$(source_bash_completions "$_bc_dir" 2>&1; echo "after=$_bc_after")
+assert_contains "Failed to load completion $_bc_dir/bad" "$result"
+assert_contains "after=yes" "$result"
+rm -rf "$_bc_dir"
+
 test_summary "$_real_shell shrc_test"
