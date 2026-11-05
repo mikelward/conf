@@ -997,6 +997,11 @@ hl.bind(key("V"), exec("qs -c tide ipc call picker toggle clipboard || notify-se
 -- and Bitwarden's logins, one row per field; Enter types it where you were.
 hl.bind(key("SHIFT + V"), exec("qs -c tide ipc call picker toggle fill || notify-send -a tide 'No picker' "
     .. "'Super+Shift+V opens the snippets and passwords picker in the tide shell, which is not running.'"), does("Snippets and passwords"))
+-- Super+;: the picker's Characters tab (tide SPEC.md §8.4), emoji and
+-- symbols by name; Enter pastes it where you were. Super+. is the next
+-- layout, so not Windows's key.
+hl.bind(key("semicolon"), exec("qs -c tide ipc call picker toggle characters || notify-send -a tide 'No picker' "
+    .. "'Super+; opens the emoji and characters picker in the tide shell, which is not running.'"), does("Emoji and characters"))
 
 -- Session.
 -- Unless tide pins the window where it is (tide SPEC.md §6.5); then a
