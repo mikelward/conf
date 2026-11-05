@@ -678,9 +678,10 @@ case "\$*" in
 esac
 EOF
 chmod +x "$_ifake/systemctl"
-# No lock running, so pidof finds nothing, unless $FAKE_PIDOF says one is.
-printf '#!/bin/sh\ntest -n "$FAKE_PIDOF"\n' > "$_ifake/pidof"
-chmod +x "$_ifake/pidof"
+# No lock running, so pgrep finds nothing, unless $FAKE_PGREP says this
+# user has one: it's found only when this user's is asked for.
+printf '#!/bin/sh\ntest -n "$FAKE_PGREP" && test "$1" = -u && test "$2" = "$(id -u)" && test "$3 $4" = "-x hyprlock"\n' > "$_ifake/pgrep"
+chmod +x "$_ifake/pgrep"
 _idle_run() {
     : > "$_ifake/log"
     XDG_CURRENT_DESKTOP="$1" PATH="$_ifake:$PATH" sh -c "$2" 2>"$_ifake/err"
@@ -713,7 +714,9 @@ _out=$(FAKE_LOADSTATE=fail _idle_run tide:Hyprland "$_idle_lock_cmd")
 assert_contains "hyprlock " "$_out"
 assert_contains "tide-lock.service is Failed to connect to bus: No medium found, so hyprlock locks instead" "$(cat "$_ifake/err")"
 start_test "in the tide session, a lock without tide-lock.service stacks no second hyprlock"
-assert_equal "$_idle_show" "$(FAKE_LOADSTATE=not-found FAKE_PIDOF=1 _idle_run tide:Hyprland "$_idle_lock_cmd")"
+assert_equal "$_idle_show" "$(FAKE_LOADSTATE=not-found FAKE_PGREP=1 _idle_run tide:Hyprland "$_idle_lock_cmd")"
+start_test "in a plain Hyprland login, a lock stacks no second hyprlock"
+assert_equal "" "$(FAKE_PGREP=1 _idle_run Hyprland "$_idle_lock_cmd")"
 start_test "in the tide session, the idle step runs tide idle-lock"
 assert_equal "tide idle-lock" "$(_idle_run tide:Hyprland "$_idle_lock_step")"
 start_test "in a plain Hyprland login, a lock runs hyprlock"
