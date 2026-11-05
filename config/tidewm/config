@@ -63,7 +63,9 @@ bindsym $mod+b exec $runenv bluetooth-connect
 bindsym $mod+Shift+b exec $runenv pulseprofile.py
 
 # tide's shell: the launcher, on Super+Space and a tap of Super, the
-# notification center, the picker's tabs, keep awake and presenter mode.
+# notification center, the picker's tabs, keep awake and presenter mode;
+# the name prompt (tide SPEC.md §6.5), to go to a workspace, or move the
+# focused window there; and the switcher's Attention tab (§8.1, §14.3).
 bindsym $mod+space exec qs -c tide ipc call launcher toggle
 bindsym --release Super_L exec qs -c tide ipc call launcher toggle
 bindsym $mod+Shift+n exec qs -c tide ipc call notifications toggle
@@ -72,6 +74,9 @@ bindsym $mod+Shift+v exec qs -c tide ipc call picker toggle fill
 bindsym $mod+semicolon exec qs -c tide ipc call picker toggle characters
 bindsym $mod+s exec qs -c tide ipc call keepawake toggle
 bindsym $mod+p exec qs -c tide ipc call presenter toggle
+bindsym $mod+Return exec qs -c tide ipc call prompt go
+bindsym $mod+Shift+Return exec qs -c tide ipc call prompt move
+bindsym $mod+a exec qs -c tide ipc call switcher toggle attention
 
 # The next keyboard layout, on the lock screen too.
 bindsym --locked $mod+Alt+space input type:keyboard xkb_switch_layout next

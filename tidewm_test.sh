@@ -83,6 +83,23 @@ _missing=$(grep -oE 'hl\.bind\(key\("[^"]+"\), app\([^)]*\)' "$_hypr" | while IF
 done)
 assert_equal "" "$_missing"
 
+# hyprland.lua's keys that call tide's shell, as key("SHIFT + Return"),
+# exec("qs -c tide ipc call prompt move ...: each is bound here,
+# $mod+Shift+Return, to the same call, but for what tide's shell can't do
+# on tidewm yet: minimizing, and the floating rules, which it writes for
+# hyprland.lua.
+start_test "each of hyprland.lua's shell keys calls the shell here too"
+_missing=$(grep -oE 'hl\.bind\(key\("[^"]+"\), exec\("qs -c tide ipc call [a-z ]*[a-z]' "$_hypr" | while IFS= read -r _bind; do
+    _k=$(printf '%s\n' "$_bind" | sed 's/^hl\.bind(key("\([^"]*\)").*/\1/')
+    _call=$(printf '%s\n' "$_bind" | sed 's/.*exec("\(qs -c tide ipc call [a-z ]*[a-z]\).*/\1/')
+    case "$_call" in
+        *" windows minimize" | *" floating remember") continue ;;
+    esac
+    _combo='$mod'$(printf '%s\n' "$_k" | sed 's/ + /+/g; s/SHIFT/Shift/; s/ALT/Alt/; s/^/+/' | awk -F+ '{ if (length($NF) == 1 || $NF == "Space") $NF = tolower($NF); OFS = "+"; print }' OFS=+)
+    grep -qxF "bindsym $_combo exec $_call" "$_cfg" || printf '%s %s\n' "$_combo" "$_call"
+done)
+assert_equal "" "$_missing"
+
 start_test "the session locks through logind, as tide's does"
 assert_contains 'bindsym $mod+l exec loginctl lock-session' "$(cat "$_cfg")"
 
