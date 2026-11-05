@@ -133,7 +133,8 @@ test-all: \
 	test-kitty \
 	test-rule-size \
 	test-hypr \
-	test-sway
+	test-sway \
+	test-tidewm
 
 $(CACHE):
 	@mkdir -p $@
@@ -463,6 +464,15 @@ $(CACHE)/test-sway.stamp: sway_test.sh shrc_test_lib.sh \
 	@touch $@
 test-sway: $(CACHE)/test-sway.stamp
 
+# tidewm's config for tide's tidewm session, checked as tidewm reads it,
+# against hyprland.lua's app keys.
+$(CACHE)/test-tidewm.stamp: tidewm_test.sh shrc_test_lib.sh \
+                          config/tidewm/config \
+                          config/hypr/hyprland.lua | $(CACHE)
+	@sh tidewm_test.sh
+	@touch $@
+test-tidewm: $(CACHE)/test-tidewm.stamp
+
 .PHONY: all install install-dotfiles install-vcs bootstrap \
 	vcs-build vcs-sync vcs-fetch \
 	test test-verbose test-full test-all test-claude-settings test-session-start-hook \
@@ -470,4 +480,4 @@ test-sway: $(CACHE)/test-sway.stamp
 	test-vcs test-vcs-zsh \
 	test-fish test-nu test-mesh test-elvish test-lint \
 	test-env test-gitconfig test-makefile test-amethyst test-karabiner test-kitty \
-	test-rule-size test-hypr test-sway
+	test-rule-size test-hypr test-sway test-tidewm

@@ -5,6 +5,14 @@
 Calls autopilot made without asking, each one chosen for being cheap to undo.
 Delete an entry once you have agreed with it or reversed it.
 
+- [ ] **tidewm's config binds only what tidewm can do** (2026-11-05):
+      `config/tidewm/config` has hyprland.lua's app, shell, session,
+      layout, workspace, screenshot and media keys, and leaves out the
+      rest (see *Fill tidewm's keys* below) rather than binding them to
+      something close. Super+1 to 9 go to the workspaces named 1 to 9,
+      where Hyprland goes to the bar's nth. Super+. is `layout toggle`,
+      the last layout, where Hyprland's is the next one. Reversible.
+
 - [ ] **A laptop's pointing stick and the touchpad's I2C nodes count as
       touchpads.** `apply-input.sh` gives a TrackPoint (or other pointing
       stick), and any pointer named by an ACPI ID such as
@@ -152,6 +160,23 @@ Delete an entry once you have agreed with it or reversed it.
       there would need another idle inhibitor and DND per session (swayidle's
       inhibit, swaync's `--dnd-on`). *Reversible:* one bind each in
       `config/sway/config` and `xbindkeysrc`.
+
+## Fill tidewm's keys
+
+`config/tidewm/config`, for tide's tidewm session, leaves out what tidewm
+can't do yet, each needing tidewm or tide's shell first:
+
+- focus and move by direction (Super+Left/Right and Shift), and moving a
+  window down and up the stack (Super+Shift+J/K);
+- the bar's nth workspace (Super+1 to 9) and the next and previous one
+  (Super+PgUp/PgDn);
+- the next and previous layout (Super+. and Super+,);
+- minimize (Super+Z), pinned windows, the name prompt (Super+Return), the
+  attention switcher (Super+A), and the window screenshot (Alt+Print),
+  which ask the shell, whose tidewm backend isn't there yet;
+- resize mode (Super+Shift+R), and the mouse's move, resize and maximize;
+- hypridle's displays off (`hyprctl dispatch dpms` in hypridle.conf), and
+  apply-input.sh's per-mouse settings, which ask Hyprland.
 
 ## Bind Super+V to a clipboard manager under sway and X
 
