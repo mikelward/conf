@@ -24,11 +24,12 @@ local mod = "SUPER"
 -- `tide launch`; a plain Hyprland login keeps doing both itself.
 local tide_session = (":" .. (os.getenv("XDG_CURRENT_DESKTOP") or "") .. ":"):find(":tide:", 1, true) ~= nil
 
--- The tide session locks with tide-lock (tide SPEC.md §10), and every lock
+-- The tide session locks with tide-lock (tide SPEC.md §10). `tide lock`
 -- goes through logind: `loginctl lock-session` raises its Lock signal, and
--- hypridle's lock_cmd starts tide-lock.service. A plain Hyprland login keeps
--- hyprlock.
-local lock = tide_session and "loginctl lock-session" or "hyprlock"
+-- hypridle's lock_cmd starts tide-lock.service. Without hypridle to answer,
+-- it starts the lock itself. A tide from before `tide lock` fails it, so
+-- logind still gets the lock. A plain Hyprland login keeps hyprlock.
+local lock = tide_session and "tide lock || loginctl lock-session" or "hyprlock"
 
 -- Hyprland shows its own overlay; used for problems found while loading.
 local function notify_error(text)

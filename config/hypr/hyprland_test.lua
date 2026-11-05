@@ -1700,7 +1700,7 @@ test("undocked, tide's Lock locks as the lid closes", function()
     lid("on")
     eq(1, #S.dispatched)
     eq("exec_cmd", S.dispatched[1].dsp)
-    eq("loginctl lock-session", S.dispatched[1].args)
+    eq("tide lock || loginctl lock-session", S.dispatched[1].args)
     eq(0, #S.monitors, "the panel is left alone")
 end)
 
@@ -2147,9 +2147,9 @@ end)
 --------------------------------------------------------------------------------
 -- Autostart
 --------------------------------------------------------------------------------
-test("Super+L locks through logind in the tide session, with hyprlock outside it", function()
+test("Super+L locks with tide lock in the tide session, with hyprlock outside it", function()
     load({ env = { XDG_CURRENT_DESKTOP = "tide:Hyprland" } })
-    eq("loginctl lock-session", bind("SUPER + L").target.args)
+    eq("tide lock || loginctl lock-session", bind("SUPER + L").target.args)
     load()
     eq("hyprlock", bind("SUPER + L").target.args)
 end)
