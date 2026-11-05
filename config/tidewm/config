@@ -1,0 +1,137 @@
+# tidewm's config for tide's tidewm session (tide SPEC.md §5.3), an option
+# beside the Hyprland one: ~/.config/tidewm/config, in sway's syntax
+# (tidewm's docs/config.md). The keys follow tide SPEC.md §6.6 as
+# ../hypr/hyprland.lua binds them; tidewm_test.sh checks each key that runs
+# an app there runs it here too. What tidewm can't do yet is left out, and
+# listed in TODO.md.
+
+set $mod Mod4
+# The scripts repo's wrapper, which gives helper scripts the login shell's
+# PATH (see hyprland.lua).
+set $runenv ~/scripts/runenv
+
+# tide's look and focus rules (tide SPEC.md §6.2, §14), as tide's
+# Hyprland config sets them.
+focus_guard enable
+dim_inactive 0.07
+single_window 2.1 0.8
+single_window 3.2 0.6
+
+# US Dvorak; Caps Lock is Compose and Menu a second Super, as setup's
+# XKBOPTIONS and hyprland.lua's INPUT.
+input type:keyboard {
+    xkb_layout us
+    xkb_variant dvorak
+    xkb_options compose:caps,altwin:menu_win
+    repeat_delay 600
+    repeat_rate 25
+}
+input type:pointer {
+    accel_profile adaptive
+    pointer_accel 1
+    natural_scroll disabled
+}
+input type:touchpad {
+    natural_scroll enabled
+    tap enabled
+    dwt enabled
+}
+
+# A laptop's panel goes off while its lid is closed, and its windows move
+# to the other monitors.
+bindswitch lid:on output eDP-1 disable
+bindswitch --locked lid:off output eDP-1 enable
+
+# Apps, each through `tide launch`, which grants its first window focus
+# (tide SPEC.md §14.3); --app names the window's app ID, or any app's.
+bindsym $mod+t exec tide launch --app kitty -- kitty
+bindsym $mod+w exec tide launch --app '*' -- $runenv terminal_on_workstation
+bindsym $mod+g exec tide launch --app '*' -- $runenv browser1
+bindsym $mod+Shift+g exec tide launch --app '*' -- $runenv browser3
+bindsym $mod+f exec tide launch --app '*' -- $runenv browser2
+bindsym $mod+c exec tide launch --app '*' -- $runenv google-chat
+bindsym $mod+Shift+c exec tide launch --app '*' -- $runenv google-calendar
+bindsym $mod+h exec tide launch --app '*' -- $runenv home
+bindsym $mod+i exec tide launch --app '*' -- $runenv irc
+bindsym $mod+m exec tide launch --app '*' -- $runenv google-meet
+bindsym $mod+n exec tide launch --app '*' -- $runenv notepad
+bindsym $mod+r exec tide launch --app '*' -- $runenv remote-desktop
+bindsym $mod+y exec tide launch --app '*' -- $runenv youtube-music
+bindsym $mod+e exec tide launch --app kitty -- kitty -e yazi
+bindsym XF86Calculator exec tide launch --app org.gnome.Calculator -- gnome-calculator
+bindsym $mod+b exec $runenv bluetooth-connect
+bindsym $mod+Shift+b exec $runenv pulseprofile.py
+
+# tide's shell: the launcher, on Super+Space and a tap of Super, the
+# notification center, the picker's tabs, keep awake and presenter mode.
+bindsym $mod+space exec qs -c tide ipc call launcher toggle
+bindsym --release Super_L exec qs -c tide ipc call launcher toggle
+bindsym $mod+Shift+n exec qs -c tide ipc call notifications toggle
+bindsym $mod+v exec qs -c tide ipc call picker toggle clipboard
+bindsym $mod+Shift+v exec qs -c tide ipc call picker toggle fill
+bindsym $mod+semicolon exec qs -c tide ipc call picker toggle characters
+bindsym $mod+s exec qs -c tide ipc call keepawake toggle
+bindsym $mod+p exec qs -c tide ipc call presenter toggle
+
+# The next keyboard layout, on the lock screen too.
+bindsym --locked $mod+Alt+space input type:keyboard xkb_switch_layout next
+
+# The session.
+bindsym $mod+BackSpace kill
+bindsym $mod+l exec loginctl lock-session
+bindsym $mod+Shift+e exit
+
+# Layouts (tide SPEC.md §6.1).
+bindsym $mod+grave layout monocle
+bindsym $mod+o layout monocle
+bindsym $mod+period layout toggle
+bindsym $mod+backslash mfact +0.05
+bindsym $mod+slash mfact -0.05
+bindsym $mod+equal nmaster +1
+bindsym $mod+minus nmaster -1
+bindsym Alt+Tab zoom
+bindsym $mod+j focus next
+bindsym $mod+k focus prev
+bindsym $mod+Up maximize toggle
+bindsym $mod+Shift+Up fullscreen toggle
+bindsym $mod+Shift+f floating toggle
+bindsym $mod+Insert floating toggle
+
+# Workspaces by name, 1 to 9: tidewm has no "the bar's nth workspace" yet.
+bindsym $mod+1 workspace number 1
+bindsym $mod+2 workspace number 2
+bindsym $mod+3 workspace number 3
+bindsym $mod+4 workspace number 4
+bindsym $mod+5 workspace number 5
+bindsym $mod+6 workspace number 6
+bindsym $mod+7 workspace number 7
+bindsym $mod+8 workspace number 8
+bindsym $mod+9 workspace number 9
+bindsym $mod+Shift+1 move container to workspace number 1
+bindsym $mod+Shift+2 move container to workspace number 2
+bindsym $mod+Shift+3 move container to workspace number 3
+bindsym $mod+Shift+4 move container to workspace number 4
+bindsym $mod+Shift+5 move container to workspace number 5
+bindsym $mod+Shift+6 move container to workspace number 6
+bindsym $mod+Shift+7 move container to workspace number 7
+bindsym $mod+Shift+8 move container to workspace number 8
+bindsym $mod+Shift+9 move container to workspace number 9
+bindsym $mod+Tab workspace back_and_forth
+
+# Screenshots (tide SPEC.md §13).
+bindsym Print exec $runenv screenshot
+bindsym Shift+Print exec $runenv screenshot --region
+bindsym $mod+Print exec $runenv screenshot --region
+
+# Volume, the microphone, brightness and media, on the lock screen too.
+bindsym --locked XF86AudioRaiseVolume exec wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+
+bindsym --locked XF86AudioLowerVolume exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+bindsym --locked XF86AudioMute exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+bindsym --locked XF86AudioMicMute exec wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+bindsym --locked $mod+Shift+m exec wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+bindsym --locked XF86MonBrightnessUp exec tide brightness 5%+
+bindsym --locked XF86MonBrightnessDown exec tide brightness 5%-
+bindsym --locked XF86AudioPlay exec playerctl play-pause
+bindsym --locked XF86AudioPause exec playerctl play-pause
+bindsym --locked XF86AudioNext exec playerctl next
+bindsym --locked XF86AudioPrev exec playerctl previous
