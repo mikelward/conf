@@ -266,6 +266,22 @@ PY
     assert_equal "" "$_tilemo_missing"
 fi
 
+if command -v python3 >/dev/null 2>&1; then
+    # Win+Backspace is tilemo's close, sent on F19: some Macs take
+    # Ctrl+Option+Command+Backspace before tilemo sees it, and a chord on a
+    # key no keyboard here has gets through, as the tap's F20 does (tilemo
+    # SPEC.md §7.2).
+    _win_backspace=$(python3 - "$_tilemo_file" <<'PY'
+import json, sys
+for m in json.load(open(sys.argv[1]))["rules"][0]["manipulators"]:
+    if m["from"].get("key_code") == "delete_or_backspace":
+        print(" ".join(t["key_code"] for t in m["to"]))
+PY
+)
+    start_test "Win+Backspace sends Super+F19, tilemo's close"
+    assert_equal "f19" "$_win_backspace"
+fi
+
 start_test "tilemo's rule matches the physical Win key, left_command"
 assert_contains '"mandatory": [' "$_tilemo"
 assert_contains '"left_command"' "$_tilemo"

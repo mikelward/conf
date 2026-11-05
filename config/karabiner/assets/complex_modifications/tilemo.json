@@ -1197,7 +1197,7 @@
                     },
                     "to": [
                         {
-                            "key_code": "delete_or_backspace",
+                            "key_code": "f19",
                             "modifiers": [
                                 "left_option",
                                 "left_command",
