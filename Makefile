@@ -392,7 +392,7 @@ $(CACHE)/test-karabiner.stamp: \
 	@touch $@
 test-karabiner: $(CACHE)/test-karabiner.stamp
 
-$(CACHE)/test-kitty.stamp: config/kitty/kitty.conf config/kitty/macos.conf \
+$(CACHE)/test-kitty.stamp: config/kitty/kitty.conf config/kitty/macos.conf config/kitty/tide-bell \
                           kitty_test.sh shrc_test_lib.sh | $(CACHE)
 	@sh kitty_test.sh
 	@touch $@

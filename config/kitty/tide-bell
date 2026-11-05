@@ -1,0 +1,34 @@
+#!/bin/sh
+#
+# kitty runs this on a bell, on a Mac (macos.conf's command_on_bell): it
+# tells tilemo which window rang, so the window wants attention, as a
+# bell's activation does on tide (tilemo SPEC.md §14.2). kitty's own alert
+# only bounces its Dock icon, which tilemo can't see.
+#
+# kitty names the window that rang by its own ID, KITTY_WINDOW_ID; its
+# remote control (KITTY_LISTEN_ON) says which macOS window holds it, as
+# platform_window_id, the ID tilemo knows windows by.
+
+kitten=kitten
+if ! command -v kitten >/dev/null 2>&1; then
+    kitten=/Applications/kitty.app/Contents/MacOS/kitten
+fi
+
+if test -z "$KITTY_WINDOW_ID"; then
+    echo "tide-bell: KITTY_WINDOW_ID isn't set; run it from kitty's command_on_bell" >&2
+    exit 1
+fi
+
+if ! json=$("$kitten" @ ls --match "id:$KITTY_WINDOW_ID"); then
+    echo "tide-bell: kitten @ ls failed for window $KITTY_WINDOW_ID" >&2
+    exit 1
+fi
+
+id=$(printf '%s\n' "$json" | sed -n 's/.*"platform_window_id": *\([0-9][0-9]*\).*/\1/p' | head -n 1)
+if test -z "$id"; then
+    echo "tide-bell: kitty named no macOS window for window $KITTY_WINDOW_ID" >&2
+    exit 1
+fi
+
+# TIDE_BELL_OPEN stands in for open in kitty_test.sh.
+exec "${TIDE_BELL_OPEN:-/usr/bin/open}" -g "hammerspoon://tide-bell?window=$id"
