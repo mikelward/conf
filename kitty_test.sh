@@ -28,6 +28,14 @@ start_test "on a Mac, the socket is relative, so it's in the per-user \$TMPDIR, 
 assert_true grep -Eq '^listen_on +unix:kitty$' "$_macos_conf"
 assert_false grep -Eq '^listen_on +(unix:/|unix:@|tcp)' "$_macos_conf"
 
+start_test "on a Mac, text is about Linux's size and isn't thickened"
+assert_true grep -Eq '^font_size +14(\.0)?$' "$_macos_conf"
+assert_true grep -Eq '^text_composition_strategy +platform$' "$_macos_conf"
+
+start_test "Linux keeps its font size and legacy text"
+assert_true grep -Eq '^font_size +11\.0$' "$_kitty_conf"
+assert_true grep -Eq '^text_composition_strategy +legacy$' "$_kitty_conf"
+
 start_test "no Linux file turns remote control on"
 assert_false test -e "$_srcdir/config/kitty/linux.conf"
 assert_false test -e "$_srcdir/config/kitty/bsd.conf"
