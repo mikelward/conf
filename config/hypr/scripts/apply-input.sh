@@ -14,8 +14,8 @@
 #
 # Devices are classified by name, the libinput name Hyprland lowercases and
 # dashes (see is_touchpad; tide's Touchpad page decides the same way). Runs at
-# login from hyprland.lua's autostart; re-run it after hotplugging a mouse,
-# touchpad or keyboard.
+# login, after each reload, and from watch-input.sh when a mouse, touchpad or
+# keyboard is plugged in.
 # Override the mouse scroll speed with HYPR_MOUSE_SCROLL_FACTOR (default 3).
 
 MOUSE_SCROLL="${HYPR_MOUSE_SCROLL_FACTOR:-3}"
