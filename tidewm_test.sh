@@ -105,6 +105,9 @@ assert_equal "include tide-*.conf" "$(printf '%s\n' "$_lines" | tail -n 1)"
 start_test "the session locks through logind, as tide's does"
 assert_contains 'bindsym $mod+l exec loginctl lock-session' "$(cat "$_cfg")"
 
+start_test "closing the lid turns the panel off, then has tide lock as its Power page says"
+assert_contains 'bindswitch lid:on output eDP-1 disable; exec tide lid-closed' "$(cat "$_cfg")"
+
 start_test "the focus guard is on, as tide's session needs"
 assert_contains 'focus_guard enable' "$(cat "$_cfg")"
 
