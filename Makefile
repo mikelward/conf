@@ -468,6 +468,7 @@ test-sway: $(CACHE)/test-sway.stamp
 # against hyprland.lua's app keys.
 $(CACHE)/test-tidewm.stamp: tidewm_test.sh shrc_test_lib.sh \
                           config/tidewm/config \
+                          config/xdg-desktop-portal-wlr/tidewm \
                           config/hypr/hyprland.lua | $(CACHE)
 	@sh tidewm_test.sh
 	@touch $@
