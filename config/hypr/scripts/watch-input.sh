@@ -41,8 +41,12 @@ if ! state=$(mktemp -d "${TMPDIR:-/tmp}/watch-input.XXXXXX"); then
 fi
 monitor=
 guard=
+# The guard below is stopped with USR1, which this doesn't trap. A subshell
+# starts with this shell's handler for a trapped signal, and loses one that
+# comes before it sets its own: a TERM sent as the guard starts would leave
+# it running, and the wait at the end waiting on it.
 stop() {
-    test -z "$guard" || kill "$guard" 2>/dev/null
+    test -z "$guard" || kill -s USR1 "$guard" 2>/dev/null
     test -z "$monitor" || kill "$monitor" 2>/dev/null
     rm -rf "$state"
 }
@@ -84,7 +88,7 @@ while IFS= read -r line; do
 done <&3
 exec 3<&-
 # The guard is done with; a run still waiting finishes first.
-kill "$guard" 2>/dev/null
+kill -s USR1 "$guard" 2>/dev/null
 guard=
 wait
 if hyprctl version >/dev/null 2>&1; then

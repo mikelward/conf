@@ -537,6 +537,15 @@ start_test "watch-input ignores a device that's unplugged"
 FAKE_EVENTS='UDEV  [101.0] remove   /devices/usb1/1-1/input/input23/event5 (input)' _watch_run
 assert_equal "" "$(cat "$_wfake/log")"
 
+# Run under load, this and the two above stop the guard just as it starts,
+# where a signal it doesn't take would leave it, and watch-input, running.
+start_test "watch-input ends, saying so, when udevadm's monitor ends at once"
+: > "$_wfake/log"
+PATH="$_wfake:$PATH" FAKE_LOG="$_wfake/log" WATCH_INPUT_DELAY=0 FAKE_EVENTS='' \
+    WATCH_INPUT_APPLY="$_wfake/apply" timeout 10 sh "$_watch" 2>"$_wfake/err"
+assert_equal 0 "$?"
+assert_contains "udevadm monitor ended" "$(cat "$_wfake/err")"
+
 start_test "watch-input stops its monitor, saying so, once Hyprland has gone"
 FAKE_HYPR_GONE=1 FAKE_MONITOR_STAYS=1 WATCH_INPUT_POLL=0 FAKE_EVENTS='' _watch_run
 assert_equal 0 "$?"
