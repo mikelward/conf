@@ -422,7 +422,8 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   `hypridle.conf` (dim → lock → DPMS off → suspend). On a desktop with no
   backlight the dim step is simply a no-op. In tide, the suspend step runs
   `tide idle-suspend`, which suspends only on battery: a desktop, or a
-  laptop on AC, just keeps its displays off.
+  laptop on AC, just keeps its displays off. The displays-off step runs
+  `tide displays off` there, which works in tide's tidewm session too.
 - **Multi-machine.** The same configs run everywhere unchanged — input
   handedness and the laptop's internal panel are auto-detected, and Hyprland
   auto-places monitors. Nothing is machine-specific. When a machine *does*

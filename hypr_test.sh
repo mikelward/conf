@@ -709,14 +709,20 @@ _idle_lock_cmd=$(sed -n 's/^ *lock_cmd = //p' "$_idle")
 _idle_lock_step=$(sed -n '/^listener {/,/^}/{/timeout = \$tide_idle_lock$/,/^}/s/^ *on-timeout = //p}' "$_idle")
 _idle_suspend_step=$(sed -n '/^listener {/,/^}/{/timeout = \$tide_idle_suspend$/,/^}/s/^ *on-timeout = //p}' "$_idle")
 _idle_suspend_resume=$(sed -n '/^listener {/,/^}/{/timeout = \$tide_idle_suspend$/,/^}/s/^ *on-resume = //p}' "$_idle")
+_idle_off_step=$(sed -n '/^listener {/,/^}/{/timeout = \$tide_idle_displays_off$/,/^}/s/^ *on-timeout = //p}' "$_idle")
+_idle_off_resume=$(sed -n '/^listener {/,/^}/{/timeout = \$tide_idle_displays_off$/,/^}/s/^ *on-resume = //p}' "$_idle")
+_idle_after_sleep=$(sed -n 's/^ *after_sleep_cmd = //p' "$_idle")
 start_test "hypridle's lock command and idle lock and suspend steps are found"
 assert_contains "esac" "$_idle_lock_cmd"
 assert_contains "esac" "$_idle_lock_step"
 assert_contains "esac" "$_idle_suspend_step"
 assert_contains "esac" "$_idle_suspend_resume"
+assert_contains "esac" "$_idle_off_step"
+assert_contains "esac" "$_idle_off_resume"
+assert_contains "esac" "$_idle_after_sleep"
 
 _ifake=$(mktemp -d)
-for _t in hyprlock tide loginctl notify-send; do
+for _t in hyprlock hyprctl tide loginctl notify-send; do
     printf '#!/bin/sh\necho "%s $*" >> "%s/log"\n' "$_t" "$_ifake" > "$_ifake/$_t"
     chmod +x "$_ifake/$_t"
 done
@@ -784,6 +790,22 @@ start_test "in a plain Hyprland login, the idle step locks through logind"
 assert_equal "loginctl lock-session" "$(_idle_run Hyprland "$_idle_lock_step")"
 start_test "with no desktop set, a lock runs hyprlock"
 assert_equal "hyprlock " "$(_idle_run "" "$_idle_lock_cmd")"
+# In tide's sessions, `tide displays` turns the displays off and on, on
+# Hyprland or tidewm; a plain Hyprland login asks Hyprland itself.
+for _desktop in tide:Hyprland tidewm:tide; do
+    start_test "in $_desktop's session, the displays-off step runs tide displays off"
+    assert_equal "tide displays off" "$(_idle_run "$_desktop" "$_idle_off_step")"
+    start_test "in $_desktop's session, input turns them on with tide displays on"
+    assert_equal "tide displays on" "$(_idle_run "$_desktop" "$_idle_off_resume")"
+    start_test "in $_desktop's session, waking from sleep turns them on with tide displays on"
+    assert_equal "tide displays on" "$(_idle_run "$_desktop" "$_idle_after_sleep")"
+done
+start_test "in a plain Hyprland login, the displays-off step is Hyprland's dpms"
+assert_equal 'hyprctl dispatch hl.dsp.dpms({ action = "off" })' "$(_idle_run Hyprland "$_idle_off_step")"
+start_test "in a plain Hyprland login, input turns them on through Hyprland"
+assert_equal 'hyprctl dispatch hl.dsp.dpms({ action = "on" })' "$(_idle_run Hyprland "$_idle_off_resume")"
+start_test "in a plain Hyprland login, waking from sleep turns them on through Hyprland"
+assert_equal 'hyprctl dispatch hl.dsp.dpms({ action = "on" })' "$(_idle_run Hyprland "$_idle_after_sleep")"
 # tide decides whether to suspend (on battery only).
 start_test "in the tide session, the suspend step runs tide idle-suspend"
 assert_equal "tide idle-suspend" "$(_idle_run tide:Hyprland "$_idle_suspend_step")"
