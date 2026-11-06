@@ -175,8 +175,7 @@ can't do yet, each needing tidewm or tide's shell first:
   attention switcher (Super+A), and the window screenshot (Alt+Print),
   which ask the shell, whose tidewm backend isn't there yet;
 - resize mode (Super+Shift+R), and the mouse's move, resize and maximize;
-- hypridle's displays off (`hyprctl dispatch dpms` in hypridle.conf), and
-  apply-input.sh's per-mouse settings, which ask Hyprland.
+- apply-input.sh's per-mouse settings, which ask Hyprland.
 
 ## Bind Super+V to a clipboard manager under sway and X
 
