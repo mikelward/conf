@@ -108,4 +108,13 @@ assert_contains 'bindsym $mod+l exec loginctl lock-session' "$(cat "$_cfg")"
 start_test "the focus guard is on, as tide's session needs"
 assert_contains 'focus_guard enable' "$(cat "$_cfg")"
 
+# xdg-desktop-portal-wlr reads the file named for the session's first
+# desktop that has one (its config.c), here tidewm's.
+_xdpw="$_srcdir/config/xdg-desktop-portal-wlr/tidewm"
+
+start_test "screen shares ask tide's picker, as xdpw's dmenu chooser"
+assert_equal "[screencast]
+chooser_type=dmenu
+chooser_cmd=tide-share-picker --dmenu" "$(grep -v -e '^#' -e '^$' "$_xdpw")"
+
 test_summary "tidewm_test"

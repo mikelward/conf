@@ -1,0 +1,10 @@
+# xdg-desktop-portal-wlr in tide's tidewm session (XDG_CURRENT_DESKTOP
+# tidewm:tide), read as it starts: restart it to apply a change. Named for
+# the desktop, so another wlroots session keeps xdpw's defaults.
+
+# When an app asks to share the screen, ask tide's picker what to share
+# (tide SPEC.md §12): xdpw writes its outputs and windows on its stdin, a
+# line each, and shares the line it prints.
+[screencast]
+chooser_type=dmenu
+chooser_cmd=tide-share-picker --dmenu
