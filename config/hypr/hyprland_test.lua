@@ -806,11 +806,9 @@ end)
 
 test("the dropped keys stay unbound", function()
     load()
-    -- BSP toggle, rotate master, and a tenth workspace. Super+O, which
-    -- rotated the master, is monocle now, and Super+P, which pseudo-tiled,
-    -- presenter mode.
-    for _, k in ipairs({ "SUPER + SHIFT + backslash",
-                         "SUPER + SHIFT + O", "SUPER + 0", "SUPER + SHIFT + 0" }) do
+    -- BSP toggle and rotate master. Super+O, which rotated the master, is
+    -- monocle now, and Super+P, which pseudo-tiled, presenter mode.
+    for _, k in ipairs({ "SUPER + SHIFT + backslash", "SUPER + SHIFT + O" }) do
         eq(nil, S.binds["|" .. k], k)
     end
 end)
@@ -869,6 +867,24 @@ test("Super+Shift+1…9 send the window to the Nth workspace and stay", function
     eq(false, d[1].args.follow)
     eq("name:docs", run("SUPER + SHIFT + 5")[1].args.workspace)
     eq(0, #run("SUPER + SHIFT + 6"), "past the last, nothing")
+end)
+
+test("Super+0 goes to the last workspace on the bar, and Super+Shift+0 sends the window there", function()
+    load({ workspaces = STANDING })
+    S.workspace_list = named("in", "PR-12", "docs")
+    S.active_workspace = { id = -1338, name = "in" }
+    -- in, re, oc, me, PR-12, docs
+    local d = run("SUPER + 0")
+    eq(1, #d)
+    truthy(is_dsp(d[1], "focus"))
+    eq("name:docs", d[1].args.workspace)
+    d = run("SUPER + SHIFT + 0")
+    eq(1, #d)
+    truthy(is_dsp(d[1], "window.move"))
+    eq("name:docs", d[1].args.workspace)
+    eq(false, d[1].args.follow, "and stays, as Super+Shift+1…9 do")
+    S.workspace_list = named("in")
+    eq("name:me", run("SUPER + 0")[1].args.workspace, "with none made, the last standing one")
 end)
 
 -- A window on each workspace named, as Hyprland lists them.

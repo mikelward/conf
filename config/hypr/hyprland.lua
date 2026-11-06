@@ -1509,10 +1509,12 @@ hl.bind(key("SHIFT + Right"), side.move_right, does("Move the window right"))
 
 -- Super+1…9: the Nth workspace in the bar's order, so Super+1 is home, as
 -- Super+Home is. Super+Shift+1…9 sends the focused window there and stays,
--- as KDE does. Past the last workspace, nothing.
+-- as KDE does. Past the last workspace, nothing. Super+0 (n = 0) is the
+-- last workspace on the bar, and Super+Shift+0 sends the window there.
 local function nth_workspace(n, send_window)
     return function()
-        local target = bar_order()[n]
+        local order = bar_order()
+        local target = order[n == 0 and #order or n]
         if not target then
             return
         end
@@ -1527,6 +1529,8 @@ for n = 1, 9 do
     hl.bind(key(tostring(n)), nth_workspace(n, false), does("Workspace " .. n .. " on the bar"))
     hl.bind(key("SHIFT + " .. n), nth_workspace(n, true), does("Send the window to workspace " .. n .. " on the bar"))
 end
+hl.bind(key("0"), nth_workspace(0, false), does("The last workspace on the bar"))
+hl.bind(key("SHIFT + 0"), nth_workspace(0, true), does("Send the window to the last workspace on the bar"))
 
 -- The workspaces other than home, the one used last first, for Super+Tab
 -- and Super+End. Kept from Hyprland's workspace.active, so a config reload
