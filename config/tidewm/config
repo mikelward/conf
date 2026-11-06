@@ -38,8 +38,9 @@ input type:touchpad {
 }
 
 # A laptop's panel goes off while its lid is closed, and its windows move
-# to the other monitors.
-bindswitch lid:on output eDP-1 disable
+# to the other monitors. With none, tide's Power page's Lock locks then, as
+# hyprland.lua's lid does (tide lid-closed, tide SPEC.md §16).
+bindswitch lid:on output eDP-1 disable; exec tide lid-closed
 bindswitch --locked lid:off output eDP-1 enable
 
 # Apps, each through `tide launch`, which grants its first window focus
