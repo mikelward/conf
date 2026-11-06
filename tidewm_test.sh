@@ -53,12 +53,20 @@ assert_equal "" "$_unknown"
 # A press is "-", so read never sees an empty first field.
 _keys=$(printf '%s\n' "$_lines" | awk '$1 == "bindsym" {
     i = 2; flags = ""
-    while ($i ~ /^--/) { if ($i == "--release") flags = flags $i; i++ }
+    while ($i ~ /^--/) { if ($i == "--release" || $i == "--kept-open") flags = flags $i; i++ }
     print (flags == "" ? "-" : flags) " " tolower($i) }' | while read -r _flags _combo; do
     printf '%s %s\n' "$_flags" "$(printf '%s\n' "$_combo" | tr '+' '\n' | sort | tr '\n' '+')"
 done)
 start_test "no key is bound twice"
 assert_equal "" "$(printf '%s\n' "$_keys" | sort | uniq -d)"
+
+# tide's pinned windows (its SPEC.md §6.5): the app's own close and quit
+# keys, as tide's pinned.lua lists them for hyprland.lua, close only a
+# window that isn't pinned.
+start_test "a pinned window's own close keys leave it open, and reach every other window"
+for _k in Ctrl+w Ctrl+Shift+w Ctrl+q Alt+F4; do
+    assert_contains "bindsym --kept-open $_k kill" "$(cat "$_cfg")"
+done
 
 start_test "every tide launch names the app its window grant is for"
 assert_equal "" "$(grep 'exec tide launch' "$_cfg" | grep -v 'tide launch --app ' || true)"

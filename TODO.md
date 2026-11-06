@@ -171,7 +171,7 @@ can't do yet, each needing tidewm or tide's shell first:
 - the bar's nth workspace (Super+1 to 9) and the next and previous one
   (Super+PgUp/PgDn);
 - the next and previous layout (Super+. and Super+,);
-- minimize (Super+Z), pinned windows, the name prompt (Super+Return), the
+- minimize (Super+Z), the name prompt (Super+Return), the
   attention switcher (Super+A), and the window screenshot (Alt+Print),
   which ask the shell, whose tidewm backend isn't there yet;
 - resize mode (Super+Shift+R), and the mouse's move, resize and maximize;
