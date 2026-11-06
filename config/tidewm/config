@@ -84,8 +84,14 @@ bindsym $mod+z exec qs -c tide ipc call windows minimize
 # The next keyboard layout, on the lock screen too.
 bindsym --locked $mod+Alt+space input type:keyboard xkb_switch_layout next
 
-# The session.
+# The session. kill leaves a window pinned where it is open, as tide's
+# shell has tidewm keep it open (tide SPEC.md §6.5), and so do the app's own
+# close and quit keys there: bound --kept-open, every other window gets them.
 bindsym $mod+BackSpace kill
+bindsym --kept-open Ctrl+w kill
+bindsym --kept-open Ctrl+Shift+w kill
+bindsym --kept-open Ctrl+q kill
+bindsym --kept-open Alt+F4 kill
 bindsym $mod+l exec loginctl lock-session
 bindsym $mod+Shift+e exit
 
