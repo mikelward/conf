@@ -32,6 +32,35 @@ start_test "on a Mac, text is about Linux's size and isn't thickened"
 assert_true grep -Eq '^font_size +14(\.0)?$' "$_macos_conf"
 assert_true grep -Eq '^text_composition_strategy +platform$' "$_macos_conf"
 
+# The window_padding_width kitty ends up with for an OS: kitty reads the
+# file top to bottom, following includes where they sit, and the last
+# setting wins. It prints the smallest of the one to four sides given.
+_padding() {
+    awk -v os="$1" -v dir="$_srcdir/config/kitty" '
+        function read(file,   line, f, i, min) {
+            while ((getline line < file) > 0) {
+                if (line ~ /^include /) {
+                    f = substr(line, 9)
+                    gsub(/\$\{KITTY_OS\}/, os, f)
+                    read(dir "/" f)
+                } else if (line ~ /^window_padding_width /) {
+                    n = split(substr(line, 22), v, " ")
+                    min = v[1]
+                    for (i = 2; i <= n; i++) if (v[i] + 0 < min + 0) min = v[i]
+                    pad = min
+                }
+            }
+            close(file)
+        }
+        BEGIN { pad = 0; read(dir "/kitty.conf"); print pad }'
+}
+
+start_test "on a Mac, text clears the rounded window corners, 4.7 pt in"
+assert_true awk -v p="$(_padding macos)" 'BEGIN { exit !(p >= 4.7) }'
+
+start_test "Linux keeps text against the window edge"
+assert_true test "$(_padding linux)" = 0
+
 start_test "Linux keeps its font size and legacy text"
 assert_true grep -Eq '^font_size +11\.0$' "$_kitty_conf"
 assert_true grep -Eq '^text_composition_strategy +legacy$' "$_kitty_conf"
