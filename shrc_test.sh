@@ -1509,16 +1509,16 @@ assert_equal "[] []
 [mine:] [mine/]" "$_out"
 
 # On macOS, a shell from Cmd+N in a running kitty lacks TIDE_WORKSPACE, and
-# reads tilemo's file instead (tilemo SPEC.md §6.3).
-_tilemo_home="$_testdir/tilemo-home"
-mkdir -p "$_tilemo_home/Library/Caches/tilemo"
-_tilemo_file="$_tilemo_home/Library/Caches/tilemo/workspace"
+# reads tide for macOS's file instead (tidemo SPEC.md §6.3).
+_macws_home="$_testdir/tide-home"
+mkdir -p "$_macws_home/Library/Caches/tide"
+_macws_file="$_macws_home/Library/Caches/tide/workspace"
 
-start_test "session_prefix reads tilemo's workspace file when TIDE_WORKSPACE is unset, and a set one wins"
-printf 'PR12login\n' >"$_tilemo_file"
+start_test "session_prefix reads tide for macOS's workspace file when TIDE_WORKSPACE is unset, and a set one wins"
+printf 'PR12login\n' >"$_macws_file"
 _out="$(
     unset SHPOOL_PREFIX TMUX_PREFIX TMUX_SEP TIDE_WORKSPACE
-    HOME="$_tilemo_home"
+    HOME="$_macws_home"
     puts "[$(session_prefix shpool)] [$(session_prefix tmux)]"
     TIDE_WORKSPACE=docs
     puts "[$(session_prefix shpool)]"
@@ -1533,29 +1533,39 @@ assert_equal "[PR12login:] [PR12login/]
 []
 [mine:]" "$_out"
 
-start_test "session_prefix takes tilemo's file without a final newline"
-printf 'docs' >"$_tilemo_file"
-_out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_tilemo_home" session_prefix shpool 2>&1)"
+start_test "session_prefix takes tide for macOS's file without a final newline"
+printf 'docs' >"$_macws_file"
+_out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_macws_home" session_prefix shpool 2>&1)"
 assert_equal "docs:" "$_out"
 
-start_test "session_prefix says nothing when tilemo's file holds a blank line"
-printf '\n' >"$_tilemo_file"
-_out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_tilemo_home" session_prefix shpool 2>&1)"
+start_test "session_prefix says nothing when tide for macOS's file holds a blank line"
+printf '\n' >"$_macws_file"
+_out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_macws_home" session_prefix shpool 2>&1)"
 assert_equal "" "$_out"
 
-start_test "session_prefix says nothing when tilemo's file is missing"
-rm -f "$_tilemo_file"
-_out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_tilemo_home" session_prefix shpool 2>&1)"
+start_test "session_prefix says nothing when tide for macOS's file is missing"
+rm -f "$_macws_file"
+_out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_macws_home" session_prefix shpool 2>&1)"
 assert_equal "" "$_out"
 
-start_test "session_prefix takes letters and digits in any script from tilemo's file, whatever the locale"
+start_test "session_prefix reads the file where tide for macOS kept it as tilemo, until it moves"
+mkdir -p "$_macws_home/Library/Caches/tilemo"
+printf 'oldname\n' >"$_macws_home/Library/Caches/tilemo/workspace"
+_out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_macws_home" session_prefix shpool 2>&1)"
+assert_equal "oldname:" "$_out"
+printf 'newname\n' >"$_macws_file"
+_out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_macws_home" session_prefix shpool 2>&1)"
+assert_equal "newname:" "$_out"
+rm -rf "$_macws_home/Library/Caches/tilemo" "$_macws_file"
+
+start_test "session_prefix takes letters and digits in any script from tide for macOS's file, whatever the locale"
 # é composed, Cyrillic, CJK, Arabic-Indic digits, a Roman numeral.
 for _good in 'caf\303\251' '\320\227\320\260\320\274\320\265\321\202\320\272\320\2700' \
     '\346\227\245\346\234\254\350\252\236' 'build\331\241\331\242' '\342\205\253'; do
-    printf "$_good\\n" >"$_tilemo_file"
+    printf "$_good\\n" >"$_macws_file"
     _want="$(printf "$_good"):"
     for _locale in C C.UTF-8; do
-        _out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; LC_ALL=$_locale; HOME="$_tilemo_home" session_prefix shpool 2>&1)"
+        _out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; LC_ALL=$_locale; HOME="$_macws_home" session_prefix shpool 2>&1)"
         assert_equal "$_want" "$_out"
     done
 done
@@ -1575,25 +1585,25 @@ else
     puts "SKIP: no python3 with Unicode 15.1.0 to check the table against"
 fi
 
-start_test "session_prefix warns about and ignores a name in tilemo's file that isn't letters and digits"
+start_test "session_prefix warns about and ignores a name in tide for macOS's file that isn't letters and digits"
 # Punctuation, a space, a quote, a decomposed é (a combining mark), an emoji,
 # a tab, bytes that aren't UTF-8 (a lone lead byte, an overlong /, a
 # surrogate), and a terminal escape.
 for _bad in 'my-repo' 'a b' "x'y" 'cafe\314\201' '\360\237\232\200' 'a\tb' 'a\303' '\300\257' \
     '\355\240\200' '\033]0;x\007'; do
-    printf "$_bad\\n" >"$_tilemo_file"
-    _out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_tilemo_home" session_prefix shpool 2>"$_testdir/tilemo.err")"
+    printf "$_bad\\n" >"$_macws_file"
+    _out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_macws_home" session_prefix shpool 2>"$_testdir/tide.err")"
     assert_equal "" "$_out"
-    assert_contains "tilemo: ignoring the workspace in $_tilemo_file" "$(cat "$_testdir/tilemo.err")"
+    assert_contains "tide: ignoring the workspace in $_macws_file" "$(cat "$_testdir/tide.err")"
 done
 
-start_test "session_prefix warns when tilemo's file can't be read"
-rm -f "$_tilemo_file"
-mkdir "$_tilemo_file"
-_out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_tilemo_home" session_prefix shpool 2>"$_testdir/tilemo.err")"
+start_test "session_prefix warns when tide for macOS's file can't be read"
+rm -f "$_macws_file"
+mkdir "$_macws_file"
+_out="$(unset SHPOOL_PREFIX TIDE_WORKSPACE; HOME="$_macws_home" session_prefix shpool 2>"$_testdir/tide.err")"
 assert_equal "" "$_out"
-assert_contains "tilemo: can't read the workspace from $_tilemo_file" "$(cat "$_testdir/tilemo.err")"
-rmdir "$_tilemo_file"
+assert_contains "tide: can't read the workspace from $_macws_file" "$(cat "$_testdir/tide.err")"
+rmdir "$_macws_file"
 
 mkdir -p "$_testdir/prefix-bin"
 printf '%s\n' '#!/bin/sh' 'printf "launcher saw prefix [%s]\n" "$SHPOOL_PREFIX"' 'exit 1' >"$_testdir/prefix-bin/autoshpool"

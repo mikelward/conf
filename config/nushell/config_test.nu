@@ -1342,12 +1342,12 @@ except OSError: pass
         assert equal (session-prefix shpool) "mine:"
     })
 
-    # tilemo SPEC.md §6.3: with TIDE_WORKSPACE unset, a macOS shell reads
-    # tilemo's file instead. Mirrors shrc_test.sh.
-    (run-test "nu session-prefix reads tilemo's workspace file when TIDE_WORKSPACE is unset, and a set one wins" {
+    # tidemo SPEC.md §6.3: with TIDE_WORKSPACE unset, a macOS shell reads
+    # tide for macOS's file instead. Mirrors shrc_test.sh.
+    (run-test "nu session-prefix reads tide for macOS's workspace file when TIDE_WORKSPACE is unset, and a set one wins" {
         let home = (mktemp -d)
-        mkdir ($home | path join "Library" "Caches" "tilemo")
-        "PR12login\n" | save ($home | path join "Library" "Caches" "tilemo" "workspace")
+        mkdir ($home | path join "Library" "Caches" "tide")
+        "PR12login\n" | save ($home | path join "Library" "Caches" "tide" "workspace")
         $env.HOME = $home
         hide-env --ignore-errors SHPOOL_PREFIX TMUX_PREFIX TMUX_SEP TIDE_WORKSPACE
         assert equal (session-prefix shpool) "PR12login:"
@@ -1357,22 +1357,22 @@ except OSError: pass
         $env.TIDE_WORKSPACE = ""
         assert equal (session-prefix shpool) ""
     })
-    (run-test "nu tilemo-workspace takes a file without a final newline, and is quiet without one" {
+    (run-test "nu tide-workspace takes a file without a final newline, and is quiet without one" {
         let home = (mktemp -d)
-        let dir = ($home | path join "Library" "Caches" "tilemo")
+        let dir = ($home | path join "Library" "Caches" "tide")
         mkdir $dir
         "docs" | save ($dir | path join "workspace")
-        let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tilemo-workspace" | complete)
+        let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tide-workspace" | complete)
         assert equal ($out.stdout | str trim) "docs"
         assert equal $out.stderr ""
         rm ($dir | path join "workspace")
-        let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tilemo-workspace" | complete)
+        let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tide-workspace" | complete)
         assert equal ($out.stdout | str trim) ""
         assert equal $out.stderr ""
     })
-    (run-test "nu tilemo-workspace takes letters and digits in any script, whatever the locale" {
+    (run-test "nu tide-workspace takes letters and digits in any script, whatever the locale" {
         let home = (mktemp -d)
-        let dir = ($home | path join "Library" "Caches" "tilemo")
+        let dir = ($home | path join "Library" "Caches" "tide")
         mkdir $dir
         let file = ($dir | path join "workspace")
         # é composed, Cyrillic, CJK, Arabic-Indic digits, a Roman numeral.
@@ -1380,40 +1380,40 @@ except OSError: pass
             $"($good)\n" | save --force $file
             for locale in ["C" "C.UTF-8"] {
                 let out = (with-env { LC_ALL: $locale } {
-                    nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tilemo-workspace" | complete
+                    nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tide-workspace" | complete
                 })
                 assert equal ($out.stdout | str trim) $good
                 assert equal $out.stderr ""
             }
         }
     })
-    (run-test "nu tilemo-workspace warns about and ignores a name that isn't letters and digits" {
+    (run-test "nu tide-workspace warns about and ignores a name that isn't letters and digits" {
         let home = (mktemp -d)
-        let dir = ($home | path join "Library" "Caches" "tilemo")
+        let dir = ($home | path join "Library" "Caches" "tide")
         mkdir $dir
         let file = ($dir | path join "workspace")
         # Punctuation, a space, a quote, a decomposed é (a combining mark), an
         # emoji, a tab, and a terminal escape; bytes that aren't UTF-8 below.
         for bad in ["my-repo" "a b" "x'y" "cafe\u{301}" "\u{1f680}" "a\tb" $"(char -u '1b')]0;x(char bel)"] {
             $"($bad)\n" | save --force $file
-            let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tilemo-workspace" | complete)
+            let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tide-workspace" | complete)
             assert equal ($out.stdout | str trim) ""
-            assert str contains $out.stderr $"tilemo: ignoring the workspace in ($file)"
+            assert str contains $out.stderr $"tide: ignoring the workspace in ($file)"
         }
         for raw in [0x[ff fe 0a] 0x[61 c3 0a] 0x[c0 af 0a] 0x[ed a0 80 0a]] {
             $raw | save --force $file
-            let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tilemo-workspace" | complete)
+            let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tide-workspace" | complete)
             assert equal ($out.stdout | str trim) ""
-            assert str contains $out.stderr $"tilemo: ignoring the workspace in ($file)"
+            assert str contains $out.stderr $"tide: ignoring the workspace in ($file)"
         }
     })
-    (run-test "nu tilemo-workspace warns when the file can't be read" {
+    (run-test "nu tide-workspace warns when the file can't be read" {
         let home = (mktemp -d)
-        let file = ($home | path join "Library" "Caches" "tilemo" "workspace")
+        let file = ($home | path join "Library" "Caches" "tide" "workspace")
         mkdir $file
-        let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tilemo-workspace" | complete)
+        let out = (nu --no-config-file -c $"source ($CONFIG | to nuon); $env.HOME = ($home | to nuon); tide-workspace" | complete)
         assert equal ($out.stdout | str trim) ""
-        assert str contains $out.stderr $"tilemo: can't read the workspace from ($file)"
+        assert str contains $out.stderr $"tide: can't read the workspace from ($file)"
     })
 
     ###############

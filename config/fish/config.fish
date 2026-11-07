@@ -1007,14 +1007,16 @@ function session_shell
     echo "$(status fish-path) -l"
 end
 
-# tilemo's current workspace on macOS, or nothing, for a shell that wasn't
-# given TIDE_WORKSPACE (tilemo SPEC.md §6.3). Read with the builtin, so no
-# fork. Mirrors shrc's tilemo_workspace.
-function tilemo_workspace
-    set -l file "$HOME/Library/Caches/tilemo/workspace"
+# tide for macOS's current workspace on macOS, or nothing, for a shell that wasn't
+# given TIDE_WORKSPACE (tidemo SPEC.md §6.3). Read with the builtin, so no
+# fork. Mirrors shrc's tide_workspace.
+function tide_workspace
+    set -l file "$HOME/Library/Caches/tide/workspace"
+    # Where tide for macOS kept it as tilemo, until it moves the folder.
+    test -e "$file"; or set file "$HOME/Library/Caches/tilemo/workspace"
     test -e "$file"; or return 0
     if test -d "$file"; or not test -r "$file"
-        warn "tilemo: can't read the workspace from $file"
+        warn "tide: can't read the workspace from $file"
         return 0
     end
     set -l ws
@@ -1025,7 +1027,7 @@ function tilemo_workspace
     # fish 4 reads the file as UTF-8 whatever the locale; fish 3 in a
     # non-UTF-8 locale doesn't, and rejects a name past ASCII, which is safe.
     if not string match -qr '^[\p{L}\p{N}]+$' -- "$ws"
-        warn "tilemo: ignoring the workspace in $file, which isn't just letters and digits"
+        warn "tide: ignoring the workspace in $file, which isn't just letters and digits"
         return 0
     end
     echo $ws
@@ -1033,7 +1035,7 @@ end
 
 # The session-name prefix for backend $argv[1] (shpool or tmux), from the
 # tide workspace the terminal was opened on (tide SPEC.md §6.5), or with
-# TIDE_WORKSPACE unset, tilemo's file. Mirrors shrc's session_prefix.
+# TIDE_WORKSPACE unset, tide for macOS's file. Mirrors shrc's session_prefix.
 function session_prefix --argument-names backend
     set -l own
     set -l sep
@@ -1051,7 +1053,7 @@ function session_prefix --argument-names backend
         return 0
     end
     set -l ws "$TIDE_WORKSPACE"
-    set -q TIDE_WORKSPACE; or set ws (tilemo_workspace)
+    set -q TIDE_WORKSPACE; or set ws (tide_workspace)
     if test -n "$ws"
         echo "$ws$sep"
     end

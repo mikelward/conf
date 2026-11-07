@@ -524,62 +524,62 @@ assert_equal "[]" "$result"
 result="$(_elvish_run 'set-env TIDE_WORKSPACE docs; set-env TMUX_PREFIX mine/' 'echo "["(session-prefix tmux)"]"')"
 assert_equal "[mine/]" "$result"
 
-# tilemo SPEC.md §6.3: with TIDE_WORKSPACE unset, a macOS shell reads tilemo's
+# tidemo SPEC.md §6.3: with TIDE_WORKSPACE unset, a macOS shell reads tide for macOS's
 # file instead. Mirrors shrc_test.sh.
-_tilemo_home="$_testdir/elvish-tilemo-home"
-mkdir -p "$_tilemo_home/Library/Caches/tilemo"
-_tilemo_file="$_tilemo_home/Library/Caches/tilemo/workspace"
-_tilemo_pre="set-env HOME $(shell_quote "$_tilemo_home"); unset-env SHPOOL_PREFIX; unset-env TMUX_PREFIX; unset-env TMUX_SEP; unset-env TIDE_WORKSPACE"
+_macws_home="$_testdir/elvish-tide-home"
+mkdir -p "$_macws_home/Library/Caches/tide"
+_macws_file="$_macws_home/Library/Caches/tide/workspace"
+_macws_pre="set-env HOME $(shell_quote "$_macws_home"); unset-env SHPOOL_PREFIX; unset-env TMUX_PREFIX; unset-env TMUX_SEP; unset-env TIDE_WORKSPACE"
 
-start_test "elvish session-prefix reads tilemo's workspace file when TIDE_WORKSPACE is unset, and a set one wins"
-printf 'PR12login\n' >"$_tilemo_file"
-result="$(_elvish_run "$_tilemo_pre" 'echo "["(session-prefix shpool)"] ["(session-prefix tmux)"]"; set-env TIDE_WORKSPACE docs; echo "["(session-prefix shpool)"]"; set-env TIDE_WORKSPACE ""; echo "["(session-prefix shpool)"]"')"
+start_test "elvish session-prefix reads tide for macOS's workspace file when TIDE_WORKSPACE is unset, and a set one wins"
+printf 'PR12login\n' >"$_macws_file"
+result="$(_elvish_run "$_macws_pre" 'echo "["(session-prefix shpool)"] ["(session-prefix tmux)"]"; set-env TIDE_WORKSPACE docs; echo "["(session-prefix shpool)"]"; set-env TIDE_WORKSPACE ""; echo "["(session-prefix shpool)"]"')"
 assert_equal "[PR12login:] [PR12login/]
 [docs:]
 []" "$result"
 
-start_test "elvish tilemo-workspace takes a file without a final newline, and is quiet without one"
-printf 'docs' >"$_tilemo_file"
-result="$(_elvish_run_all "$_tilemo_pre" 'echo "["(tilemo-workspace)"]"')"
+start_test "elvish tide-workspace takes a file without a final newline, and is quiet without one"
+printf 'docs' >"$_macws_file"
+result="$(_elvish_run_all "$_macws_pre" 'echo "["(tide-workspace)"]"')"
 assert_contains "[docs]" "$result"
-assert_not_contains "tilemo:" "$result"
-rm -f "$_tilemo_file"
-result="$(_elvish_run_all "$_tilemo_pre" 'echo "["(tilemo-workspace)"]"')"
+assert_not_contains "tide:" "$result"
+rm -f "$_macws_file"
+result="$(_elvish_run_all "$_macws_pre" 'echo "["(tide-workspace)"]"')"
 assert_contains "[]" "$result"
-assert_not_contains "tilemo:" "$result"
+assert_not_contains "tide:" "$result"
 
-start_test "elvish tilemo-workspace takes letters and digits in any script, whatever the locale"
+start_test "elvish tide-workspace takes letters and digits in any script, whatever the locale"
 # é composed, Cyrillic, CJK, Arabic-Indic digits, a Roman numeral.
 for _good in 'caf\303\251' '\320\227\320\260\320\274\320\265\321\202\320\272\320\2700' \
     '\346\227\245\346\234\254\350\252\236' 'build\331\241\331\242' '\342\205\253'; do
-    printf "$_good\\n" >"$_tilemo_file"
+    printf "$_good\\n" >"$_macws_file"
     for _locale in C C.UTF-8; do
-        result="$(LC_ALL=$_locale _elvish_run "$_tilemo_pre" 'echo "["(tilemo-workspace)"]"' 2>&1)"
+        result="$(LC_ALL=$_locale _elvish_run "$_macws_pre" 'echo "["(tide-workspace)"]"' 2>&1)"
         assert_equal "[$(printf "$_good")]" "$result"
     done
 done
 
-start_test "elvish tilemo-workspace warns about and ignores a name that isn't letters and digits"
+start_test "elvish tide-workspace warns about and ignores a name that isn't letters and digits"
 # Punctuation, a space, a quote, a decomposed é (a combining mark), an emoji,
 # a tab, bytes that aren't UTF-8 (a lone lead byte, an overlong /, a
 # surrogate), and a terminal escape.
 for _bad in 'my-repo' 'a b' "x'y" 'cafe\314\201' '\360\237\232\200' 'a\tb' 'a\303' '\300\257' \
     '\355\240\200' '\377' '\033]0;x\007'; do
-    printf "$_bad\\n" >"$_tilemo_file"
-    result="$(_elvish_run "$_tilemo_pre" 'echo "["(tilemo-workspace)"]"')"
+    printf "$_bad\\n" >"$_macws_file"
+    result="$(_elvish_run "$_macws_pre" 'echo "["(tide-workspace)"]"')"
     assert_equal "[]" "$result"
-    result="$(_elvish_run_all "$_tilemo_pre" 'echo "["(tilemo-workspace)"]"')"
-    assert_contains "tilemo: ignoring the workspace in $_tilemo_file" "$result"
+    result="$(_elvish_run_all "$_macws_pre" 'echo "["(tide-workspace)"]"')"
+    assert_contains "tide: ignoring the workspace in $_macws_file" "$result"
 done
 
-start_test "elvish tilemo-workspace warns when the file can't be read"
-rm -f "$_tilemo_file"
-mkdir "$_tilemo_file"
-result="$(_elvish_run "$_tilemo_pre" 'echo "["(tilemo-workspace)"]"')"
+start_test "elvish tide-workspace warns when the file can't be read"
+rm -f "$_macws_file"
+mkdir "$_macws_file"
+result="$(_elvish_run "$_macws_pre" 'echo "["(tide-workspace)"]"')"
 assert_equal "[]" "$result"
-result="$(_elvish_run_all "$_tilemo_pre" 'echo "["(tilemo-workspace)"]"')"
-assert_contains "tilemo: can't read the workspace from $_tilemo_file" "$result"
-rmdir "$_tilemo_file"
+result="$(_elvish_run_all "$_macws_pre" 'echo "["(tide-workspace)"]"')"
+assert_contains "tide: can't read the workspace from $_macws_file" "$result"
+rmdir "$_macws_file"
 
 start_test "elvish session-name reports the shpool session"
 result="$(_elvish_run 'set-env SHPOOL_SESSION_NAME work' 'echo (session-name)')"

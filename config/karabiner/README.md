@@ -3,7 +3,7 @@
 Complex-modification rules for a PC keyboard, in five files:
 
 - `assets/complex_modifications/pc-alt-tab.json` puts the next tab back on
-  physical Ctrl+Tab; physical Alt+Tab is tilemo's.
+  physical Ctrl+Tab; physical Alt+Tab is tide for macOS's.
 - `assets/complex_modifications/pc-arrows.json` makes physical Ctrl+Left/Right,
   left or right Ctrl, move by word, Win+Left/Right switch Spaces and
   Win+Shift+Left/Right move the window a Space; see
@@ -13,9 +13,9 @@ Complex-modification rules for a PC keyboard, in five files:
   Ctrl+Shift+C in Terminal and iTerm2; see [Terminals](#terminals).
 - `assets/complex_modifications/pc-lock.json` makes Ctrl+U clear the
   password at the lock screen, as on Linux; see [Lock screen](#lock-screen).
-- `assets/complex_modifications/tilemo.json` gives
-  [tilemo](https://github.com/mikelward/tilemo) its Super key; see
-  [tilemo](#tilemo).
+- `assets/complex_modifications/tide.json` gives
+  [tide for macOS](https://github.com/mikelward/tidemo) its Super key; see
+  [tide for macOS](#tide-for-macos).
 
 Only the asset file is kept here. Karabiner rewrites
 `~/.config/karabiner/karabiner.json` itself on every UI change, so that file is
@@ -46,10 +46,10 @@ tab. This rule puts the next tab back there.
 | Ctrl+Tab | switch applications | **next tab** |
 | Shift+Ctrl+Tab | switch applications, backwards | **previous tab** |
 
-**Physical Alt+Tab is tilemo's**, swap with the master, in tilemo's rule
-below (tilemo SPEC.md §7.2). This rule used to swap the two both ways, making
-Alt+Tab switch applications; it gave that up when tilemo took the key.
-**Without tilemo's rule**, physical Alt+Tab is left to the rotation, as
+**Physical Alt+Tab is tide for macOS's**, swap with the master, in tide for macOS's rule
+below (tidemo SPEC.md §7.2). This rule used to swap the two both ways, making
+Alt+Tab switch applications; it gave that up when tide for macOS took the key.
+**Without tide for macOS's rule**, physical Alt+Tab is left to the rotation, as
 Ctrl+Tab, the next tab too.
 
 What still switches applications:
@@ -57,7 +57,7 @@ What still switches applications:
 - **Physical right Ctrl+Tab,** on a keyboard that has a right Ctrl. The
   rotation makes it Cmd+Tab, and this rule only takes left Ctrl (see
   [Scope](#scope)).
-- **tilemo's switcher,** with tilemo: its Windows tab stands in for the
+- **tide for macOS's switcher,** with tide for macOS: its Windows tab stands in for the
   application switcher.
 - **Not a Mac keyboard's Cmd+Tab.** `setup-macos` applies the rotation to
   every keyboard, the built-in one included, so its Command key sends Option.
@@ -178,7 +178,7 @@ same layering as above. Copy and paste are the terminal's, from conf's
 uses, so Ctrl+C there copies a selection and otherwise sends the interrupt
 (in Ghostty, a `performable:` binding, from Ghostty 1.1).
 
-- **Left to the rotation:** Tab, which the Ctrl+Tab rule and tilemo's take; Space, since
+- **Left to the rotation:** Tab, which the Ctrl+Tab rule and tide for macOS's take; Space, since
   Control+Space is macOS's input source switch; and Ctrl+Up and Down, which
   are Mission Control. Right Ctrl and right Alt are left alone, so right Ctrl
   still reaches the terminal's Command shortcuts (Cmd+Q, Cmd+,), but for
@@ -229,48 +229,48 @@ it:
   same name. Everywhere else Ctrl+U is left to the other rules.
 - **A Mac keyboard's Command+U,** for the habit of a Mac's own Command key:
   to Karabiner it's `left_command`, the PC's Win key, so Win+U clears the
-  password too. tilemo's rule takes Win+U elsewhere, as Super+U; there's
-  nothing of tilemo's at the lock screen.
+  password too. tide for macOS's rule takes Win+U elsewhere, as Super+U; there's
+  nothing of tide for macOS's at the lock screen.
 - **Not the login window after a restart.** Before you log in, Karabiner
   runs only what's copied to its system default configuration (Settings,
   Misc), and the rotation isn't set yet, so Command+A would arrive as
   Control+A. The rule is for unlocking.
 - **It's a new file:** run `confinst` once after pulling conf, to link it
-  into Karabiner's folder. tilemo then turns it on by itself, at the top;
-  without tilemo, enable it as in [Enabling it](#enabling-it).
+  into Karabiner's folder. tide for macOS then turns it on by itself, at the top;
+  without tide for macOS, enable it as in [Enabling it](#enabling-it).
 
-## tilemo
+## tide for macOS
 
-tilemo, the macOS tiling desktop, puts tide's keys on Super, the physical Win
+tide for macOS, the macOS tiling desktop, puts tide's keys on Super, the physical Win
 key. The rotation makes Win into Option, and Option already means things on
 a Mac: Option+Backspace deletes a word, the arrow rule above makes
 Option+arrow from Ctrl+arrow, and Option+E and friends are accent dead keys.
 So this rule turns physical Win+key into a combination nothing else uses,
-Ctrl+Option+Command+key, and tilemo binds that (tilemo SPEC.md §7.1).
+Ctrl+Option+Command+key, and tide for macOS binds that (tidemo SPEC.md §7.1).
 
 | Physical keys | Emits | macOS sees |
 | --- | --- | --- |
-| Win+key, for each key tilemo binds | `left_option`+`left_command`+`left_control`+key | Ctrl+Option+Command+key |
+| Win+key, for each key tide for macOS binds | `left_option`+`left_command`+`left_control`+key | Ctrl+Option+Command+key |
 | Win+Shift+key | the same, plus `shift` | Ctrl+Option+Command+Shift+key |
-| Win+click, Win+right-click, Win+middle-click | the same modifiers, on the button | Super+drag and Super+middle-click in tilemo |
-| Win, tapped alone | `f20` with the same modifiers | tilemo's launcher, as Super+Space |
-| Win+Backspace | `f19` with the same modifiers | tilemo's close, as Super+Backspace: some Macs take Ctrl+Option+Command+Backspace before tilemo sees it |
-| Alt+Tab | `left_option`+`left_command`+`shift`+`tab` | Ctrl+Option+Shift+Tab: tilemo's swap with the master |
+| Win+click, Win+right-click, Win+middle-click | the same modifiers, on the button | Super+drag and Super+middle-click in tide for macOS |
+| Win, tapped alone | `f20` with the same modifiers | tide for macOS's launcher, as Super+Space |
+| Win+Backspace | `f19` with the same modifiers | tide for macOS's close, as Super+Backspace: some Macs take Ctrl+Option+Command+Backspace before tide for macOS sees it |
+| Alt+Tab | `left_option`+`left_command`+`shift`+`tab` | Ctrl+Option+Shift+Tab: tide for macOS's swap with the master |
 
 The outputs name the keys the rotation turns into Control, Option and
 Command, by the same layering as the rules above.
 
 - **Every key of the typing block is mapped, by physical position:** the
-  letters, digits and all the punctuation keys, whether tilemo binds what's
-  on them in U.S. layout or not. tilemo binds its keys by character in the
+  letters, digits and all the punctuation keys, whether tide for macOS binds what's
+  on them in U.S. layout or not. tide for macOS binds its keys by character in the
   current layout (`hs.hotkey`), so on Dvorak, Super+/ is the physical `[`
   key and Super+S the physical `;`; a key missing here would type its
-  character instead. Keys off that block that tilemo doesn't bind, such as
+  character instead. Keys off that block that tide for macOS doesn't bind, such as
   the function keys, are left alone and stay Option.
 
-- **The lone tap is Super+F20,** a key no PC keyboard here has, so tilemo
+- **The lone tap is Super+F20,** a key no PC keyboard here has, so tide for macOS
   tells it from Super+Space. Both open its launcher now, as tide's tap and
-  chromeOS's Search tap do (tilemo SPEC.md §7.2, §9). The rule's
+  chromeOS's Search tap do (tidemo SPEC.md §7.2, §9). The rule's
   description still says the workspace list: Tide Settings' Keyboard page
   knows an enabled rule by its whole description, so changing it would
   show the rule as off until it's added again.
@@ -280,22 +280,23 @@ Command, by the same layering as the rules above.
 
 - **Enable it above the arrow rule.** Both match Win+Left/Right, and
   Karabiner uses the first rule that matches, with newly added rules at the
-  top. tilemo's window keys (Win+Left/Right to select a window, Win+Shift+Left/Right
+  top. tide for macOS's window keys (Win+Left/Right to select a window, Win+Shift+Left/Right
   to move it, across displays) take Win+arrow over the Spaces shortcut.
-- **tilemo finds it by its description,** which starts `tilemo:`. Without it,
-  tilemo puts its keys on plain Option and says so once.
-- **A rule enabled before the rename still works.** tilemo was called timo,
-  and its rule's description started `timo:`; tilemo accepts both prefixes
-  while the rename settles. Removing the rule and adding it again, as in
-  [Enabling it](#enabling-it), gives it the new `tilemo:` name. `confinst`
-  doesn't prune, so the old
-  `~/.config/karabiner/assets/complex_modifications/timo.json` link is left
-  dangling; delete it.
+- **tide for macOS finds it by its description,** which starts `tide:`. Without it,
+  tide for macOS puts its keys on plain Option and says so once.
+- **A rule enabled before the rename still works.** tide for macOS was called
+  tilemo, and timo before that, and its rule's description started `tilemo:`
+  or `timo:`; tide for macOS accepts all three prefixes while the rename
+  settles. Removing the rule and adding it again, as in
+  [Enabling it](#enabling-it), gives it the new `tide:` name. `confinst`
+  doesn't prune, so the old `tilemo.json` and `timo.json` links in
+  `~/.config/karabiner/assets/complex_modifications/` are left dangling;
+  delete them.
 - **The mouse needs enabling too.** Karabiner leaves mouse devices alone by
   default, so Win+click, Win+drag and Win+middle-click only carry Super once
   Modify events is turned on beside the mouse or trackpad under Devices
   ([Karabiner's mouse button docs](https://karabiner-elements.pqrs.org/docs/help/how-to/mouse-button/)).
-  Until then, tilemo's mouse gestures see plain Option.
+  Until then, tide for macOS's mouse gestures see plain Option.
 - Whether a click while Win is held cancels the lone tap, as a key does, is
   *(unverified)*.
 
@@ -311,9 +312,9 @@ the list. Enable, in this order:
 2. under "PC keyboard arrows", "Ctrl+Left/Right moves by word, …";
 3. under "PC keyboard terminals", "Ctrl is Control and Alt is Meta in kitty
    and Ghostty", so it sits above the arrow rule;
-4. with tilemo, under "tilemo", the "tilemo:" rule, so it sits above them;
+4. with tide for macOS, under "tide", the "tide:" rule, so it sits above them;
 5. under "PC keyboard lock screen", "Ctrl+U clears the password at the lock
-   screen", last, above tilemo's, which would otherwise take a Mac
+   screen", last, above tide for macOS's, which would otherwise take a Mac
    keyboard's Command+U there as Super+U.
 
 Karabiner puts each rule you enable at the top of the Complex Modifications
@@ -332,7 +333,7 @@ the System Settings page for it.
 
 ## Scope
 
-Only left Ctrl, and in tilemo's rule left Alt, are mapped, but for the
+Only left Ctrl, and in tide for macOS's rule left Alt, are mapped, but for the
 arrow rule's Ctrl+arrow and Ctrl+Home/End and the lock screen's Ctrl+U,
 which take right Ctrl too. Right Alt is left alone so it stays available as
 a plain modifier, and the rotation still sends it to right Control.
@@ -344,4 +345,4 @@ Karabiner's canonical name for the Alt modifier is `left_option`, not
 an alias, and an unrecognized modifier name in a `mandatory` block is not an
 error Karabiner reports. It simply never matches, which looks identical to the
 rule not being enabled. The test asserts `left_option` in both the trigger
-(tilemo's Alt+Tab) and output positions for that reason.
+(tide for macOS's Alt+Tab) and output positions for that reason.

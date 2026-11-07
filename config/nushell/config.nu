@@ -443,15 +443,19 @@ def session-shell [] {
     $"($nu.current-exe) -l"
 }
 
-# tilemo's current workspace on macOS, or "", for a shell that wasn't given
-# TIDE_WORKSPACE (tilemo SPEC.md §6.3). `open` is a builtin, so no fork; the
+# tide for macOS's current workspace on macOS, or "", for a shell that wasn't given
+# TIDE_WORKSPACE (tidemo SPEC.md §6.3). `open` is a builtin, so no fork; the
 # path stands in for an OS test, as in the other shells. Mirrors shrc's
-# tilemo_workspace.
-def tilemo-workspace [] {
-    let file = ($env.HOME | path join "Library" "Caches" "tilemo" "workspace")
+# tide_workspace.
+def tide-workspace [] {
+    let new = ($env.HOME | path join "Library" "Caches" "tide" "workspace")
+    # Where tide for macOS kept it as tilemo, until it moves the folder.
+    let file = if ($new | path exists) { $new } else {
+        $env.HOME | path join "Library" "Caches" "tilemo" "workspace"
+    }
     if not ($file | path exists) { return "" }
     let raw = try { open --raw $file | into binary } catch {
-        warn $"tilemo: can't read the workspace from ($file)"
+        warn $"tide: can't read the workspace from ($file)"
         return ""
     }
     # decode is lossy, so bytes that aren't UTF-8 fail the check below.
@@ -459,7 +463,7 @@ def tilemo-workspace [] {
     if $ws == "" { return "" }
     # Unicode's letters and digits, in any script, whatever the locale.
     if not ($ws =~ '^[\p{L}\p{N}]+$') {
-        warn $"tilemo: ignoring the workspace in ($file), which isn't just letters and digits"
+        warn $"tide: ignoring the workspace in ($file), which isn't just letters and digits"
         return ""
     }
     $ws
@@ -467,11 +471,11 @@ def tilemo-workspace [] {
 
 # The session-name prefix for a backend (shpool or tmux), from the tide
 # workspace the terminal was opened on (tide SPEC.md §6.5), or with
-# TIDE_WORKSPACE unset, tilemo's file. Mirrors shrc's session_prefix.
+# TIDE_WORKSPACE unset, tide for macOS's file. Mirrors shrc's session_prefix.
 def session-prefix [backend: string] {
     let own = if $backend == "shpool" { $env.SHPOOL_PREFIX? | default "" } else { $env.TMUX_PREFIX? | default "" }
     if $own != "" { return $own }
-    let ws = if "TIDE_WORKSPACE" in $env { $env.TIDE_WORKSPACE } else { tilemo-workspace }
+    let ws = if "TIDE_WORKSPACE" in $env { $env.TIDE_WORKSPACE } else { tide-workspace }
     if $ws == "" { return "" }
     let tmux_sep = ($env.TMUX_SEP? | default "")
     let sep = if $backend == "shpool" { ":" } else if $tmux_sep != "" { $tmux_sep } else { "/" }

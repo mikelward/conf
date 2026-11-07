@@ -43,14 +43,14 @@ Delete an entry once you have agreed with it or reversed it.
       shares, would need the scripts repo's launchers to change. Undoing it
       is `session_prefix` in each shell (shrc, fish, nushell, mesh,
       Elvish).
-- [ ] **On macOS, a shell with TIDE_WORKSPACE unset reads tilemo's file,
+- [ ] **On macOS, a shell with TIDE_WORKSPACE unset reads tide for macOS's file,
       gated on the file's path, not an OS test.**
-      `~/Library/Caches/tilemo/workspace` (tilemo SPEC.md §6.3) only exists
-      on a Mac running tilemo, and fish and mesh can't ask the OS without
+      `~/Library/Caches/tide/workspace` (tidemo SPEC.md §6.3) only exists
+      on a Mac running tide for macOS, and fish and mesh can't ask the OS without
       forking `uname` on every start, so every shell checks the path alone
       and behaves the same. The alternative is an OS test where it's free
       (`$OSTYPE` in shrc, `$nu.os-info` in nushell, `platform:os` in Elvish),
-      with fish and mesh left path-only. Undoing it is `tilemo_workspace` in
+      with fish and mesh left path-only. Undoing it is `tide_workspace` in
       each shell.
 - [ ] **Home's apps are scripts' launchers for four Google sites**:
       `gmail`, `google-chat`, `google-calendar` and `youtube-music`, in
@@ -193,7 +193,7 @@ Ghostty is to try next to kitty, on macOS first. Not urgent on Linux.
 - **macOS:** conf has a Ghostty config with kitty's keys
   (`config/ghostty/config`), and the Karabiner terminal rule covers it. Left:
   scripts' `setup` would install it with `brew install --cask ghostty`, and
-  tilemo's Super+T could open either terminal.
+  tide for macOS's Super+T could open either terminal.
 - **Linux:** Debian and Ubuntu don't package it *(unverified for their newest
   releases)*. When it matters, the choices are a community package or
   building it from source, which needs Zig.

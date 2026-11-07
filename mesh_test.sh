@@ -1735,13 +1735,13 @@ assert_equal "[PR12login:] [PR12login/]
 []
 [mine/]" "$result"
 
-# tilemo SPEC.md §6.3: with TIDE_WORKSPACE unset, a macOS shell reads tilemo's
+# tidemo SPEC.md §6.3: with TIDE_WORKSPACE unset, a macOS shell reads tide for macOS's
 # file instead. Mirrors shrc_test.sh.
-_tilemo_home="$_testdir/mesh-tilemo-home"
-mkdir -p "$_tilemo_home/Library/Caches/tilemo"
-_tilemo_file="$_tilemo_home/Library/Caches/tilemo/workspace"
-_tilemo_pre='
-    $env.HOME = "'"$_tilemo_home"'"
+_macws_home="$_testdir/mesh-tide-home"
+mkdir -p "$_macws_home/Library/Caches/tide"
+_macws_file="$_macws_home/Library/Caches/tide/workspace"
+_macws_pre='
+    $env.HOME = "'"$_macws_home"'"
     $env.SHPOOL_PREFIX = ""
     $env.TMUX_PREFIX = ""
     $env.TMUX_SEP = ""
@@ -1749,9 +1749,9 @@ _tilemo_pre='
     unset $env.TIDE_WORKSPACE
 '
 
-start_test "mesh session-prefix reads tilemo's workspace file when TIDE_WORKSPACE is unset, and a set one wins"
-printf 'PR12login\n' >"$_tilemo_file"
-result="$(_mesh_run_config "$_tilemo_pre" '
+start_test "mesh session-prefix reads tide for macOS's workspace file when TIDE_WORKSPACE is unset, and a set one wins"
+printf 'PR12login\n' >"$_macws_file"
+result="$(_mesh_run_config "$_macws_pre" '
     a = session-prefix(shpool)
     b = session-prefix(tmux)
     puts "[$a] [$b]"
@@ -1766,59 +1766,59 @@ assert_equal "[PR12login:] [PR12login/]
 [docs:]
 []" "$result"
 
-start_test "mesh tilemo-workspace takes a file without a final newline, and is quiet without one"
-printf 'docs' >"$_tilemo_file"
-result="$(_mesh_run_config "$_tilemo_pre" '
-    w = tilemo-workspace()
+start_test "mesh tide-workspace takes a file without a final newline, and is quiet without one"
+printf 'docs' >"$_macws_file"
+result="$(_mesh_run_config "$_macws_pre" '
+    w = tide-workspace()
     puts "[$w]"
 ' 2>&1)"
 assert_equal "[docs]" "$result"
-rm -f "$_tilemo_file"
-result="$(_mesh_run_config "$_tilemo_pre" '
-    w = tilemo-workspace()
+rm -f "$_macws_file"
+result="$(_mesh_run_config "$_macws_pre" '
+    w = tide-workspace()
     puts "[$w]"
 ' 2>&1)"
 assert_equal "[]" "$result"
 
-start_test "mesh tilemo-workspace takes letters and digits in any script, whatever the locale"
+start_test "mesh tide-workspace takes letters and digits in any script, whatever the locale"
 # é composed, Cyrillic, CJK, Arabic-Indic digits, a Roman numeral.
 for _good in 'caf\303\251' '\320\227\320\260\320\274\320\265\321\202\320\272\320\2700' \
     '\346\227\245\346\234\254\350\252\236' 'build\331\241\331\242' '\342\205\253'; do
-    printf "$_good\\n" >"$_tilemo_file"
+    printf "$_good\\n" >"$_macws_file"
     for _locale in C C.UTF-8; do
-        result="$(LC_ALL=$_locale _mesh_run_config "$_tilemo_pre" '
-            w = tilemo-workspace()
+        result="$(LC_ALL=$_locale _mesh_run_config "$_macws_pre" '
+            w = tide-workspace()
             puts "[$w]"
         ' 2>&1)"
         assert_equal "[$(printf "$_good")]" "$result"
     done
 done
 
-start_test "mesh tilemo-workspace warns about and ignores a name that isn't letters and digits"
+start_test "mesh tide-workspace warns about and ignores a name that isn't letters and digits"
 # Punctuation, a space, a quote, a decomposed é (a combining mark), an emoji,
 # a tab, bytes that aren't UTF-8 (a lone lead byte, an overlong /, a
 # surrogate), and a terminal escape.
 for _bad in 'my-repo' 'a b' "x'y" 'cafe\314\201' '\360\237\232\200' 'a\tb' 'a\303' '\300\257' \
     '\355\240\200' '\377' '\033]0;x\007'; do
-    printf "$_bad\\n" >"$_tilemo_file"
-    result="$(_mesh_run_config "$_tilemo_pre" '
-        w = tilemo-workspace()
+    printf "$_bad\\n" >"$_macws_file"
+    result="$(_mesh_run_config "$_macws_pre" '
+        w = tide-workspace()
         puts "[$w]"
-    ' 2>"$_testdir/mesh-tilemo.err")"
+    ' 2>"$_testdir/mesh-tide.err")"
     assert_equal "[]" "$result"
-    assert_contains "tilemo: ignoring the workspace in $_tilemo_file" "$(cat "$_testdir/mesh-tilemo.err")"
+    assert_contains "tide: ignoring the workspace in $_macws_file" "$(cat "$_testdir/mesh-tide.err")"
 done
 
-start_test "mesh tilemo-workspace warns when the file can't be read"
-rm -f "$_tilemo_file"
-mkdir "$_tilemo_file"
-result="$(_mesh_run_config "$_tilemo_pre" '
-    w = tilemo-workspace()
+start_test "mesh tide-workspace warns when the file can't be read"
+rm -f "$_macws_file"
+mkdir "$_macws_file"
+result="$(_mesh_run_config "$_macws_pre" '
+    w = tide-workspace()
     puts "[$w]"
-' 2>"$_testdir/mesh-tilemo.err")"
+' 2>"$_testdir/mesh-tide.err")"
 assert_equal "[]" "$result"
-assert_contains "tilemo: can't read the workspace from $_tilemo_file" "$(cat "$_testdir/mesh-tilemo.err")"
-rmdir "$_tilemo_file"
+assert_contains "tide: can't read the workspace from $_macws_file" "$(cat "$_testdir/mesh-tide.err")"
+rmdir "$_macws_file"
 
 ###############
 # TEST: applydiff only replaces the file when the command succeeded
@@ -2248,7 +2248,7 @@ e = one-line("a  b"); e = projectname(); e = projectroot(); e = prompt-line("")
 e = prompt-project-name(); e = prompt-session-name(); e = publish-jobs-file()
 e = red("x"); e = rootdir(); e = session-backend(); e = session-name()
 e = session-prefix("shpool"); e = session-shell(); e = short-hostname(); e = ssh-client-host(); e = tilde-pwd()
-e = tilemo-workspace(); e = title-text(); e = unquoted-head("\"x\""); e = vm(); e = workstation()
+e = tide-workspace(); e = title-text(); e = unquoted-head("\"x\""); e = vm(); e = workstation()
 e = yellow("x")
 f = age("/etc/hostname")
 '
