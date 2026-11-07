@@ -127,6 +127,12 @@ exec ~/.config/hypr/scripts/theme-daemon.sh
 exec nm-applet --indicator
 exec blueman-applet
 
+# Clipboard history for Win+V: each copy goes to tide's own history, the
+# one tide's picker shows, kept encrypted under the login keyring and never
+# holding a copy a password manager marks. Guarded so a machine without
+# tide still starts.
+exec command -v tide >/dev/null && wl-paste --watch tide clipboard store --max-items 100
+
 # Polkit authentication agent (needed for GUI privilege prompts). Uncomment
 # the one you have installed.
 # exec /usr/lib/polkit-kde-authentication-agent-1
@@ -144,8 +150,10 @@ bindsym $mod+Shift+g exec browser3
 bindsym $mod+f exec browser2
 bindsym $mod+b exec bluetooth-connect
 bindsym $mod+Shift+b exec pulseprofile.py
-# $mod+v is tide's clipboard and characters picker there, which sway has no
-# equivalent for. Terminal on the VM has no key: the launcher finds it.
+# $mod+v: the clipboard history in fuzzel, pasting the entry chosen, as
+# tide's picker does (scripts' clipboard-menu). Terminal on the VM has no
+# key: the launcher finds it.
+bindsym $mod+v exec clipboard-menu
 bindsym $mod+c exec google-chat
 bindsym $mod+Shift+c exec google-calendar
 bindsym $mod+h exec home
