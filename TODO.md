@@ -177,15 +177,6 @@ can't do yet, each needing tidewm or tide's shell first:
 - resize mode (Super+Shift+R), and the mouse's move, resize and maximize;
 - apply-input.sh's per-mouse settings, which ask Hyprland.
 
-## Bind Super+V to a clipboard manager under sway and X
-
-Super+V opens tide's clipboard and characters picker, but sway
-(`config/sway/config`) and an X session (`xbindkeysrc`) leave it unbound,
-since neither runs tide's shell. Bind it in both to a clipboard manager, so
-the key means the same everywhere. Which manager is still to choose: one
-that works on Wayland (sway) and X11, or one per session, and what scripts'
-`setup` would install for it.
-
 ## Add Ghostty alongside kitty
 
 Ghostty is to try next to kitty, on macOS first. Not urgent on Linux.

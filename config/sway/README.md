@@ -59,6 +59,9 @@ repos — no COPR/backport needed, unlike Hyprland):
     pipewire wireplumber pavucontrol      # volume/sound
     brightnessctl                         # backlight keys + idle dimming
     grim slurp wl-clipboard               # screenshots (Print) → clipboard
+    tide, with wtype and fuzzel           # SUPER+V's clipboard history
+                                          #   (scripts' setup-tide installs
+                                          #   them; clipboard-menu is scripts')
     playerctl                             # media play/pause/next/prev keys
     gnome-calculator                      # XF86Calculator key
     yazi                                  # terminal file manager (SUPER+E)
@@ -220,6 +223,12 @@ Sway-specific tiling keys (manual overrides on top of autotiling):
 | `SUPER + arrows` / `SUPER + Shift + arrows` | Directional focus / move |
 | `SUPER + Shift + R` | **Resize** mode (h/j/k/l or arrows; Esc/Enter exits) |
 | `SUPER + drag` / `SUPER + right-drag` | Move / resize window (mouse) |
+
+`SUPER + V` opens the clipboard history in fuzzel and pastes the entry
+chosen (scripts' `clipboard-menu`). It's tide's own history, the one tide's
+picker shows on Hyprland: encrypted under your login keyring, and never
+holding a copy a password manager marks. A terminal gets Ctrl+Shift+V,
+as from tide's picker. With no window focused, the entry is only copied.
 
 Hyprland binds with no Sway equivalent (master/stack: `SUPER+\`, `SUPER+/`,
 `SUPER+Return`, `SUPER+=`, `SUPER+-`) are intentionally unbound.

@@ -209,6 +209,37 @@ assert_contains "bindsym Print exec grim" "$_sway_body"
 assert_contains "wl-copy --type image/png" "$_sway_body"
 
 ################################################################################
+# SUPER+V: the clipboard history, kept by tide's encrypted store.
+################################################################################
+# The active lines, not comments: what sway runs.
+_superv=$(printf '%s\n' "$_sway_body" | grep -E '^bindsym [$]mod[+]v ' || true)
+_feed=$(printf '%s\n' "$_sway_body" | grep -E '^exec .*tide clipboard store' || true)
+
+start_test "SUPER+V runs clipboard-menu, which pastes"
+assert_equal "bindsym \$mod+v exec clipboard-menu" "$_superv"
+
+# Run the configured exec command as sway does (sh -c), with fake tide and
+# wl-paste that log their calls, with tide installed and without.
+_clipdir=$(mktemp -d)
+mkdir -p "$_clipdir/with" "$_clipdir/without"
+printf '#!/bin/sh\necho "wl-paste $*" >> "%s/calls"\n' "$_clipdir" > "$_clipdir/with/wl-paste"
+printf '#!/bin/sh\nexit 0\n' > "$_clipdir/with/tide"
+cp "$_clipdir/with/wl-paste" "$_clipdir/without/wl-paste"
+chmod +x "$_clipdir/with/wl-paste" "$_clipdir/with/tide" "$_clipdir/without/wl-paste"
+_sh=$(command -v sh)
+
+start_test "with tide, each copy goes to tide's encrypted history"
+: > "$_clipdir/calls"
+PATH="$_clipdir/with" "$_sh" -c "${_feed#exec }"
+assert_equal "wl-paste --watch tide clipboard store --max-items 100" "$(cat "$_clipdir/calls")"
+
+start_test "without tide, nothing watches the clipboard, and sway still starts"
+: > "$_clipdir/calls"
+PATH="$_clipdir/without" "$_sh" -c "${_feed#exec }" || true
+assert_equal "" "$(cat "$_clipdir/calls")"
+rm -rf "$_clipdir"
+
+################################################################################
 # Laptop lid: bound to the lid switch (locked + reload), driven by lid.sh.
 ################################################################################
 start_test "lid switch close/open bindings invoke lid.sh"
