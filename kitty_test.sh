@@ -90,7 +90,7 @@ STUB
 chmod +x "$_bin/kitten" "$_bin/open"
 _log=$(mktemp)
 
-start_test "tide-bell asks kitty which macOS window rang, and tells tilemo"
+start_test "tide-bell asks kitty which macOS window rang, and tells tide"
 _out=$(PATH="$_bin:$PATH" TIDE_BELL_LOG="$_log" KITTY_WINDOW_ID=7 TIDE_BELL_OPEN="$_bin/open" \
     sh "$_srcdir/config/kitty/tide-bell" 2>&1)
 assert_true grep -q '^@ ls --match id:7$' "$_log"

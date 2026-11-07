@@ -1501,7 +1501,7 @@ hl.bind(key("Page_Up"), step_workspace(-1, false), does("Previous workspace"))
 hl.bind(key("Page_Down"), step_workspace(1, false), does("Next workspace"))
 hl.bind(key("SHIFT + Page_Up"), step_workspace(-1, true), does("Move the window to the previous workspace"))
 hl.bind(key("SHIFT + Page_Down"), step_workspace(1, true), does("Move the window to the next workspace"))
--- Left and right are windows, across monitors, as in tilemo (above).
+-- Left and right are windows, across monitors, as in tide for macOS (above).
 hl.bind(key("Left"), side.focus_left, does("Focus the window to the left"))
 hl.bind(key("Right"), side.focus_right, does("Focus the window to the right"))
 hl.bind(key("SHIFT + Left"), side.move_left, does("Move the window left"))

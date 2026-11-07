@@ -1,13 +1,13 @@
 #!/bin/sh
 #
 # kitty runs this on a bell, on a Mac (macos.conf's command_on_bell): it
-# tells tilemo which window rang, so the window wants attention, as a
-# bell's activation does on tide (tilemo SPEC.md §14.2). kitty's own alert
-# only bounces its Dock icon, which tilemo can't see.
+# tells tide for macOS which window rang, so the window wants attention, as a
+# bell's activation does on tide (tidemo SPEC.md §14.2). kitty's own alert
+# only bounces its Dock icon, which tide for macOS can't see.
 #
 # kitty names the window that rang by its own ID, KITTY_WINDOW_ID; its
 # remote control (KITTY_LISTEN_ON) says which macOS window holds it, as
-# platform_window_id, the ID tilemo knows windows by.
+# platform_window_id, the ID tide for macOS knows windows by.
 
 kitten=kitten
 if ! command -v kitten >/dev/null 2>&1; then

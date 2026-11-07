@@ -382,7 +382,7 @@ test-amethyst: $(CACHE)/test-amethyst.stamp
 $(CACHE)/test-karabiner.stamp: \
                           config/karabiner/assets/complex_modifications/pc-alt-tab.json \
                           config/karabiner/assets/complex_modifications/pc-arrows.json \
-                          config/karabiner/assets/complex_modifications/tilemo.json \
+                          config/karabiner/assets/complex_modifications/tide.json \
                           config/karabiner/assets/complex_modifications/pc-terminal.json \
                           config/karabiner/assets/complex_modifications/pc-lock.json \
                           config/kitty/kitty.conf \

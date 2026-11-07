@@ -2,7 +2,7 @@
     "title": "PC keyboard Ctrl+Tab",
     "rules": [
         {
-            "description": "Ctrl+Tab goes to the next tab, not the application switcher (PC muscle memory, alongside the setup-macos modifier rotation; Alt+Tab is tilemo's)",
+            "description": "Ctrl+Tab goes to the next tab, not the application switcher (PC muscle memory, alongside the setup-macos modifier rotation; Alt+Tab is tide for macOS's)",
             "manipulators": [
                 {
                     "type": "basic",

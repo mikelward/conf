@@ -1257,16 +1257,20 @@ str func session-shell() {
   return "$exe -l"
 }
 
-# tilemo's current workspace on macOS, or "", for a shell that wasn't given
-# TIDE_WORKSPACE (tilemo SPEC.md §6.3). `gets` reads in the shell itself, so
+# tide for macOS's current workspace on macOS, or "", for a shell that wasn't given
+# TIDE_WORKSPACE (tidemo SPEC.md §6.3). `gets` reads in the shell itself, so
 # no fork; the path stands in for an OS test, as in the other shells. Mirrors
-# shrc's tilemo_workspace.
-str func tilemo-workspace() {
-  file = "$env.HOME/Library/Caches/tilemo/workspace"
+# shrc's tide_workspace.
+str func tide-workspace() {
+  file = "$env.HOME/Library/Caches/tide/workspace"
+  # Where tide for macOS kept it as tilemo, until it moves the folder.
+  if not $file:exists {
+    file = "$env.HOME/Library/Caches/tilemo/workspace"
+  }
   return "" unless $file:exists
   readable = $file:type == "file" and $file:read
   if not $readable {
-    warn "tilemo: can't read the workspace from $file"
+    warn "tide: can't read the workspace from $file"
     return ""
   }
   # An empty file is status 1 and a line that isn't UTF-8 raises; neither is
@@ -1277,7 +1281,7 @@ str func tilemo-workspace() {
   # Unicode's letters and digits, in any script, whatever the locale.
   valid = $ws ~ /^[\p{L}\p{N}]+$/
   if not $valid {
-    warn "tilemo: ignoring the workspace in $file, which isn't just letters and digits"
+    warn "tide: ignoring the workspace in $file, which isn't just letters and digits"
     return ""
   }
   return $ws
@@ -1285,13 +1289,13 @@ str func tilemo-workspace() {
 
 # The session-name prefix for a backend (shpool or tmux), from the tide
 # workspace the terminal was opened on (tide SPEC.md §6.5), or with
-# TIDE_WORKSPACE unset, tilemo's file. Mirrors shrc's session_prefix.
+# TIDE_WORKSPACE unset, tide for macOS's file. Mirrors shrc's session_prefix.
 str func session-prefix(backend) {
   own = $env:get(SHPOOL_PREFIX, "")
   if $backend == "tmux" { own = $env:get(TMUX_PREFIX, "") }
   return $own if $own != ""
   ws = $env:get(TIDE_WORKSPACE, "")
-  if not $env:has(TIDE_WORKSPACE) { ws = tilemo-workspace() }
+  if not $env:has(TIDE_WORKSPACE) { ws = tide-workspace() }
   return "" if $ws == ""
   if $backend == "tmux" {
     sep = $env:get(TMUX_SEP, "")

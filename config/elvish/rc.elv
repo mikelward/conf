@@ -1636,19 +1636,21 @@ fn session-shell {
 # SESSION_SHELL is set for the launcher alone and put back when it fails, so a
 # failed handoff does not leave this shell's identity for later nested shells to
 # inherit.
-# tilemo's current workspace on macOS, or '', for a shell that wasn't given
-# TIDE_WORKSPACE (tilemo SPEC.md §6.3). `slurp` is a builtin, so no fork; the
+# tide for macOS's current workspace on macOS, or '', for a shell that wasn't given
+# TIDE_WORKSPACE (tidemo SPEC.md §6.3). `slurp` is a builtin, so no fork; the
 # path stands in for an OS test, as in the other shells. Mirrors shrc's
-# tilemo_workspace.
-fn tilemo-workspace {
-    var file = $E:HOME/Library/Caches/tilemo/workspace
+# tide_workspace.
+fn tide-workspace {
+    var file = $E:HOME/Library/Caches/tide/workspace
+    # Where tide for macOS kept it as tilemo, until it moves the folder.
+    if (not (os:exists $file)) { set file = $E:HOME/Library/Caches/tilemo/workspace }
     if (not (os:exists $file)) { put ''; return }
     var text = ''
     try {
         if (os:is-dir $file) { fail 'a directory' }
         set text = (slurp < $file)
     } catch {
-        warn "tilemo: can't read the workspace from "$file
+        warn "tide: can't read the workspace from "$file
         put ''
         return
     }
@@ -1657,7 +1659,7 @@ fn tilemo-workspace {
     # Go's \p{L} and \p{N}: Unicode's letters and digits, in any script,
     # whatever the locale. Bytes that aren't UTF-8 read as U+FFFD, which fails.
     if (not (re:match '^[\p{L}\p{N}]+$' $ws)) {
-        warn "tilemo: ignoring the workspace in "$file", which isn't just letters and digits"
+        warn "tide: ignoring the workspace in "$file", which isn't just letters and digits"
         put ''
         return
     }
@@ -1666,7 +1668,7 @@ fn tilemo-workspace {
 
 # The session-name prefix for a backend (shpool or tmux), from the tide
 # workspace the terminal was opened on (tide SPEC.md §6.5), or with
-# TIDE_WORKSPACE unset, tilemo's file. Mirrors shrc's session_prefix.
+# TIDE_WORKSPACE unset, tide for macOS's file. Mirrors shrc's session_prefix.
 fn session-prefix {|backend|
     var own = (env-or SHPOOL_PREFIX '')
     var sep = ':'
@@ -1677,7 +1679,7 @@ fn session-prefix {|backend|
     }
     if (not-eq $own '') { put $own; return }
     var ws = (env-or TIDE_WORKSPACE '')
-    if (not (has-env TIDE_WORKSPACE)) { set ws = (tilemo-workspace) }
+    if (not (has-env TIDE_WORKSPACE)) { set ws = (tide-workspace) }
     if (==s $ws '') { put ''; return }
     put $ws$sep
 }
