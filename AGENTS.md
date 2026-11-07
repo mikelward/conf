@@ -1,7 +1,7 @@
 ---
 trigger: always_on
 alwaysApply: true
-last_modified: 2026-11-05
+last_modified: 2026-11-07
 ---
 
 # conf
@@ -52,6 +52,10 @@ Shared by every mikelward repo and the user-level agent config; canonical in mik
 ### Pull requests
 
 - **Opening**. Open the PR unasked; update its title and body before each push.
+- **Descriptions**. Scope, rationale and test plan, plus the change's privacy,
+  reliability and cost impact (say "none" where there is none).
+- **TODO.md**. Tick an item off in the PR that implements it, not a follow-up. Don't
+  spend a CI run on trivia.
 - **Watching**. PR events plus one scheduled check (events miss CI success and Codex's
   👍).
 - **Auto-merge**. Enable it on PRs that target `main`; stack dependent ones.
@@ -97,7 +101,9 @@ Shared by every mikelward repo and the user-level agent config; canonical in mik
   not structure. No sleeps or retries; never disable a failing check.
 - **Docs**. Keep `SPEC.md` and `README.md` current.
 - **CI**. Wait for it before claiming success.
-- **Errors**. Never swallow one; log it with context and clean up.
+- **Errors**. Never swallow one silently: every catch logs it with context (no user
+  data), cleans up what the `try` acquired, and handles the case explicitly. To ignore
+  one on purpose, say why in a comment and still log it at debug level.
 - **Cost**. State the cost and reliability of new dependencies or services up front.
 - **Privacy**. No user data (personal paths, hostnames, tokens, keys, private remotes)
   leaves this machine; use placeholders.
