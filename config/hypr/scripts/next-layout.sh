@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # Moves every keyboard to the next keyboard layout, for Super+Alt+Space
-# (tide SPEC.md §16). Hyprland 0.56.2's `switchxkblayout all next` moves
+# (tide SPEC.md §16). Hyprland 0.57.1's `switchxkblayout all next` moves
 # each keyboard on from its own layout, so a keyboard plugged in after a
 # switch, which starts on the first, would stay out of step for good.
 # Instead this takes the layout after the main keyboard's (the one last

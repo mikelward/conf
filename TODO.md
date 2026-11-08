@@ -73,7 +73,7 @@ Delete an entry once you have agreed with it or reversed it.
       change there, or `HYPR_MOUSE_SCROLL_FACTOR` per machine.
 
 - [ ] **Hyprland's missing-hyprland-guiutils warning is turned off.** The
-      tide source build of Hyprland 0.56 doesn't include
+      tide source build of Hyprland 0.57 doesn't include
       hyprland-guiutils, which draws Hyprland's own dialogs: "app not
       responding", and permission prompts for things like screen capture by
       unknown apps (Hyprland disables that permission control without it).

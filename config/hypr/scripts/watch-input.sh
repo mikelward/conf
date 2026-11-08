@@ -3,7 +3,7 @@
 # Runs apply-input.sh again whenever an input device is plugged in, such as
 # the mouse a KVM switch hands back, so it gets its handedness and wheel
 # speed too. apply-input.sh runs at login and after each reload, but
-# Hyprland (0.56) has no event for a new device, so this listens to udev.
+# Hyprland (0.57.1) has no event for a new device, so this listens to udev.
 #
 # hyprland.lua starts it at login outside the tide session; tide's shell
 # starts it in the tide session. It ends once Hyprland has gone.

@@ -1,6 +1,6 @@
 # Hyprland Wayland desktop
 
-A dynamic-tiling Wayland desktop for **Hyprland 0.56+**, configured in Lua
+A dynamic-tiling Wayland desktop for **Hyprland 0.57+**, configured in Lua
 (`hyprland.lua`; Hyprland no longer reads `hyprland.conf`). Tiling comes from
 the [tide](https://github.com/mikelward/tide) layout when it is
 installed (tile, three-column, two columns + stack and monocle, per
@@ -49,7 +49,7 @@ The packages `setup` installs (names vary by distro; Hyprland is first-class on
 Arch, `setup` auto-enables the `lionheartp/Hyprland` COPR on Fedora, and on
 Debian/Ubuntu the hypr* tools may need a backport or manual build):
 
-    hyprland (0.56+) hypridle hyprlock xdg-desktop-portal-hyprland
+    hyprland (0.57+) hypridle hyprlock xdg-desktop-portal-hyprland
     waybar fuzzel swaync swww
     power-profiles-daemon
     pipewire wireplumber pavucontrol      # volume/sound
