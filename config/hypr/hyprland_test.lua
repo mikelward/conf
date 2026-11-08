@@ -68,6 +68,8 @@ local TIDE_APPEARANCE = ".config/hypr/tide-appearance.lua"
 local TIDE_POWER = ".config/hypr/tide-power.lua"
 local TIDE_WORKSPACES = ".config/hypr/tide-workspaces.lua"
 local TIDE_FLOATING = ".config/hypr/tide-floating.lua"
+local TIDE_KEYS = ".config/hypr/tide-keys.lua"
+local KEYS_FILE = "run/hypr/sig1/tide-keys.json"
 local LID_FILE = "run/hypr/sig1/tide-lid"
 local HOMES_FILE = "run/hypr/sig1/tide-homes"
 
@@ -429,7 +431,7 @@ end
 -- (whose lid state file survives).
 local function load(setup)
     if not (setup and setup.keep_files) then
-        assert(os.execute("rm -rf '" .. tmp .. "/" .. LAYOUT .. "' '" .. tmp .. "/" .. LOCAL .. "' '" .. tmp .. "/" .. TIDE_INPUT .. "' '" .. tmp .. "/" .. TIDE_OUTPUTS .. "' '" .. tmp .. "/" .. TIDE_APPEARANCE .. "' '" .. tmp .. "/" .. TIDE_WORKSPACES .. "' '" .. tmp .. "/" .. TIDE_POWER .. "' '" .. tmp .. "/" .. TIDE_FLOATING .. "'"))
+        assert(os.execute("rm -rf '" .. tmp .. "/" .. LAYOUT .. "' '" .. tmp .. "/" .. LOCAL .. "' '" .. tmp .. "/" .. TIDE_INPUT .. "' '" .. tmp .. "/" .. TIDE_OUTPUTS .. "' '" .. tmp .. "/" .. TIDE_APPEARANCE .. "' '" .. tmp .. "/" .. TIDE_WORKSPACES .. "' '" .. tmp .. "/" .. TIDE_POWER .. "' '" .. tmp .. "/" .. TIDE_FLOATING .. "' '" .. tmp .. "/" .. TIDE_KEYS .. "'"))
     end
     if not (setup and setup.reload) then
         -- rm -rf, since a failed test can leave a directory in its place.
@@ -475,9 +477,20 @@ local function load(setup)
     if setup and setup.floating then
         write(TIDE_FLOATING, setup.floating)
     end
+    if setup and setup.keys then
+        write(TIDE_KEYS, setup.keys)
+    end
     env_overrides = { XDG_RUNTIME_DIR = tmp .. "/run", HYPRLAND_INSTANCE_SIGNATURE = "sig1", XDG_CURRENT_DESKTOP = false }
     for k, v in pairs((setup and setup.env) or {}) do
         env_overrides[k] = v
+    end
+    -- Hyprland makes its instance's runtime directory before reading the
+    -- config.
+    -- Not for a test with no runtime directory (""), which would make one
+    -- at the root.
+    local run_dir, sig = env_overrides.XDG_RUNTIME_DIR, env_overrides.HYPRLAND_INSTANCE_SIGNATURE
+    if type(sig) == "string" and sig ~= "" and type(run_dir) == "string" and run_dir ~= "" then
+        assert(os.execute("mkdir -p '" .. env_overrides.XDG_RUNTIME_DIR .. "/hypr/" .. env_overrides.HYPRLAND_INSTANCE_SIGNATURE .. "'"))
     end
     _G.fake_layout = nil
     _G.hl = new_hl()
@@ -3039,6 +3052,189 @@ test("the template is all comments, and loads cleanly as a local file", function
     end
     load({ ["local"] = body })
     eq(0, #S.notifications)
+end)
+
+--------------------------------------------------------------------------------
+-- tide's keys (tide SPEC.md §16)
+--------------------------------------------------------------------------------
+-- tide-keys.json as { name = { does, defaults, keys, at } }, at its place in
+-- the list.
+local function listed_keys()
+    local f = assert(io.open(tmp .. "/" .. KEYS_FILE))
+    local text = f:read("a")
+    f:close()
+    local function strings(list)
+        local out = {}
+        for v in list:gmatch('"(.-)"') do
+            table.insert(out, v)
+        end
+        return out
+    end
+    local out, n = {}, 0
+    for name, does, defaults, keys in text:gmatch('{"name":"(.-)","does":"(.-)","defaults":(%b[]),"keys":(%b[])}') do
+        n = n + 1
+        out[name] = { does = does, defaults = strings(defaults), keys = strings(keys), at = n }
+    end
+    return out, n
+end
+
+-- Two lists of strings are the same, in order.
+local function same(want, got, what)
+    eq(table.concat(want, " | "), table.concat(got or { "(nil)" }, " | "), what)
+end
+
+local function bound(keys)
+    return S.binds["|" .. keys]
+end
+
+test("the named bindings are listed for tide, in order, with what each does and its keys", function()
+    load({ layout = FAKE_LAYOUT })
+    local keys, n = listed_keys()
+    truthy(n > 50, "most bindings are named; " .. n .. " listed")
+    eq("Terminal", keys.terminal.does)
+    eq(1, keys.terminal.at, "the first in the file")
+    same({ "SUPER + T" }, keys.terminal.defaults)
+    same({ "SUPER + T" }, keys.terminal.keys)
+    same({ "SUPER + grave", "SUPER + O" }, keys.monocle.keys, "both of monocle's")
+    same({ "SHIFT + Print", "SUPER + Print" }, keys.screenshot_region.keys)
+    eq(nil, keys["Workspace 1 on the bar"], "Super+1…9 aren't named")
+    for name, k in pairs(keys) do
+        truthy(k.does ~= "", name .. " says what it does")
+        truthy(name:match("^[a-z_]+$"), name .. " is a plain name")
+    end
+    eq(0, #S.notifications)
+end)
+
+test("tide-keys.lua's keys replace a binding's defaults, and none turns it off", function()
+    load({ keys = [[return { keys = { terminal = { "SUPER + D", "SUPER + CTRL + T" }, lock = {} } }]] })
+    eq(nil, bound("SUPER + T"), "the default is free")
+    eq("kitty", bound("SUPER + D").target.args)
+    eq("kitty", bound("SUPER + CTRL + T").target.args)
+    eq("Terminal", bound("SUPER + D").opts.description)
+    eq(nil, bound("SUPER + L"), "lock is off")
+    local keys = listed_keys()
+    same({ "SUPER + D", "SUPER + CTRL + T" }, keys.terminal.keys)
+    same({ "SUPER + T" }, keys.terminal.defaults)
+    same({}, keys.lock.keys)
+    eq("~/scripts/runenv browser1", bound("SUPER + G").target.args, "the rest keep theirs")
+    eq(0, #S.notifications)
+end)
+
+test("a binding given another's default keys takes them, and the other goes without", function()
+    load({ keys = [[return { keys = { lock = { "SUPER + T" } } }]] })
+    eq("Lock", bound("SUPER + T").opts.description)
+    same({}, listed_keys().terminal.keys)
+    eq(0, #S.notifications, "the swap is tide's to ask about, not an error")
+end)
+
+test("keys a fixed binding or another given binding has are refused, and said so", function()
+    load({ keys = [[return { keys = {
+        terminal = { "SUPER + 1", "SUPER + D" },
+        files = { "super + d" },
+        lock = { "SHIFT + SUPER + L" },
+    } }]] })
+    eq("Workspace 1 on the bar", bound("SUPER + 1").opts.description, "Super+1 stays the workspace's")
+    eq("kitty", bound("SUPER + D").target.args, "the first given in the file's order keeps it")
+    local keys = listed_keys()
+    same({ "SUPER + D" }, keys.terminal.keys)
+    same({}, keys.files.keys)
+    same({ "SHIFT + SUPER + L" }, keys.lock.keys, "modifiers in any order")
+    eq(1, #S.notifications)
+    local text = S.notifications[1].text
+    truthy(text:find("terminal can't have SUPER + 1, which is kept for something else", 1, true), text)
+    truthy(text:find("files can't have super + d, which terminal has", 1, true), text)
+end)
+
+test("a name tide-keys.lua has and this file doesn't is reported, and the rest applied", function()
+    load({ keys = [[return { keys = { teleport = { "SUPER + D" }, lock = { "SUPER + X" } } }]] })
+    eq("Lock", bound("SUPER + X").opts.description)
+    eq(nil, bound("SUPER + D"))
+    eq(1, #S.notifications)
+    truthy(S.notifications[1].text:find("no binding is called teleport", 1, true), S.notifications[1].text)
+end)
+
+test("a broken or wrong tide-keys.lua is reported, and every key is its default", function()
+    for _, text in ipairs({
+        "this is not lua",
+        "return 1",
+        [[return { keys = {}, extra = 1 }]],
+        [[return { keys = { lock = "SUPER + X" } }]],
+        [[return { keys = { lock = { "SUPER + X", 2 } } }]],
+        [[return { keys = { lock = { [1] = "SUPER + X", [3] = "SUPER + Y" } } }]],
+        [[return { keys = { lock = { "" } } }]],
+        [[return { keys = { [1] = { "SUPER + X" } } }]],
+        [[return { keys = { lock = { "a", "b", "c", "d", "e", "f", "g", "h", "i" } } }]],
+        [[os.exit(1)]],
+    }) do
+        load({ keys = text })
+        eq(1, #S.notifications, text)
+        truthy(S.notifications[1].text:find("tide-keys.lua (none of it applied", 1, true), S.notifications[1].text)
+        eq("Lock", bound("SUPER + L").opts.description, text)
+        eq(nil, bound("SUPER + X"), text)
+    end
+end)
+
+test("conf_keys.reload binds the file's new keys, freeing the old ones", function()
+    load()
+    eq("function", type(conf_keys.reload))
+    write(TIDE_KEYS, [[return { keys = { lock = { "SUPER + X" }, monocle = { "SUPER + grave" } } }]])
+    conf_keys.reload()
+    eq(nil, bound("SUPER + L"))
+    eq("Lock", bound("SUPER + X").opts.description)
+    eq(nil, bound("SUPER + O"), "monocle keeps one of its two")
+    truthy(bound("SUPER + grave"), "monocle's other")
+    remove(TIDE_KEYS)
+    conf_keys.reload()
+    eq(nil, bound("SUPER + X"), "back to the defaults")
+    eq("Lock", bound("SUPER + L").opts.description)
+    truthy(bound("SUPER + O"))
+    same({ "SUPER + L" }, listed_keys().lock.keys)
+    eq(0, #S.notifications)
+end)
+
+test("tide records keys in its own submap, which Esc leaves and nothing else binds", function()
+    load()
+    local count = 0
+    for id in pairs(S.binds) do
+        if id:sub(1, #"tide-keys|") == "tide-keys|" then
+            count = count + 1
+        end
+    end
+    eq(1, count)
+    truthy(is_dsp(bind("escape", "tide-keys").target, "submap"), "Esc leaves")
+end)
+
+test("hyprland.local.lua's keys stay its own through a reload of tide's keys", function()
+    load({ ["local"] = "hl.unbind('SUPER + E')\nhl.bind('SUPER + E', hl.dsp.exec_cmd('nautilus'))" })
+    same({}, listed_keys().files.keys, "Files gave up Super+E")
+    write(TIDE_KEYS, [[return { keys = { lock = { "SUPER + X" }, terminal = { "SUPER + E" } } }]])
+    conf_keys.reload()
+    eq("nautilus", bound("SUPER + E").target.args)
+    same({}, listed_keys().terminal.keys)
+    eq(1, #S.notifications)
+    truthy(S.notifications[1].text:find("terminal can't have SUPER + E, which is kept for something else", 1, true), S.notifications[1].text)
+end)
+
+test("a key hyprland.local.lua binds in its own submap leaves the named binding its keys", function()
+    load({ ["local"] = "hl.define_submap('mine', function() hl.bind('SUPER + T', hl.dsp.exec_cmd('nautilus')) end)" })
+    same({ "SUPER + T" }, listed_keys().terminal.keys)
+    write(TIDE_KEYS, [[return { keys = { terminal = { "SUPER + D" } } }]])
+    conf_keys.reload()
+    eq(nil, bound("SUPER + T"), "a reload still frees it")
+    eq("nautilus", bind("SUPER + T", "mine").target.args, "the submap's stays")
+    eq(0, #S.notifications)
+end)
+
+test("a key hyprland.local.lua binds without an unbind first is reported", function()
+    -- The stub refuses a second bind on the same keys, so the local file
+    -- reports its own error too; Hyprland would fire both.
+    load({ ["local"] = "hl.bind('SUPER + E', hl.dsp.exec_cmd('nautilus'))" })
+    local found = false
+    for _, n in ipairs(S.notifications) do
+        found = found or n.text:find("SUPER + E does both files and what hyprland.local.lua binds it to", 1, true) ~= nil
+    end
+    truthy(found, "reported")
+    same({}, listed_keys().files.keys)
 end)
 
 os.execute("rm -rf '" .. tmp .. "'")

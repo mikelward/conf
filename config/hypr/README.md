@@ -154,8 +154,29 @@ the tiling controls sit on symbol keys so they don't take the letters. The
 table is the tide spec's (SPEC.md §6.6).
 
 Each binding says what it does with `does("...")`, its `hl.bind`
-description, which tide's settings panel lists on its Keys page;
+description, which tide's Keyboard shortcuts list (tide SPEC.md §16);
 `hyprland_test.lua` fails on a binding without one.
+
+Most bindings also have a name, `bind("terminal", key("T"), ...)`, so
+tide's Keyboard shortcuts can give them other keys:
+
+- tide writes your keys to `~/.config/hypr/tide-keys.lua`, as
+  `{ keys = { terminal = { "SUPER + D" }, lock = {} } }`. A binding listed
+  there gets those keys in place of its defaults; an empty list turns it
+  off.
+- `hyprland.lua` reads it as data. A broken file is reported and ignored,
+  so every key is its default; a name it doesn't know is reported and
+  skipped. tide applies a change with `conf_keys.reload()`.
+- A binding given another's default keys takes them, and the other goes
+  without. Keys that two listed bindings share, or that a fixed binding or
+  `hyprland.local.lua` has, are refused and reported.
+- The fixed ones keep their keys: the mouse, the media and brightness keys,
+  the Super tap, `SUPER + 0…9`, and the app keys a pinned window keeps.
+- tide records new keys in the `tide-keys` submap, where no other binding
+  fires; Esc leaves it.
+- Each named binding's name, description, defaults and keys now go to
+  `$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/tide-keys.json`, for
+  tide's list.
 
 ### Apps / session
 
