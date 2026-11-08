@@ -130,26 +130,37 @@ bindsym $mod+Insert floating toggle
 floating_modifier $mod normal
 bindsym --whole-window $mod+button2 maximize toggle
 
-# Workspaces by name, 1 to 9: tidewm has no "the bar's nth workspace" yet.
-bindsym $mod+1 workspace number 1
-bindsym $mod+2 workspace number 2
-bindsym $mod+3 workspace number 3
-bindsym $mod+4 workspace number 4
-bindsym $mod+5 workspace number 5
-bindsym $mod+6 workspace number 6
-bindsym $mod+7 workspace number 7
-bindsym $mod+8 workspace number 8
-bindsym $mod+9 workspace number 9
-bindsym $mod+Shift+1 move container to workspace number 1
-bindsym $mod+Shift+2 move container to workspace number 2
-bindsym $mod+Shift+3 move container to workspace number 3
-bindsym $mod+Shift+4 move container to workspace number 4
-bindsym $mod+Shift+5 move container to workspace number 5
-bindsym $mod+Shift+6 move container to workspace number 6
-bindsym $mod+Shift+7 move container to workspace number 7
-bindsym $mod+Shift+8 move container to workspace number 8
-bindsym $mod+Shift+9 move container to workspace number 9
-bindsym $mod+Tab workspace back_and_forth
+# Workspaces (tide SPEC.md §6.6): Super+1 to 9 go to the bar's nth, and
+# Super+0 to its last, and Shift sends the focused window there; Super+Home
+# goes home; Super+Tab goes home, and from home back to the last other
+# workspace; and Super+End goes to the last other than home and this one.
+# tidewm knows neither the bar's order nor home, so tide's shell does them,
+# and without it a notification says so.
+set $workspaces qs -c tide ipc call workspaces
+set $no_shell notify-send -a tide 'No workspace keys' 'Super with a number, Home, Tab or End needs the tide shell, which is not running.'
+bindsym $mod+1 exec $workspaces go 1 || $no_shell
+bindsym $mod+2 exec $workspaces go 2 || $no_shell
+bindsym $mod+3 exec $workspaces go 3 || $no_shell
+bindsym $mod+4 exec $workspaces go 4 || $no_shell
+bindsym $mod+5 exec $workspaces go 5 || $no_shell
+bindsym $mod+6 exec $workspaces go 6 || $no_shell
+bindsym $mod+7 exec $workspaces go 7 || $no_shell
+bindsym $mod+8 exec $workspaces go 8 || $no_shell
+bindsym $mod+9 exec $workspaces go 9 || $no_shell
+bindsym $mod+0 exec $workspaces go 0 || $no_shell
+bindsym $mod+Shift+1 exec $workspaces send 1 || $no_shell
+bindsym $mod+Shift+2 exec $workspaces send 2 || $no_shell
+bindsym $mod+Shift+3 exec $workspaces send 3 || $no_shell
+bindsym $mod+Shift+4 exec $workspaces send 4 || $no_shell
+bindsym $mod+Shift+5 exec $workspaces send 5 || $no_shell
+bindsym $mod+Shift+6 exec $workspaces send 6 || $no_shell
+bindsym $mod+Shift+7 exec $workspaces send 7 || $no_shell
+bindsym $mod+Shift+8 exec $workspaces send 8 || $no_shell
+bindsym $mod+Shift+9 exec $workspaces send 9 || $no_shell
+bindsym $mod+Shift+0 exec $workspaces send 0 || $no_shell
+bindsym $mod+Home exec $workspaces home || $no_shell
+bindsym $mod+Tab exec $workspaces homeOrBack || $no_shell
+bindsym $mod+End exec $workspaces lastOther || $no_shell
 bindsym $mod+Page_Up workspace prev
 bindsym $mod+Page_Down workspace next
 bindsym $mod+Shift+Page_Up move container to workspace prev

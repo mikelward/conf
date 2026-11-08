@@ -110,6 +110,62 @@ _missing=$(grep -oE 'hl\.bind\(key\("[^"]+"\), exec\("qs -c tide ipc call [a-z ]
 done)
 assert_equal "" "$_missing"
 
+# A key's exec, as tidewm runs it: what follows "exec" on the key's line,
+# with the variables set before it in place, longest name first, as
+# tidewm's set does.
+exec_of() {
+    awk -v key="$1" '
+        $1 == "set" { name = $2; $1 = ""; $2 = ""; sub(/^[[:space:]]+/, ""); vars[name] = $0; next }
+        $1 == "bindsym" && $2 == key && $3 == "exec" {
+            $1 = ""; $2 = ""; $3 = ""; sub(/^[[:space:]]+/, "")
+            do {
+                best = ""
+                for (v in vars) if (index($0, v) && length(v) > length(best)) best = v
+                if (best != "") { i = index($0, best); $0 = substr($0, 1, i - 1) vars[best] substr($0, i + length(best)) }
+            } while (best != "")
+            print; exit }' "$_cfg"
+}
+
+# Runs KEY's exec with a qs that exits QS_STATUS and a notify-send, each
+# writing its arguments to the log, and prints the log.
+run_key() {
+    _bin="$_testdir/tidewm-bin"
+    mkdir -p "$_bin"
+    printf '#!/bin/sh\necho "qs $*" >>"%s/tidewm-run.log"\nexit %s\n' "$_testdir" "$2" >"$_bin/qs"
+    printf '#!/bin/sh\necho "notify-send $*" >>"%s/tidewm-run.log"\n' "$_testdir" >"$_bin/notify-send"
+    chmod +x "$_bin/qs" "$_bin/notify-send"
+    : >"$_testdir/tidewm-run.log"
+    PATH="$_bin:$PATH" sh -c "$(exec_of "$1")"
+    cat "$_testdir/tidewm-run.log"
+}
+
+# tide SPEC.md §6.6's workspace keys, which tidewm can't do itself: tide's
+# shell keeps the bar's order and the workspaces used.
+start_test "Super with a number goes to the bar's nth workspace through tide's shell, Super+0 its last"
+for _n in 1 2 3 4 5 6 7 8 9 0; do
+    assert_equal "qs -c tide ipc call workspaces go $_n" "$(run_key "\$mod+$_n" 0)"
+done
+
+start_test "Super+Shift with a number sends the focused window there through tide's shell"
+for _n in 1 2 3 4 5 6 7 8 9 0; do
+    assert_equal "qs -c tide ipc call workspaces send $_n" "$(run_key "\$mod+Shift+$_n" 0)"
+done
+
+start_test "Super+Home, Super+Tab and Super+End go home, home or back, and to the last other workspace"
+assert_equal "qs -c tide ipc call workspaces home" "$(run_key '$mod+Home' 0)"
+assert_equal "qs -c tide ipc call workspaces homeOrBack" "$(run_key '$mod+Tab' 0)"
+assert_equal "qs -c tide ipc call workspaces lastOther" "$(run_key '$mod+End' 0)"
+
+start_test "without tide's shell, a workspace key says it needs it"
+for _k in '$mod+1' '$mod+0' '$mod+Shift+1' '$mod+Shift+0' '$mod+Home' '$mod+Tab' '$mod+End'; do
+    _log=$(run_key "$_k" 1)
+    assert_contains "notify-send -a tide No workspace keys" "$_log"
+    assert_contains "needs the tide shell" "$_log"
+done
+
+start_test "no key goes to a workspace by its name, which isn't its place on the bar"
+assert_equal "" "$(grep -E '^bindsym .*workspace number [0-9]' "$_cfg" || true)"
+
 # hyprland.lua's screenshot keys named as one string, as "ALT + Print",
 # exec(screenshot .. " --window"): each runs the same screenshot here.
 start_test "each of hyprland.lua's screenshot keys takes the same shot here"
