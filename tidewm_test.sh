@@ -14,6 +14,12 @@ _hypr="$_srcdir/config/hypr/hyprland.lua"
 start_test "exists: tidewm/config"
 assert_true test -f "$_cfg"
 
+# The file with each binding's --name=NAME left out, for the checks of
+# what a key runs, which don't care what it's called.
+_named_cfg=$_cfg
+_cfg="$_testdir/tidewm-config"
+sed 's/^\(bindsym .*\)--name=[a-z0-9_]* /\1/' "$_named_cfg" >"$_cfg"
+
 # The file's lines, comments and blank lines left out, with an input
 # block's lines (input NAME { ... }) prefixed "  " so they read as
 # settings. A mode's lines (mode NAME { ... }) are bindings, read as the
@@ -52,12 +58,13 @@ _unknown=$(printf '%s\n' "$_bindings" | while IFS= read -r _cmd; do
 done | grep -vxE 'exec|kill|exit|layout|mfact|nmaster|zoom|focus|maximize|fullscreen|floating|workspace|move|movestack|resize|input|output|mode|reload|grant|dim|sticky|urgent|nop|rename|persist|unpersist|chvt|unlock|switch' || true)
 assert_equal "" "$_unknown"
 
-# A key, as tidewm matches it: its modifiers in any order, and any case.
-# A press is "-", so read never sees an empty first field.
-_keys=$(printf '%s\n' "$_lines" | awk '$1 == "bindsym" {
-    i = 2; flags = ""
+# A key, as tidewm matches it: its modifiers in any order, and any case,
+# in its mode, as each mode has keys of its own. A press is "-", so read
+# never sees an empty first field.
+_keys=$(awk '/^mode / { mode = $2 } /^}/ { mode = "" } $1 == "bindsym" {
+    i = 2; flags = mode
     while ($i ~ /^--/) { if ($i == "--release" || $i == "--kept-open") flags = flags $i; i++ }
-    print (flags == "" ? "-" : flags) " " tolower($i) }' | while read -r _flags _combo; do
+    print (flags == "" ? "-" : flags) " " tolower($i) }' "$_cfg" | while read -r _flags _combo; do
     printf '%s %s\n' "$_flags" "$(printf '%s\n' "$_combo" | tr '+' '\n' | sort | tr '\n' '+')"
 done)
 start_test "no key is bound twice"
@@ -177,6 +184,43 @@ done)
 assert_equal "" "$_missing"
 start_test "the focused window's screenshot is bound"
 assert_contains 'bindsym Alt+Print exec $runenv screenshot --window' "$(cat "$_cfg")"
+
+# tide's Keyboard shortcuts (tide SPEC.md §16) give a named binding other
+# keys: every one takes the name hyprland.lua gives it, so keys.json serves
+# both, and each name runs one thing.
+_names=$(sed -n 's/^bindsym .*--name=\([a-z0-9_]*\) .*/\1/p' "$_named_cfg" | sort -u)
+start_test "the shortcuts tide can change are named"
+assert_true test -n "$_names"
+for _k in '$mod+t terminal' '$mod+space launcher' '$mod+l lock' '$mod+BackSpace close' \
+    '$mod+Shift+f float' '$mod+Insert float' '$mod+Tab home_or_back' 'Alt+Print screenshot_window'; do
+    set -- $_k
+    assert_contains "--name=$2 $1 " "$(cat "$_named_cfg")"
+done
+
+start_test "a name's lines all run the same thing, with the same flags"
+_differ=$(for _n in $_names; do
+    grep -E "^bindsym (--[a-z-]+ )*--name=$_n " "$_named_cfg" | awk '{
+        rest = ""; flags = ""
+        for (i = 2; i <= NF; i++) if ($i ~ /^--/) { if ($i !~ /^--name=/) flags = flags $i } else break
+        for (j = i + 1; j <= NF; j++) rest = rest " " $j
+        print flags rest }' | sort -u | awk -v n="$_n" 'NR == 2 { print n }'
+done)
+assert_equal "" "$_differ"
+
+# tide's own names (terminal, launcher and the rest) are in tide's
+# hyprland.lua; this setup's apps are named in conf's.
+start_test "each of hyprland.lua's apps has its name here"
+_apps=$(grep -oE '(app|t\.bind)\("[a-z0-9_]+"' "$_hypr" | sed 's/.*"\(.*\)"/\1/' | sort -u)
+assert_true test -n "$_apps"
+assert_equal "" "$(printf '%s\n' "$_apps" | grep -vxF "$_names" || true)"
+
+start_test "the keys Hyprland keeps fixed aren't named here either"
+assert_equal "" "$(grep -E '^bindsym .*--name=.* (\$mod\+(Shift\+)?[0-9]|XF86|Super_L|Ctrl\+w|Ctrl\+Shift\+w|Ctrl\+q|Alt\+F4) ' "$_named_cfg" || true)"
+assert_equal "" "$(grep -E -- '--(release|kept-open|whole-window).*--name=|--name=.*--(release|kept-open|whole-window)' "$_named_cfg" || true)"
+
+start_test "tide records a shortcut's keys in a mode where only Esc is bound"
+_mode=$(awk '/^mode "tide-keys" {/ { on = 1; next } on && /^}/ { on = 0 } on' "$_cfg" | sed 's/^[[:space:]]*//')
+assert_equal 'bindsym Escape mode default' "$_mode"
 
 start_test "the settings tide's shell writes are included, last, so they win"
 assert_equal "include tide-*.conf" "$(printf '%s\n' "$_lines" | tail -n 1)"
