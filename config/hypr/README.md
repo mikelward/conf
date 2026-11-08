@@ -260,6 +260,7 @@ back to its own, each window's monitor noted as it opens and as you move it.
 | `SUPER + \` / `SUPER + /` | Grow / shrink the master area (mfact ±0.025) |
 | `SUPER + =` / `SUPER + -` | Add / remove a master |
 | `SUPER + .` / `SUPER + ,` | Next / previous layout |
+| none | The layout used last, so two presses come back (tide's layout; dwm's preset in tide's Keyboard shortcuts gives it `SUPER + Space`) |
 | `SUPER + \`` (backtick), `SUPER + O` | Toggle monocle |
 | `SUPER + Up` / `SUPER + Shift + Up` / `SUPER + Down` | Maximize (bar stays) / fullscreen / restore |
 | `SUPER + Shift + F` / `SUPER + Insert` | Toggle floating; floating a window no rule covers has tide's shell ask, once a session for each app, whether to always float it |

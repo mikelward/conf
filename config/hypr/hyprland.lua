@@ -475,6 +475,8 @@ if qs then
     act = {
         next_layout = qs.cycle_next,
         prev_layout = qs.cycle_prev,
+        -- An older layout without it has no layout used last.
+        last_layout = qs.last_mode,
         monocle = qs.toggle_monocle,
         grow = qs.grow,
         shrink = qs.shrink,
@@ -1086,6 +1088,11 @@ bind("quit", key("SHIFT + E"), hl.dsp.exit(), does("Quit Hyprland"))
 -- Layouts.
 bind("next_layout", key("period"), act.next_layout, does("Next layout"))
 bind("previous_layout", key("comma"), act.prev_layout, does("Previous layout"))
+-- No key of its own; dwm's preset gives it Super+Space, as dwm does, and
+-- tide's Keyboard shortcuts can give it any. Master has no layout used last.
+if act.last_layout then
+    bind("last_layout", {}, act.last_layout, does("The layout used last"))
+end
 -- O as in "one window"; it also leaves Super+` free for tide for Chrome,
 -- where Chrome can't bind a backtick.
 bind("monocle", { key("grave"), key("O") }, act.monocle, does("Monocle"))
