@@ -201,121 +201,13 @@ fi
 start_test "sixteen arrow manipulators: left and right Ctrl, Alt and Win, with and without Shift, per arrow"
 assert_equal "16" "$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["rules"][0]["manipulators"]))' "$_arrow_file")"
 
-# tide for macOS's rule (mikelward/tidemo SPEC.md §7.1): physical Win+key becomes
-# Ctrl+Option+Command+key, which tide for macOS registers, so Option keeps its own
-# meanings. Through the rotation that means emitting left_option (Control),
-# left_command (Option) and left_control (Command).
-_macws_file="$_srcdir/config/karabiner/assets/complex_modifications/tide.json"
-
-start_test "tide's rule exists"
-assert_true test -f "$_macws_file"
-
-# The rule was timo.json before the repo was renamed; a copy left behind
-# would list the same rule twice in Karabiner's Add predefined rule list.
-start_test "the old timo.json rule is gone"
-assert_false test -e "$_srcdir/config/karabiner/assets/complex_modifications/timo.json"
-
-_tilemo=$(cat "$_macws_file")
-
-if command -v python3 >/dev/null 2>&1; then
-    start_test "tide's rule is valid JSON"
-    assert_true python3 -m json.tool "$_macws_file" /dev/null
-
-    # tide for macOS finds its rule in karabiner.json by a description starting
-    # "tide:" (tidemo's keys.RULE_PREFIXES, which still accepts the old
-    # "tilemo:" and "timo:"); renaming it turns tide for macOS's keys back to
-    # plain Option.
-    start_test "tide's rule description starts with tide:, which tide for macOS looks for"
-    assert_equal "tide:" "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["rules"][0]["description"][:5])' "$_macws_file")"
-
-    _macws_bad=$(python3 - "$_macws_file" <<'PY'
-import json, sys
-hyper = {"left_option", "left_command", "left_control"}
-for m in json.load(open(sys.argv[1]))["rules"][0]["manipulators"]:
-    f = m["from"]
-    if f.get("key_code") == "left_command":
-        continue
-    # Physical Alt+Tab, tide for macOS's swap with the master: checked below.
-    if f.get("key_code") == "tab" and f["modifiers"]["mandatory"] == ["left_option"]:
-        continue
-    if f["modifiers"]["mandatory"] != ["left_command"] or f["modifiers"].get("optional") != ["shift"]:
-        print("from", f)
-    for t in m["to"]:
-        if set(t["modifiers"]) != hyper:
-            print("to", t)
-PY
-)
-    start_test "every Win combination emits Ctrl+Option+Command, keeping Shift"
-    assert_equal "" "$_macws_bad"
-fi
-
-if command -v python3 >/dev/null 2>&1; then
-    # tide for macOS binds by character in the current layout, so every key of the
-    # typing block has to be mapped, by physical position, for its keys to
-    # work in any layout: on Dvorak, / is the physical [ key and S the ;.
-    _macws_missing=$(python3 - "$_macws_file" <<'PY'
-import json, sys, string
-have = {m["from"].get("key_code") for m in json.load(open(sys.argv[1]))["rules"][0]["manipulators"]}
-block = set(string.ascii_lowercase) | set(string.digits) | {
-    "grave_accent_and_tilde", "hyphen", "equal_sign", "open_bracket", "close_bracket",
-    "backslash", "semicolon", "quote", "comma", "period", "slash"}
-print(" ".join(sorted(block - have)))
-PY
-)
-    start_test "every key of the typing block is tide for macOS's, so Super works in any layout"
-    assert_equal "" "$_macws_missing"
-fi
-
-if command -v python3 >/dev/null 2>&1; then
-    # Win+Backspace is tide for macOS's close, sent on F19: some Macs take
-    # Ctrl+Option+Command+Backspace before tide for macOS sees it, and a chord on a
-    # key no keyboard here has gets through, as the tap's F20 does (tide for macOS
-    # SPEC.md §7.2).
-    _win_backspace=$(python3 - "$_macws_file" <<'PY'
-import json, sys
-for m in json.load(open(sys.argv[1]))["rules"][0]["manipulators"]:
-    if m["from"].get("key_code") == "delete_or_backspace":
-        print(" ".join(t["key_code"] for t in m["to"]))
-PY
-)
-    start_test "Win+Backspace sends Super+F19, tide for macOS's close"
-    assert_equal "f19" "$_win_backspace"
-fi
-
-start_test "tide's rule matches the physical Win key, left_command"
-assert_contains '"mandatory": [' "$_tilemo"
-assert_contains '"left_command"' "$_tilemo"
-
-start_test "a lone Win tap sends Super+F20, tide for macOS's workspace list, not Super+Space"
-assert_contains '"to_if_alone"' "$_tilemo"
-assert_contains '"key_code": "f20"' "$_tilemo"
-
-if command -v python3 >/dev/null 2>&1; then
-    # Physical Alt+Tab is tide for macOS's swap with the master (tidemo SPEC.md
-    # §7.2): left_option (physical Alt) + Tab emits left_option +
-    # left_command + shift, which the rotation turns into
-    # Control+Option+Shift+Tab, a combination nothing else uses. Without
-    # Command, so no Win combination can make it.
-    _alt_tab=$(python3 - "$_macws_file" <<'PY'
-import json, sys
-for m in json.load(open(sys.argv[1]))["rules"][0]["manipulators"]:
-    f = m["from"]
-    if f.get("key_code") == "tab" and f["modifiers"]["mandatory"] == ["left_option"]:
-        t = m["to"][0]
-        print(t["key_code"], "+".join(sorted(t["modifiers"])))
-PY
-)
-    start_test "physical Alt+Tab emits Control+Option+Shift+Tab for tide"
-    assert_equal "tab left_command+left_option+shift" "$_alt_tab"
-fi
-
-start_test "Win+click and Win+drag carry the same modifiers, for tide for macOS's mouse"
-assert_contains '"pointing_button": "button1"' "$_tilemo"
-assert_contains '"pointing_button": "button2"' "$_tilemo"
-assert_contains '"pointing_button": "button3"' "$_tilemo"
-
-start_test "tide's rule doesn't use the left_alt spelling"
-assert_not_contains '"left_alt"' "$_tilemo"
+# tide for macOS's rule, for its Super key, is tide's own now
+# (mikelward/tidemo hammerspoon/tide/karabiner/), installed by its
+# installer; a copy here would list the same rule twice in Karabiner.
+for _old in tide.json tilemo.json timo.json; do
+    start_test "tide's rule isn't here: $_old"
+    assert_false test -e "$_srcdir/config/karabiner/assets/complex_modifications/$_old"
+done
 
 # --- Terminals: Ctrl is Control and Alt is Meta in kitty and Ghostty ---
 #

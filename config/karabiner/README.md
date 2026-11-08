@@ -1,6 +1,6 @@
 # Karabiner-Elements
 
-Complex-modification rules for a PC keyboard, in five files:
+Complex-modification rules for a PC keyboard, in four files:
 
 - `assets/complex_modifications/pc-alt-tab.json` puts the next tab back on
   physical Ctrl+Tab; physical Alt+Tab is tide for macOS's.
@@ -13,9 +13,6 @@ Complex-modification rules for a PC keyboard, in five files:
   Ctrl+Shift+C in Terminal and iTerm2; see [Terminals](#terminals).
 - `assets/complex_modifications/pc-lock.json` makes Ctrl+U clear the
   password at the lock screen, as on Linux; see [Lock screen](#lock-screen).
-- `assets/complex_modifications/tide.json` gives
-  [tide for macOS](https://github.com/mikelward/tidemo) its Super key; see
-  [tide for macOS](#tide-for-macos).
 
 Only the asset file is kept here. Karabiner rewrites
 `~/.config/karabiner/karabiner.json` itself on every UI change, so that file is
@@ -241,64 +238,13 @@ it:
 
 ## tide for macOS
 
-tide for macOS, the macOS tiling desktop, puts tide's keys on Super, the physical Win
-key. The rotation makes Win into Option, and Option already means things on
-a Mac: Option+Backspace deletes a word, the arrow rule above makes
-Option+arrow from Ctrl+arrow, and Option+E and friends are accent dead keys.
-So this rule turns physical Win+key into a combination nothing else uses,
-Ctrl+Option+Command+key, and tide for macOS binds that (tidemo SPEC.md §7.1).
-
-| Physical keys | Emits | macOS sees |
-| --- | --- | --- |
-| Win+key, for each key tide for macOS binds | `left_option`+`left_command`+`left_control`+key | Ctrl+Option+Command+key |
-| Win+Shift+key | the same, plus `shift` | Ctrl+Option+Command+Shift+key |
-| Win+click, Win+right-click, Win+middle-click | the same modifiers, on the button | Super+drag and Super+middle-click in tide for macOS |
-| Win, tapped alone | `f20` with the same modifiers | tide for macOS's launcher, as Super+Space |
-| Win+Backspace | `f19` with the same modifiers | tide for macOS's close, as Super+Backspace: some Macs take Ctrl+Option+Command+Backspace before tide for macOS sees it |
-| Alt+Tab | `left_option`+`left_command`+`shift`+`tab` | Ctrl+Option+Shift+Tab: tide for macOS's swap with the master |
-
-The outputs name the keys the rotation turns into Control, Option and
-Command, by the same layering as the rules above.
-
-- **Every key of the typing block is mapped, by physical position:** the
-  letters, digits and all the punctuation keys, whether tide for macOS binds what's
-  on them in U.S. layout or not. tide for macOS binds its keys by character in the
-  current layout (`hs.hotkey`), so on Dvorak, Super+/ is the physical `[`
-  key and Super+S the physical `;`; a key missing here would type its
-  character instead. Keys off that block that tide for macOS doesn't bind, such as
-  the function keys, are left alone and stay Option.
-
-- **The lone tap is Super+F20,** a key no PC keyboard here has, so tide for macOS
-  tells it from Super+Space. Both open its launcher now, as tide's tap and
-  chromeOS's Search tap do (tidemo SPEC.md §7.2, §9). The rule's
-  description still says the workspace list: Tide Settings' Keyboard page
-  knows an enabled rule by its whole description, so changing it would
-  show the rule as off until it's added again.
-- **Alt+Tab is Ctrl+Option+Shift+Tab,** without Command, so no Win
-  combination makes it. Physical Alt+Shift+Tab is left to the rotation, as
-  Shift+Ctrl+Tab, the previous tab.
-
-- **Enable it above the arrow rule.** Both match Win+Left/Right, and
-  Karabiner uses the first rule that matches, with newly added rules at the
-  top. tide for macOS's window keys (Win+Left/Right to select a window, Win+Shift+Left/Right
-  to move it, across displays) take Win+arrow over the Spaces shortcut.
-- **tide for macOS finds it by its description,** which starts `tide:`. Without it,
-  tide for macOS puts its keys on plain Option and says so once.
-- **A rule enabled before the rename still works.** tide for macOS was called
-  tilemo, and timo before that, and its rule's description started `tilemo:`
-  or `timo:`; tide for macOS accepts all three prefixes while the rename
-  settles. Removing the rule and adding it again, as in
-  [Enabling it](#enabling-it), gives it the new `tide:` name. `confinst`
-  doesn't prune, so the old `tilemo.json` and `timo.json` links in
-  `~/.config/karabiner/assets/complex_modifications/` are left dangling;
-  delete them.
-- **The mouse needs enabling too.** Karabiner leaves mouse devices alone by
-  default, so Win+click, Win+drag and Win+middle-click only carry Super once
-  Modify events is turned on beside the mouse or trackpad under Devices
-  ([Karabiner's mouse button docs](https://karabiner-elements.pqrs.org/docs/help/how-to/mouse-button/)).
-  Until then, tide for macOS's mouse gestures see plain Option.
-- Whether a click while Win is held cancels the lone tap, as a key does, is
-  *(unverified)*.
+[tide for macOS](https://github.com/mikelward/tidemo)'s Super key is its
+own rule now, in tidemo's `hammerspoon/tide/karabiner/`: its installer
+copies it into Karabiner's folder, and `setup-macos` asks for the physical
+Win key's (`--super win`), which turns the rotation's Option into
+Ctrl+Option+Command. Tide Settings' Keyboard page switches it. `confinst`
+doesn't prune, so an old `tide.json` link here dangles until the installer
+replaces it with tide's file.
 
 ## Enabling it
 
@@ -312,7 +258,8 @@ the list. Enable, in this order:
 2. under "PC keyboard arrows", "Ctrl+Left/Right moves by word, …";
 3. under "PC keyboard terminals", "Ctrl is Control and Alt is Meta in kitty
    and Ghostty", so it sits above the arrow rule;
-4. with tide for macOS, under "tide", the "tide:" rule, so it sits above them;
+4. with tide for macOS, its "tide:" rule, which its installer adds (tide
+   turns it on itself), above them;
 5. under "PC keyboard lock screen", "Ctrl+U clears the password at the lock
    screen", last, above tide for macOS's, which would otherwise take a Mac
    keyboard's Command+U there as Super+U.
@@ -333,7 +280,7 @@ the System Settings page for it.
 
 ## Scope
 
-Only left Ctrl, and in tide for macOS's rule left Alt, are mapped, but for the
+Only left Ctrl, and in tide for macOS's Win rule left Alt, are mapped, but for the
 arrow rule's Ctrl+arrow and Ctrl+Home/End and the lock screen's Ctrl+U,
 which take right Ctrl too. Right Alt is left alone so it stays available as
 a plain modifier, and the rotation still sends it to right Control.
