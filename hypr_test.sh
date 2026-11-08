@@ -434,6 +434,31 @@ run_follow TIDE_BAR=waybar timeout 10 sh "$_themed"
 assert_contains "gsettings set org.gnome.desktop.interface color-scheme" "$(cat "$_tfake/log")"
 rm -f "$_tfake/sleep"
 
+# A suspend stops sleep's time but not the wall clock. The fake sleep logs
+# each sleep, and on its first one the wall clock (the fake date's +%s)
+# jumps a day ahead, past the next boundary, as a long suspend would; its
+# second ends the daemon. The change must come a few seconds after the
+# wake, not after the rest of a sleep that ran to the boundary.
+start_test "theme-daemon.sh re-applies within seconds of a resume past the boundary"
+_real_date=$(command -v date)
+cat > "$_tfake/date" <<FAKE
+#!/bin/sh
+if test "\$*" = +%s && test -s "$_tfake/epoch"; then cat "$_tfake/epoch"; else exec $_real_date "\$@"; fi
+FAKE
+cat > "$_tfake/sleep" <<FAKE
+#!/bin/sh
+printf 'sleep %s\n' "\$1" >> "\$FAKE_LOG"
+if test -s "$_tfake/epoch"; then kill "\$PPID"; exit 0; fi
+echo \$((\$($_real_date +%s) + 86400)) > "$_tfake/epoch"
+FAKE
+chmod +x "$_tfake/date" "$_tfake/sleep"
+rm -f "$_tfake/epoch"
+run_follow TIDE_BAR=waybar timeout 10 sh "$_themed"
+_slept=$(awk '/^gsettings set org.gnome.desktop.interface color-scheme/ { n++; if (n == 2) exit } /^sleep / && n == 1 { t += $2 } END { print t + 0 }' "$_tfake/log")
+assert_equal 2 "$(grep -c '^gsettings set org.gnome.desktop.interface color-scheme' "$_tfake/log")"
+assert_true test "$_slept" -le 5
+rm -f "$_tfake/date" "$_tfake/sleep" "$_tfake/epoch"
+
 # tide's shell runs the hook after each change it makes.
 _hook="$_srcdir/config/tide/appearance-hook"
 start_test "tide's appearance hook restyles for the scheme now, and sets none"

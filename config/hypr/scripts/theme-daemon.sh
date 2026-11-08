@@ -1,7 +1,8 @@
 #!/bin/sh
 #
-# Applies the time-based light/dark theme, then sleeps until the next
-# 07:00/19:00 boundary and re-applies. Runs for the life of the session --
+# Applies the time-based light/dark theme, then waits until the next
+# 07:00/19:00 boundary, by the wall clock so a suspend can't delay it, and
+# re-applies. Runs for the life of the session --
 # started by hyprland.lua's autostart, or by exec in config/sway/config
 # (theme.sh detects which compositor is running) -- so it always has the
 # session's Wayland/D-Bus environment. theme.sh launches waybar and swaync
@@ -39,5 +40,12 @@ while true; do
         ''|*[!0-9]*) secs=3600 ;;
     esac
     test "$secs" -gt 0 2>/dev/null || secs=3600
-    sleep "$secs"
+    # Waits on the wall clock, a few seconds at a time, not one long sleep:
+    # sleep's time stops while the machine is suspended, so a boundary
+    # passed asleep would wait out the rest of the sleep after waking. This
+    # way the change comes within a few seconds of the resume.
+    until=$(($(date +%s) + secs))
+    while test "$(date +%s)" -lt "$until"; do
+        sleep "${THEME_DAEMON_STEP:-5}"
+    done
 done
