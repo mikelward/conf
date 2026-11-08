@@ -168,8 +168,11 @@ Delete an entry once you have agreed with it or reversed it.
 `config/tidewm/config`, for tide's tidewm session, leaves out what tidewm
 can't do yet, each needing tidewm or tide's shell first:
 
-- the bar's nth workspace (Super+1 to 9), and the home workspace
-  (Super+Home, Super+End), which tidewm has no idea of yet;
+- the bar's nth workspace (Super+1 to 9, Super+0), and the home
+  workspace (Super+Home, Super+End), which tidewm has no idea of yet;
+- Super+Tab, which is `workspace back_and_forth`, the last two
+  workspaces, where tide SPEC.md §6.6 flips between home and the last
+  other one;
 - the floating rules (Super+Alt+F), which tide's shell writes for
   Hyprland;
 - dragging the master's edge with Super and the left button, which tide's
