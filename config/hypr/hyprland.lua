@@ -943,28 +943,75 @@ local function does(description, opts)
     return o
 end
 
+-- Most bindings have a name, so tide's Keyboard shortcuts (tide SPEC.md
+-- §16) can give them other keys: bind(name, keys, ...) takes one key or a
+-- list, its defaults, and apply_keys() binds them all at once below, after
+-- tide-keys.lua's changes. The rest, fixed(...), keep their keys: the mouse,
+-- the media keys, the app keys a pinned window keeps, Super+0…9 and the
+-- Super tap. A named binding can't take a fixed one's keys.
+local named_binds = {}
+local named_by = {}
+local fixed_keys = {}
+
+-- A binding's keys as one string to compare, its modifiers in a set order
+-- and its key in lower case, so "SHIFT + SUPER + g" is "SUPER + SHIFT + G".
+local MOD_ORDER = { SUPER = 1, CTRL = 2, ALT = 3, SHIFT = 4 }
+local MOD_ALIAS = { CONTROL = "CTRL", MOD4 = "SUPER", WIN = "SUPER", LOGO = "SUPER", META = "SUPER", MOD1 = "ALT" }
+local function key_id(keys)
+    local mods, last = {}, nil
+    for part in tostring(keys):gmatch("[^+]+") do
+        part = part:match("^%s*(.-)%s*$")
+        if part ~= "" then
+            if last then
+                local m = last:upper()
+                table.insert(mods, MOD_ALIAS[m] or m)
+            end
+            last = part
+        end
+    end
+    table.sort(mods, function(a, b)
+        return (MOD_ORDER[a] or 9) < (MOD_ORDER[b] or 9) or ((MOD_ORDER[a] or 9) == (MOD_ORDER[b] or 9) and a < b)
+    end)
+    table.insert(mods, (last or ""):lower())
+    return table.concat(mods, " + ")
+end
+
+local function fixed(keys, target, opts)
+    fixed_keys[key_id(keys)] = true
+    hl.bind(keys, target, opts)
+end
+
+local function bind(name, keys, target, opts)
+    if named_by[name] then
+        error("bind(" .. name .. "): named twice", 2)
+    end
+    local b = { name = name, defaults = type(keys) == "table" and keys or { keys }, target = target, opts = opts, bound = {} }
+    table.insert(named_binds, b)
+    named_by[name] = b
+end
+
 -- Applications. The helper scripts live in the scripts repo, on the PATH
 -- runenv provides. Super+D is left for hyprland.local.lua.
-hl.bind(key("T"), app(terminal, terminal), does("Terminal"))
-hl.bind(key("W"), app(runenv .. " terminal_on_workstation"), does("Terminal on the workstation"))
-hl.bind(key("G"), app(runenv .. " browser1"), does("Browser"))
-hl.bind(key("SHIFT + G"), app(runenv .. " browser3"), does("Browser, third profile"))
-hl.bind(key("F"), app(runenv .. " browser2"), does("Browser, second profile"))
-hl.bind(key("B"), exec(runenv .. " bluetooth-connect"), does("Connect the headphones"))
-hl.bind(key("SHIFT + B"), exec(runenv .. " pulseprofile.py"), does("Next audio profile"))
-hl.bind(key("C"), app(runenv .. " google-chat"), does("Google Chat"))
-hl.bind(key("SHIFT + C"), app(runenv .. " google-calendar"), does("Google Calendar"))
-hl.bind(key("H"), app(runenv .. " home"), does("Home folder"))
-hl.bind(key("I"), app(runenv .. " irc"), does("IRC"))
-hl.bind(key("M"), app(runenv .. " google-meet"), does("Google Meet"))
-hl.bind(key("N"), app(runenv .. " notepad"), does("Notepad"))
-hl.bind(key("R"), app(runenv .. " remote-desktop"), does("Remote desktop"))
-hl.bind(key("Y"), app(runenv .. " youtube-music"), does("YouTube Music"))
-hl.bind(key("E"), app(terminal .. " -e yazi", terminal), does("Files"))
+bind("terminal", key("T"), app(terminal, terminal), does("Terminal"))
+bind("terminal_on_workstation", key("W"), app(runenv .. " terminal_on_workstation"), does("Terminal on the workstation"))
+bind("browser", key("G"), app(runenv .. " browser1"), does("Browser"))
+bind("browser_third", key("SHIFT + G"), app(runenv .. " browser3"), does("Browser, third profile"))
+bind("browser_second", key("F"), app(runenv .. " browser2"), does("Browser, second profile"))
+bind("headphones", key("B"), exec(runenv .. " bluetooth-connect"), does("Connect the headphones"))
+bind("audio_profile", key("SHIFT + B"), exec(runenv .. " pulseprofile.py"), does("Next audio profile"))
+bind("chat", key("C"), app(runenv .. " google-chat"), does("Google Chat"))
+bind("calendar", key("SHIFT + C"), app(runenv .. " google-calendar"), does("Google Calendar"))
+bind("home_folder", key("H"), app(runenv .. " home"), does("Home folder"))
+bind("irc", key("I"), app(runenv .. " irc"), does("IRC"))
+bind("meet", key("M"), app(runenv .. " google-meet"), does("Google Meet"))
+bind("notepad", key("N"), app(runenv .. " notepad"), does("Notepad"))
+bind("remote_desktop", key("R"), app(runenv .. " remote-desktop"), does("Remote desktop"))
+bind("music", key("Y"), app(runenv .. " youtube-music"), does("YouTube Music"))
+bind("files", key("E"), app(terminal .. " -e yazi", terminal), does("Files"))
 -- tide's launcher (SPEC.md §8) while its shell runs; the call fails
 -- otherwise (no shell), and fuzzel opens instead, through runenv so its app
 -- list sees the user's scripts.
-hl.bind(key("Space"), exec("qs -c tide ipc call launcher toggle || " .. runenv .. " " .. scripts .. "/launch-fuzzel.sh"), does("Launcher"))
+bind("launcher", key("Space"), exec("qs -c tide ipc call launcher toggle || " .. runenv .. " " .. scripts .. "/launch-fuzzel.sh"), does("Launcher"))
 -- A bare Super tap opens tide's launcher too, through the shell's
 -- tide:launcher global shortcut (tide SPEC.md §8.2), which is quicker than a
 -- qs call per tap. Only from Hyprland 0.57: before it, a release bind on
@@ -979,31 +1026,31 @@ local function at_least(version, major, minor)
     return ma > major or (ma == major and mi >= minor)
 end
 if type(hl.version) == "function" and at_least(hl.version(), 0, 57) then
-    hl.bind("SUPER + SUPER_L", hl.dsp.global("tide:launcher"), does("Launcher", { release = true }))
+    fixed("SUPER + SUPER_L", hl.dsp.global("tide:launcher"), does("Launcher", { release = true }))
 end
 -- The next keyboard layout, once there are two (kb_layout "us,de", say, from
 -- tide's Keyboard page), on every keyboard so they stay in step
 -- (next-layout.sh). Locked too, so a password can be typed in the other
 -- layout. Super+Space would be GNOME's, but it's the launcher.
-hl.bind(key("ALT + Space"), exec(scripts .. "/next-layout.sh"), does("Next keyboard layout", { locked = true }))
+bind("next_keyboard_layout", key("ALT + Space"), exec(scripts .. "/next-layout.sh"), does("Next keyboard layout", { locked = true }))
 -- tide's notification center (SPEC.md §9) while its shell is the
 -- notification server; the call fails otherwise (no shell, or the server not
 -- opted in), and swaync's panel opens instead.
-hl.bind(key("SHIFT + N"), exec("qs -c tide ipc call notifications toggle || swaync-client -t -sw"), does("Notification center"))
+bind("notifications", key("SHIFT + N"), exec("qs -c tide ipc call notifications toggle || swaync-client -t -sw"), does("Notification center"))
 -- Super+V: tide's clipboard and characters picker (tide SPEC.md §8.4), V
 -- as in paste: Enter pastes the selection where you were. Terminal on the
 -- VM, which it was, has no key now; the launcher finds it. Without the
 -- shell there's no picker, so a notification says why.
-hl.bind(key("V"), exec("qs -c tide ipc call picker toggle clipboard || notify-send -a tide 'No picker' "
+bind("clipboard", key("V"), exec("qs -c tide ipc call picker toggle clipboard || notify-send -a tide 'No picker' "
     .. "'Super+V opens the clipboard and characters picker in the tide shell, which is not running.'"), does("Clipboard and characters"))
 -- Super+Shift+V: the picker's Fill tab (tide SPEC.md §8.4), your snippets
 -- and Bitwarden's logins, one row per field; Enter types it where you were.
-hl.bind(key("SHIFT + V"), exec("qs -c tide ipc call picker toggle fill || notify-send -a tide 'No picker' "
+bind("fill", key("SHIFT + V"), exec("qs -c tide ipc call picker toggle fill || notify-send -a tide 'No picker' "
     .. "'Super+Shift+V opens the snippets and passwords picker in the tide shell, which is not running.'"), does("Snippets and passwords"))
 -- Super+;: the picker's Characters tab (tide SPEC.md §8.4), emoji and
 -- symbols by name; Enter pastes it where you were. Super+. is the next
 -- layout, so not Windows's key.
-hl.bind(key("semicolon"), exec("qs -c tide ipc call picker toggle characters || notify-send -a tide 'No picker' "
+bind("characters", key("semicolon"), exec("qs -c tide ipc call picker toggle characters || notify-send -a tide 'No picker' "
     .. "'Super+; opens the emoji and characters picker in the tide shell, which is not running.'"), does("Emoji and characters"))
 
 -- Session.
@@ -1013,54 +1060,53 @@ hl.bind(key("semicolon"), exec("qs -c tide ipc call picker toggle characters || 
 -- can't be conditional on the window, so it's bound for all, and returns
 -- { pass_event = true } for one that isn't pinned.
 if pinned then
-    hl.bind(key("BackSpace"), pinned.close, does("Close the window, unless it's pinned"))
+    bind("close", key("BackSpace"), pinned.close, does("Close the window, unless it's pinned"))
     for _, keys in ipairs(pinned.shortcuts) do
-        hl.bind(keys, pinned.shortcut, does("The app's own, unless its window is pinned"))
+        fixed(keys, pinned.shortcut, does("The app's own, unless its window is pinned"))
     end
 else
-    hl.bind(key("BackSpace"), hl.dsp.window.close(), does("Close the window"))
+    bind("close", key("BackSpace"), hl.dsp.window.close(), does("Close the window"))
 end
 -- Super+Z: minimize (tide SPEC.md §6.7). tide's shell moves the window to
 -- a special workspace named for its own and shows it in a corner tray, a
 -- click there bringing it back. Without the shell nothing could bring it
 -- back, so the window stays and a notification says why.
-hl.bind(key("Z"), exec("qs -c tide ipc call windows minimize || notify-send -a tide 'No minimize' "
+bind("minimize", key("Z"), exec("qs -c tide ipc call windows minimize || notify-send -a tide 'No minimize' "
     .. "'Super+Z minimizes a window in the tide shell, which is not running.'"), does("Minimize the window"))
-hl.bind(key("L"), exec(lock), does("Lock"))
+bind("lock", key("L"), exec(lock), does("Lock"))
 -- Super+S: keep awake, Super+P: presenter mode, Do not disturb and keep
 -- awake together (tide SPEC.md §10). tide's shell holds both and shows
 -- the OSD; without it nothing could, so a notification says why.
-hl.bind(key("S"), exec("qs -c tide ipc call keepawake toggle || notify-send -a tide 'No keep awake' "
+bind("keep_awake", key("S"), exec("qs -c tide ipc call keepawake toggle || notify-send -a tide 'No keep awake' "
     .. "'Super+S keeps the screen awake in the tide shell, which is not running.'"), does("Keep awake"))
-hl.bind(key("P"), exec("qs -c tide ipc call presenter toggle || notify-send -a tide 'No presenter mode' "
+bind("presenter", key("P"), exec("qs -c tide ipc call presenter toggle || notify-send -a tide 'No presenter mode' "
     .. "'Super+P turns on presenter mode in the tide shell, which is not running.'"), does("Presenter mode"))
-hl.bind(key("SHIFT + E"), hl.dsp.exit(), does("Quit Hyprland"))
+bind("quit", key("SHIFT + E"), hl.dsp.exit(), does("Quit Hyprland"))
 
 -- Layouts.
-hl.bind(key("period"), act.next_layout, does("Next layout"))
-hl.bind(key("comma"), act.prev_layout, does("Previous layout"))
-hl.bind(key("grave"), act.monocle, does("Monocle"))
--- O as in "one window"; it also leaves Super+` free for tileco, where Chrome
--- can't bind a backtick.
-hl.bind(key("O"), act.monocle, does("Monocle"))
-hl.bind(key("backslash"), act.grow, does("Grow the master", { repeating = true }))
-hl.bind(key("slash"), act.shrink, does("Shrink the master", { repeating = true }))
-hl.bind(key("equal"), act.add_master, does("Add a master"))
-hl.bind(key("minus"), act.remove_master, does("Remove a master"))
+bind("next_layout", key("period"), act.next_layout, does("Next layout"))
+bind("previous_layout", key("comma"), act.prev_layout, does("Previous layout"))
+-- O as in "one window"; it also leaves Super+` free for tide for Chrome,
+-- where Chrome can't bind a backtick.
+bind("monocle", { key("grave"), key("O") }, act.monocle, does("Monocle"))
+bind("grow_master", key("backslash"), act.grow, does("Grow the master", { repeating = true }))
+bind("shrink_master", key("slash"), act.shrink, does("Shrink the master", { repeating = true }))
+bind("add_master", key("equal"), act.add_master, does("Add a master"))
+bind("remove_master", key("minus"), act.remove_master, does("Remove a master"))
 -- dwm's zoom on Alt+Tab (tide SPEC.md §6.6); on the master, the tide
 -- layout swaps back with the master before it. Hyprland takes a bound key
 -- from every app, so Alt+Tab no longer reaches one.
-hl.bind("ALT + Tab", act.swap_master, does("Swap with the master"))
-hl.bind(key("J"), act.focus_next, does("Focus down the stack"))
-hl.bind(key("K"), act.focus_prev, does("Focus up the stack"))
-hl.bind(key("SHIFT + J"), act.move_next, does("Move down the stack"))
-hl.bind(key("SHIFT + K"), act.move_prev, does("Move up the stack"))
+bind("swap_master", "ALT + Tab", act.swap_master, does("Swap with the master"))
+bind("focus_down", key("J"), act.focus_next, does("Focus down the stack"))
+bind("focus_up", key("K"), act.focus_prev, does("Focus up the stack"))
+bind("move_down", key("SHIFT + J"), act.move_next, does("Move down the stack"))
+bind("move_up", key("SHIFT + K"), act.move_prev, does("Move up the stack"))
 
 -- One window big: maximize keeps the bar, fullscreen covers it, and
 -- Super+Down undoes either. Unset is a no-op for a mode that isn't on.
-hl.bind(key("Up"), hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }), does("Maximize"))
-hl.bind(key("SHIFT + Up"), hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }), does("Fullscreen"))
-hl.bind(key("Down"), function()
+bind("maximize", key("Up"), hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }), does("Maximize"))
+bind("fullscreen", key("SHIFT + Up"), hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }), does("Fullscreen"))
+bind("restore", key("Down"), function()
     hl.dispatch(hl.dsp.window.fullscreen({ mode = "fullscreen", action = "unset" }))
     hl.dispatch(hl.dsp.window.fullscreen({ mode = "maximized", action = "unset" }))
 end, does("Restore"))
@@ -1079,23 +1125,22 @@ local function toggle_float()
         hl.dispatch(hl.dsp.event("tide-floated>>" .. w.address))
     end
 end
-hl.bind(key("SHIFT + F"), toggle_float, does("Float or tile"))
-hl.bind(key("Insert"), toggle_float, does("Float or tile"))
+bind("float", { key("SHIFT + F"), key("Insert") }, toggle_float, does("Float or tile"))
 -- Super+Alt+F: a floating rule for this window (tide SPEC.md §6.4): tide's
 -- shell opens its Floating settings with a rule filled in for the focused
 -- window, to trim and add; without the shell, a notification says why
 -- nothing opened.
-hl.bind(key("ALT + F"), exec("qs -c tide ipc call floating remember || notify-send -a tide 'No floating rules' "
+bind("floating_rule", key("ALT + F"), exec("qs -c tide ipc call floating remember || notify-send -a tide 'No floating rules' "
     .. "'Super+Alt+F opens the floating rules in the tide shell, which is not running.'"), does("Floating rule for this window"))
-hl.bind(key("mouse:272"), hl.dsp.window.drag(), does("Move the window", { mouse = true }))
-hl.bind(key("mouse:273"), hl.dsp.window.resize(), does("Resize the window", { mouse = true }))
+fixed(key("mouse:272"), hl.dsp.window.drag(), does("Move the window", { mouse = true }))
+fixed(key("mouse:273"), hl.dsp.window.resize(), does("Resize the window", { mouse = true }))
 -- Drag the master/stack edge with no key held (tide SPEC.md §6.6). The
 -- press is the layout's only on an edge; anywhere else it goes on to the
 -- window. The release ignores modifiers and the lock, so a drag always
 -- ends. An older layout without these just doesn't get them.
 if qs and type(qs.drag_press) == "function" and type(qs.drag_release) == "function" then
-    hl.bind("mouse:272", qs.drag_press, does("Drag the master's edge"))
-    hl.bind("mouse:272", qs.drag_release, does("End an edge drag", {
+    fixed("mouse:272", qs.drag_press, does("Drag the master's edge"))
+    fixed("mouse:272", qs.drag_release, does("End an edge drag", {
         release = true, non_consuming = true, ignore_mods = true, locked = true,
     }))
 end
@@ -1103,10 +1148,10 @@ end
 -- maximize, and a second click puts the window back in its tile. It acts on
 -- the focused window, which focus-follows-mouse makes the one under the
 -- pointer.
-hl.bind(key("mouse:274"), hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }), does("Maximize"))
+fixed(key("mouse:274"), hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }), does("Maximize"))
 
 -- Resize mode, for floating windows: h/j/k/l or arrows, Esc or Return to leave.
-hl.bind(key("SHIFT + R"), hl.dsp.submap("resize"), does("Resize mode"))
+bind("resize_mode", key("SHIFT + R"), hl.dsp.submap("resize"), does("Resize mode"))
 hl.define_submap("resize", function()
     local steps = {
         H = { -40, 0 }, L = { 40, 0 }, K = { 0, -40 }, J = { 0, 40 },
@@ -1118,6 +1163,14 @@ hl.define_submap("resize", function()
     end
     hl.bind("escape", hl.dsp.submap("reset"), does("Leave resize mode"))
     hl.bind("Return", hl.dsp.submap("reset"), does("Leave resize mode"))
+end)
+
+-- tide's Keyboard shortcuts record a binding's new keys in this submap,
+-- where no other binding takes them (tide SPEC.md §16). Esc leaves it,
+-- which tide takes as a cancel; it's also the way out should tide go away
+-- mid-recording. Hyprland enters only a submap with a binding in it.
+hl.define_submap("tide-keys", function()
+    hl.bind("escape", hl.dsp.submap("reset"), does("Stop recording a shortcut"))
 end)
 
 -- The workspace a Hyprland workspace's name is a part of: NAME@OUT is
@@ -1497,15 +1550,15 @@ local function step_workspace(delta, move_window)
         end
     end
 end
-hl.bind(key("Page_Up"), step_workspace(-1, false), does("Previous workspace"))
-hl.bind(key("Page_Down"), step_workspace(1, false), does("Next workspace"))
-hl.bind(key("SHIFT + Page_Up"), step_workspace(-1, true), does("Move the window to the previous workspace"))
-hl.bind(key("SHIFT + Page_Down"), step_workspace(1, true), does("Move the window to the next workspace"))
+bind("previous_workspace", key("Page_Up"), step_workspace(-1, false), does("Previous workspace"))
+bind("next_workspace", key("Page_Down"), step_workspace(1, false), does("Next workspace"))
+bind("move_to_previous_workspace", key("SHIFT + Page_Up"), step_workspace(-1, true), does("Move the window to the previous workspace"))
+bind("move_to_next_workspace", key("SHIFT + Page_Down"), step_workspace(1, true), does("Move the window to the next workspace"))
 -- Left and right are windows, across monitors, as in tide for macOS (above).
-hl.bind(key("Left"), side.focus_left, does("Focus the window to the left"))
-hl.bind(key("Right"), side.focus_right, does("Focus the window to the right"))
-hl.bind(key("SHIFT + Left"), side.move_left, does("Move the window left"))
-hl.bind(key("SHIFT + Right"), side.move_right, does("Move the window right"))
+bind("focus_left", key("Left"), side.focus_left, does("Focus the window to the left"))
+bind("focus_right", key("Right"), side.focus_right, does("Focus the window to the right"))
+bind("move_left", key("SHIFT + Left"), side.move_left, does("Move the window left"))
+bind("move_right", key("SHIFT + Right"), side.move_right, does("Move the window right"))
 
 -- Super+1…9: the Nth workspace in the bar's order, so Super+1 is home, as
 -- Super+Home is. Super+Shift+1…9 sends the focused window there and stays,
@@ -1526,11 +1579,11 @@ local function nth_workspace(n, send_window)
     end
 end
 for n = 1, 9 do
-    hl.bind(key(tostring(n)), nth_workspace(n, false), does("Workspace " .. n .. " on the bar"))
-    hl.bind(key("SHIFT + " .. n), nth_workspace(n, true), does("Send the window to workspace " .. n .. " on the bar"))
+    fixed(key(tostring(n)), nth_workspace(n, false), does("Workspace " .. n .. " on the bar"))
+    fixed(key("SHIFT + " .. n), nth_workspace(n, true), does("Send the window to workspace " .. n .. " on the bar"))
 end
-hl.bind(key("0"), nth_workspace(0, false), does("The last workspace on the bar"))
-hl.bind(key("SHIFT + 0"), nth_workspace(0, true), does("Send the window to the last workspace on the bar"))
+fixed(key("0"), nth_workspace(0, false), does("The last workspace on the bar"))
+fixed(key("SHIFT + 0"), nth_workspace(0, true), does("Send the window to the last workspace on the bar"))
 
 -- The workspaces other than home, the one used last first, for Super+Tab
 -- and Super+End. Kept from Hyprland's workspace.active, so a config reload
@@ -1567,7 +1620,7 @@ end
 
 -- Super+Tab: from any other workspace to home, and from home back to the
 -- last other one, so presses toggle. From home with none, nothing.
-hl.bind(key("Tab"), function()
+bind("home_or_back", key("Tab"), function()
     local here, home_name = active_name(), conf_workspaces.home()
     if here ~= home_name then
         go(home_name)
@@ -1578,12 +1631,12 @@ hl.bind(key("Tab"), function()
         go(back)
     end
 end, does("Home, or back to the last workspace"))
-hl.bind(key("Home"), function()
+bind("home", key("Home"), function()
     go(conf_workspaces.home())
 end, does("Home workspace"))
 -- Super+End: the last workspace other than home and this one; from home,
 -- where Super+Tab goes. So presses toggle between two, never home.
-hl.bind(key("End"), function()
+bind("last_other_workspace", key("End"), function()
     local here = active_name()
     local back = last_used(here)
     if back then
@@ -1596,10 +1649,10 @@ end, does("The last workspace other than home"))
 -- Super+Shift+Return: the same prompt for the focused window, which moves
 -- it there. Both need tide's shell; a notification says so when there's
 -- none.
-hl.bind(key("Return"), exec("qs -c tide ipc call prompt go || notify-send -a tide 'No name prompt' "
+bind("go_to_workspace", key("Return"), exec("qs -c tide ipc call prompt go || notify-send -a tide 'No name prompt' "
     .. "'Super+Return goes to a workspace through the name prompt in the tide shell, which is not running.'"),
     does("Go to a workspace"))
-hl.bind(key("SHIFT + Return"), exec("qs -c tide ipc call prompt move || notify-send -a tide 'No name prompt' "
+bind("move_to_workspace", key("SHIFT + Return"), exec("qs -c tide ipc call prompt move || notify-send -a tide 'No name prompt' "
     .. "'Super+Shift+Return moves a window through the name prompt in the tide shell, which is not running.'"),
     does("Move the window to a workspace"))
 
@@ -1623,7 +1676,7 @@ local function attention_without_shell()
     end
 end
 _G.conf_attention = { without_shell = attention_without_shell }
-hl.bind(key("A"), exec("qs -c tide ipc call switcher toggle attention || { "
+bind("attention", key("A"), exec("qs -c tide ipc call switcher toggle attention || { "
     .. "notify-send -a tide 'No Attention tab' 'Super+A lists the windows that want attention in the tide shell, which is not running.'; "
     .. "hyprctl eval 'conf_attention.without_shell()'; }"),
     does("The windows that want attention"))
@@ -1633,20 +1686,19 @@ hl.bind(key("A"), exec("qs -c tide ipc call switcher toggle attention || { "
 -- region (Shift or Super). It reports its own failures, since a key binding
 -- has no terminal, and Esc on a region cancels quietly.
 local screenshot = runenv .. " screenshot"
-hl.bind("Print", exec(screenshot), does("Screenshot"))
-hl.bind("ALT + Print", exec(screenshot .. " --window"), does("Screenshot of the window"))
-hl.bind("SHIFT + Print", exec(screenshot .. " --region"), does("Screenshot of a region"))
-hl.bind(key("Print"), exec(screenshot .. " --region"), does("Screenshot of a region"))
+bind("screenshot", "Print", exec(screenshot), does("Screenshot"))
+bind("screenshot_window", "ALT + Print", exec(screenshot .. " --window"), does("Screenshot of the window"))
+bind("screenshot_region", { "SHIFT + Print", key("Print") }, exec(screenshot .. " --region"), does("Screenshot of a region"))
 
 -- Volume, microphone, brightness and playback keys. These work on the lock
 -- screen too; the calculator doesn't, since it opens a window.
 local locked = { locked = true }
 local locked_repeating = { locked = true, repeating = true }
-hl.bind("XF86AudioRaiseVolume", exec("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), does("Volume up", locked_repeating))
-hl.bind("XF86AudioLowerVolume", exec("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), does("Volume down", locked_repeating))
-hl.bind("XF86AudioMute", exec("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), does("Mute", locked))
-hl.bind("XF86AudioMicMute", exec("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), does("Mute the microphone", locked))
-hl.bind(key("SHIFT + M"), exec("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), does("Mute the microphone", locked))
+fixed("XF86AudioRaiseVolume", exec("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), does("Volume up", locked_repeating))
+fixed("XF86AudioLowerVolume", exec("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), does("Volume down", locked_repeating))
+fixed("XF86AudioMute", exec("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), does("Mute", locked))
+fixed("XF86AudioMicMute", exec("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), does("Mute the microphone", locked))
+bind("mute_microphone", key("SHIFT + M"), exec("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), does("Mute the microphone", locked))
 -- tide's command shows the new level on the shell's OSD. Only a
 -- tide from before it (a usage error, 2) or none (127) falls back to
 -- brightnessctl alone: any other failure may have changed the level already,
@@ -1655,13 +1707,234 @@ local function brightness(step)
     return exec("tide brightness " .. step .. "; s=$?; "
         .. "if test $s -eq 2 || test $s -eq 127; then brightnessctl set " .. step .. "; else exit $s; fi")
 end
-hl.bind("XF86MonBrightnessUp", brightness("5%+"), does("Brightness up", locked_repeating))
-hl.bind("XF86MonBrightnessDown", brightness("5%-"), does("Brightness down", locked_repeating))
-hl.bind("XF86AudioPlay", exec("playerctl play-pause"), does("Play or pause", locked))
-hl.bind("XF86AudioPause", exec("playerctl play-pause"), does("Play or pause", locked))
-hl.bind("XF86AudioNext", exec("playerctl next"), does("Next track", locked))
-hl.bind("XF86AudioPrev", exec("playerctl previous"), does("Previous track", locked))
-hl.bind("XF86Calculator", app("gnome-calculator", "org.gnome.Calculator"), does("Calculator"))
+fixed("XF86MonBrightnessUp", brightness("5%+"), does("Brightness up", locked_repeating))
+fixed("XF86MonBrightnessDown", brightness("5%-"), does("Brightness down", locked_repeating))
+fixed("XF86AudioPlay", exec("playerctl play-pause"), does("Play or pause", locked))
+fixed("XF86AudioPause", exec("playerctl play-pause"), does("Play or pause", locked))
+fixed("XF86AudioNext", exec("playerctl next"), does("Next track", locked))
+fixed("XF86AudioPrev", exec("playerctl previous"), does("Previous track", locked))
+fixed("XF86Calculator", app("gnome-calculator", "org.gnome.Calculator"), does("Calculator"))
+
+-- Your own keys for the named bindings (tide SPEC.md §16): tide's Keyboard
+-- shortcuts write them to tide-keys.lua beside this file as { keys = {
+-- terminal = { "SUPER + Return" }, lock = {} } }, a binding's keys in place
+-- of its defaults, and none turns it off. It's read as data, as
+-- tide-floating.lua is. A file that's wrong is reported and none of it
+-- applied; a name this file doesn't have, from a newer tide, is reported and
+-- skipped. conf_keys.reload() is how tide applies a change.
+local MAX_KEYS_PER_BIND = 8
+
+local function read_tide_keys()
+    local path = home .. "/.config/hypr/tide-keys.lua"
+    local text = read_optional(path, "tide-keys.lua", 64 * 1024)
+    if not text then
+        return {}, {}
+    end
+    local function wrong(what)
+        notify_error("tide-keys.lua (none of it applied, so every key is its default): " .. what)
+        return {}, {}
+    end
+    local chunk, err = load(text, "@" .. path, "t", {})
+    if not chunk then
+        return wrong(tostring(err))
+    end
+    local ok, value = pcall(chunk)
+    if not ok then
+        return wrong(tostring(value))
+    end
+    if type(value) ~= "table" then
+        return wrong("expected a table, not " .. type(value))
+    end
+    for k in pairs(value) do
+        if k ~= "keys" then
+            return wrong("unknown setting " .. tostring(k))
+        end
+    end
+    local given = value.keys or {}
+    if type(given) ~= "table" then
+        return wrong("keys should be a table of names, not " .. type(given))
+    end
+    local out, unknown = {}, {}
+    for name, list in pairs(given) do
+        if type(name) ~= "string" then
+            return wrong("keys should be a table of names; " .. tostring(name) .. " isn't one")
+        end
+        if type(list) ~= "table" then
+            return wrong(name .. " should list its keys, not " .. tostring(list))
+        end
+        local count = 0
+        for _ in pairs(list) do
+            count = count + 1
+        end
+        if count > MAX_KEYS_PER_BIND then
+            return wrong(name .. " lists " .. count .. " keys, more than " .. MAX_KEYS_PER_BIND)
+        end
+        for i = 1, count do
+            if type(list[i]) ~= "string" or not list[i]:match("%S") then
+                return wrong(name .. " should list its keys with no gaps; " .. i .. " is " .. tostring(list[i]))
+            end
+        end
+        if named_by[name] then
+            out[name] = list
+        else
+            table.insert(unknown, name)
+        end
+    end
+    table.sort(unknown)
+    return out, unknown
+end
+
+-- The keys hyprland.local.lua binds or unbinds, which the named bindings
+-- leave to it: a reload of tide's keys never takes them back. "unbound" if
+-- it unbound them first, as README.md says to, else "bound".
+local local_keys = {}
+
+-- What tide's Keyboard shortcuts list, beside `hyprctl binds -j`: each named
+-- binding's name, what it does, its defaults and its keys now, in this
+-- file's order, as JSON in this Hyprland instance's runtime directory.
+local keys_file
+do
+    local dir = os.getenv("XDG_RUNTIME_DIR")
+    local sig = os.getenv("HYPRLAND_INSTANCE_SIGNATURE")
+    if dir and dir ~= "" and sig and sig ~= "" then
+        keys_file = dir .. "/hypr/" .. sig .. "/tide-keys.json"
+    end
+end
+
+local function json_string(v)
+    return '"' .. tostring(v):gsub('[%c"\\]', function(c)
+        if c == '"' then
+            return '\\"'
+        elseif c == "\\" then
+            return "\\\\"
+        end
+        return string.format("\\u%04x", c:byte())
+    end) .. '"'
+end
+
+local function json_list(list)
+    local out = {}
+    for _, v in ipairs(list) do
+        table.insert(out, json_string(v))
+    end
+    return "[" .. table.concat(out, ",") .. "]"
+end
+
+local function save_keys()
+    if not keys_file then
+        return
+    end
+    local rows = {}
+    for _, b in ipairs(named_binds) do
+        table.insert(rows, "{" .. table.concat({
+            '"name":' .. json_string(b.name),
+            '"does":' .. json_string((b.opts or {}).description or ""),
+            '"defaults":' .. json_list(b.defaults),
+            '"keys":' .. json_list(b.bound),
+        }, ",") .. "}")
+    end
+    -- Written beside the file and renamed over it, so tide only reads a
+    -- whole one.
+    local tmp = keys_file .. ".tmp"
+    local f, err = io.open(tmp, "w")
+    local ok = f ~= nil
+    if f then
+        ok, err = f:write('{"keys":[', table.concat(rows, ","), "]}\n")
+        local closed, close_err = f:close()
+        if ok and not closed then
+            ok, err = false, close_err
+        end
+    end
+    if ok then
+        ok, err = os.rename(tmp, keys_file)
+    end
+    if not ok then
+        os.remove(tmp)
+        notify_error("keys: couldn't save the list for tide's Keyboard shortcuts: " .. tostring(err))
+    end
+end
+
+-- Binds every named binding, to tide-keys.lua's keys or its defaults. A
+-- binding given keys there takes them first, so a default that wants the
+-- same keys gives them up: the swap tide's page asks about. Two given the
+-- same keys, or keys a fixed binding or hyprland.local.lua has, are
+-- reported, and the binding goes without them.
+local function apply_keys()
+    local given, unknown = read_tide_keys()
+    local problems = {}
+    for _, b in ipairs(named_binds) do
+        for _, k in ipairs(b.bound) do
+            hl.unbind(k)
+        end
+        b.bound = {}
+    end
+    if #unknown > 0 then
+        table.insert(problems, "no binding is called " .. table.concat(unknown, ", "))
+    end
+    local taken = {}
+    local function claim(b, list, mine)
+        for _, k in ipairs(list) do
+            local id = key_id(k)
+            if fixed_keys[id] or local_keys[id] then
+                if mine then
+                    table.insert(problems, b.name .. " can't have " .. k .. ", which is kept for something else")
+                end
+            elseif taken[id] then
+                if mine then
+                    table.insert(problems, b.name .. " can't have " .. k .. ", which " .. taken[id] .. " has")
+                end
+            else
+                local ok, err = pcall(hl.bind, k, b.target, b.opts)
+                if ok then
+                    taken[id] = b.name
+                    table.insert(b.bound, k)
+                else
+                    table.insert(problems, b.name .. ": couldn't bind " .. k .. ": " .. tostring(err))
+                end
+            end
+        end
+    end
+    for _, b in ipairs(named_binds) do
+        if given[b.name] then
+            claim(b, given[b.name], true)
+        end
+    end
+    for _, b in ipairs(named_binds) do
+        if not given[b.name] then
+            claim(b, b.defaults, false)
+        end
+    end
+    if #problems > 0 then
+        notify_error("tide-keys.lua: " .. table.concat(problems, "; "))
+    end
+    save_keys()
+end
+apply_keys()
+_G.conf_keys = { reload = apply_keys }
+
+-- After hyprland.local.lua: a named binding gives up the keys it took, so a
+-- reload of tide's keys leaves them to it. One it bound without an unbind
+-- first fires both, which is reported, as unbinding it now would take the
+-- local file's too.
+local function release_local_keys()
+    local problems = {}
+    for _, b in ipairs(named_binds) do
+        local kept = {}
+        for _, k in ipairs(b.bound) do
+            local how = local_keys[key_id(k)]
+            if not how then
+                table.insert(kept, k)
+            elseif how == "bound" then
+                table.insert(problems, k .. " does both " .. b.name .. " and what hyprland.local.lua binds it to; unbind it there first")
+            end
+        end
+        b.bound = kept
+    end
+    if #problems > 0 then
+        notify_error("hyprland.local.lua: " .. table.concat(problems, "; "))
+    end
+    save_keys()
+end
 
 --------------------------------------------------------------------------------
 -- LAPTOP LID
@@ -2432,6 +2705,31 @@ do
         else
             -- Hyprland names a device with its spaces as dashes.
             local real_device, real_config, real_monitor = hl.device, hl.config, hl.monitor
+            local real_bind, real_unbind, real_define_submap = hl.bind, hl.unbind, hl.define_submap
+            -- A binding in one of its own submaps takes no named binding's
+            -- keys, which are all outside one.
+            local in_submap = 0
+            hl.define_submap = function(name, fn, ...)
+                return real_define_submap(name, function(...)
+                    in_submap = in_submap + 1
+                    local ok, err = pcall(fn, ...)
+                    in_submap = in_submap - 1
+                    if not ok then
+                        error(err, 0)
+                    end
+                end, ...)
+            end
+            hl.bind = function(keys, ...)
+                if in_submap == 0 then
+                    local id = key_id(keys)
+                    local_keys[id] = local_keys[id] or "bound"
+                end
+                return real_bind(keys, ...)
+            end
+            hl.unbind = function(keys, ...)
+                local_keys[key_id(keys)] = "unbound"
+                return real_unbind(keys, ...)
+            end
             hl.monitor = function(t)
                 if type(t) == "table" and type(t.output) == "string" then
                     table.insert(local_monitors, copy_rule(t))
@@ -2478,6 +2776,7 @@ do
             end
             local ok, run_err = pcall(chunk)
             hl.device, hl.config, hl.monitor = real_device, real_config, real_monitor
+            hl.bind, hl.unbind, hl.define_submap = real_bind, real_unbind, real_define_submap
             if not ok then
                 notify_error("hyprland.local.lua stopped (the calls before this applied): " .. tostring(run_err))
             end
@@ -2486,6 +2785,11 @@ do
             -- closed lid's, as a reload of tide's settings would add them.
             if local_catchall then
                 restack_monitors(nil, lid.panel)
+            end
+            -- The named bindings give up the keys it took, and the list
+            -- for tide's Keyboard shortcuts drops them.
+            if next(local_keys) then
+                release_local_keys()
             end
         end
     end
