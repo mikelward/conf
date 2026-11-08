@@ -961,8 +961,10 @@ local MOD_ORDER = { SUPER = 1, CTRL = 2, ALT = 3, SHIFT = 4 }
 local MOD_ALIAS = { CONTROL = "CTRL", MOD4 = "SUPER", WIN = "SUPER", LOGO = "SUPER", META = "SUPER", MOD1 = "ALT" }
 local function key_id(keys)
     local mods, last = {}, nil
-    for part in tostring(keys):gmatch("[^+]+") do
-        part = part:match("^%s*(.-)%s*$")
+    -- Lua 5.5, Hyprland's, makes a for loop's variable constant, so the
+    -- trimmed part is a local of its own.
+    for raw in tostring(keys):gmatch("[^+]+") do
+        local part = raw:match("^%s*(.-)%s*$")
         if part ~= "" then
             if last then
                 local m = last:upper()
