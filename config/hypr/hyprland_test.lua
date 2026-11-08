@@ -3248,6 +3248,81 @@ test("a key hyprland.local.lua binds without an unbind first is reported", funct
     same({}, listed_keys().files.keys)
 end)
 
+--------------------------------------------------------------------------------
+-- Lua 5.5, Hyprland's, makes a for loop's variables constant, so assigning
+-- to one stops the config at load. The tests run on 5.4 too, which allows
+-- it, so the source is checked instead. A loop's body is the lines indented
+-- under it, up to its `end` at its own indent; a one-line loop is skipped.
+--------------------------------------------------------------------------------
+local function loop_var_assignments(text)
+    local found, open = {}, {}
+    local n = 0
+    for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+        n = n + 1
+        local code = line:gsub("%-%-.*$", "")
+        local indent = #code:match("^(%s*)")
+        while #open > 0 and indent <= open[#open].indent and code:match("^%s*end") do
+            if indent == open[#open].indent then
+                table.remove(open)
+                break
+            end
+            table.remove(open)
+        end
+        local names = code:match("^%s*for%s+([%w_%s,]-)%s+in%s") or code:match("^%s*for%s+([%w_]+)%s*=")
+        if names and not code:match("%f[%w_]end%f[^%w_]%s*[%),]*%s*$") then
+            local vars = {}
+            for v in names:gmatch("[%w_]+") do
+                vars[#vars + 1] = v
+            end
+            open[#open + 1] = { indent = indent, vars = vars }
+        elseif not code:match("^%s*local%s") then
+            local lhs = code:match("^%s*([%w_%s,%.%[%]\"]-)%s*=[^=]")
+            if lhs then
+                for _, loop in ipairs(open) do
+                    for _, v in ipairs(loop.vars) do
+                        for target in lhs:gmatch("[^,]+") do
+                            if target:match("^%s*(.-)%s*$") == v then
+                                found[#found + 1] = string.format("%d: %s", n, line:match("^%s*(.-)%s*$"))
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return found
+end
+
+test("the loop-variable check finds an assignment to a loop's variable", function()
+    same({ "2: part = part:upper()" }, loop_var_assignments(table.concat({
+        "for part in s:gmatch('x') do",
+        "    part = part:upper()",
+        "end",
+    }, "\n")))
+    same({ "2: a, i = 1, 2" }, loop_var_assignments("for i = 1, 3 do\n    a, i = 1, 2\nend"))
+    same({ "3: k = 1" }, loop_var_assignments("for k, v in pairs(t) do\n    if v then\n        k = 1\n    end\nend"))
+end)
+
+test("the loop-variable check allows a local of the same name, and code after the loop", function()
+    same({}, loop_var_assignments(table.concat({
+        "for raw in s:gmatch('x') do",
+        "    local part = raw  -- part = nothing",
+        "    t.part = part",
+        "    ok = part == raw",
+        "end",
+        "raw = 1",
+        "for i = 1, 2 do f(i) end",
+        "i = 3",
+    }, "\n")))
+end)
+
+test("hyprland.lua assigns to no loop's variable (Lua 5.5 makes them constant)", function()
+    local f = assert(io.open(config_path))
+    local text = f:read("a")
+    f:close()
+    same({}, loop_var_assignments(text))
+end)
+
 os.execute("rm -rf '" .. tmp .. "'")
 io.write(string.format("hyprland_test.lua: %d passed, %d failed\n", passes, failures))
 os.exit(failures == 0 and 0 or 1)
