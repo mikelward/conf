@@ -172,8 +172,6 @@ can't do yet, each needing tidewm or tide's shell first:
   (Super+Home, Super+End), which tidewm has no idea of yet;
 - the floating rules (Super+Alt+F), which tide's shell writes for
   Hyprland;
-- the window screenshot (Alt+Print), once scripts' `screenshot` takes
-  tidewm's window from tide's launcher;
 - dragging the master's edge with Super and the left button, which tide's
   shell does for Hyprland;
 - apply-input.sh's per-mouse settings, which ask Hyprland.
