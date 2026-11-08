@@ -1,70 +1,34 @@
-# tidewm's config for tide's tidewm session (tide SPEC.md §5.3), an option
-# beside the Hyprland one: ~/.config/tidewm/config, in sway's syntax
-# (tidewm's docs/config.md). The keys follow tide SPEC.md §6.6 as
-# ../hypr/hyprland.lua binds them; tidewm_test.sh checks each key that runs
-# an app there runs it here too. What tidewm can't do yet is left out, and
-# listed in TODO.md.
-#
-# A binding tide's Keyboard shortcuts can give other keys (tide SPEC.md §16)
-# has a --name, the name hyprland.lua gives it, so your keys in tide's
-# keys.json serve both. The page writes them to tide-keys.conf as rebind
-# lines, which the include at the end reads. The rest keep their keys, as
-# hyprland.lua's fixed ones: the mouse, the media and brightness keys,
-# Super+0…9, the Super tap, a pinned window's app keys and resize mode's.
+# tidewm's config for tide's tidewm session: tide's own (its SPEC.md §6.8),
+# ~/.config/tidewm/tide.conf, which tide's `make install` puts there, with
+# this setup's preferences over it. tidewm replaces an earlier binding of
+# the same keys with a later one, and a later input block's settings win,
+# so what's here wins over tide's; tide's settings pages, included last,
+# win over both.
 
-set $mod Mod4
+include tide.conf
+
 # The scripts repo's wrapper, which gives helper scripts the login shell's
-# PATH (see hyprland.lua).
+# PATH (see ../hypr/hyprland.lua).
 set $runenv ~/scripts/runenv
 
-# tide's look and focus rules (tide SPEC.md §6.2, §14), as tide's
-# Hyprland config sets them. A lone window's widths are tidewm's own,
-# tide's, unless the Layouts page sets them in tide-layouts.conf: lines
-# here would add to its, not give way.
-focus_guard enable
-dim_inactive 0.07
-
-# X11 apps are sharp at a fractional scale (tide SPEC.md §17): drawn in the
-# output's own pixels, unscaled, so one that scales itself is the right
-# size and one that doesn't is small.
-xwayland_scaling disable
-
 # US Dvorak; Caps Lock is Compose and Menu a second Super, as setup's
-# XKBOPTIONS and hyprland.lua's INPUT.
+# XKBOPTIONS and hyprland.lua's input option.
 input type:keyboard {
-    xkb_layout us
     xkb_variant dvorak
     xkb_options compose:caps,altwin:menu_win
-    repeat_delay 600
-    repeat_rate 25
 }
 # Every mouse: the right button primary, with a faster wheel, as
-# hyprland.lua's mouse option. tidewm's pointer is anything that can't tap,
-# so tide's apply-input.sh gives a laptop's pointing stick and its
-# touchpad's -mouse node the touchpad's settings (in tide-devices.conf,
-# included below), and HYPR_MOUSE_SCROLL_FACTOR the wheel's.
+# hyprland.lua's mouse option.
 input type:pointer {
-    accel_profile adaptive
-    pointer_accel 1
-    natural_scroll disabled
     left_handed enabled
     scroll_factor 3
 }
-input type:touchpad {
-    natural_scroll enabled
-    tap enabled
-    dwt enabled
-}
 
-# A laptop's panel goes off while its lid is closed, and its windows move
-# to the other monitors. With none, tide's Power page's Lock locks then, as
-# hyprland.lua's lid does (tide lid-closed, tide SPEC.md §16).
-bindswitch lid:on output eDP-1 disable; exec tide lid-closed
-bindswitch --locked lid:off output eDP-1 enable
-
-# Apps, each through `tide launch`, which grants its first window focus
-# (tide SPEC.md §14.3); --app names the window's app ID, or any app's.
+# kitty, and yazi for files, as hyprland.lua's terminal and files.
 bindsym --name=terminal $mod+t exec tide launch --app kitty -- kitty
+bindsym --name=files $mod+e exec tide launch --app kitty -- kitty -e yazi
+
+# The scripts repo's apps, as hyprland.lua's apps.
 bindsym --name=terminal_on_workstation $mod+w exec tide launch --app '*' -- $runenv terminal_on_workstation
 bindsym --name=browser $mod+g exec tide launch --app '*' -- $runenv browser1
 bindsym --name=browser_third $mod+Shift+g exec tide launch --app '*' -- $runenv browser3
@@ -77,157 +41,16 @@ bindsym --name=meet $mod+m exec tide launch --app '*' -- $runenv google-meet
 bindsym --name=notepad $mod+n exec tide launch --app '*' -- $runenv notepad
 bindsym --name=remote_desktop $mod+r exec tide launch --app '*' -- $runenv remote-desktop
 bindsym --name=music $mod+y exec tide launch --app '*' -- $runenv youtube-music
-bindsym --name=files $mod+e exec tide launch --app kitty -- kitty -e yazi
-bindsym XF86Calculator exec tide launch --app org.gnome.Calculator -- gnome-calculator
 bindsym --name=headphones $mod+b exec $runenv bluetooth-connect
 bindsym --name=audio_profile $mod+Shift+b exec $runenv pulseprofile.py
 
-# tide's shell: the launcher, on Super+Space and a tap of Super, the
-# notification center, the picker's tabs, keep awake and presenter mode;
-# the name prompt (tide SPEC.md §6.5), to go to a workspace, or move the
-# focused window there; the switcher's Attention tab (§8.1, §14.3); and
-# minimizing (§6.7), which the shell's tray brings back.
-bindsym --name=launcher $mod+space exec qs -c tide ipc call launcher toggle
-bindsym --release Super_L exec qs -c tide ipc call launcher toggle
-bindsym --name=notifications $mod+Shift+n exec qs -c tide ipc call notifications toggle
-bindsym --name=clipboard $mod+v exec qs -c tide ipc call picker toggle clipboard
-bindsym --name=fill $mod+Shift+v exec qs -c tide ipc call picker toggle fill
-bindsym --name=characters $mod+semicolon exec qs -c tide ipc call picker toggle characters
-bindsym --name=keep_awake $mod+s exec qs -c tide ipc call keepawake toggle
-bindsym --name=presenter $mod+p exec qs -c tide ipc call presenter toggle
-bindsym --name=go_to_workspace $mod+Return exec qs -c tide ipc call prompt go
-bindsym --name=move_to_workspace $mod+Shift+Return exec qs -c tide ipc call prompt move
-bindsym --name=attention $mod+a exec qs -c tide ipc call switcher toggle attention
-bindsym --name=minimize $mod+z exec qs -c tide ipc call windows minimize
-
-# The next keyboard layout, on the lock screen too.
-bindsym --name=next_keyboard_layout --locked $mod+Alt+space input type:keyboard xkb_switch_layout next
-
-# The session. kill leaves a window pinned where it is open, as tide's
-# shell has tidewm keep it open (tide SPEC.md §6.5), and so do the app's own
-# close and quit keys there: bound --kept-open, every other window gets them.
-bindsym --name=close $mod+BackSpace kill
-bindsym --kept-open Ctrl+w kill
-bindsym --kept-open Ctrl+Shift+w kill
-bindsym --kept-open Ctrl+q kill
-bindsym --kept-open Alt+F4 kill
-bindsym --name=lock $mod+l exec loginctl lock-session
-bindsym --name=quit $mod+Shift+e exit
-
-# Layouts (tide SPEC.md §6.1).
-bindsym --name=monocle $mod+grave layout monocle
-bindsym --name=monocle $mod+o layout monocle
-bindsym --name=next_layout $mod+period layout next
-bindsym --name=previous_layout $mod+comma layout prev
-bindsym --name=grow_master $mod+backslash mfact +0.05
-bindsym --name=shrink_master $mod+slash mfact -0.05
-bindsym --name=add_master $mod+equal nmaster +1
-bindsym --name=remove_master $mod+minus nmaster -1
-bindsym --name=swap_master Alt+Tab zoom
-bindsym --name=focus_down $mod+j focus next
-bindsym --name=focus_up $mod+k focus prev
-bindsym --name=move_down $mod+Shift+j movestack next
-bindsym --name=move_up $mod+Shift+k movestack prev
-bindsym --name=focus_left $mod+Left focus left
-bindsym --name=focus_right $mod+Right focus right
-bindsym --name=move_left $mod+Shift+Left move left
-bindsym --name=move_right $mod+Shift+Right move right
-bindsym --name=maximize $mod+Up maximize toggle
-bindsym --name=fullscreen $mod+Shift+Up fullscreen toggle
-bindsym --name=restore $mod+Down fullscreen disable; maximize disable
-bindsym --name=float $mod+Shift+f floating toggle
-bindsym --name=float $mod+Insert floating toggle
-
-# The mouse, as hyprland.lua's: Super and the left button drag a window,
-# which floats a tile, Super and the right one resize it, and Super and
-# the middle one maximize it, or put it back.
-floating_modifier $mod normal
-bindsym --whole-window $mod+button2 maximize toggle
-
-# Workspaces (tide SPEC.md §6.6): Super+1 to 9 go to the bar's nth, and
-# Super+0 to its last, and Shift sends the focused window there; Super+Home
-# goes home; Super+Tab goes home, and from home back to the last other
-# workspace; and Super+End goes to the last other than home and this one.
-# tidewm knows neither the bar's order nor home, so tide's shell does them,
-# and without it a notification says so.
-set $workspaces qs -c tide ipc call workspaces
-set $no_shell notify-send -a tide 'No workspace keys' 'Super with a number, Home, Tab or End needs the tide shell, which is not running.'
-bindsym $mod+1 exec $workspaces go 1 || $no_shell
-bindsym $mod+2 exec $workspaces go 2 || $no_shell
-bindsym $mod+3 exec $workspaces go 3 || $no_shell
-bindsym $mod+4 exec $workspaces go 4 || $no_shell
-bindsym $mod+5 exec $workspaces go 5 || $no_shell
-bindsym $mod+6 exec $workspaces go 6 || $no_shell
-bindsym $mod+7 exec $workspaces go 7 || $no_shell
-bindsym $mod+8 exec $workspaces go 8 || $no_shell
-bindsym $mod+9 exec $workspaces go 9 || $no_shell
-bindsym $mod+0 exec $workspaces go 0 || $no_shell
-bindsym $mod+Shift+1 exec $workspaces send 1 || $no_shell
-bindsym $mod+Shift+2 exec $workspaces send 2 || $no_shell
-bindsym $mod+Shift+3 exec $workspaces send 3 || $no_shell
-bindsym $mod+Shift+4 exec $workspaces send 4 || $no_shell
-bindsym $mod+Shift+5 exec $workspaces send 5 || $no_shell
-bindsym $mod+Shift+6 exec $workspaces send 6 || $no_shell
-bindsym $mod+Shift+7 exec $workspaces send 7 || $no_shell
-bindsym $mod+Shift+8 exec $workspaces send 8 || $no_shell
-bindsym $mod+Shift+9 exec $workspaces send 9 || $no_shell
-bindsym $mod+Shift+0 exec $workspaces send 0 || $no_shell
-bindsym --name=home $mod+Home exec $workspaces home || $no_shell
-bindsym --name=home_or_back $mod+Tab exec $workspaces homeOrBack || $no_shell
-bindsym --name=last_other_workspace $mod+End exec $workspaces lastOther || $no_shell
-bindsym --name=previous_workspace $mod+Page_Up workspace prev
-bindsym --name=next_workspace $mod+Page_Down workspace next
-bindsym --name=move_to_previous_workspace $mod+Shift+Page_Up move container to workspace prev
-bindsym --name=move_to_next_workspace $mod+Shift+Page_Down move container to workspace next
-
-# Screenshots (tide SPEC.md §13): the screen, the focused window (Alt), or
-# a region (Shift or Super), as hyprland.lua's.
+# The scripts repo's screenshot, which asks tidewm for the window, as
+# hyprland.lua's screenshot option.
 bindsym --name=screenshot Print exec $runenv screenshot
 bindsym --name=screenshot_window Alt+Print exec $runenv screenshot --window
 bindsym --name=screenshot_region Shift+Print exec $runenv screenshot --region
 bindsym --name=screenshot_region $mod+Print exec $runenv screenshot --region
 
-# Volume, the microphone, brightness and media, on the lock screen too.
-bindsym --locked XF86AudioRaiseVolume exec wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+
-bindsym --locked XF86AudioLowerVolume exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
-bindsym --locked XF86AudioMute exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
-bindsym --locked XF86AudioMicMute exec wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
-bindsym --name=mute_microphone --locked $mod+Shift+m exec wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
-bindsym --locked XF86MonBrightnessUp exec tide brightness 5%+
-bindsym --locked XF86MonBrightnessDown exec tide brightness 5%-
-bindsym --locked XF86AudioPlay exec playerctl play-pause
-bindsym --locked XF86AudioPause exec playerctl play-pause
-bindsym --locked XF86AudioNext exec playerctl next
-bindsym --locked XF86AudioPrev exec playerctl previous
-
-# Resize mode, as hyprland.lua's: h/j/k/l or the arrows, Esc or Return to
-# leave. A floating window's right or bottom edge moves 40 pixels; a
-# tile's column grows or shrinks by 5% of the window area.
-bindsym --name=resize_mode $mod+Shift+r mode "resize"
-mode "resize" {
-    bindsym h resize shrink right 40 px or 5 ppt
-    bindsym l resize grow right 40 px or 5 ppt
-    bindsym k resize shrink down 40 px
-    bindsym j resize grow down 40 px
-    bindsym Left resize shrink right 40 px or 5 ppt
-    bindsym Right resize grow right 40 px or 5 ppt
-    bindsym Up resize shrink down 40 px
-    bindsym Down resize grow down 40 px
-    bindsym Escape mode default
-    bindsym Return mode default
-}
-
-# tide's Keyboard shortcuts record a shortcut's new keys in this mode,
-# where no other binding takes them (tide SPEC.md §16). Esc leaves it,
-# which tide takes as a cancel; it's also the way out should tide go away
-# mid-recording.
-mode "tide-keys" {
-    bindsym Escape mode default
-}
-
-# The settings tide's shell writes (tide SPEC.md §16), as hyprland.lua reads
-# tide-*.lua: the Mouse, Touchpad and Keyboard pages' tide-input.conf, the
-# Keyboard shortcuts' tide-keys.conf, and the pages to come. Last, so they
-# win over the lines above. One the shell hasn't written yet includes
-# nothing.
+# The settings tide's shell writes, again, so they win over the lines here
+# too (tide.conf includes them, before these).
 include tide-*.conf
