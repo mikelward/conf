@@ -9,11 +9,10 @@ Delete an entry once you have agreed with it or reversed it.
       `config/tidewm/config` has hyprland.lua's app, shell, session,
       layout, workspace, screenshot and media keys, and leaves out the
       rest (see *Fill tidewm's keys* below) rather than binding them to
-      something close. Super+1 to 9 go to the workspaces named 1 to 9,
-      where Hyprland goes to the bar's nth. Super+PgUp and PgDn go round
-      past the last workspace, as sway's `workspace next` does. Resize
-      mode's h and l also resize a tile, by 5% of the window area, where
-      Hyprland's resizes only a floating window. Reversible.
+      something close. Super+PgUp and PgDn go round past the last
+      workspace, as sway's `workspace next` does. Resize mode's h and l
+      also resize a tile, by 5% of the window area, where Hyprland's
+      resizes only a floating window. Reversible.
 
 - [ ] **A laptop's pointing stick and the touchpad's I2C nodes count as
       touchpads.** `apply-input.sh` gives a TrackPoint (or other pointing
@@ -33,7 +32,8 @@ Delete an entry once you have agreed with it or reversed it.
 - [ ] **Super+Tab's history starts afresh on a config reload.** It's kept
       in Lua from `workspace.active`, and a reload is a new Lua state.
       Keeping it in a file, as the lid's state is, would be the
-      alternative.
+      alternative. On tidewm, tide's shell keeps it, from the shell's
+      start, so it starts afresh when the shell restarts.
 
 - [ ] **A tide workspace names its shell sessions as a prefix, not a whole
       name.** A terminal opened on tide's `PR-12 login` workspace
@@ -168,11 +168,6 @@ Delete an entry once you have agreed with it or reversed it.
 `config/tidewm/config`, for tide's tidewm session, leaves out what tidewm
 can't do yet, each needing tidewm or tide's shell first:
 
-- the bar's nth workspace (Super+1 to 9, Super+0), and the home
-  workspace (Super+Home, Super+End), which tidewm has no idea of yet;
-- Super+Tab, which is `workspace back_and_forth`, the last two
-  workspaces, where tide SPEC.md §6.6 flips between home and the last
-  other one;
 - the floating rules (Super+Alt+F), which tide's shell writes for
   Hyprland;
 - dragging the master's edge with Super and the left button, which tide's
