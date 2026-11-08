@@ -1,7 +1,7 @@
 -- Hyprland configuration
 -- ~/.config/hypr/hyprland.lua
 --
--- A dynamic-tiling Wayland desktop for Hyprland 0.56+, which reads only this
+-- A dynamic-tiling Wayland desktop for Hyprland 0.57+, which reads only this
 -- Lua file (hyprland.conf is gone). Tiling comes from the tide layout
 -- when it is installed and from Hyprland's master layout otherwise. The keys,
 -- look and focus rules follow the tide spec (SPEC.md §6 and §14 in

@@ -55,7 +55,7 @@ done
 
 
 ################################################################################
-# hyprland.lua, loaded under a stub of Hyprland's Lua API. Hyprland 0.56
+# hyprland.lua, loaded under a stub of Hyprland's Lua API. Hyprland 0.57
 # embeds Lua 5.5; the config also runs on 5.4, which is what most
 # distributions (and the CI runner) package today.
 ################################################################################

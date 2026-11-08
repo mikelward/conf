@@ -494,7 +494,7 @@ local function load(setup)
     end
     _G.fake_layout = nil
     _G.hl = new_hl()
-    S.version = (setup and setup.version) or "0.56.2"
+    S.version = (setup and setup.version) or "0.57.1"
     -- Monitors already connected as the config loads, as on a reload.
     if setup and setup.monitors then
         S.monitor_list = setup.monitors
@@ -575,7 +575,7 @@ local function unknown_keys(t, prefix, out)
     return out
 end
 
-test("every hl.config key is one Hyprland 0.56 accepts", function()
+test("every hl.config key is one Hyprland 0.57.1 accepts", function()
     load()
     local config = {}
     for k, v in pairs(S.config) do

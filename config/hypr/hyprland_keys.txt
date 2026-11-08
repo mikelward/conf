@@ -1,4 +1,4 @@
-# Every hl.config key Hyprland v0.56.2 accepts, in its Lua spelling (":"
+# Every hl.config key Hyprland v0.57.1 accepts, in its Lua spelling (":"
 # as ".", "-" as "_"), from src/config/values/ConfigValues.cpp. Hyprland
 # rejects any other key, so hyprland_test.lua checks the config against this.
 # Regenerate it when Hyprland's pin moves.
@@ -6,7 +6,9 @@ animations.enabled
 animations.workspace_wraparound
 binds.allow_pin_fullscreen
 binds.allow_workspace_cycles
+binds.client_requested_fs_uses_layout_handler
 binds.disable_keybind_grabbing
+binds.drag_center_window
 binds.drag_threshold
 binds.focus_preferred_method
 binds.hide_special_on_workspace_change
@@ -35,6 +37,7 @@ cursor.sync_gsettings_theme
 cursor.use_cpu_buffer
 cursor.warp_back_after_non_mouse_input
 cursor.warp_on_change_workspace
+cursor.warp_on_monitor_change
 cursor.warp_on_toggle_special
 cursor.zoom_detached_camera
 cursor.zoom_disable_aa
@@ -51,9 +54,9 @@ debug.ds_handle_same_buffer_fifo
 debug.enable_stdout_logs
 debug.error_limit
 debug.error_position
-debug.fifo_pending_workaround
 debug.full_cm_proto
 debug.gl_debugging
+debug.invalidate_buffers
 debug.invalidate_fp16
 debug.log_damage
 debug.manual_crash
@@ -63,9 +66,32 @@ debug.render_solitary_wo_damage
 debug.suppress_errors
 debug.vfr
 decoration.active_opacity
+decoration.blur.acrylic.aberration
+decoration.blur.acrylic.bulb
+decoration.blur.acrylic.clarity
+decoration.blur.acrylic.refraction
+decoration.blur.acrylic.tint
+decoration.blur.aurora.color1
+decoration.blur.aurora.color2
+decoration.blur.aurora.intensity
+decoration.blur.aurora.speed
 decoration.blur.brightness
 decoration.blur.contrast
+decoration.blur.drops.speed
 decoration.blur.enabled
+decoration.blur.fluid_jar.color
+decoration.blur.fluid_jar.distortion
+decoration.blur.fluid_jar.fill_amount
+decoration.blur.fluid_jar.mass
+decoration.blur.fluid_jar.precision
+decoration.blur.fluid_jar.speed
+decoration.blur.fluid_jar.turbulence
+decoration.blur.glass.refraction
+decoration.blur.glass.roughness
+decoration.blur.glass.size
+decoration.blur.haze.intensity
+decoration.blur.haze.iridescence
+decoration.blur.heat_shimmer.speed
 decoration.blur.ignore_opacity
 decoration.blur.input_methods
 decoration.blur.input_methods_ignorealpha
@@ -74,10 +100,21 @@ decoration.blur.noise
 decoration.blur.passes
 decoration.blur.popups
 decoration.blur.popups_ignorealpha
+decoration.blur.proportional
+decoration.blur.ripple.duration
+decoration.blur.ripple.radius
+decoration.blur.ripple.strength
+decoration.blur.ripple.width
 decoration.blur.size
 decoration.blur.special
+decoration.blur.variant
 decoration.blur.vibrancy
 decoration.blur.vibrancy_darkness
+decoration.blur.water.damping
+decoration.blur.water.duration
+decoration.blur.water.radius
+decoration.blur.water.speed
+decoration.blur.water.strength
 decoration.blur.xray
 decoration.border_part_of_window
 decoration.dim_around
@@ -100,10 +137,19 @@ decoration.screen_shader
 decoration.shadow.color
 decoration.shadow.color_inactive
 decoration.shadow.enabled
+decoration.shadow.offset
 decoration.shadow.range
 decoration.shadow.render_power
 decoration.shadow.scale
 decoration.shadow.sharp
+decoration.wobble.damping
+decoration.wobble.enabled
+decoration.wobble.intensity
+decoration.wobble.mass
+decoration.wobble.mesh
+decoration.wobble.stiffness
+decoration.wobble.value_epsilon
+decoration.wobble.velocity_epsilon
 dwindle.default_split_ratio
 dwindle.force_split
 dwindle.permanent_direction_override
@@ -233,9 +279,15 @@ input.scroll_method
 input.scroll_points
 input.sensitivity
 input.special_fallthrough
+input.swallow_focus_click
 input.tablet.absolute_region_position
+input.tablet.active_area_position
+input.tablet.active_area_size
+input.tablet.enabled
 input.tablet.left_handed
 input.tablet.output
+input.tablet.region_position
+input.tablet.region_size
 input.tablet.relative_input
 input.tablet.transform
 input.tablettool.eraser_button_mode
@@ -261,6 +313,9 @@ input.virtualkeyboard.release_pressed_on_close
 input.virtualkeyboard.share_states
 input_capture.capture_modifiers
 input_capture.enforce_barriers
+layers.allow_new_top_layers_over_existing_fullscreen
+layers.layers_hog_keyboard_focus
+layout.single_window_aspect_ratio
 layout.single_window_aspect_ratio_tolerance
 master.allow_small_split
 master.always_keep_position
@@ -282,6 +337,7 @@ misc.animate_manual_resizes
 misc.animate_mouse_windowdragging
 misc.anr_missed_pings
 misc.background_color
+misc.bell_sound
 misc.close_special_on_empty
 misc.col.splash
 misc.disable_autoreload
@@ -294,6 +350,7 @@ misc.disable_xdg_env_checks
 misc.enable_anr_dialog
 misc.enable_swallow
 misc.exit_window_retains_fullscreen
+misc.float_force_onscreen
 misc.focus_on_activate
 misc.font_family
 misc.force_default_wallpaper
@@ -306,6 +363,7 @@ misc.middle_click_paste
 misc.mouse_move_enables_dpms
 misc.mouse_move_focuses_monitor
 misc.name_vk_after_proc
+misc.new_float_force_onscreen
 misc.on_focus_under_fullscreen
 misc.render_unfocused_fps
 misc.screencopy_force_8b
@@ -319,6 +377,7 @@ misc.vrr
 opengl.nvidia_anti_flicker
 quirks.prefer_hdr
 quirks.skip_non_kms_dmabuf_formats
+render.async_commit
 render.cm_auto_hdr
 render.cm_enabled
 render.cm_sdr_eotf
@@ -332,6 +391,7 @@ render.keep_unmodified_copy
 render.new_render_scheduling
 render.non_shader_cm
 render.non_shader_cm_interop
+render.not_shown_fifo_lock
 render.send_content_type
 render.use_fp16
 render.use_shader_blur_blend
