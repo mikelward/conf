@@ -25,8 +25,9 @@ _lines=$(awk '
 start_test "tide's config comes first, so these win over it"
 assert_equal "include tide.conf" "$(printf '%s\n' "$_lines" | head -n 1)"
 
-start_test "the settings tide's shell writes are included, last, so they win"
-assert_equal "include tide-*.conf" "$(printf '%s\n' "$_lines" | tail -n 1)"
+start_test "the settings tide's shell writes are included, then nwg-displays' outputs, so they win"
+assert_equal "include tide-*.conf
+include ~/.config/sway/outputs" "$(printf '%s\n' "$_lines" | tail -n 2)"
 
 start_test "every line is a directive tidewm takes"
 _bad=$(printf '%s\n' "$_lines" | grep -v '^  ' | awk '{ print $1 }' | grep -vxE 'set|bindsym|input|include' || true)

@@ -5,6 +5,14 @@
 Calls autopilot made without asking, each one chosen for being cheap to undo.
 Delete an entry once you have agreed with it or reversed it.
 
+- [ ] **nwg-displays' outputs win over tide's** (2026-11-08):
+      `config/tidewm/config` includes `~/.config/sway/outputs`, the file
+      nwg-displays saves under tidewm (it takes it for sway), after
+      `tide-*.conf`, so an arrangement made there overrides
+      `tide-outputs.conf` from tide's Displays page. It's sway's own
+      path, so a sway session on the same machine shares it. Reversible
+      by swapping the two includes.
+
 - [ ] **tidewm's config binds only what tidewm can do** (2026-11-05):
       `config/tidewm/config` has hyprland.lua's app, shell, session,
       layout, workspace, screenshot and media keys, and leaves out the
