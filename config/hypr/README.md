@@ -405,7 +405,8 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   Lock. A bad file is reported and taken as suspend.
 - **Automatic light/dark by time of day.** `theme-daemon.sh` (autostarted)
   applies **light 07:00–19:00 and dark otherwise**, and re-applies at each
-  boundary. `theme.sh` drives the whole desktop: it sets the freedesktop
+  boundary, within a few seconds of waking when the machine slept through
+  one. `theme.sh` drives the whole desktop: it sets the freedesktop
   colour-scheme preference (so **kitty**, via its `*.auto.conf` themes, and
   **GTK** apps follow automatically), relaunches **waybar** and **swaync** with
   the matching stylesheet, and — if you drop
