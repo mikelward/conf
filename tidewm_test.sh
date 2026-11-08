@@ -14,22 +14,25 @@ _hypr="$_srcdir/config/hypr/hyprland.lua"
 start_test "exists: tidewm/config"
 assert_true test -f "$_cfg"
 
-# The file's lines, comments and blank lines left out, with a block's
-# lines (input NAME { ... }) prefixed "  " so they read as settings.
+# The file's lines, comments and blank lines left out, with an input
+# block's lines (input NAME { ... }) prefixed "  " so they read as
+# settings. A mode's lines (mode NAME { ... }) are bindings, read as the
+# top level's are.
 _lines=$(awk '
     /^[[:space:]]*(#|$)/ { next }
     /^[[:space:]]*}[[:space:]]*$/ { inblock = 0; next }
-    inblock { sub(/^[[:space:]]+/, ""); print "  " $0; next }
-    /{[[:space:]]*$/ { inblock = 1; sub(/[[:space:]]*{[[:space:]]*$/, ""); print; next }
+    inblock == "input" { sub(/^[[:space:]]+/, ""); print "  " $0; next }
+    inblock == "mode" { sub(/^[[:space:]]+/, ""); print; next }
+    /{[[:space:]]*$/ { inblock = $1; sub(/[[:space:]]*{[[:space:]]*$/, ""); print; next }
     { print }' "$_cfg")
 
 start_test "every line is a directive tidewm takes"
 _bad=$(printf '%s\n' "$_lines" | grep -v '^  ' | awk '{ print $1 }' | grep -vxE \
-    'set|bindsym|bindswitch|for_window|output|input|mode|single_window|dim_inactive|focus_guard|include' || true)
+    'set|bindsym|bindswitch|for_window|output|input|mode|single_window|dim_inactive|focus_guard|floating_modifier|include' || true)
 assert_equal "" "$_bad"
 
-start_test "the file's blocks are input blocks, which take a setting a line"
-_blocks=$(grep -E '{[[:space:]]*$' "$_cfg" | grep -vE '^input ' || true)
+start_test "the file's blocks are input blocks and modes"
+_blocks=$(grep -E '{[[:space:]]*$' "$_cfg" | grep -vE '^(input|mode) ' || true)
 assert_equal "" "$_blocks"
 
 # A binding's commands: what follows its keys, with $mod and $runenv as
@@ -46,7 +49,7 @@ _unknown=$(printf '%s\n' "$_bindings" | while IFS= read -r _cmd; do
         exec\ *) printf '%s\n' exec; continue ;;
     esac
     printf '%s\n' "$_cmd" | tr ';' '\n' | awk 'NF { print $1 }'
-done | grep -vxE 'exec|kill|exit|layout|mfact|nmaster|zoom|focus|maximize|fullscreen|floating|workspace|move|input|output|mode|reload|grant|dim|sticky|urgent|nop|rename|persist|unpersist|chvt|unlock|switch' || true)
+done | grep -vxE 'exec|kill|exit|layout|mfact|nmaster|zoom|focus|maximize|fullscreen|floating|workspace|move|movestack|resize|input|output|mode|reload|grant|dim|sticky|urgent|nop|rename|persist|unpersist|chvt|unlock|switch' || true)
 assert_equal "" "$_unknown"
 
 # A key, as tidewm matches it: its modifiers in any order, and any case.
@@ -115,6 +118,14 @@ assert_contains 'bindsym $mod+l exec loginctl lock-session' "$(cat "$_cfg")"
 
 start_test "closing the lid turns the panel off, then has tide lock as its Power page says"
 assert_contains 'bindswitch lid:on output eDP-1 disable; exec tide lid-closed' "$(cat "$_cfg")"
+
+start_test "Super and the left button drag a window, and the right one resizes it, as in hyprland.lua"
+assert_contains 'floating_modifier $mod normal' "$(cat "$_cfg")"
+
+start_test "resize mode has a way out"
+_mode=$(awk '/^mode "resize" {/ { on = 1; next } on && /^}/ { on = 0 } on' "$_cfg")
+assert_contains 'bindsym Escape mode default' "$_mode"
+assert_contains 'bindsym Return mode default' "$_mode"
 
 start_test "the focus guard is on, as tide's session needs"
 assert_contains 'focus_guard enable' "$(cat "$_cfg")"

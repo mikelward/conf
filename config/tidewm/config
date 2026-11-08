@@ -98,7 +98,8 @@ bindsym $mod+Shift+e exit
 # Layouts (tide SPEC.md §6.1).
 bindsym $mod+grave layout monocle
 bindsym $mod+o layout monocle
-bindsym $mod+period layout toggle
+bindsym $mod+period layout next
+bindsym $mod+comma layout prev
 bindsym $mod+backslash mfact +0.05
 bindsym $mod+slash mfact -0.05
 bindsym $mod+equal nmaster +1
@@ -106,10 +107,23 @@ bindsym $mod+minus nmaster -1
 bindsym Alt+Tab zoom
 bindsym $mod+j focus next
 bindsym $mod+k focus prev
+bindsym $mod+Shift+j movestack next
+bindsym $mod+Shift+k movestack prev
+bindsym $mod+Left focus left
+bindsym $mod+Right focus right
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Right move right
 bindsym $mod+Up maximize toggle
 bindsym $mod+Shift+Up fullscreen toggle
+bindsym $mod+Down fullscreen disable; maximize disable
 bindsym $mod+Shift+f floating toggle
 bindsym $mod+Insert floating toggle
+
+# The mouse, as hyprland.lua's: Super and the left button drag a window,
+# which floats a tile, Super and the right one resize it, and Super and
+# the middle one maximize it, or put it back.
+floating_modifier $mod normal
+bindsym --whole-window $mod+button2 maximize toggle
 
 # Workspaces by name, 1 to 9: tidewm has no "the bar's nth workspace" yet.
 bindsym $mod+1 workspace number 1
@@ -131,6 +145,10 @@ bindsym $mod+Shift+7 move container to workspace number 7
 bindsym $mod+Shift+8 move container to workspace number 8
 bindsym $mod+Shift+9 move container to workspace number 9
 bindsym $mod+Tab workspace back_and_forth
+bindsym $mod+Page_Up workspace prev
+bindsym $mod+Page_Down workspace next
+bindsym $mod+Shift+Page_Up move container to workspace prev
+bindsym $mod+Shift+Page_Down move container to workspace next
 
 # Screenshots (tide SPEC.md §13).
 bindsym Print exec $runenv screenshot
@@ -149,6 +167,23 @@ bindsym --locked XF86AudioPlay exec playerctl play-pause
 bindsym --locked XF86AudioPause exec playerctl play-pause
 bindsym --locked XF86AudioNext exec playerctl next
 bindsym --locked XF86AudioPrev exec playerctl previous
+
+# Resize mode, as hyprland.lua's: h/j/k/l or the arrows, Esc or Return to
+# leave. A floating window's right or bottom edge moves 40 pixels; a
+# tile's column grows or shrinks by 5% of the window area.
+bindsym $mod+Shift+r mode "resize"
+mode "resize" {
+    bindsym h resize shrink right 40 px or 5 ppt
+    bindsym l resize grow right 40 px or 5 ppt
+    bindsym k resize shrink down 40 px
+    bindsym j resize grow down 40 px
+    bindsym Left resize shrink right 40 px or 5 ppt
+    bindsym Right resize grow right 40 px or 5 ppt
+    bindsym Up resize shrink down 40 px
+    bindsym Down resize grow down 40 px
+    bindsym Escape mode default
+    bindsym Return mode default
+}
 
 # The settings tide's shell writes (tide SPEC.md §16), as hyprland.lua reads
 # tide-*.lua: the Mouse, Touchpad and Keyboard pages' tide-input.conf, and
