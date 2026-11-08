@@ -88,7 +88,7 @@ local M = { calls = {} }
 local function helper(name)
     return function(...) table.insert(M.calls, { name, ... }) end
 end
-for _, n in ipairs({ "cycle_next", "cycle_prev", "toggle_monocle", "grow", "shrink",
+for _, n in ipairs({ "cycle_next", "cycle_prev", "last_mode", "toggle_monocle", "grow", "shrink",
                      "add_master", "remove_master", "swap_with_master", "focus", "move",
                      "focus_side", "move_side", "drag_press", "drag_release" }) do
     M[n] = helper(n)
@@ -3086,6 +3086,17 @@ end
 local function bound(keys)
     return S.binds["|" .. keys]
 end
+
+test("the layout used last has no key of its own, and tide's keys can give it one", function()
+    load({ layout = FAKE_LAYOUT, keys = [[return { keys = { last_layout = { "SUPER + Space" }, launcher = {} } }]] })
+    eq("The layout used last", bound("SUPER + Space").opts.description)
+    load({ layout = FAKE_LAYOUT })
+    local keys = listed_keys()
+    same({}, keys.last_layout.defaults)
+    same({}, keys.last_layout.keys)
+    load()
+    eq(nil, listed_keys().last_layout, "master has none")
+end)
 
 test("the named bindings are listed for tide, in order, with what each does and its keys", function()
     load({ layout = FAKE_LAYOUT })
