@@ -31,10 +31,17 @@ input type:keyboard {
     repeat_delay 600
     repeat_rate 25
 }
+# Every mouse: the right button primary, with a faster wheel, as
+# hyprland.lua's mouse option. tidewm's pointer is anything that can't tap,
+# so tide's apply-input.sh gives a laptop's pointing stick and its
+# touchpad's -mouse node the touchpad's settings (in tide-devices.conf,
+# included below), and HYPR_MOUSE_SCROLL_FACTOR the wheel's.
 input type:pointer {
     accel_profile adaptive
     pointer_accel 1
     natural_scroll disabled
+    left_handed enabled
+    scroll_factor 3
 }
 input type:touchpad {
     natural_scroll enabled
