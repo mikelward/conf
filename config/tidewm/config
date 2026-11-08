@@ -150,8 +150,10 @@ bindsym $mod+Page_Down workspace next
 bindsym $mod+Shift+Page_Up move container to workspace prev
 bindsym $mod+Shift+Page_Down move container to workspace next
 
-# Screenshots (tide SPEC.md §13).
+# Screenshots (tide SPEC.md §13): the screen, the focused window (Alt), or
+# a region (Shift or Super), as hyprland.lua's.
 bindsym Print exec $runenv screenshot
+bindsym Alt+Print exec $runenv screenshot --window
 bindsym Shift+Print exec $runenv screenshot --region
 bindsym $mod+Print exec $runenv screenshot --region
 

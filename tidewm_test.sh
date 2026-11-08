@@ -110,6 +110,18 @@ _missing=$(grep -oE 'hl\.bind\(key\("[^"]+"\), exec\("qs -c tide ipc call [a-z ]
 done)
 assert_equal "" "$_missing"
 
+# hyprland.lua's screenshot keys named as one string, as "ALT + Print",
+# exec(screenshot .. " --window"): each runs the same screenshot here.
+start_test "each of hyprland.lua's screenshot keys takes the same shot here"
+_missing=$(grep -oE 'bind\("screenshot[a-z_]*", "[^"]+", exec\(screenshot( \.\. " [^"]*")?\)' "$_hypr" | while IFS= read -r _bind; do
+    _k=$(printf '%s\n' "$_bind" | sed 's/^bind("[^"]*", "\([^"]*\)".*/\1/; s/ + /+/g; s/ALT/Alt/; s/SHIFT/Shift/; s/SUPER/$mod/')
+    _args=$(printf '%s\n' "$_bind" | sed -n 's/.*exec(screenshot \.\. "\(.*\)")$/\1/p')
+    grep -qxF "bindsym $_k exec \$runenv screenshot$_args" "$_cfg" || printf '%s%s\n' "$_k" "$_args"
+done)
+assert_equal "" "$_missing"
+start_test "the focused window's screenshot is bound"
+assert_contains 'bindsym Alt+Print exec $runenv screenshot --window' "$(cat "$_cfg")"
+
 start_test "the settings tide's shell writes are included, last, so they win"
 assert_equal "include tide-*.conf" "$(printf '%s\n' "$_lines" | tail -n 1)"
 
