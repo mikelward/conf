@@ -1,11 +1,12 @@
 # Hyprland Wayland desktop
 
 A dynamic-tiling Wayland desktop for **Hyprland 0.57+**, configured in Lua
-(`hyprland.lua`; Hyprland no longer reads `hyprland.conf`). Tiling comes from
-the [tide](https://github.com/mikelward/tide) layout when it is
-installed (tile, three-column, two columns + stack and monocle, per
-workspace), and from Hyprland's master layout otherwise. The keys, look and
-focus rules follow the tide spec (SPEC.md §6 and §14). Intended as a
+(`hyprland.lua`; Hyprland no longer reads `hyprland.conf`). The config is
+[tide](https://github.com/mikelward/tide)'s own (its SPEC.md §6.8), which
+tide's `make install` puts in `~/.config/hypr/tide/`: its keys, layout,
+rules, look and input scripts. `hyprland.lua` here loads it with this
+setup's preferences: Dvorak, left-handed mice with a faster wheel, kitty,
+the app keys below, and waybar, swaync and fuzzel outside tide's shell. Intended as a
 KDE replacement that works across laptops and workstations; KDE Plasma stays
 installed as the fallback.
 
@@ -13,13 +14,12 @@ Files (all live under this repo's `config/` and map to `~/.config/`):
 
 | Path | Purpose |
 |------|---------|
-| `config/hypr/hyprland.lua` | Compositor: layout, input, keybinds, look, lid, window rules |
-| `config/hypr/hyprland_test.lua` | Tests for `hyprland.lua` against a stub of Hyprland's Lua API |
+| `config/hypr/hyprland.lua` | Loads tide's Hyprland config with these preferences |
+| `config/hypr/hyprland_test.lua` | Tests for `hyprland.lua`, against a stand-in for tide's |
 | `config/hypr/hyprland.local.lua.template` | Per-machine override template (copy to `~/.config/hypr/hyprland.local.lua`) |
 | `config/hypr/hypridle.conf` | Idle: dim → lock → DPMS off → suspend (in tide, on battery only) |
 | `config/hypr/hyprlock.conf` | Lock screen outside the tide session |
 | `config/hypr/xdph.conf` | Screen sharing: `scripts/share-picker.sh`, tide's share picker where tide is installed, xdph's own otherwise |
-| `config/hypr/scripts/apply-input.sh` | Auto-classify pointers (mice → right-handed), and give each keyboard tide's settings |
 | `config/hypr/scripts/theme.sh` | Apply light/dark theme by time of day |
 | `config/hypr/scripts/theme-daemon.sh` | Re-apply theme at each 07:00/19:00 boundary |
 | `config/hypr/scripts/launch-fuzzel.sh` | Launch fuzzel with the current theme's colours |
@@ -155,7 +155,7 @@ table is the tide spec's (SPEC.md §6.6).
 
 Each binding says what it does with `does("...")`, its `hl.bind`
 description, which tide's Keyboard shortcuts list (tide SPEC.md §16);
-`hyprland_test.lua` fails on a binding without one.
+tide's `hyprland_test.lua` fails on a binding without one.
 
 Most bindings also have a name, `bind("terminal", key("T"), ...)`, so
 tide's Keyboard shortcuts can give them other keys:
@@ -343,7 +343,7 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   open windows a new rule covers. conf ships no `floating.json`.
 - **Per-device handedness and speed (auto).** Global default is
   right-handed so **trackpads keep the left button primary**.
-  `apply-input.sh` (autostarted) enumerates the pointers at login,
+  tide's `apply-input.sh` (autostarted) enumerates the pointers at login,
   classifies each as touchpad or mouse by name, and configures each one —
   no device names to hardcode, and the same config works on every machine:
   - **Mice** flip to `left_handed` (right button primary) with a faster
