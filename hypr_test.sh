@@ -57,7 +57,9 @@ done
 ################################################################################
 # hyprland.lua, loaded under a stub of Hyprland's Lua API. Hyprland 0.56
 # embeds Lua 5.5; the config also runs on 5.4, which is what most
-# distributions (and the CI runner) package today.
+# distributions (and the CI runner) package today. It loads tide's config,
+# from a tide checkout: $TIDE_DIR, else one beside this repo (CI checks
+# tide's main out there), else setup's ~/src/tide.
 ################################################################################
 _lua=
 for _l in lua5.5 lua5.4 lua; do
@@ -67,18 +69,28 @@ for _l in lua5.5 lua5.4 lua; do
         break
     fi
 done
-if test -n "$_lua"; then
-    start_test "hyprland_test.lua passes"
-    _lua_out=$("$_lua" "$_hypr_test" 2>&1)
+_tide_config=
+for _d in ${TIDE_DIR:+"$TIDE_DIR"} "$_srcdir/../tide" "$HOME/src/tide"; do
+    if test -f "$_d/hypr/tide/config.lua"; then
+        _tide_config="$_d/hypr/tide/config.lua"
+        break
+    fi
+done
+if test -n "$_lua" && test -n "$_tide_config"; then
+    start_test "hyprland_test.lua passes, with tide's config from ${_tide_config%/hypr/tide/config.lua}"
+    _lua_out=$("$_lua" "$_hypr_test" "$_tide_config" 2>&1)
     _lua_status=$?
     printf '%s\n' "$_lua_out"
     assert_equal 0 "$_lua_status"
 elif test -n "${CI:-}"; then
-    # CI installs Lua; a skip there would pass without testing the config.
-    start_test "Lua 5.5 or 5.4 is installed for hyprland_test.lua"
+    # CI installs Lua and checks tide out; a skip there would pass without
+    # testing the config.
+    start_test "Lua 5.5 or 5.4 and tide's config are there for hyprland_test.lua"
     assert_true false
-else
+elif test -z "$_lua"; then
     skip_block "hyprland_test.lua (neither Lua 5.5 nor 5.4 is installed)"
+else
+    skip_block "hyprland_test.lua (no tide checkout with hypr/tide/config.lua; set TIDE_DIR)"
 fi
 
 start_test "the conf-format config is gone (Hyprland 0.56 reads only hyprland.lua)"

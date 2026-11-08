@@ -79,6 +79,16 @@ jobs:
           # Read-only test job; don't leave a write-capable token in
           # the local git config for subsequent steps.
           persist-credentials: false
+      # hyprland.lua loads tide's Hyprland config, so its test needs tide:
+      # main, beside this checkout, where hypr_test.sh looks. tide is
+      # public, so this costs one more clone, and fails the job only if
+      # GitHub does.
+      - uses: actions/checkout@v4
+        with:
+          repository: mikelward/tide
+          ref: main
+          path: with space/tide
+          persist-credentials: false
       # Every apt-get below gives up on a mirror that stalls for 30 s and
       # tries again, rather than waiting out the job's limit, as Azure's
       # Ubuntu mirror has made it.

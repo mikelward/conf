@@ -405,7 +405,8 @@ $(CACHE)/test-rule-size.stamp: scripts/check-rule-size.sh AGENTS.md agents/AGENT
 	@touch $@
 test-rule-size: $(CACHE)/test-rule-size.stamp
 
-# The Hyprland desktop: hyprland.lua under a stub of Hyprland's Lua API, plus
+# The Hyprland desktop: hyprland.lua under a stub of Hyprland's Lua API, with
+# tide's config from a tide checkout (hypr_test.sh says where), plus
 # presence/parse and script checks. Depends on every file it validates so
 # editing any of them re-runs.
 $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
@@ -441,7 +442,9 @@ $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
                           config/swaync/colors-dark.css \
                           config/swaync/colors-light.css \
                           config/uwsm/env \
-                          config/uwsm/env-hyprland | $(CACHE)
+                          config/uwsm/env-hyprland \
+                          $(wildcard $(TIDE_DIR)/hypr/tide/config.lua ../tide/hypr/tide/config.lua \
+                                     $(HOME)/src/tide/hypr/tide/config.lua) | $(CACHE)
 	@bash hypr_test.sh
 	@touch $@
 test-hypr: $(CACHE)/test-hypr.stamp
