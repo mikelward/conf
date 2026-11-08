@@ -54,3 +54,9 @@ bindsym --name=screenshot_region $mod+Print exec $runenv screenshot --region
 # The settings tide's shell writes, again, so they win over the lines here
 # too (tide.conf includes them, before these).
 include tide-*.conf
+
+# The outputs nwg-displays saves, which takes tidewm for sway by its
+# SWAYSOCK, so it writes sway's file. After tide's tide-outputs.conf, so
+# arranging the displays there wins. Missing until it first saves, it
+# includes nothing.
+include ~/.config/sway/outputs
