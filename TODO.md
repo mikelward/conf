@@ -204,20 +204,6 @@ inhibit taken while idle and held through your return, so this waits for
 the distros conf targets to ship 0.1.8; drop this note then. (Codex on
 mikelward/conf#414.)
 
-## Find a docked panel that's off
-
-`lid_open`'s fallback, for a lid closed with no saved state (it predates
-this config, or the state file couldn't be written), looks for an
-internal panel that is off with `hl.get_monitors({ all = true })`.
-Hyprland 0.56.2's `hl.get_monitors` ignores its argument and lists only
-the monitors on (`hlGetMonitors` in `LuaBindingsQuery.cpp`), and
-`hl.get_monitor` resolves only those too. With `HYPR_INTERNAL_OUTPUT`
-set, the fallback now turns the named panel on when it isn't listed.
-Without it, it never finds the panel and the lid opens to a dark panel.
-The stub in `hyprland_test.lua` still lists monitors that are off under
-`{ all = true }` for that case's test; `on_only` makes it list as 0.56.2
-does, and should become the default once this is fixed.
-
 ## Close theme.sh's gaps when following tide's shell
 
 When the theme daemon's first `theme.sh follow` and tide's first
