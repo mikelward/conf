@@ -181,6 +181,21 @@ assert_contains 'bindsym Alt+Print exec $runenv screenshot --window' "$(cat "$_c
 start_test "the settings tide's shell writes are included, last, so they win"
 assert_equal "include tide-*.conf" "$(printf '%s\n' "$_lines" | tail -n 1)"
 
+# What a block of the config sets: each line of `input NAME {` ... `}`.
+_block() {
+    awk -v head="input $1 {" '$0 == head { on = 1; next } on && /^}/ { on = 0 } on { sub(/^[[:space:]]+/, ""); print }' "$_cfg"
+}
+
+start_test "every mouse has hyprland.lua's handedness and wheel speed"
+_mouse=$(sed -n 's/^ *mouse = { left_handed = \(true\|false\), scroll_factor = \([0-9.]*\) },$/\1 \2/p' "$_hypr")
+assert_equal "true 3" "$_mouse"
+assert_contains "left_handed enabled" "$(_block type:pointer)"
+assert_contains "scroll_factor ${_mouse#* }" "$(_block type:pointer)"
+
+start_test "touchpads keep their own handedness and wheel speed"
+assert_not_contains "left_handed" "$(_block type:touchpad)"
+assert_not_contains "scroll_factor" "$(_block type:touchpad)"
+
 start_test "the session locks through logind, as tide's does"
 assert_contains 'bindsym $mod+l exec loginctl lock-session' "$(cat "$_cfg")"
 
