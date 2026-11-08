@@ -17,7 +17,7 @@ Files (all live under this repo's `config/` and map to `~/.config/`):
 | `config/hypr/hyprland.lua` | Loads tide's Hyprland config with these preferences |
 | `config/hypr/hyprland_test.lua` | Tests for `hyprland.lua`, against a stand-in for tide's |
 | `config/hypr/hyprland.local.lua.template` | Per-machine override template (copy to `~/.config/hypr/hyprland.local.lua`) |
-| `config/hypr/hypridle.conf` | Idle: dim → lock → DPMS off → suspend (in tide, on battery only) |
+| (tide's `hypr/hypridle.conf`) | Idle: dim → lock → DPMS off → suspend (in tide, on battery only); tide's installer copies it to `~/.config/hypr/hypridle.conf` |
 | `config/hypr/hyprlock.conf` | Lock screen outside the tide session |
 | `config/hypr/xdph.conf` | Screen sharing: `scripts/share-picker.sh`, tide's share picker where tide is installed, xdph's own otherwise |
 | `config/hypr/scripts/theme.sh` | Apply light/dark theme by time of day |

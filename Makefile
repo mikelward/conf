@@ -411,7 +411,6 @@ $(CACHE)/test-hypr.stamp: hypr_test.sh shrc_test_lib.sh \
                           config/hypr/hyprland.lua \
                           config/hypr/hyprland_test.lua \
                           config/hypr/hyprland.local.lua.template \
-                          config/hypr/hypridle.conf \
                           config/hypr/hyprlock.conf \
                           config/hypr/xdph.conf \
                           config/hypr/scripts/share-picker.sh \
