@@ -28,7 +28,7 @@ _lines=$(awk '
 
 start_test "every line is a directive tidewm takes"
 _bad=$(printf '%s\n' "$_lines" | grep -v '^  ' | awk '{ print $1 }' | grep -vxE \
-    'set|bindsym|bindswitch|for_window|output|input|mode|single_window|dim_inactive|focus_guard|floating_modifier|include' || true)
+    'set|bindsym|bindswitch|for_window|output|input|mode|single_window|dim_inactive|focus_guard|floating_modifier|xwayland_scaling|include' || true)
 assert_equal "" "$_bad"
 
 start_test "the file's blocks are input blocks and modes"
@@ -138,6 +138,9 @@ start_test "resize mode has a way out"
 _mode=$(awk '/^mode "resize" {/ { on = 1; next } on && /^}/ { on = 0 } on' "$_cfg")
 assert_contains 'bindsym Escape mode default' "$_mode"
 assert_contains 'bindsym Return mode default' "$_mode"
+
+start_test "X11 windows are sharp at a fractional scale, as tide SPEC.md §17 asks"
+assert_contains 'xwayland_scaling disable' "$(printf '%s\n' "$_lines")"
 
 start_test "the focus guard is on, as tide's session needs"
 assert_contains 'focus_guard enable' "$(cat "$_cfg")"

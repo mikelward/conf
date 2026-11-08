@@ -17,6 +17,11 @@ set $runenv ~/scripts/runenv
 focus_guard enable
 dim_inactive 0.07
 
+# X11 apps are sharp at a fractional scale (tide SPEC.md §17): drawn in the
+# output's own pixels, unscaled, so one that scales itself is the right
+# size and one that doesn't is small.
+xwayland_scaling disable
+
 # US Dvorak; Caps Lock is Compose and Menu a second Super, as setup's
 # XKBOPTIONS and hyprland.lua's INPUT.
 input type:keyboard {
