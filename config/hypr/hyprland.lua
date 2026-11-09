@@ -23,21 +23,8 @@ local tide_config = os.getenv("TIDE_HYPRLAND_LUA") or (home .. "/.config/hypr/ti
 -- Classic GTK scrollbars, matching xsessionrc.
 hl.env("GTK_OVERLAY_SCROLLING", "0")
 
-local chunk, err = loadfile(tide_config)
-if not chunk then
-    -- Without tide there are no keys at all, so enough to get a terminal
-    -- and out, and a notification saying why.
-    hl.notification.create({
-        text = "tide's Hyprland config didn't load (" .. tostring(err) .. "); run `make install` in tide. Super+T is a terminal, Super+Shift+E quits.",
-        duration = 0,
-        icon = "error",
-    })
-    hl.bind("SUPER + T", hl.dsp.exec_cmd(terminal))
-    hl.bind("SUPER + SHIFT + E", hl.dsp.exit())
-    return
-end
-
-chunk({
+-- These preferences over tide's.
+local opts = {
     terminal = terminal,
     terminal_app = terminal,
     files = terminal .. " -e yazi",
@@ -85,4 +72,42 @@ chunk({
         app("remote_desktop", "R", "remote-desktop", "Remote desktop")
         app("music", "Y", "youtube-music", "YouTube Music")
     end,
-})
+}
+
+-- Without tide's config, or with one that fails, as when this file is
+-- newer than the tide installed, there are no keys at all. So enough to get
+-- a terminal and out, the preferences above that work on any Hyprland,
+-- and a notification saying why. Each setting is applied on its own, so
+-- one this Hyprland rejects doesn't take the others with it.
+local function without_tide(why)
+    hl.notification.create({
+        text = "tide's Hyprland config " .. why .. "; run `make install` in tide. Super+T is a terminal, Super+Shift+E quits.",
+        duration = 0,
+        icon = "error",
+    })
+    local function try(what, fn)
+        local ok, set_err = pcall(fn)
+        if not ok then
+            hl.notification.create({ text = "couldn't set " .. what .. ": " .. tostring(set_err), duration = 0, icon = "error" })
+        end
+    end
+    try("no gaps", function() hl.config({ general = { gaps_in = 0, gaps_out = 0 } }) end)
+    try("the keyboard layout", function()
+        hl.config({ input = { kb_layout = "us", kb_variant = opts.input.kb_variant, kb_options = opts.input.kb_options } })
+    end)
+    try("the mouse", function()
+        hl.config({ input = { left_handed = opts.mouse.left_handed, scroll_factor = opts.mouse.scroll_factor } })
+    end)
+    hl.bind("SUPER + T", hl.dsp.exec_cmd(terminal))
+    hl.bind("SUPER + SHIFT + E", hl.dsp.exit())
+end
+
+local chunk, err = loadfile(tide_config)
+if not chunk then
+    without_tide("didn't load (" .. tostring(err) .. ")")
+    return
+end
+local ok, run_err = pcall(chunk, opts)
+if not ok then
+    without_tide("failed (" .. tostring(run_err) .. ")")
+end

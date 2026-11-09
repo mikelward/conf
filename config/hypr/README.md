@@ -1,6 +1,6 @@
 # Hyprland Wayland desktop
 
-A dynamic-tiling Wayland desktop for **Hyprland 0.57+**, configured in Lua
+A dynamic-tiling Wayland desktop for **Hyprland 0.56.2+**, configured in Lua
 (`hyprland.lua`; Hyprland no longer reads `hyprland.conf`). The config is
 [tide](https://github.com/mikelward/tide)'s own (its SPEC.md §6.8), which
 tide's `make install` puts in `~/.config/hypr/tide/`: its keys, layout,
@@ -44,6 +44,11 @@ The dotfiles here are installed by this repo's `make install`, and the
 packages by `setup` (scripts repo). The tide layout is optional: its
 repo's `make install` puts it in `~/.config/hypr/tide/`, and
 `hyprland.lua` picks it up on the next reload.
+
+Until it's there, or when it fails (an older tide that doesn't know an
+option this file gives it), `hyprland.lua` still sets Dvorak, the mouse
+and no gaps, binds `Super+T` to a terminal and `Super+Shift+E` to quit,
+and says why in a notification.
 
 The packages `setup` installs (names vary by distro; Hyprland is first-class on
 Arch, `setup` auto-enables the `lionheartp/Hyprland` COPR on Fedora, and on

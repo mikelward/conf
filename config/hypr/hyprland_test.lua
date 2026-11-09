@@ -38,6 +38,13 @@ do
     f:write("_G.tide_opts = ...\n")
     f:close()
 end
+-- A tide config older than this file, which rejects an option it's given.
+local FAILING = tmp .. "/tide-failing.lua"
+do
+    local f = assert(io.open(FAILING, "w"))
+    f:write('error("tide\'s hyprland.lua has no option mouse", 0)\n')
+    f:close()
+end
 
 -- A stub of what this file calls of Hyprland's API.
 local S
@@ -50,12 +57,20 @@ os.getenv = function(k)
     return real_getenv(k)
 end
 local function load(tide)
-    S = { env = {}, binds = {}, notifications = {} }
+    S = { env = {}, binds = {}, notifications = {}, config = {} }
     _G.tide_opts = nil
     env = { TIDE_HYPRLAND_LUA = tide }
     _G.hl = {
         env = function(k, v) S.env[k] = v end,
         bind = function(keys, target) S.binds[keys] = target end,
+        config = function(t)
+            for section, values in pairs(t) do
+                S.config[section] = S.config[section] or {}
+                for k, v in pairs(values) do
+                    S.config[section][k] = v
+                end
+            end
+        end,
         notification = { create = function(t) table.insert(S.notifications, t) end },
         dsp = {
             exec_cmd = function(cmd) return { exec = cmd } end,
@@ -119,6 +134,58 @@ test("without tide's config, a terminal, a way out, and why", function()
     truthy(S.binds["SUPER + SHIFT + E"].exit, "Super+Shift+E quits")
     eq(1, #S.notifications)
     truthy(S.notifications[1].text:find("make install", 1, true), S.notifications[1].text)
+end)
+
+-- What a session gets when tide's config is missing or fails: no gaps,
+-- Dvorak, the mouse, a terminal and a way out, rather than Hyprland's
+-- defaults.
+local function check_fallback(what)
+    eq(0, S.config.general.gaps_in, what .. ": gaps_in")
+    eq(0, S.config.general.gaps_out, what .. ": gaps_out")
+    eq("us", S.config.input.kb_layout, what .. ": kb_layout")
+    eq("dvorak", S.config.input.kb_variant, what .. ": kb_variant")
+    eq("compose:caps,altwin:menu_win", S.config.input.kb_options, what .. ": kb_options")
+    eq(true, S.config.input.left_handed, what .. ": left_handed")
+    eq(3, S.config.input.scroll_factor, what .. ": scroll_factor")
+    eq("kitty", S.binds["SUPER + T"].exec, what .. ": Super+T")
+    truthy(S.binds["SUPER + SHIFT + E"].exit, what .. ": Super+Shift+E quits")
+end
+
+test("without tide's config, still Dvorak, the mouse and no gaps", function()
+    load(tmp .. "/missing.lua")
+    check_fallback("missing")
+end)
+
+test("with a tide config that fails, the same, and why", function()
+    load(FAILING)
+    check_fallback("failing")
+    eq(1, #S.notifications)
+    truthy(S.notifications[1].text:find("failed", 1, true), S.notifications[1].text)
+    truthy(S.notifications[1].text:find("has no option mouse", 1, true), S.notifications[1].text)
+end)
+
+test("a setting this Hyprland rejects leaves the rest", function()
+    _G.tide_opts = nil
+    env = { TIDE_HYPRLAND_LUA = tmp .. "/missing.lua" }
+    local binds, notes = {}, {}
+    _G.hl = {
+        env = function() end,
+        bind = function(keys, target) binds[keys] = target end,
+        notification = { create = function(t) table.insert(notes, t) end },
+        config = function(t)
+            if t.general then
+                error("no such option general.gaps_in")
+            end
+        end,
+        dsp = {
+            exec_cmd = function(cmd) return { exec = cmd } end,
+            exit = function() return { exit = true } end,
+        },
+    }
+    assert(loadfile(config_path))()
+    eq("kitty", binds["SUPER + T"].exec)
+    eq(2, #notes, "why, and the setting that failed")
+    truthy(notes[2].text:find("no gaps", 1, true), notes[2].text)
 end)
 
 os.execute("rm -rf '" .. tmp .. "'")
