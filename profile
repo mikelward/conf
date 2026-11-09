@@ -17,6 +17,22 @@ is_zsh() {
     test -n "${ZSH_VERSION:-}"
 }
 
+# A login with no terminal is a display manager's (GDM, SDDM) starting a
+# session, and a hang here stops that session with nothing on screen and
+# nothing in the log. So such a login says in the journal which session it
+# starts and how far it got: `journalctl -t profile`. One `logger` per step,
+# a few milliseconds each, and none for a login on a terminal.
+_profile_start=$(date +%s 2>/dev/null)
+if ! test -t 0 && command -v logger >/dev/null 2>&1; then
+    profile_log() {
+        # Nothing to report a failed logger to: this is the log.
+        logger -t profile -- "$*" 2>/dev/null || true
+    }
+else
+    profile_log() { :; }
+fi
+profile_log "starting ${XDG_SESSION_DESKTOP:-${DESKTOP_SESSION:-unnamed}} session as $(basename "${SHELL:-sh}") login"
+
 # Shared environment (~/.env, from the conf repo: PATH and other exports)
 # and per-host overrides (~/.env.local, e.g. SHELL or extra PATH dirs),
 # sourced before .shrc so that anything set here is visible to the shrc
@@ -42,7 +58,11 @@ fi
 # zsh will have already read .shrc via the .zshrc symlink if it's interactive,
 # source .shrc for other shells here
 if { ! is_zsh; } || { is_zsh && ! is_interactive; }; then
-    test -f "$HOME"/.shrc && . "$HOME"/.shrc
+    if test -f "$HOME"/.shrc; then
+        profile_log "reading .shrc"
+        . "$HOME"/.shrc
+        profile_log "read .shrc"
+    fi
 fi
 
 # set a script that will be sourced on exiting the shell
@@ -52,13 +72,23 @@ fi
 # Build and install vcs tools from the submodule if present and Go is available.
 # make is a no-op (~30ms) when sources haven't changed, so this is safe on every login.
 if test -f "$HOME/conf/vcs/Makefile" && command -v go >/dev/null 2>&1; then
-    make -C "$HOME/conf/vcs" install PREFIX="$HOME/.local" >/dev/null 2>&1
+    profile_log "building vcs"
+    make -C "$HOME/conf/vcs" install PREFIX="$HOME/.local" >/dev/null 2>&1 \
+        || profile_log "building vcs failed"
 fi
 
 if test -t 0; then
     # disable flow control so applications can use ^Q and ^S
     type stty >/dev/null 2>/dev/null && stty -ixon
 fi
+
+if test -n "$_profile_start" && _profile_end=$(date +%s 2>/dev/null); then
+    profile_log "starting the session after $((_profile_end - _profile_start))s"
+else
+    profile_log "starting the session"
+fi
+unset _profile_start _profile_end
+unset -f profile_log
 
 # finish with a zero exit status so the first prompt is '$' rather than '?'
 true

@@ -123,6 +123,7 @@ test-all: \
 	test-elvish \
 	test-lint \
 	test-env \
+	test-profile \
 	test-gitconfig \
 	test-makefile \
 	test-claude-settings \
@@ -333,6 +334,11 @@ $(CACHE)/test-env.stamp: env config/environment.d/env.conf env_test.sh shrc_test
 	@touch $@
 test-env: $(CACHE)/test-env.stamp
 
+$(CACHE)/test-profile.stamp: profile profile_test.sh shrc_test_lib.sh | $(CACHE)
+	@bash profile_test.sh
+	@touch $@
+test-profile: $(CACHE)/test-profile.stamp
+
 $(CACHE)/test-gitconfig.stamp: gitconfig gitconfig_test.sh shrc_test_lib.sh | $(CACHE)
 	@sh gitconfig_test.sh
 	@touch $@
@@ -475,5 +481,5 @@ test-tidewm: $(CACHE)/test-tidewm.stamp
 	test-dash test-ksh test-bash test-zsh test-prompt test-prompt-zsh test-prompt-perf \
 	test-vcs test-vcs-zsh \
 	test-fish test-nu test-mesh test-elvish test-lint \
-	test-env test-gitconfig test-makefile test-amethyst test-karabiner test-kitty \
+	test-env test-profile test-gitconfig test-makefile test-amethyst test-karabiner test-kitty \
 	test-rule-size test-hypr test-sway test-tidewm
