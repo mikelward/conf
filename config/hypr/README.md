@@ -445,7 +445,8 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   (tide's `appearance.json`) and sets the color scheme itself. The daemon
   then styles swaync and the wallpaper once at startup, and the shell runs
   `config/tide/appearance-hook` after each change it makes, which restyles
-  them again.
+  them again; a swaync already running in that mode is left running.
+  swaync's warnings and errors are in `journalctl --user -t swaync`.
 - **Power management is shared by laptops and desktops** — one
   `hypridle.conf` (dim → lock → DPMS off → suspend). On a desktop with no
   backlight the dim step is simply a no-op. In tide, the suspend step runs
