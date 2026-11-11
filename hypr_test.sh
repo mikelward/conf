@@ -272,6 +272,40 @@ env -u SWAYSOCK -u XDG_CONFIG_HOME PATH="$_tfake:$PATH" FAKE_LOG="$_tfake/log" X
     TIDE_BAR=quickshell FAKE_SCHEME=prefer-dark sh "$_theme" follow 9>&1 >/dev/null 2>&1 | cat >/dev/null
 assert_contains "swaync --style $_tfake/.config/swaync/style.css" "$(cat "$_tfake/log")"
 
+# A lock that's never released: the fake flock fails at once when given a
+# timeout, as the real one does once it's up, and without one says it would
+# wait forever (the real one would, and the test with it).
+start_test "theme.sh follow gives up on a lock that's held, says so, and styles unlocked"
+cat > "$_tfake/flock" <<'FAKE'
+#!/bin/sh
+case "$1" in
+    -w | --timeout) ;;
+    *) echo "flock waits forever" >> "$FAKE_LOG" ;;
+esac
+exit 1
+FAKE
+chmod +x "$_tfake/flock"
+: > "$_tfake/log"
+_err=$(env -u SWAYSOCK -u XDG_CONFIG_HOME PATH="$_tfake:$PATH" FAKE_LOG="$_tfake/log" XDG_RUNTIME_DIR="$_tfake" HOME="$_tfake" XDG_CURRENT_DESKTOP= \
+    TIDE_BAR=quickshell FAKE_SCHEME=prefer-dark sh "$_theme" follow 2>&1 >/dev/null; wait)
+rm -f "$_tfake/flock"
+assert_not_contains "flock waits forever" "$(cat "$_tfake/log")"
+assert_contains "$_tfake/theme.lock was still locked" "$_err"
+assert_contains "swaync --style $_tfake/.config/swaync/style.css" "$(cat "$_tfake/log")"
+
+# Only where no swaync is on the PATH once the fake is gone.
+start_test "theme.sh says there are no notifications when swaync isn't installed"
+mv "$_tfake/swaync" "$_tfake/swaync.off"
+if ! PATH="$_tfake:$PATH" command -v swaync >/dev/null 2>&1; then
+    : > "$_tfake/log"
+    _err=$(env -u SWAYSOCK -u XDG_CONFIG_HOME PATH="$_tfake:$PATH" FAKE_LOG="$_tfake/log" XDG_RUNTIME_DIR="$_tfake" HOME="$_tfake" XDG_CURRENT_DESKTOP= \
+        TIDE_BAR=quickshell FAKE_SCHEME=prefer-dark sh "$_theme" follow 2>&1 >/dev/null; echo "status $?")
+    assert_contains "swaync isn't installed, so there are no notifications" "$_err"
+    assert_contains "status 0" "$_err"
+    assert_equal dark "$(cat "$_tfake/theme-mode")"
+fi
+mv "$_tfake/swaync.off" "$_tfake/swaync"
+
 start_test "theme.sh scheme reads gsettings' answer"
 assert_equal dark "$(PATH="$_tfake:$PATH" FAKE_LOG=/dev/null FAKE_SCHEME=prefer-dark sh "$_theme" scheme)"
 assert_equal light "$(PATH="$_tfake:$PATH" FAKE_LOG=/dev/null FAKE_SCHEME=default sh "$_theme" scheme)"

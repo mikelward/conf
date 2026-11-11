@@ -150,6 +150,8 @@ apply() {
         # this script's do (in tide, the tide.service journal), so one that
         # fails to start says why.
         swaync --style "$sstyle" >/dev/null 8>&- &
+    else
+        echo "$0: swaync isn't installed, so there are no notifications" >&2
     fi
 
     # 4) Window border colors under Sway. Hyprland draws no borders (the
@@ -195,11 +197,18 @@ case "${1:-auto}" in
         # the daemon's first run and the shell's hook overlap at login, the
         # one that runs last applies the scheme as it is by then. What apply
         # starts in the background closes fd 8, so it doesn't hold the lock.
+        # A run that never lets go of it (stuck, or stopped) mustn't hold
+        # up every later one, and tide's unit with them: 5 s, then unlocked.
+        _lock="${XDG_RUNTIME_DIR:-/tmp}/theme.lock"
         if command -v flock >/dev/null 2>&1; then
             # `command` so a lock file that can't be opened is an error
             # here, not the end of the script (exec is a special builtin).
-            command exec 8>"${XDG_RUNTIME_DIR:-/tmp}/theme.lock" && flock 8 ||
-                echo "$0: couldn't lock ${XDG_RUNTIME_DIR:-/tmp}/theme.lock; styling unlocked" >&2
+            if command exec 8>"$_lock"; then
+                flock -w 5 8 ||
+                    echo "$0: $_lock was still locked by another run after 5 s; styling unlocked" >&2
+            else
+                echo "$0: couldn't open $_lock; styling unlocked" >&2
+            fi
         fi
         _mode=$(scheme_mode)
         if test -z "$_mode"; then
