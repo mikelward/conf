@@ -28,9 +28,9 @@ start_test "on a Mac, the socket is relative, so it's in the per-user \$TMPDIR, 
 assert_true grep -Eq '^listen_on +unix:kitty$' "$_macos_conf"
 assert_false grep -Eq '^listen_on +(unix:/|unix:@|tcp)' "$_macos_conf"
 
-start_test "on a Mac, text is about Linux's size and isn't thickened"
+start_test "on a Mac, text is about Linux's size and only lightly thickened"
 assert_true grep -Eq '^font_size +14(\.0)?$' "$_macos_conf"
-assert_true grep -Eq '^text_composition_strategy +platform$' "$_macos_conf"
+assert_true grep -Eq '^text_composition_strategy +1\.5 +10$' "$_macos_conf"
 
 # The window_padding_width kitty ends up with for an OS: kitty reads the
 # file top to bottom, following includes where they sit, and the last
