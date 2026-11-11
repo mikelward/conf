@@ -228,6 +228,18 @@ assert_not_contains "swaync --style" "$(cat "$_tfake/log")"
 assert_equal dark "$(cat "$_tfake/theme-mode")"
 rm -f "$_tfake/log.pgrep"
 
+# With TIDE_NOTIFICATIONS=1, tide's Quickshell shell serves notifications,
+# and a swaync started here would take the name from it.
+start_test "theme.sh starts no swaync when tide's shell serves notifications"
+rm -f "$_tfake/log.pgrep"
+run_follow FAKE_SCHEME=prefer-dark TIDE_NOTIFICATIONS=1 sh "$_theme" follow
+assert_not_contains "swaync" "$(cat "$_tfake/log")"
+assert_equal dark "$(cat "$_tfake/theme-mode")"
+# Under waybar the shell isn't running, so swaync still serves them.
+run_theme TIDE_NOTIFICATIONS=1 TIDE_BAR=waybar
+assert_contains "swaync --style" "$(cat "$_tfake/log")"
+rm -f "$_tfake/log.pgrep"
+
 start_test "theme.sh follow restarts a running swaync when the mode changes"
 run_follow FAKE_SCHEME=prefer-dark sh "$_theme" follow
 rm -f "$_tfake/log.pgrep"
