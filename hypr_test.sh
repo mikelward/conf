@@ -112,6 +112,24 @@ case "$1" in
 esac
 FAKE
 chmod +x "$_tfake/gsettings"
+# systemd-cat stands in for the journal: with $FAKE_JOURNAL it logs its pid
+# and options, and runs its command with stdout and stderr appended to that
+# file. With none, as with no journald, it fails without running it.
+cat > "$_tfake/systemd-cat" <<'FAKE'
+#!/bin/sh
+test -n "$FAKE_JOURNAL" || { echo "Failed to create stream fd" >&2; exit 1; }
+_opts=
+while test "$#" -gt 0; do
+    case "$1" in
+        -t | -p) _opts="$_opts $1 $2"; shift 2 ;;
+        -*) _opts="$_opts $1"; shift ;;
+        *) break ;;
+    esac
+done
+test "$1" = true || printf 'systemd-cat pid %s%s\n' "$$" "$_opts" >> "$FAKE_LOG"
+exec "$@" >> "$FAKE_JOURNAL" 2>&1
+FAKE
+chmod +x "$_tfake/systemd-cat"
 # pkill finds a waybar only when $FAKE_WAYBAR_UP is set, and anything else
 # always, as the real one would after the launches above.
 cat > "$_tfake/pkill" <<'FAKE'
@@ -253,8 +271,30 @@ assert_not_contains "another user's" "$(cat "$_tfake/log")"
 rm -f "$_tfake/swaybg" "$_tfake/.config/hypr/wallpaper-dark.jpg" "$_tfake/log.pgrep"
 
 # swaync's own errors reach the journal, not /dev/null, so one that fails
-# to start says why.
-start_test "theme.sh passes on swaync's errors"
+# to start says why. Not through the caller's stderr: tide's shell runs the
+# hook with a pipe there, gone once the hook exits, while swaync runs on.
+# The fake swaync logs its pid: the one systemd-cat had means nothing is
+# left between them, so pgrep and pkill -x swaync find it.
+start_test "theme.sh sends swaync's errors to the journal, not to its caller"
+cat > "$_tfake/swaync" <<'FAKE'
+#!/bin/sh
+printf 'swaync %s\n' "$*" >> "$FAKE_LOG"
+printf 'swaync pid %s\n' "$$" >> "$FAKE_LOG"
+echo "** Message: chatter"
+echo "swaync: cannot open display" >&2
+FAKE
+: > "$_tfake/journal"
+: > "$_tfake/log"
+_err=$(env -u SWAYSOCK -u XDG_CONFIG_HOME PATH="$_tfake:$PATH" FAKE_LOG="$_tfake/log" XDG_RUNTIME_DIR="$_tfake" HOME="$_tfake" XDG_CURRENT_DESKTOP= \
+    TIDE_BAR=quickshell FAKE_SCHEME=prefer-dark FAKE_JOURNAL="$_tfake/journal" sh "$_theme" follow 2>&1 9>&1 >/dev/null | cat)
+assert_equal "" "$_err"
+assert_equal "swaync: cannot open display" "$(cat "$_tfake/journal")"
+assert_contains "swaync --style $_tfake/.config/swaync/style.css" "$(cat "$_tfake/log")"
+assert_contains "systemd-cat pid $(sed -n 's/^swaync pid //p' "$_tfake/log") -t swaync" "$(cat "$_tfake/log")"
+printf '#!/bin/sh\nprintf "%%s %%s\\n" "swaync" "$*" >> "$FAKE_LOG"\n' > "$_tfake/swaync"
+
+# The fake systemd-cat fails here, as the real one does with no journald.
+start_test "theme.sh passes on swaync's errors when there's no journal"
 printf '#!/bin/sh\nprintf "%%s %%s\\n" "swaync" "$*" >> "$FAKE_LOG"\necho "swaync: cannot open display" >&2\n' > "$_tfake/swaync"
 _err=$(env -u SWAYSOCK -u XDG_CONFIG_HOME PATH="$_tfake:$PATH" FAKE_LOG="$_tfake/log" XDG_RUNTIME_DIR="$_tfake" HOME="$_tfake" XDG_CURRENT_DESKTOP= \
     TIDE_BAR=quickshell FAKE_SCHEME=prefer-dark sh "$_theme" follow 2>&1 >/dev/null; wait)
@@ -321,6 +361,11 @@ printf 'swaync %s\n' "$*" >> "$FAKE_LOG"
 if test -e /proc/$$/fd/8; then echo "swaync holds fd 8" >> "$FAKE_LOG"; fi
 FAKE
     run_follow FAKE_SCHEME=prefer-dark sh "$_theme" follow
+    assert_contains "swaync --style" "$(cat "$_tfake/log")"
+    assert_not_contains "holds fd 8" "$(cat "$_tfake/log")"
+    # Nor when it's started through systemd-cat.
+    run_follow FAKE_SCHEME=prefer-dark FAKE_JOURNAL=/dev/null sh "$_theme" follow
+    assert_contains "systemd-cat pid" "$(cat "$_tfake/log")"
     assert_contains "swaync --style" "$(cat "$_tfake/log")"
     assert_not_contains "holds fd 8" "$(cat "$_tfake/log")"
     printf '#!/bin/sh\nprintf "%%s %%s\\n" "swaync" "$*" >> "$FAKE_LOG"\n' > "$_tfake/swaync"

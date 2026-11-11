@@ -146,10 +146,22 @@ apply() {
                 echo "$0: the old swaync was still running 5 s after it was told to stop; starting the new one anyway" >&2
             fi
         fi
-        # Its chatter on stdout is dropped; its warnings and errors go where
-        # this script's do (in tide, the tide.service journal), so one that
-        # fails to start says why.
-        swaync --style "$sstyle" >/dev/null 8>&- &
+        # Its chatter on stdout is dropped; its warnings and errors go to
+        # the journal (`journalctl --user -t swaync`), so one that fails to
+        # start says why. Not to this script's stderr: run by tide's shell
+        # that's a pipe, closed once the hook exits, and swaync runs on, to
+        # lose what it writes there or die of SIGPIPE. systemd-cat execs sh,
+        # which execs swaync, so no process is left between, and none holds
+        # fd 8. It's tried with `true` first: with no journal it fails
+        # without running its command, and an old one lacks the option.
+        if systemd-cat -t swaync --stderr-priority=warning true >/dev/null 2>&1 8>&-; then
+            # shellcheck disable=SC2016  # $1 is for the inner sh.
+            systemd-cat -t swaync --stderr-priority=warning \
+                sh -c 'exec swaync --style "$1" >/dev/null' sh "$sstyle" 8>&- &
+        else
+            # No systemd-cat, or no journal: where this script's errors go.
+            swaync --style "$sstyle" >/dev/null 8>&- &
+        fi
     else
         echo "$0: swaync isn't installed, so there are no notifications" >&2
     fi
