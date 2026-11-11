@@ -120,6 +120,16 @@ printf 'pkill %s\n' "$*" >> "$FAKE_LOG"
 test "$2" != waybar || test -n "$FAKE_WAYBAR_UP"
 FAKE
 chmod +x "$_tfake/pkill"
+# pgrep finds a swaync for the first $FAKE_SWAYNC_LINGERS calls, counted in
+# $FAKE_LOG.pgrep, and none after; none at all by default.
+cat > "$_tfake/pgrep" <<'FAKE'
+#!/bin/sh
+printf 'pgrep %s\n' "$*" >> "$FAKE_LOG"
+n=$(cat "$FAKE_LOG.pgrep" 2>/dev/null || echo 0)
+echo $((n + 1)) > "$FAKE_LOG.pgrep"
+test "$n" -lt "${FAKE_SWAYNC_LINGERS:-0}"
+FAKE
+chmod +x "$_tfake/pgrep"
 # run_theme ENV...: theme.sh starts its programs in the background. Each
 # inherits fd 9, the write end of a pipe that `cat` drains, so the pipeline
 # ends only once every one of them has logged and exited.
@@ -166,6 +176,24 @@ assert_not_contains "gsettings set" "$(cat "$_tfake/log")"
 run_follow FAKE_SCHEME=prefer-dark sh "$_theme" follow
 assert_contains "swaync --style $_tfake/.config/swaync/style.css" "$(cat "$_tfake/log")"
 assert_not_contains "gsettings set" "$(cat "$_tfake/log")"
+
+# A new swaync started while the old one still holds the notifications name
+# can't take it, and once the old one exits there's none.
+start_test "theme.sh starts swaync only once the old one has exited"
+rm -f "$_tfake/log.pgrep"
+run_follow FAKE_SCHEME=prefer-dark FAKE_SWAYNC_LINGERS=3 sh "$_theme" follow
+assert_equal 4 "$(grep -c '^pgrep -x swaync' "$_tfake/log")"
+assert_equal "swaync" "$(grep -E '^(pgrep|swaync)' "$_tfake/log" | tail -n 1 | cut -d' ' -f1)"
+rm -f "$_tfake/log.pgrep"
+
+# swaync's own errors reach the journal, not /dev/null, so one that fails
+# to start says why.
+start_test "theme.sh passes on swaync's errors"
+printf '#!/bin/sh\nprintf "%%s %%s\\n" "swaync" "$*" >> "$FAKE_LOG"\necho "swaync: cannot open display" >&2\n' > "$_tfake/swaync"
+_err=$(env -u SWAYSOCK -u XDG_CONFIG_HOME PATH="$_tfake:$PATH" FAKE_LOG="$_tfake/log" XDG_RUNTIME_DIR="$_tfake" HOME="$_tfake" XDG_CURRENT_DESKTOP= \
+    TIDE_BAR=quickshell FAKE_SCHEME=prefer-dark sh "$_theme" follow 2>&1 >/dev/null; wait)
+assert_contains "swaync: cannot open display" "$_err"
+printf '#!/bin/sh\nprintf "%%s %%s\\n" "swaync" "$*" >> "$FAKE_LOG"\n' > "$_tfake/swaync"
 
 start_test "theme.sh follow falls back to the clock when the scheme can't be read"
 run_follow FAKE_SCHEME= sh "$_theme" follow
