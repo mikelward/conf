@@ -76,6 +76,9 @@ scheme_mode() {
 
 apply() {
     mode="$1"
+    # Only this user's programs are stopped and waited for: another user's
+    # swaync isn't this one's to signal, and would be waited on for 5 s.
+    uid=$(id -u)
     # "no" when following tide's shell, which sets the color scheme itself.
     set_scheme="${2:-yes}"
 
@@ -110,7 +113,7 @@ apply() {
         esac
     fi
     if test "$want_waybar" != no && command -v waybar >/dev/null 2>&1; then
-        if pkill -x waybar 2>/dev/null || test "$want_waybar" = yes; then
+        if pkill -u "$uid" -x waybar 2>/dev/null || test "$want_waybar" = yes; then
             waybar -s "$wstyle" >/dev/null 2>&1 8>&- &
         fi
     fi
@@ -127,15 +130,15 @@ apply() {
     # The marker alone can't say so: one left by an earlier session names a
     # mode with no swaync running.
     if test "$set_scheme" = no && test "$(cat "$marker" 2>/dev/null)" = "$mode" &&
-        pgrep -x swaync >/dev/null 2>&1; then
+        pgrep -u "$uid" -x swaync >/dev/null 2>&1; then
         :
     elif command -v swaync >/dev/null 2>&1; then
         # pkill doesn't wait. A swaync started while the old one still holds
         # org.freedesktop.Notifications can't take it, and once the old one
         # exits there's none, so the old one is waited for, 5 s at most.
-        if pkill -x swaync 2>/dev/null; then
+        if pkill -u "$uid" -x swaync 2>/dev/null; then
             _waited=0
-            while pgrep -x swaync >/dev/null 2>&1 && test "$_waited" -lt 50; do
+            while pgrep -u "$uid" -x swaync >/dev/null 2>&1 && test "$_waited" -lt 50; do
                 sleep 0.1
                 _waited=$((_waited + 1))
             done
@@ -172,7 +175,7 @@ apply() {
     wall="$HOME/.config/hypr/wallpaper-$mode.jpg"
     if test -f "$wall"; then
         if test -n "$SWAYSOCK" && command -v swaybg >/dev/null 2>&1; then
-            pkill -x swaybg 2>/dev/null
+            pkill -u "$uid" -x swaybg 2>/dev/null
             swaybg -i "$wall" -m fill >/dev/null 2>&1 8>&- &
         elif command -v swww >/dev/null 2>&1; then
             swww img "$wall" >/dev/null 2>&1
