@@ -122,8 +122,23 @@ apply() {
         sstyle="$cfg/swaync/style.css"
     fi
     if command -v swaync >/dev/null 2>&1; then
-        pkill -x swaync 2>/dev/null
-        swaync --style "$sstyle" >/dev/null 2>&1 8>&- &
+        # pkill doesn't wait. A swaync started while the old one still holds
+        # org.freedesktop.Notifications can't take it, and once the old one
+        # exits there's none, so the old one is waited for, 5 s at most.
+        if pkill -x swaync 2>/dev/null; then
+            _waited=0
+            while pgrep -x swaync >/dev/null 2>&1 && test "$_waited" -lt 50; do
+                sleep 0.1
+                _waited=$((_waited + 1))
+            done
+            if test "$_waited" -ge 50; then
+                echo "$0: the old swaync was still running 5 s after it was told to stop; starting the new one anyway" >&2
+            fi
+        fi
+        # Its chatter on stdout is dropped; its warnings and errors go where
+        # this script's do (in tide, the tide.service journal), so one that
+        # fails to start says why.
+        swaync --style "$sstyle" >/dev/null 8>&- &
     fi
 
     # 4) Window border colors under Sway. Hyprland draws no borders (the
