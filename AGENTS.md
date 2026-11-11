@@ -1,7 +1,7 @@
 ---
 trigger: always_on
 alwaysApply: true
-last_modified: 2026-11-07
+last_modified: 2026-11-11
 ---
 
 # conf
@@ -104,6 +104,9 @@ Shared by every mikelward repo and the user-level agent config; canonical in mik
 - **Errors**. Never swallow one silently: every catch logs it with context (no user
   data), cleans up what the `try` acquired, and handles the case explicitly. To ignore
   one on purpose, say why in a comment and still log it at debug level.
+- **Logs**. Every process logs that it started, that it ended and how, and each error,
+  where that outlasts it, a logout and a reboot: the journal, or a file under
+  `~/.local/state`. Never only `/tmp`, a runtime directory or `/dev/null`.
 - **Cost**. State the cost and reliability of new dependencies or services up front.
 - **Privacy**. No user data (personal paths, hostnames, tokens, keys, private remotes)
   leaves this machine; use placeholders.
