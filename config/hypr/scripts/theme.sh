@@ -121,7 +121,15 @@ apply() {
     else
         sstyle="$cfg/swaync/style.css"
     fi
-    if command -v swaync >/dev/null 2>&1; then
+    # Following tide's shell, a swaync that's already up in this mode is left
+    # alone: the daemon's first run and the shell's hook both style the same
+    # scheme at login, and restarting it leaves a gap with no notifications.
+    # The marker alone can't say so: one left by an earlier session names a
+    # mode with no swaync running.
+    if test "$set_scheme" = no && test "$(cat "$marker" 2>/dev/null)" = "$mode" &&
+        pgrep -x swaync >/dev/null 2>&1; then
+        :
+    elif command -v swaync >/dev/null 2>&1; then
         # pkill doesn't wait. A swaync started while the old one still holds
         # org.freedesktop.Notifications can't take it, and once the old one
         # exits there's none, so the old one is waited for, 5 s at most.
