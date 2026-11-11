@@ -163,8 +163,12 @@ assert_contains "waybar -s" "$(cat "$_tfake/log")"
 # In tide with the Quickshell bar, the shell sets the color scheme, and the
 # rest follows it.
 run_follow() {
-    : > "$_tfake/log"
     rm -f "$_tfake/theme-mode"
+    run_follow_again "$@"
+}
+# run_follow_again: the same, with the mode the last run left in the marker.
+run_follow_again() {
+    : > "$_tfake/log"
     env -u SWAYSOCK -u XDG_CONFIG_HOME PATH="$_tfake:$PATH" FAKE_LOG="$_tfake/log" XDG_RUNTIME_DIR="$_tfake" HOME="$_tfake" XDG_CURRENT_DESKTOP= \
         TIDE_BAR=quickshell "$@" 9>&1 >/dev/null 2>&1 | cat >/dev/null
 }
@@ -184,6 +188,41 @@ rm -f "$_tfake/log.pgrep"
 run_follow FAKE_SCHEME=prefer-dark FAKE_SWAYNC_LINGERS=3 sh "$_theme" follow
 assert_equal 4 "$(grep -c '^pgrep -x swaync' "$_tfake/log")"
 assert_equal "swaync" "$(grep -E '^(pgrep|swaync)' "$_tfake/log" | tail -n 1 | cut -d' ' -f1)"
+rm -f "$_tfake/log.pgrep"
+
+# At login the daemon's first run and the shell's hook style the same scheme
+# seconds apart. The fake pgrep finds a swaync on its first call.
+start_test "theme.sh follow leaves a running swaync alone when the mode hasn't changed"
+run_follow FAKE_SCHEME=prefer-dark sh "$_theme" follow
+rm -f "$_tfake/log.pgrep"
+run_follow_again FAKE_SCHEME=prefer-dark FAKE_SWAYNC_LINGERS=1 sh "$_theme" follow
+assert_not_contains "pkill -x swaync" "$(cat "$_tfake/log")"
+assert_not_contains "swaync --style" "$(cat "$_tfake/log")"
+assert_equal dark "$(cat "$_tfake/theme-mode")"
+rm -f "$_tfake/log.pgrep"
+
+start_test "theme.sh follow restarts a running swaync when the mode changes"
+run_follow FAKE_SCHEME=prefer-dark sh "$_theme" follow
+rm -f "$_tfake/log.pgrep"
+run_follow_again FAKE_SCHEME=prefer-light FAKE_SWAYNC_LINGERS=1 sh "$_theme" follow
+assert_contains "pkill -x swaync" "$(cat "$_tfake/log")"
+assert_contains "swaync --style $_tfake/.config/swaync/style-light.css" "$(cat "$_tfake/log")"
+rm -f "$_tfake/log.pgrep"
+
+# The marker outlives a session that ended without clearing it.
+start_test "theme.sh follow starts swaync when the marker names the mode but none runs"
+run_follow FAKE_SCHEME=prefer-dark sh "$_theme" follow
+run_follow_again FAKE_SCHEME=prefer-dark sh "$_theme" follow
+assert_contains "swaync --style $_tfake/.config/swaync/style.css" "$(cat "$_tfake/log")"
+
+# By hand, the same mode again reloads the styles.
+start_test "theme.sh dark restarts a running swaync that's already dark"
+run_theme
+rm -f "$_tfake/log.pgrep"
+: > "$_tfake/log"
+env -u SWAYSOCK -u TIDE_BAR PATH="$_tfake:$PATH" FAKE_LOG="$_tfake/log" XDG_RUNTIME_DIR="$_tfake" HOME="$_tfake" XDG_CURRENT_DESKTOP= \
+    FAKE_SWAYNC_LINGERS=1 sh "$_theme" dark 9>&1 >/dev/null 2>&1 | cat >/dev/null
+assert_contains "swaync --style" "$(cat "$_tfake/log")"
 rm -f "$_tfake/log.pgrep"
 
 # swaync's own errors reach the journal, not /dev/null, so one that fails
@@ -252,6 +291,11 @@ assert_contains "gsettings set org.gnome.desktop.interface color-scheme" "$(cat 
 start_test "theme-daemon.sh sets the color scheme itself outside tide's Quickshell bar"
 run_follow TIDE_BAR=waybar timeout 10 sh "$_themed"
 assert_contains "gsettings set org.gnome.desktop.interface color-scheme" "$(cat "$_tfake/log")"
+
+start_test "theme-daemon.sh starts swaync when an earlier session left the marker"
+echo light > "$_tfake/theme-mode"
+run_follow_again FAKE_SCHEME=prefer-light timeout 10 sh "$_themed"
+assert_equal 1 "$(grep -c '^swaync --style' "$_tfake/log")"
 rm -f "$_tfake/sleep"
 
 # A suspend stops sleep's time but not the wall clock. The fake sleep logs
