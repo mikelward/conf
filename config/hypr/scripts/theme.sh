@@ -8,7 +8,9 @@
 #              tide's own bar is the bar (TIDE_BAR=quickshell,
 #              set by tide-shell), which themes itself; run by hand
 #              in tide, only a waybar that's already up
-#   - swaync   (relaunched with --style style.css / style-light.css)
+#   - swaync   (relaunched with --style style.css / style-light.css),
+#              unless tide's shell is the notification server
+#              (TIDE_NOTIFICATIONS=1 with TIDE_BAR=quickshell)
 #   - window border colors under Sway (Hyprland draws none)
 #   - the wallpaper, when per-mode images exist (swww / swaybg)
 #   - a mode marker read by launch-fuzzel.sh
@@ -129,7 +131,12 @@ apply() {
     # scheme at login, and restarting it leaves a gap with no notifications.
     # The marker alone can't say so: one left by an earlier session names a
     # mode with no swaync running.
-    if test "$set_scheme" = no && test "$(cat "$marker" 2>/dev/null)" = "$mode" &&
+    if test "${TIDE_NOTIFICATIONS:-}" = 1 && test "${TIDE_BAR:-}" = quickshell; then
+        # tide's Quickshell shell serves notifications itself (tide-shell
+        # says so with TIDE_NOTIFICATIONS=1), and a swaync started here
+        # would take org.freedesktop.Notifications from it.
+        :
+    elif test "$set_scheme" = no && test "$(cat "$marker" 2>/dev/null)" = "$mode" &&
         pgrep -u "$uid" -x swaync >/dev/null 2>&1; then
         :
     elif command -v swaync >/dev/null 2>&1; then
