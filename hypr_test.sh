@@ -117,14 +117,23 @@ chmod +x "$_tfake/gsettings"
 cat > "$_tfake/pkill" <<'FAKE'
 #!/bin/sh
 printf 'pkill %s\n' "$*" >> "$FAKE_LOG"
-test "$2" != waybar || test -n "$FAKE_WAYBAR_UP"
+for _name; do :; done
+if test -n "$FAKE_OTHER_USER"; then
+    case "$*" in "-u $(id -u) "*) ;; *) echo "pkill signalled another user's $_name" >> "$FAKE_LOG" ;; esac
+fi
+test "$_name" != waybar || test -n "$FAKE_WAYBAR_UP"
 FAKE
 chmod +x "$_tfake/pkill"
 # pgrep finds a swaync for the first $FAKE_SWAYNC_LINGERS calls, counted in
-# $FAKE_LOG.pgrep, and none after; none at all by default.
+# $FAKE_LOG.pgrep, and none after; none at all by default. With
+# $FAKE_OTHER_USER set, another user's swaync runs for good: pkill and pgrep
+# find it unless they're asked for this user's only.
 cat > "$_tfake/pgrep" <<'FAKE'
 #!/bin/sh
 printf 'pgrep %s\n' "$*" >> "$FAKE_LOG"
+if test -n "$FAKE_OTHER_USER"; then
+    case "$*" in "-u $(id -u) "*) ;; *) echo "pgrep found another user's" >> "$FAKE_LOG"; exit 0 ;; esac
+fi
 n=$(cat "$FAKE_LOG.pgrep" 2>/dev/null || echo 0)
 echo $((n + 1)) > "$FAKE_LOG.pgrep"
 test "$n" -lt "${FAKE_SWAYNC_LINGERS:-0}"
@@ -186,7 +195,7 @@ assert_not_contains "gsettings set" "$(cat "$_tfake/log")"
 start_test "theme.sh starts swaync only once the old one has exited"
 rm -f "$_tfake/log.pgrep"
 run_follow FAKE_SCHEME=prefer-dark FAKE_SWAYNC_LINGERS=3 sh "$_theme" follow
-assert_equal 4 "$(grep -c '^pgrep -x swaync' "$_tfake/log")"
+assert_equal 4 "$(grep -c '^pgrep .*-x swaync' "$_tfake/log")"
 assert_equal "swaync" "$(grep -E '^(pgrep|swaync)' "$_tfake/log" | tail -n 1 | cut -d' ' -f1)"
 rm -f "$_tfake/log.pgrep"
 
@@ -196,7 +205,7 @@ start_test "theme.sh follow leaves a running swaync alone when the mode hasn't c
 run_follow FAKE_SCHEME=prefer-dark sh "$_theme" follow
 rm -f "$_tfake/log.pgrep"
 run_follow_again FAKE_SCHEME=prefer-dark FAKE_SWAYNC_LINGERS=1 sh "$_theme" follow
-assert_not_contains "pkill -x swaync" "$(cat "$_tfake/log")"
+assert_not_contains "pkill -u $(id -u) -x swaync" "$(cat "$_tfake/log")"
 assert_not_contains "swaync --style" "$(cat "$_tfake/log")"
 assert_equal dark "$(cat "$_tfake/theme-mode")"
 rm -f "$_tfake/log.pgrep"
@@ -205,7 +214,7 @@ start_test "theme.sh follow restarts a running swaync when the mode changes"
 run_follow FAKE_SCHEME=prefer-dark sh "$_theme" follow
 rm -f "$_tfake/log.pgrep"
 run_follow_again FAKE_SCHEME=prefer-light FAKE_SWAYNC_LINGERS=1 sh "$_theme" follow
-assert_contains "pkill -x swaync" "$(cat "$_tfake/log")"
+assert_contains "pkill -u $(id -u) -x swaync" "$(cat "$_tfake/log")"
 assert_contains "swaync --style $_tfake/.config/swaync/style-light.css" "$(cat "$_tfake/log")"
 rm -f "$_tfake/log.pgrep"
 
@@ -224,6 +233,24 @@ env -u SWAYSOCK -u TIDE_BAR PATH="$_tfake:$PATH" FAKE_LOG="$_tfake/log" XDG_RUNT
     FAKE_SWAYNC_LINGERS=1 sh "$_theme" dark 9>&1 >/dev/null 2>&1 | cat >/dev/null
 assert_contains "swaync --style" "$(cat "$_tfake/log")"
 rm -f "$_tfake/log.pgrep"
+
+# pkill and pgrep match every user's processes unless told otherwise. With
+# a wallpaper and a fake swaybg under Sway, every program theme.sh stops is
+# stopped here.
+start_test "theme.sh leaves another user's swaync, waybar and swaybg alone"
+mkdir -p "$_tfake/.config/hypr"
+: > "$_tfake/.config/hypr/wallpaper-dark.jpg"
+printf '#!/bin/sh\nprintf "swaybg %%s\\n" "$*" >> "$FAKE_LOG"\n' > "$_tfake/swaybg"
+chmod +x "$_tfake/swaybg"
+run_theme SWAYSOCK="$_tfake/no-sway" FAKE_OTHER_USER=1 FAKE_WAYBAR_UP=1
+assert_contains "swaync --style" "$(cat "$_tfake/log")"
+assert_contains "swaybg -i" "$(cat "$_tfake/log")"
+assert_not_contains "another user's" "$(cat "$_tfake/log")"
+run_follow FAKE_SCHEME=prefer-dark sh "$_theme" follow
+run_follow_again FAKE_SCHEME=prefer-dark FAKE_OTHER_USER=1 sh "$_theme" follow
+assert_contains "swaync --style" "$(cat "$_tfake/log")"
+assert_not_contains "another user's" "$(cat "$_tfake/log")"
+rm -f "$_tfake/swaybg" "$_tfake/.config/hypr/wallpaper-dark.jpg" "$_tfake/log.pgrep"
 
 # swaync's own errors reach the journal, not /dev/null, so one that fails
 # to start says why.
