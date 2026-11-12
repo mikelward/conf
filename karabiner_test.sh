@@ -150,6 +150,29 @@ for rule in json.load(open(sys.argv[1]))["rules"]:
 
     # Alt+arrow moves by word too, as Option does on a Mac keyboard. Left to
     # the rotation it's Control+arrow, which jumps to the line ends.
+    # Alt+Left/Right are Back and Forward in browsers and Finder, as on
+    # Linux: Command+[ and ], which the rotation makes from left_control.
+    # Only there, since editors take Command+[ to outdent; first, so they
+    # come before the word movement below.
+    _back=$(python3 -c '
+import json, sys
+ms = json.load(open(sys.argv[1]))["rules"][0]["manipulators"]
+for i, m in enumerate(ms):
+    f, t = m["from"], m["to"][0]
+    if f["modifiers"].get("mandatory") == ["left_option"]:
+        c = m.get("conditions") or [{}]
+        print(i, f["key_code"], "->", t["key_code"], "+".join(t["modifiers"]), c[0].get("type", "-"), " ".join(c[0].get("bundle_identifiers", [])))
+' "$_arrow_file")
+    start_test "Alt+Left/Right are Back and Forward in browsers and Finder, before the word movement"
+    assert_contains "left_arrow -> open_bracket left_control frontmost_application_if" "$_back"
+    assert_contains "right_arrow -> close_bracket left_control frontmost_application_if" "$_back"
+    assert_contains "^com\\.google\\.Chrome" "$_back"
+    assert_contains "^com\\.apple\\.Safari$" "$_back"
+    assert_contains "^com\\.apple\\.finder$" "$_back"
+    assert_not_contains "kitty" "$_back"
+    assert_equal "open_bracket" "$(printf '%s\n' "$_back" | grep ' left_arrow ' | head -1 | cut -d' ' -f4)"
+    assert_equal "close_bracket" "$(printf '%s\n' "$_back" | grep ' right_arrow ' | head -1 | cut -d' ' -f4)"
+
     start_test "Alt+arrow emits Option+arrow, word movement, rather than Control+arrow"
     assert_contains "left_arrow left_option -> left_arrow left_command" "$_pairs"
     assert_contains "right_arrow left_option -> right_arrow left_command" "$_pairs"
@@ -198,8 +221,8 @@ for m in r["manipulators"]:
     assert_equal "6" "$(printf '%s\n' "$_home" | grep -c "\['shift'\].*frontmost_application_unless.*kitty.*ghostty.*Terminal.*iterm2")"
 fi
 
-start_test "sixteen arrow manipulators: left and right Ctrl, Alt and Win, with and without Shift, per arrow"
-assert_equal "16" "$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["rules"][0]["manipulators"]))' "$_arrow_file")"
+start_test "eighteen arrow manipulators: left and right Ctrl, Alt and Win, with and without Shift, per arrow, and Alt's Back and Forward"
+assert_equal "18" "$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["rules"][0]["manipulators"]))' "$_arrow_file")"
 
 # tide for macOS's rule, for its Super key, is tide's own now
 # (mikelward/tidemo hammerspoon/tide/karabiner/), installed by its
