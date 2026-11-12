@@ -1243,7 +1243,7 @@ else
         WANT_TMUX=0 \
         PATH="$_stubs:$PATH" \
         run_with_timeout 30 script -qec elvish /dev/null 2>&1 | \
-        sed -e 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | tr -d '\r')"
+        sed -e "s/$(printf '\033')\\[[0-9;?]*[a-zA-Z]//g" | tr -d '\r')"
     assert_contains '$ ' "$result"
     assert_contains '―' "$result"
 
@@ -1273,7 +1273,7 @@ else
             WANT_TMUX=0 \
             PATH="$_stubs:$PATH" \
             run_with_timeout 30 script -qec elvish /dev/null 2>&1 | \
-            sed -e 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | tr -d '\r'
+            sed -e "s/$(printf '\033')\\[[0-9;?]*[a-zA-Z]//g" | tr -d '\r'
     }
     : > "$_elv_search_log"
     _elvish_arrows 'echo alpha-one\nexit\n' >/dev/null

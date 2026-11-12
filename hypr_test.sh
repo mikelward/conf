@@ -487,7 +487,7 @@ assert_contains "fail_color = rgba(bf616aff)" "$(cat "$_lock")"
 # hyprlock 0.9.0 replaced general:grace with --grace; the option is an error
 # on every lock.
 start_test "hyprlock.conf sets no grace period"
-assert_equal "" "$(sed -n '/^general {/,/^}/{/^ *grace *=/p}' "$_lock")"
+assert_equal "" "$(sed -n '/^general {/,/^}/{/^ *grace *=/p;}' "$_lock")"
 
 start_test "hyprlock has no animations, so typing shows at once"
 assert_equal "enabled = false" "$(sed -n '/^animations {/,/^}/s/^ *\(enabled = .*\)$/\1/p' "$_lock")"

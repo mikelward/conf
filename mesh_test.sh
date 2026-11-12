@@ -2315,10 +2315,11 @@ assert_not_contains "declared " "$_audit_out"
 # below sweeps exactly the words the pattern matches, instead of a second copy
 # that can drift from it.
 _return_type_words="status int str bool list map job regex glob stream func any"
-# `\|` rather than a bare `|`: the pattern below is a BRE, where an unescaped
-# `|` is the literal character and the sweep would match nothing at all -- and
-# find nothing missing, so it would pass while checking nothing.
-_return_type_alt="$(printf '%s' "$_return_type_words" | sed 's/ /\\|/g')"
+# The pattern below is an ERE (`sed -E`): BSD sed has no BRE `\|` or `\?`.
+# In a BRE a bare `|` is the literal character, and the sweep would match
+# nothing at all -- and find nothing missing, so it would pass while checking
+# nothing.
+_return_type_alt="$(printf '%s' "$_return_type_words" | tr ' ' '|')"
 
 # The names exercised above are extracted and compared whole, rather than the
 # audit being searched for `$_name(` as a substring: a kebab-case vocabulary is
@@ -2327,7 +2328,7 @@ _return_type_alt="$(printf '%s' "$_return_type_words" | sed 's/ /\\|/g')"
 # supposed to close.
 start_test "mesh the return-type audit covers every declared function"
 _audited="$(printf '%s' "$_typed_audit" | grep -o '[A-Za-z][A-Za-z0-9-]*(' | tr -d '(' | sort -u)"
-_declared="$(sed -n "s/^\\($_return_type_alt\\) \\(wrapper \\)\\?func \\([A-Za-z][A-Za-z0-9-]*\\)(.*/\\3/p" \
+_declared="$(sed -E -n "s/^($_return_type_alt) (wrapper )?func ([A-Za-z][A-Za-z0-9-]*)\\(.*/\\3/p" \
         "$_env_mesh" "$_rc_mesh" | sort -u | wc -l)"
 # The sweep finds nothing missing when it finds nothing at all, so a pattern
 # that stopped matching -- a bad escape, a vocabulary word dropped -- would go
@@ -2337,7 +2338,7 @@ _declared="$(sed -n "s/^\\($_return_type_alt\\) \\(wrapper \\)\\?func \\([A-Za-z
 # pattern that broke, so ordinary edits never have to touch it.
 assert_true test "$_declared" -ge 40
 _missing=""
-for _name in $(sed -n "s/^\\($_return_type_alt\\) \\(wrapper \\)\\?func \\([A-Za-z][A-Za-z0-9-]*\\)(.*/\\3/p" \
+for _name in $(sed -E -n "s/^($_return_type_alt) (wrapper )?func ([A-Za-z][A-Za-z0-9-]*)\\(.*/\\3/p" \
         "$_env_mesh" "$_rc_mesh"); do
     case "$_name" in
         confirm) continue ;;  # driven by its own stdin test above

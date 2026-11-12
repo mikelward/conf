@@ -868,7 +868,9 @@ def body [--lines (-l): int = 1, ...args: string] {
 
 # delete a specific line number from a file in place
 def delline [line: int, file: path] {
-    ^sed -i -e $"($line)d" $file
+    # -i with an attached suffix is the one spelling GNU and BSD sed share
+    ^sed -i.delline -e $"($line)d" $file
+    rm -f $"($file).delline"
 }
 
 # see what changes a command would make to a file
@@ -919,7 +921,7 @@ def retry [--sleep (-s): duration = 10sec, ...cmd: string] {
 # remove the ssh known host from the specified line number
 def rmkey [line: int] {
     let known = ([$env.HOME ".ssh" "known_hosts"] | path join)
-    ^sed -i -e $"($line)d" $known
+    delline $line $known
 }
 
 # run a command with the first argument moved to the end
