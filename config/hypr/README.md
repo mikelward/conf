@@ -353,6 +353,9 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   no device names to hardcode, and the same config works on every machine:
   - **Mice** flip to `left_handed` (right button primary) with a faster
     `scroll_factor`, through `hyprland.lua`'s `conf_input.mouse()`.
+    `~/.config/tide/input.json`, which conf ships, sets the same, and
+    Dvorak, as tide's Mouse and Keyboard settings, which otherwise show
+    tide's own defaults (US, right-handed, Hyprland's scrolling).
   - **Touchpads** go through `conf_input.touchpad()`, which keeps the
     global defaults unless tide's Touchpad settings (below) give a speed or
     handedness.

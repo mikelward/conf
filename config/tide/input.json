@@ -1,0 +1,10 @@
+{
+  "mouse": {
+    "leftHanded": true,
+    "scrollSpeed": 3
+  },
+  "keyboard": {
+    "layout": "us",
+    "variant": "dvorak"
+  }
+}

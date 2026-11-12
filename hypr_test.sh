@@ -25,6 +25,7 @@ _waybar_css="$_srcdir/config/waybar/style.css"
 _fuzzel="$_srcdir/config/fuzzel/fuzzel.ini"
 _swaync_cfg="$_srcdir/config/swaync/config.json"
 _tide_workspaces="$_srcdir/config/tide/workspaces.json"
+_tide_input="$_srcdir/config/tide/input.json"
 _swaync_css="$_srcdir/config/swaync/style.css"
 
 ################################################################################
@@ -751,6 +752,21 @@ assert s["workspaceSettings"] == {"in": {"askForName": True, "pinnedApps": ["gma
     fi
 else
     echo "SKIP: JSON parse checks (python3 not installed)"
+fi
+
+# tide's Mouse and Keyboard settings (tide SPEC.md §16), which show tide's
+# own defaults until set: this machine's choices, as hyprland.lua gives them
+# too, so the pages show them as set. tide for macOS reads the mouse's
+# scrollSpeed for LinearMouse.
+if command -v python3 >/dev/null 2>&1; then
+    start_test "tide input.json sets Dvorak, a left-handed mouse and a 3x wheel"
+    if python3 -c 'import sys, json
+s = json.load(sys.stdin)
+assert s == {"mouse": {"leftHanded": True, "scrollSpeed": 3}, "keyboard": {"layout": "us", "variant": "dvorak"}}, s' < "$_tide_input"; then
+        assert_true true
+    else
+        assert_true false
+    fi
 fi
 
 ################################################################################
