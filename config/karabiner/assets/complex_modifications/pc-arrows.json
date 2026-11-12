@@ -281,6 +281,39 @@
                     },
                     "to": [
                         {
+                            "key_code": "open_bracket",
+                            "modifiers": [
+                                "left_control"
+                            ]
+                        }
+                    ],
+                    "conditions": [
+                        {
+                            "type": "frontmost_application_if",
+                            "bundle_identifiers": [
+                                "^com\\.google\\.Chrome",
+                                "^com\\.brave\\.Browser",
+                                "^com\\.microsoft\\.edgemac",
+                                "^com\\.apple\\.Safari$",
+                                "^org\\.mozilla\\.firefox$",
+                                "^company\\.thebrowser\\.Browser$",
+                                "^com\\.apple\\.finder$"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "left_arrow",
+                        "modifiers": {
+                            "mandatory": [
+                                "left_option"
+                            ]
+                        }
+                    },
+                    "to": [
+                        {
                             "key_code": "left_arrow",
                             "modifiers": [
                                 "left_command"
@@ -305,6 +338,39 @@
                             "modifiers": [
                                 "left_command",
                                 "shift"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "right_arrow",
+                        "modifiers": {
+                            "mandatory": [
+                                "left_option"
+                            ]
+                        }
+                    },
+                    "to": [
+                        {
+                            "key_code": "close_bracket",
+                            "modifiers": [
+                                "left_control"
+                            ]
+                        }
+                    ],
+                    "conditions": [
+                        {
+                            "type": "frontmost_application_if",
+                            "bundle_identifiers": [
+                                "^com\\.google\\.Chrome",
+                                "^com\\.brave\\.Browser",
+                                "^com\\.microsoft\\.edgemac",
+                                "^com\\.apple\\.Safari$",
+                                "^org\\.mozilla\\.firefox$",
+                                "^company\\.thebrowser\\.Browser$",
+                                "^com\\.apple\\.finder$"
                             ]
                         }
                     ]
