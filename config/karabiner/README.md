@@ -1,6 +1,6 @@
 # Karabiner-Elements
 
-Complex-modification rules for a PC keyboard, in four files:
+Complex-modification rules for a PC keyboard, in five files:
 
 - `assets/complex_modifications/pc-alt-tab.json` puts the next tab back on
   physical Ctrl+Tab; physical Alt+Tab is tide for macOS's.
@@ -13,6 +13,10 @@ Complex-modification rules for a PC keyboard, in four files:
   Ctrl+Shift+C in Terminal and iTerm2; see [Terminals](#terminals).
 - `assets/complex_modifications/pc-lock.json` makes Ctrl+U clear the
   password at the lock screen, as on Linux; see [Lock screen](#lock-screen).
+- `assets/complex_modifications/pc-nav.json` makes Caps Lock held, or a
+  MacBook's Fn, with the arrows Home, End, Page Up and Page Down, and with
+  Alt the document's start and end, as Alt+Home and Alt+End are; see
+  [Caps Lock and Fn](#caps-lock-and-fn).
 
 Only the asset file is kept here. Karabiner rewrites
 `~/.config/karabiner/karabiner.json` itself on every UI change, so that file is
@@ -208,6 +212,41 @@ It's its own rule, "Ctrl+Shift+C interrupts in Terminal and iTerm2", enabled
 on its own (`com.apple.Terminal`, `com.googlecode.iterm2`). kitty and Ghostty
 keep Ctrl+Shift+C as copy, through the rule above.
 
+## Caps Lock and Fn
+
+A MacBook has no Home, End, Page Up or Page Down keys; Fn with the arrows
+stands in for them. This rule gives a PC keyboard the same with Caps Lock
+held, and makes both match Linux, where `setup` gives Caps Lock the same
+layer with keyd:
+
+| Physical keys | Does |
+| --- | --- |
+| Caps Lock or Fn + Left, Right | the line's start, end (Home, End) |
+| Caps Lock or Fn + Up, Down | Page Up, Page Down |
+| Caps Lock or Fn + Alt + an arrow | Left or Up the document's start, Right or Down its end |
+| Alt+Home, Alt+End | the document's start, end |
+
+Shift with any of them selects to there. Outside terminals the rule emits
+`left_control`+arrow, which the rotation makes Command+arrow, as the Home and
+End rule does; in kitty, Ghostty, Terminal and iTerm2 it emits Home, End,
+Page Up and Page Down themselves, and the document's ends as `left_option`+Home
+and End, which the rotation makes Control+Home and End.
+
+- **A Caps Lock tap is still Caps Lock,** which tide for macOS's mapping
+  makes F18, its Compose key. It's sent as the key comes up, and only when no
+  other key went down meanwhile: Compose's next key has to wait for Caps Lock
+  to come up. Without tide for macOS it's plain Caps Lock, held 200 ms, as
+  macOS ignores a Caps Lock press with no time held.
+- **F18 too:** the rule takes held F18 the same way, in case Karabiner sees
+  the mapped key rather than the physical one.
+- **Fn is matched as Fn+arrow and as Home and End,** whichever Karabiner
+  sees a MacBook's Fn+arrow as. Not tried on a Mac yet.
+- **Either Alt,** unlike the rest of these rules: the layer has nothing else
+  for right Alt to do.
+- **Above the arrow rule,** whose Alt+Left/Right word move would otherwise
+  match first, Caps Lock or Fn held or not. Enabled after it, it's above it;
+  tide for macOS puts a rule it doesn't know at the top.
+
 ## Lock screen
 
 On Linux, Ctrl+U clears a password field, tide's lock among them. The
@@ -262,7 +301,11 @@ the list. Enable, in this order:
    turns it on itself), above them;
 5. under "PC keyboard lock screen", "Ctrl+U clears the password at the lock
    screen", last, above tide for macOS's, which would otherwise take a Mac
-   keyboard's Command+U there as Super+U.
+   keyboard's Command+U there as Super+U;
+6. under "PC keyboard navigation", "Caps Lock or Fn with the arrows is
+   Home, End, …", after the arrow rule, so it sits above it: the arrow
+   rule's Alt+Left/Right would otherwise take Caps Lock or Fn with Alt+Left
+   and Right as a word move.
 
 Karabiner puts each rule you enable at the top of the Complex Modifications
 list, and uses the first that matches a key. `setup-macos` installs Karabiner
