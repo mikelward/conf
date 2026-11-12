@@ -510,7 +510,8 @@ function cdfile
 end
 
 function delline
-    sed -i -e $argv[1]d $argv[2]
+    # -i with an attached suffix is the one spelling GNU and BSD sed share
+    sed -i.delline -e $argv[1]d $argv[2]; and rm -f -- $argv[2].delline
 end
 
 # print the block device associated with the given mount point (or file)
@@ -625,7 +626,7 @@ end
 
 function names
     grep '^nameserver' /etc/resolv.conf
-    nmcli dev list 2>/dev/null | sed -ne '/domain_name_servers/{s/[^ ]*: *//;p}'
+    nmcli dev list 2>/dev/null | sed -ne '/domain_name_servers/{s/[^ ]*: *//;p;}'
 end
 
 # list non-empty files, prefixed by timestamp in case sorting is needed

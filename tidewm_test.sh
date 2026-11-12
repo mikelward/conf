@@ -54,7 +54,7 @@ _block() {
 }
 
 start_test "every mouse has hyprland.lua's handedness and wheel speed"
-_mouse=$(sed -n 's/^ *mouse = { left_handed = \(true\|false\), scroll_factor = \([0-9.]*\) },$/\1 \2/p' "$_hypr")
+_mouse=$(sed -E -n 's/^ *mouse = \{ left_handed = (true|false), scroll_factor = ([0-9.]*) \},$/\1 \2/p' "$_hypr")
 assert_equal "true 3" "$_mouse"
 assert_contains "left_handed enabled" "$(_block type:pointer)"
 assert_contains "scroll_factor ${_mouse#* }" "$(_block type:pointer)"

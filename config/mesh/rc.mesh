@@ -406,8 +406,8 @@ func myip() { dig +short o-o.myaddr.l.google.com txt @ns1.google.com | tr -d '"'
 
 # print the list of nameservers
 func names() {
-  sed -ne '/^nameserver/{s/^nameserver[[:space:]]*//;p}' /etc/resolv.conf
-  nmcli dev show 2> /dev/null | sed -ne '/^IP..DNS/{s/[^ ]*: *//;p}'
+  sed -ne '/^nameserver/{s/^nameserver[[:space:]]*//;p;}' /etc/resolv.conf
+  nmcli dev show 2> /dev/null | sed -ne '/^IP..DNS/{s/[^ ]*: *//;p;}'
 }
 
 # rename each file to <file>.bak
@@ -572,7 +572,8 @@ func isort(file) {
 }
 
 # delete the given line number from a file
-func delline(line, file) { sed -i -e "${line}d" $file }
+# -i with an attached suffix is the one spelling GNU and BSD sed share
+func delline(line, file) { sed -i.delline -e "${line}d" $file && rm -f -- "${file}.delline" }
 
 # remove the ssh known host on the given line
 func rmkey(line) { delline $line "$env.HOME/.ssh/known_hosts" }

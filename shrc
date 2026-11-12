@@ -970,7 +970,9 @@ cdfile() {
 }
 
 delline() {
-    sed -i -e "${1}d" "$2"
+    # -i with an attached suffix is the one spelling GNU and BSD sed share;
+    # macOS reads `-i -e` as a backup named "<file>-e".
+    sed -i.delline -e "${1}d" "$2" && rm -f -- "$2.delline"
 }
 
 # print the block device associated with the given mount point (or file)
@@ -1126,9 +1128,9 @@ myip() {
 
 # print the list of nameservers
 names() {
-    sed -ne '/^nameserver/{s/^nameserver[[:space:]]*//;p}' /etc/resolv.conf
-    nmcli dev list 2>/dev/null | sed -ne '/domain_name_servers/{s/[^ ]*: *//;p}'
-    nmcli dev show 2>/dev/null | sed -ne '/^IP..DNS/{s/[^ ]*: *//;p}'
+    sed -ne '/^nameserver/{s/^nameserver[[:space:]]*//;p;}' /etc/resolv.conf
+    nmcli dev list 2>/dev/null | sed -ne '/domain_name_servers/{s/[^ ]*: *//;p;}'
+    nmcli dev show 2>/dev/null | sed -ne '/^IP..DNS/{s/[^ ]*: *//;p;}'
 }
 
 # list non-empty files, prefixed by timestamp in case sorting is needed
@@ -2400,10 +2402,12 @@ _job_info_compute() {
             # operate on the captured text rather than a `jobs -r | ...` pipe.
             local _raw
             _raw="$(jobs -r; jobs -s)"
+            # LC_ALL=C: the patterns are ASCII, and in a UTF-8 locale macOS
+            # sed and grep refuse a job whose command holds invalid UTF-8.
             _job_info_out="$(printf '%s\n' "$_raw" |
-                sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /' |
-                grep -v '(pwd now:' |
-                grep -vE '^%[0-9][0-9]* ([0-9][0-9]* +)?command vcs( |$)' |
+                LC_ALL=C sed -e 's/^\[\([0-9][0-9]*\)\][-+ ]*[^ ]* */%\1 /' |
+                LC_ALL=C grep -v '(pwd now:' |
+                LC_ALL=C grep -vE '^%[0-9][0-9]* ([0-9][0-9]* +)?command vcs( |$)' |
                 tr '\n' ' ')"
         fi
         _job_info_out="${_job_info_out% }"
@@ -4176,7 +4180,7 @@ if is_interactive; then
                     ;;
                 $'\n'|$'\r')
                     # Enter or Return
-                    BUFFER="$(echo "$BUFFER" | sed -r -e "$SEDARG")"
+                    BUFFER="$(echo "$BUFFER" | sed -E -e "$SEDARG")"
                     return
                     ;;
                 $'\b'|$'\x7F')

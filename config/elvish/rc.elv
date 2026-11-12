@@ -884,11 +884,11 @@ fn myip { dig +short o-o.myaddr.l.google.com txt @ns1.google.com | tr -d '"' }
 
 # print the list of nameservers
 fn names {
-    sed -ne '/^nameserver/{s/^nameserver[[:space:]]*//;p}' /etc/resolv.conf
+    sed -ne '/^nameserver/{s/^nameserver[[:space:]]*//;p;}' /etc/resolv.conf
     # not every machine runs NetworkManager
     if (have-command nmcli) {
         capture-or-empty nmcli dev show &quiet=$true | ^
-            sed -ne '/^IP..DNS/{s/[^ ]*: *//;p}'
+            sed -ne '/^IP..DNS/{s/[^ ]*: *//;p;}'
     }
 }
 
@@ -1009,7 +1009,8 @@ fn isort {|file|
 }
 
 # delete the given line number from a file
-fn delline {|line file| sed -i -e $line'd' $file }
+# -i with an attached suffix is the one spelling GNU and BSD sed share
+fn delline {|line file| sed -i.delline -e $line'd' $file; rm -f -- $file.delline }
 
 # remove the ssh known host on the given line
 fn rmkey {|line| delline $line $E:HOME/.ssh/known_hosts }

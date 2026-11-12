@@ -133,6 +133,7 @@ test-all: \
 	test-karabiner \
 	test-kitty \
 	test-rule-size \
+	test-portable-sed \
 	test-hypr \
 	test-sway \
 	test-tidewm
@@ -411,6 +412,14 @@ $(CACHE)/test-rule-size.stamp: scripts/check-rule-size.sh AGENTS.md agents/AGENT
 	@touch $@
 test-rule-size: $(CACHE)/test-rule-size.stamp
 
+# The config's sed calls take only what macOS's BSD sed also takes.
+$(CACHE)/test-portable-sed.stamp: shrc shrc.vcs profile exitrc config/fish/config.fish \
+                          config/mesh/rc.mesh config/elvish/rc.elv config/nushell/config.nu \
+                          config/kitty/tide-bell portable_sed_test.sh shrc_test_lib.sh | $(CACHE)
+	@sh portable_sed_test.sh
+	@touch $@
+test-portable-sed: $(CACHE)/test-portable-sed.stamp
+
 # The Hyprland desktop: hyprland.lua under a stub of Hyprland's Lua API, plus
 # presence/parse and script checks. Depends on every file it validates so
 # editing any of them re-runs.
@@ -484,4 +493,4 @@ test-tidewm: $(CACHE)/test-tidewm.stamp
 	test-vcs test-vcs-zsh \
 	test-fish test-nu test-mesh test-elvish test-lint \
 	test-env test-profile test-gitconfig test-makefile test-amethyst test-karabiner test-kitty \
-	test-rule-size test-hypr test-sway test-tidewm
+	test-rule-size test-portable-sed test-hypr test-sway test-tidewm

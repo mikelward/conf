@@ -548,6 +548,29 @@ result=$(cat "$_tmpfile")
 assert_equal "" "$result"
 rm -f "$_tmpfile"
 
+# macOS sed's -i takes the next argument as the backup suffix, so `sed -i -e`
+# deletes the line and also leaves "<file>-e" behind. This stand-in does the
+# same, then hands the rest to the real sed.
+start_test "delline leaves no backup beside the file under BSD sed"
+_bsd_sed_dir="$_testdir/bsd-sed"
+mkdir -p "$_bsd_sed_dir" "$_testdir/delline"
+cat > "$_bsd_sed_dir/sed" <<EOF
+#!/bin/sh
+if test "\$1" = -i; then
+    _suffix=\$2
+    shift 2
+    for _last; do :; done
+    cp -- "\$_last" "\$_last\$_suffix"
+    exec $(command -v sed) -i "\$@"
+fi
+exec $(command -v sed) "\$@"
+EOF
+chmod +x "$_bsd_sed_dir/sed"
+printf 'line1\nline2\n' > "$_testdir/delline/hosts"
+(PATH="$_bsd_sed_dir:$PATH"; delline 1 "$_testdir/delline/hosts")
+assert_equal "line2" "$(cat "$_testdir/delline/hosts")"
+assert_equal "hosts" "$(ls "$_testdir/delline")"
+
 start_test "delline no-op for out of range line"
 _tmpfile=$(mktemp)
 printf 'only line\n' > "$_tmpfile"
