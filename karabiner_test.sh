@@ -359,4 +359,84 @@ PY
     assert_equal "4" "$(printf '%s\n' "$_lock" | grep -c -F -- "$_at_lock")"
 fi
 
+# Caps Lock held, or a MacBook's Fn, with the arrows: Home, End, Page Up and
+# Page Down, and with Alt the document's start and end, as Alt+Home and
+# Alt+End are. A Caps Lock tap is still Caps Lock, which tide's hidutil
+# mapping makes F18, Compose. Outside terminals the outputs name the keys
+# the rotation turns into Command (left_control); in terminals they're the
+# PC keys, with left_option, which the rotation makes Control.
+_nav_file="$_srcdir/config/karabiner/assets/complex_modifications/pc-nav.json"
+
+start_test "the navigation rule exists"
+assert_true test -f "$_nav_file"
+
+if command -v python3 >/dev/null 2>&1; then
+    start_test "the navigation rule is valid JSON"
+    assert_true python3 -m json.tool "$_nav_file" /dev/null
+
+    _nav=$(python3 - "$_nav_file" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+print("title", bool(d.get("title")))
+for r in d["rules"]:
+    print("description", r["description"][:40])
+    for m in r["manipulators"]:
+        f = m["from"]
+        mods = f.get("modifiers", {})
+        key = "+".join(mods.get("mandatory", []) + [f["key_code"]])
+        if "to_if_alone" in m:
+            print("hold", key, "sets", m["to"][0]["set_variable"]["name"],
+                  "tap", m["to_if_alone"][0]["key_code"],
+                  "release", m["to_after_key_up"][0]["set_variable"]["value"])
+            continue
+        where = "layer" if any(c["type"] == "variable_if" for c in m["conditions"]) else "plain"
+        term = "terminal" if any(c["type"] == "frontmost_application_if" for c in m["conditions"]) else "app"
+        to = " ".join("+".join(t.get("modifiers", []) + [t["key_code"]]) for t in m["to"])
+        print(where, term, key, "shift" if "shift" in mods.get("optional", []) else "noshift", "->", to)
+PY
+)
+    start_test "the navigation rule has a title, and says what it does first"
+    assert_contains "title True" "$_nav"
+    assert_contains "description Caps Lock or Fn with the arrows is Home" "$_nav"
+
+    start_test "holding Caps Lock is the layer; a tap is still Caps Lock, Compose"
+    assert_contains "hold caps_lock sets pc_nav_layer tap caps_lock release 0" "$_nav"
+    # macOS ignores a Caps Lock tap with no time held, so plain Caps Lock,
+    # without tide for macOS's F18, wouldn't toggle.
+    start_test "the Caps Lock tap is held long enough for macOS to take it"
+    assert_equal "200" "$(python3 -c 'import json,sys; print([m for m in json.load(open(sys.argv[1]))["rules"][0]["manipulators"] if m["from"]["key_code"] == "caps_lock"][0]["to_if_alone"][0].get("hold_down_milliseconds"))' "$_nav_file")"
+    start_test "F18 too, should Karabiner see the mapped key"
+    assert_contains "hold f18 sets pc_nav_layer tap f18 release 0" "$_nav"
+
+    # The Caps Lock layer, then Fn: the same moves.
+    for _via in "layer " "plain fn+"; do
+        _w=${_via% *}
+        _p=${_via#* }
+        start_test "$_w ${_p}arrows: the line's ends and the page, selecting with shift"
+        assert_contains "$_w app ${_p}left_arrow shift -> left_control+left_arrow" "$_nav"
+        assert_contains "$_w app ${_p}right_arrow shift -> left_control+right_arrow" "$_nav"
+        assert_contains "$_w app ${_p}up_arrow shift -> page_up" "$_nav"
+        assert_contains "$_w app ${_p}down_arrow shift -> page_down" "$_nav"
+        start_test "$_w ${_p}arrows with Alt: the document's start and end"
+        assert_contains "$_w app ${_p}option+left_arrow shift -> left_control+up_arrow" "$_nav"
+        assert_contains "$_w app ${_p}option+up_arrow shift -> left_control+up_arrow" "$_nav"
+        assert_contains "$_w app ${_p}option+right_arrow shift -> left_control+down_arrow" "$_nav"
+        assert_contains "$_w app ${_p}option+down_arrow shift -> left_control+down_arrow" "$_nav"
+        start_test "$_w ${_p}arrows in terminals: the PC keys, Alt's as Control"
+        assert_contains "$_w terminal ${_p}left_arrow shift -> home" "$_nav"
+        assert_contains "$_w terminal ${_p}down_arrow shift -> page_down" "$_nav"
+        assert_contains "$_w terminal ${_p}option+left_arrow shift -> left_option+home" "$_nav"
+        assert_contains "$_w terminal ${_p}option+right_arrow shift -> left_option+end" "$_nav"
+    done
+
+    start_test "Alt+Home and Alt+End go to the document's start and end"
+    assert_contains "plain app option+home shift -> left_control+up_arrow" "$_nav"
+    assert_contains "plain app option+end shift -> left_control+down_arrow" "$_nav"
+    assert_contains "plain terminal option+home shift -> left_option+home" "$_nav"
+
+    start_test "nothing else: 36 key manipulators, half of them for terminals"
+    assert_equal "36" "$(printf '%s\n' "$_nav" | grep -c -- ' -> ')"
+    assert_equal "18" "$(printf '%s\n' "$_nav" | grep -c -- '^[a-z]* terminal ')"
+fi
+
 test_summary "karabiner_test"
