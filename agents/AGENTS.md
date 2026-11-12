@@ -1,7 +1,7 @@
 ---
 trigger: always_on
 alwaysApply: true
-last_modified: 2026-11-11
+last_modified: 2026-11-12
 ---
 
 ## Fleet conventions
@@ -108,3 +108,5 @@ Shared by every mikelward repo and the user-level agent config; canonical in mik
 - **Portability**. Flag anything that won't run on Linux and macOS.
 - **UI text**. Words a person would say, as few as do the job. Say what a setting does;
   leave out what works by default, what the screen already shows, and how it works.
+- **Terminology**. Standard domain terms, never coined ones: "Text console layout is
+  Dvorak", not "The text consoles type Dvorak"; "dimming inactive windows", not "the dim".
