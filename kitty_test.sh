@@ -107,6 +107,57 @@ assert_true test -n "$(printf '%s' "$_out" | grep 'kitten @ ls failed')"
 assert_false test -n "$(printf '%s' "$_out" | grep hammerspoon)"
 rm -rf "$_bin" "$_log"
 
+# What kitty ends up with for a setting on an OS: kitty reads the file top
+# to bottom, following includes where they sit, and the last line that
+# starts with the words given wins. Prints the rest of that line, or
+# nothing when no line sets it.
+_effective() {
+    _os=$1
+    shift
+    awk -v os="$_os" -v dir="$_srcdir/config/kitty" -v want="$*" '
+        function read(file,   line, f, i, n, w, k) {
+            while ((getline line < file) > 0) {
+                if (line ~ /^include /) {
+                    f = substr(line, 9)
+                    gsub(/\$\{KITTY_OS\}/, os, f)
+                    read(dir "/" f)
+                    continue
+                }
+                n = split(line, w, " ")
+                if (n < nwant) continue
+                for (i = 1; i <= nwant; i++) if (w[i] != wanted[i]) break
+                if (i <= nwant) continue
+                value = ""
+                for (k = nwant + 1; k <= n; k++) value = value (k > nwant + 1 ? " " : "") w[k]
+            }
+            close(file)
+        }
+        BEGIN { nwant = split(want, wanted, " "); value = ""; read(dir "/kitty.conf"); print value }'
+}
+
+start_test "on a Mac, selecting copies to a buffer of kitty's own, not the clipboard"
+_buffer=$(_effective macos copy_on_select)
+assert_true test -n "$_buffer"
+assert_false test "$_buffer" = clipboard
+assert_false test "$_buffer" = no
+assert_false test "$_buffer" = yes
+
+start_test "on a Mac, the middle button pastes what selecting copied"
+assert_true test "$(_effective macos mouse_map middle release ungrabbed)" = "paste_from_buffer $_buffer"
+assert_true test "$(_effective macos mouse_map shift+middle release ungrabbed,grabbed)" = "paste_from_buffer $_buffer"
+
+start_test "on a Mac, every key that pastes the selection on Linux pastes that buffer"
+_keys=$(sed -n 's/^map  *\([^ ]*\)  *paste_from_selection$/\1/p' "$_kitty_conf")
+assert_true test -n "$_keys"
+for _key in $_keys; do
+    assert_true test "$(_effective linux map "$_key")" = paste_from_selection
+    assert_true test "$(_effective macos map "$_key")" = "paste_from_buffer $_buffer"
+done
+
+start_test "Linux keeps the primary selection: nothing copies on select or remaps the middle button"
+assert_true test -z "$(_effective linux copy_on_select)"
+assert_true test -z "$(_effective linux mouse_map middle release ungrabbed)"
+
 start_test "Ctrl+N opens a new OS window, and nothing else takes it"
 assert_true grep -Eq '^map +ctrl\+n +new_os_window$' "$_kitty_conf"
 assert_true test "$(grep -Ec '^map +ctrl\+n ' "$_kitty_conf" "$_macos_conf" | awk -F: '{ n += $2 } END { print n }')" -eq 1
