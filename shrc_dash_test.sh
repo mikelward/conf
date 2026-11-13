@@ -22,4 +22,15 @@ ln -sf "$_srcdir/shrc.vcs" "$_vcsguard_home/.shrc.vcs"
 _vcsguard_stderr=$(HOME="$_vcsguard_home" run_with_timeout 10 dash -c '. "$1"' _ "$_srcdir/shrc" 2>&1 >/dev/null)
 assert_not_contains "Syntax error" "$_vcsguard_stderr"
 
+# A display manager's login runs ~/.profile under sh, and profile sources
+# shrc: greetd's does, with its stderr on the login screen's console. That
+# isn't anyone at a prompt, so it says nothing there.
+start_test "shrc says nothing under a non-interactive dash"
+_quiet_stderr=$(HOME="$_vcsguard_home" run_with_timeout 10 dash -c '. "$1"' sh "$_srcdir/shrc" 2>&1 >/dev/null)
+assert_not_contains "failsafe mode" "$_quiet_stderr"
+
+start_test "shrc says failsafe mode to an interactive dash"
+_loud_stderr=$(HOME="$_vcsguard_home" run_with_timeout 10 dash -i -c '. "$1"' sh "$_srcdir/shrc" 2>&1 >/dev/null </dev/null)
+assert_contains "failsafe mode" "$_loud_stderr"
+
 test_summary "shrc_dash_test"

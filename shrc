@@ -74,7 +74,10 @@ if is_sh || is_dash || is_ksh \
     || failsafe_flag FAILSAFE "${FAILSAFE-0}" \
     || failsafe_flag LC_FAILSAFE "${LC_FAILSAFE-0}" \
     || test -e "$HOME/.failsafe"; then
-    echo failsafe mode >&2
+    # Said only to someone at a prompt. A display manager's login (greetd's
+    # runs ~/.profile under sh, which sources this) has the login screen's
+    # console as its stderr, where it flashed up as if something had failed.
+    case $- in *i*) echo failsafe mode >&2 ;; esac
     PS1='
 $(basename "$PWD")$ '
     return

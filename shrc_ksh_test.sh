@@ -31,7 +31,7 @@ assert_not_contains "Syntax error" "$_vcsguard_stderr"
 # Assert the short-circuit actually fired rather than the rich config
 # running silently.
 start_test "shrc reaches failsafe mode under ksh"
-_failsafe_stderr=$(HOME="$_vcsguard_home" run_with_timeout 10 mksh -c '. "$1"' _ "$_srcdir/shrc" 2>&1 >/dev/null)
+_failsafe_stderr=$(HOME="$_vcsguard_home" run_with_timeout 10 mksh -i -c '. "$1"' _ "$_srcdir/shrc" 2>&1 >/dev/null </dev/null)
 assert_contains "failsafe mode" "$_failsafe_stderr"
 
 test_summary "shrc_ksh_test"
