@@ -1,7 +1,7 @@
 ---
 trigger: always_on
 alwaysApply: true
-last_modified: 2026-11-12
+last_modified: 2026-11-14
 ---
 
 # conf
@@ -44,7 +44,6 @@ Shared by every mikelward repo and the user-level agent config; canonical in mik
   titles match.
 - **Prefixes**. `docs:`, `test:`, `build:`, `refactor:` mark what users won't notice. No
   `feat:` or `fix:`.
-- **Model names**. Never in anything pushed.
 - **After a merge**. Branch afresh.
 - **Shallow clones**. Unshallow before trusting history or calculating a version code.
 - **Language**. US English everywhere.
