@@ -194,6 +194,7 @@ tide's Keyboard shortcuts can give them other keys:
 | `SUPER + E` | File manager (yazi in a terminal) |
 | `SUPER + B` / `SUPER + Shift + B` | Bluetooth connect / audio profile |
 | `SUPER + V` | Clipboard history and special characters: tide's picker, where Enter pastes (needs the tide shell) |
+| `SUPER + ;` | Emoji and symbols, by name: tide's picker on its Characters tab, where Enter pastes (needs the tide shell) |
 | `SUPER + Shift + V` | Snippets and Bitwarden logins: tide's picker on its Fill tab, where Enter types the field chosen (needs the tide shell, and rbw for Bitwarden) |
 | `SUPER + C` / `SUPER + Shift + C` | Chat / Calendar |
 | `SUPER + H` | Home |
@@ -209,6 +210,7 @@ tide's Keyboard shortcuts can give them other keys:
 | `CTRL + W`, `CTRL + Shift + W`, `CTRL + Q`, `ALT + F4` | The app's own, passed on to every window but one tide pins on its workspace, which never sees them (bound only with tide's `pinned.lua`) |
 | `SUPER + Z` | Minimize the current window into tide's corner tray; a click there restores it (needs the tide shell) |
 | `SUPER + L` | Lock (tide-lock in the tide session, hyprlock otherwise) |
+| `SUPER + Shift + R` | Reload the config (`tide reload` in the tide session, `hyprctl reload` otherwise) |
 | `SUPER + S` | Keep awake on or off, with an OSD (needs the tide shell) |
 | `SUPER + P` | Presenter mode on or off: Do not disturb and keep awake together, each put back as it was when it goes off (needs the tide shell) |
 | `SUPER + Shift + E` | Exit Hyprland (log out) |
@@ -257,8 +259,8 @@ back to its own, each window's monitor noted as it opens and as you move it.
 
 | Keys | Action |
 |------|--------|
-| `SUPER + Left` / `SUPER + Right` | Focus the window to the left / right; at a monitor's edge, the nearest window on the next monitor that way; past the last monitor, nothing |
-| `SUPER + Shift + Left` / `SUPER + Shift + Right` | Move the window the same way: a swap on its monitor, or onto the next monitor at the edge, keeping focus |
+| `SUPER + Left` / `Right` / `Up` / `Down` | Focus the window that way; at a monitor's edge, the nearest window on the next monitor that way; past the last monitor, nothing |
+| `SUPER + Shift + Left` / `Right` / `Up` / `Down` | Move the window the same way: a swap on its monitor, or onto the next monitor at the edge, keeping focus |
 | `SUPER + J` / `SUPER + K` | Focus next / previous in the stack |
 | `SUPER + Shift + J` / `SUPER + Shift + K` | Move window down / up the stack |
 | `ALT + Tab` | Make the focused window the master; on the master, swap back with the one before it |
@@ -267,15 +269,15 @@ back to its own, each window's monitor noted as it opens and as you move it.
 | `SUPER + .` / `SUPER + ,` | Next / previous layout |
 | none | The layout used last, so two presses come back (tide's layout; dwm's preset in tide's Keyboard shortcuts gives it `SUPER + Space`) |
 | `SUPER + \`` (backtick), `SUPER + O` | Toggle monocle |
-| `SUPER + Up` / `SUPER + Shift + Up` / `SUPER + Down` | Maximize (bar stays) / fullscreen / restore |
+| `SUPER + X` / `SUPER + Shift + X` | Maximize (bar stays) / fullscreen, each a toggle |
+| none | Restore from either (tide's Keyboard shortcuts can give it a key) |
 | `SUPER + Shift + F` / `SUPER + Insert` | Toggle floating; floating a window no rule covers has tide's shell ask, once a session for each app, whether to always float it |
 | `SUPER + Alt + F` | Open tide's Floating settings with a rule filled in for the focused window, its class and exact title, to trim and add with Enter (needs the tide shell) |
-| `SUPER + Shift + R` | **Resize** mode (h/j/k/l or arrows; Esc/Enter to exit) |
 
 Without the tide layout, the layout keys drive Hyprland's master layout
 instead: `.` / `,` rotate the master orientation (center is the three-column
-shape) and `` ` `` or `O` maximizes the window. `SUPER + Left` / `Right`
-and their `Shift` twins are Hyprland's `movefocus` and `movewindow`, which
+shape) and `` ` `` or `O` maximizes the window. `SUPER` and an arrow, and
+their `Shift` twins, are Hyprland's `movefocus` and `movewindow`, which
 cross monitors too.
 
 ### Mouse
@@ -297,7 +299,7 @@ two tiles with no gaps, and its Lua can't set one (tide SPEC.md §6.6).
 
 Focus follows the mouse when it crosses into a window, and never warps the
 pointer. An app that asks for focus is marked urgent instead of taking it
-(`SUPER + Tab` goes there).
+(`SUPER + A` goes there).
 
 ## Behaviour notes
 
