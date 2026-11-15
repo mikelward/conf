@@ -326,12 +326,55 @@ for m in rules[1]["manipulators"] if len(rules) > 1 else []:
 PY
 )
     start_test "Ctrl+Shift+C in Terminal and iTerm2 is Control+C, the interrupt"
-    assert_equal "2
+    assert_equal "3
 $(python3 -c 'import json; print(json.dumps([{"key_code": "c", "modifiers": {"mandatory": ["left_control", "shift"]}}, [{"key_code": "c", "modifiers": ["left_option"]}], [{"type": "frontmost_application_if", "bundle_identifiers": ["^com\\.apple\\.Terminal$", "^com\\.googlecode\\.iterm2$"]}]], sort_keys=True))')" "$_interrupt"
     start_test "the interrupt rule names Ctrl+Shift+C first, for setup-macos to find"
     assert_equal "Ctrl+Shift+C interrupts in Terminal and iTerm2" "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["rules"][1]["description"][:46])' "$_terminal_file")"
     start_test "Ctrl+C itself is left to the rotation in Terminal and iTerm2, as copy"
     assert_not_contains "iterm2" "$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))["rules"][0]))' "$_terminal_file")"
+
+    # Terminal and iTerm2 get kitty's keys too, where their own settings
+    # allow: Ctrl as Control but for copy and paste, which stay theirs on
+    # Command+C and V, and Alt as Meta, sent as Escape and the key, which
+    # needs no Option-as-Meta setting.
+    _term_pairs=$(python3 - "$_terminal_file" <<'PY'
+import json, sys
+for m in json.load(open(sys.argv[1]))["rules"][2]["manipulators"]:
+    if m.get("conditions") != [{"type": "frontmost_application_if", "bundle_identifiers": ["^com\\.apple\\.Terminal$", "^com\\.googlecode\\.iterm2$"]}]:
+        print("BAD condition", m.get("conditions"))
+    f = m["from"]
+    out = " ".join((t.get("modifiers") or ["-"])[0] + ":" + t["key_code"] for t in m["to"])
+    print("+".join(f["modifiers"]["mandatory"]), f["key_code"], "->", out)
+PY
+)
+    start_test "the Terminal and iTerm2 rule is theirs alone, named for the terminal rule's place"
+    assert_not_contains "BAD" "$_term_pairs"
+    assert_equal "Ctrl is Control and Alt is Meta in Terminal and iTerm2" "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["rules"][2]["description"][:54])' "$_terminal_file")"
+    start_test "Ctrl+U, Ctrl+K and Ctrl+W reach Terminal and iTerm2 as Control"
+    assert_contains "left_control u -> left_option:u" "$_term_pairs"
+    assert_contains "left_control k -> left_option:k" "$_term_pairs"
+    assert_contains "left_control w -> left_option:w" "$_term_pairs"
+    start_test "Ctrl+C and Ctrl+V stay copy and paste there; Ctrl+Shift+V is Control+V"
+    assert_not_contains "left_control c ->" "$_term_pairs"
+    assert_not_contains "left_control v ->" "$_term_pairs"
+    assert_contains "left_control+shift v -> left_option:v" "$_term_pairs"
+    start_test "Alt+B and Alt+. reach Terminal and iTerm2 as Meta, Escape then the key"
+    assert_contains "left_option b -> -:escape -:b" "$_term_pairs"
+    assert_contains "left_option period -> -:escape -:period" "$_term_pairs"
+    # Karabiner repeats only a sequence's last event: a held Alt+B would
+    # move a word, then type b. So the key doesn't repeat.
+    start_test "a held Alt+key doesn't repeat the key alone"
+    assert_equal "" "$(python3 -c '
+import json, sys
+for m in json.load(open(sys.argv[1]))["rules"][2]["manipulators"]:
+    t = m["to"]
+    if t[0].get("key_code") == "escape" and t[-1].get("repeat") is not False:
+        print(m["from"]["key_code"])
+' "$_terminal_file")"
+
+    start_test "Ghostty interrupts on Ctrl+Shift+C and types the next key on Ctrl+Shift+V, as kitty does"
+    assert_true grep -Fqx 'keybind = ctrl+shift+c=text:\x03' "$_ghostty_conf"
+    assert_true grep -Fqx 'keybind = ctrl+shift+v=text:\x16' "$_ghostty_conf"
 
     start_test "Tab, Space and Ctrl+Up/Down are left to the rotation"
     assert_not_contains " tab " "$_terminal_pairs"
