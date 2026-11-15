@@ -9,6 +9,10 @@
 # interrupt, like kitty's copy_or_interrupt. performable: needs 1.1.
 keybind = performable:ctrl+c=copy_to_clipboard
 keybind = ctrl+v=paste_from_clipboard
+# Ctrl+Shift+C always interrupts and Ctrl+Shift+V types the next key as it
+# is, as kitty's send_text maps do, so every terminal has both.
+keybind = ctrl+shift+c=text:\x03
+keybind = ctrl+shift+v=text:\x16
 
 # Left Option is Meta, so Alt+B and Alt+F move by word; right Option still
 # types accents, like kitty's macos_option_as_alt left.

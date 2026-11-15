@@ -8,9 +8,10 @@ Complex-modification rules for a PC keyboard, in five files:
   left or right Ctrl, move by word, Win+Left/Right switch Spaces and
   Win+Shift+Left/Right move the window a Space; see
   [Arrow keys](#arrow-keys).
-- `assets/complex_modifications/pc-terminal.json` gives kitty and Ghostty
-  their Ctrl and Alt back, as Control and Meta, and puts the interrupt on
-  Ctrl+Shift+C in Terminal and iTerm2; see [Terminals](#terminals).
+- `assets/complex_modifications/pc-terminal.json` gives every terminal its
+  Ctrl and Alt back, as Control and Meta, and the interrupt on Ctrl+Shift+C:
+  kitty and Ghostty, and Terminal and iTerm2 but for copy and paste; see
+  [Terminals](#terminals).
 - `assets/complex_modifications/pc-lock.json` makes Ctrl+U clear the
   password at the lock screen, as on Linux; see [Lock screen](#lock-screen).
 - `assets/complex_modifications/pc-nav.json` makes Caps Lock held, or a
@@ -203,20 +204,32 @@ uses, so Ctrl+C there copies a selection and otherwise sends the interrupt
 
 ### Terminal and iTerm2
 
-Terminal and iTerm2 copy on Command+C, which the rotation already puts on
-physical Ctrl+C, as Linux's copy key; they're not in the rule above. What they
-lack is the interrupt, Control+C, which the rotation puts on physical Alt+C.
-A second rule in the same file puts it on physical Ctrl+Shift+C, where a Linux
-terminal's copy and interrupt keys sit together:
+They work as kitty and Ghostty do, where their own settings allow, in two
+rules of the same file, each on its own (`com.apple.Terminal`,
+`com.googlecode.iterm2`):
 
 | Physical keys | Emits | The terminal sees | Does |
 | --- | --- | --- | --- |
-| Ctrl+C | (left to the rotation) | Command+C | copy |
+| Ctrl+key, Ctrl+Shift+key, but C and V | `left_option`+key | Control+key | the shell's Ctrl+U, Ctrl+K, Ctrl+W, … |
+| Ctrl+C, Ctrl+V | (left to the rotation) | Command+C, V | copy and paste |
 | Ctrl+Shift+C | `left_option`+C | Control+C | interrupt (`^C`) |
+| Ctrl+Shift+V | `left_option`+V | Control+V | the next key as it is |
+| Alt+letter, digit or punctuation | Escape, then the key | Escape, the key | Meta, as the shell reads it |
 
-It's its own rule, "Ctrl+Shift+C interrupts in Terminal and iTerm2", enabled
-on its own (`com.apple.Terminal`, `com.googlecode.iterm2`). kitty and Ghostty
-keep Ctrl+Shift+C as copy, through the rule above.
+- **Copy and paste stay on Command,** where both terminals have them; they
+  can't copy a selection or else interrupt on one key, as kitty's
+  `copy_or_interrupt` and Ghostty's `performable:` do. So in every terminal
+  Ctrl+Shift+C interrupts: kitty's and Ghostty's configs send `^C` there
+  too, and `^V` on Ctrl+Shift+V.
+- **Alt is Escape then the key,** the bytes Meta sends, so it needs neither
+  terminal's "Use Option as Meta" setting. Alt with the arrows and the
+  editing keys is left to the arrow rule. Held, it doesn't repeat:
+  Karabiner repeats only a sequence's last event, so a held Alt+B would
+  move a word and then type b.
+- The interrupt is its own rule, "Ctrl+Shift+C interrupts in Terminal and
+  iTerm2", which `setup-macos` names; the rest is "Ctrl is Control and Alt
+  is Meta in Terminal and iTerm2", which tide for macOS places beside the
+  kitty rule, above the arrow rule.
 
 ## Caps Lock and Fn
 
