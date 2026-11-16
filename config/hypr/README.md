@@ -433,6 +433,10 @@ pointer. An app that asks for focus is marked urgent instead of taking it
   `~/.config/hypr/tide-power.lua` (`{ lid_close = "lock" }`), which
   `hyprland.lua` reads at each close, running `loginctl lock-session` for
   Lock. A bad file is reported and taken as suspend.
+- **Power profile.** `~/.config/tide/power.json`, which conf ships,
+  switches power-profiles-daemon to performance on AC power and balanced
+  on battery, as the source changes. tide's Power page shows it, and a
+  machine changes it in `power.local.json`.
 - **Automatic light/dark by time of day.** `theme-daemon.sh` (autostarted)
   applies **light 07:00–19:00 and dark otherwise**, and re-applies at each
   boundary, within a few seconds of waking when the machine slept through
