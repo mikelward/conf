@@ -66,10 +66,8 @@ local opts = {
         app("chat", "C", "google-chat", "Google Chat")
         app("calendar", "SHIFT + C", "google-calendar", "Google Calendar")
         app("home_folder", "H", "home", "Home folder")
-        app("irc", "I", "irc", "IRC")
         app("meet", "M", "google-meet", "Google Meet")
         app("notepad", "N", "notepad", "Notepad")
-        app("remote_desktop", "R", "remote-desktop", "Remote desktop")
         app("music", "Y", "youtube-music", "YouTube Music")
     end,
 }
