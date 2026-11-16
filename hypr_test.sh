@@ -26,6 +26,7 @@ _fuzzel="$_srcdir/config/fuzzel/fuzzel.ini"
 _swaync_cfg="$_srcdir/config/swaync/config.json"
 _tide_workspaces="$_srcdir/config/tide/workspaces.json"
 _tide_input="$_srcdir/config/tide/input.json"
+_tide_power="$_srcdir/config/tide/power.json"
 _swaync_css="$_srcdir/config/swaync/style.css"
 
 ################################################################################
@@ -763,6 +764,15 @@ if command -v python3 >/dev/null 2>&1; then
     if python3 -c 'import sys, json
 s = json.load(sys.stdin)
 assert s == {"mouse": {"leftHanded": True, "scrollSpeed": 3}, "keyboard": {"layout": "us", "variant": "dvorak"}}, s' < "$_tide_input"; then
+        assert_true true
+    else
+        assert_true false
+    fi
+
+    start_test "tide power.json switches to performance on AC and balanced on battery"
+    if python3 -c 'import sys, json
+s = json.load(sys.stdin)
+assert s == {"onAC": "performance", "onBattery": "balanced"}, s' < "$_tide_power"; then
         assert_true true
     else
         assert_true false
