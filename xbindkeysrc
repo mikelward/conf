@@ -41,9 +41,6 @@
 "home"
 	Mod4 + h
 
-"irc"
-	Mod4 + i
-
 "lock-screensaver"
 	Mod4 + l
 
@@ -58,9 +55,6 @@
 
 "xfce4-display-settings"
     Mod4 + Shift + d
-
-"remote-desktop"
-    Mod4 + r
 
 "autorandr --cycle --ignore-lid"
     Mod4 + Shift + r

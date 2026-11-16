@@ -157,10 +157,8 @@ bindsym $mod+v exec clipboard-menu
 bindsym $mod+c exec google-chat
 bindsym $mod+Shift+c exec google-calendar
 bindsym $mod+h exec home
-bindsym $mod+i exec irc
 bindsym $mod+m exec google-meet
 bindsym $mod+n exec notepad
-bindsym $mod+r exec remote-desktop
 bindsym $mod+y exec youtube-music
 # NOTE: SUPER+D (code) is intentionally left unbound, matching the Hyprland
 # build -- add it in config.local. SUPER+S (keep awake) and SUPER+P

@@ -838,7 +838,7 @@ assert_contains "export HYPRCURSOR_SIZE=24" "$_uwsm_env_hypr"
 assert_not_contains "HYPRCURSOR_SIZE" "$_uwsm_env"
 
 ################################################################################
-# Session PATH: the launcher binds run helper scripts (browser1, home, irc,
+# Session PATH: the launcher binds run helper scripts (browser1, home, notepad,
 # ...) from the scripts repo, but no session flavour runs .profile/.shrc, so
 # those binds go through runenv (scripts repo), which sources .shrc
 # -- the single source of truth for PATH (add_path dirs plus the ~/scripts.*

@@ -109,11 +109,15 @@ start_test "terminal-on-workstation bound to SUPER+W; terminal-on-VM has no key"
 assert_contains "bindsym \$mod+w exec terminal_on_workstation" "$_sway_body"
 assert_not_contains "terminal_on_vm" "$_sway_body"
 
-for _app in browser1 browser2 browser3 home irc google-chat \
-            google-meet notepad bluetooth-connect remote-desktop youtube-music; do
+for _app in browser1 browser2 browser3 home google-chat \
+            google-meet notepad bluetooth-connect youtube-music; do
     start_test "app-launch bind present: $_app"
     assert_contains "exec $_app" "$_sway_body"
 done
+
+start_test "Super+I and Super+R are left free"
+assert_not_contains "bindsym \$mod+i " "$_sway_body"
+assert_not_contains "bindsym \$mod+r " "$_sway_body"
 
 start_test "Super+C is Google Chat, and Super+Shift+C Google Calendar"
 assert_contains "bindsym \$mod+c exec google-chat" "$_sway_body"

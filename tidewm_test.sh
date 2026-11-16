@@ -37,6 +37,9 @@ start_test "no key is bound twice here"
 _keys=$(awk '$1 == "bindsym" { i = 2; while ($i ~ /^--/) i++; print tolower($i) }' "$_cfg" | sort)
 assert_equal "" "$(printf '%s\n' "$_keys" | uniq -d)"
 
+start_test "Super+I and Super+R are left free"
+assert_equal "" "$(grep -iE 'bindsym (--[^ ]+ )*\$mod\+[ir] ' "$_cfg" || true)"
+
 start_test "every app runs through tide launch, naming the app its grant is for"
 assert_equal "" "$(grep 'exec tide launch' "$_cfg" | grep -v 'tide launch --app ' || true)"
 

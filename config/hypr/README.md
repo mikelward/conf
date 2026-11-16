@@ -30,7 +30,7 @@ Files (all live under this repo's `config/` and map to `~/.config/`):
 | `config/uwsm/env` + `env-hyprland` | Environment for the optional uwsm session |
 | `config/environment.d/env.conf` | Symlink to `env` so systemd user services see the shared PATH |
 
-The launcher keybinds run their helper scripts (`browser1`, `home`, `irc`, ...)
+The launcher keybinds run their helper scripts (`browser1`, `home`, `notepad`, ...)
 through `runenv` from the scripts repo, which sources `~/.env` (the canonical
 user PATH dirs, from this repo — including `~/scripts.local` for per-machine
 scripts) and `~/.env.local` (other per-machine additions, e.g.
@@ -198,10 +198,8 @@ tide's Keyboard shortcuts can give them other keys:
 | `SUPER + Shift + V` | Snippets and Bitwarden logins: tide's picker on its Fill tab, where Enter types the field chosen (needs the tide shell, and rbw for Bitwarden) |
 | `SUPER + C` / `SUPER + Shift + C` | Chat / Calendar |
 | `SUPER + H` | Home |
-| `SUPER + I` | IRC |
 | `SUPER + M` | Meet |
 | `SUPER + N` | Notepad |
-| `SUPER + R` | Remote desktop |
 | `SUPER + Y` | YouTube Music |
 | `SUPER + Space` | Launcher (tide's, or fuzzel without the tide shell) |
 | `SUPER + Alt + Space` | Next keyboard layout, once `kb_layout` has two, on every keyboard and on the lock screen (`next-layout.sh`) |
