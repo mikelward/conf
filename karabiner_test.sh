@@ -66,10 +66,32 @@ assert_contains '"mandatory": ["left_control", "shift"]' "$_rule"
 # Physical Alt+Tab no longer switches applications: it's tide for macOS's swap with
 # the master, in tide for macOS's rule below (tidemo SPEC.md §7.2). Two manipulators,
 # Ctrl+Tab with and without shift, and none on physical Alt.
-start_test "only Ctrl+Tab is mapped here, not Alt+Tab"
+start_test "only Ctrl+Tab and Ctrl+Page Down and Up are mapped here, not Alt+Tab"
 _manipulators=$(grep -c '"type": "basic"' "$_karabiner")
-assert_equal "2" "$_manipulators"
+assert_equal "4" "$_manipulators"
 assert_not_contains '"mandatory": ["left_option"' "$_rule"
+
+# Ctrl+Page Down and Up are the next and previous tab on Linux. The
+# rotation makes them Command+Page Down and Up, which a Mac browser
+# ignores, so they're Ctrl+Tab and Ctrl+Shift+Tab, a Mac's next and
+# previous tab, emitted as left_option for the rotation. Either Ctrl. Not
+# in terminals, whose own rule sends them on as Control+Page Down and Up.
+if command -v python3 >/dev/null 2>&1; then
+    _tab_pairs=$(python3 -c '
+import json, sys
+for m in json.load(open(sys.argv[1]))["rules"][0]["manipulators"]:
+    f, t = m["from"], m["to"][0]
+    c = (m.get("conditions") or [{}])[0]
+    print(f["key_code"], "+".join(f["modifiers"]["mandatory"]), "->", t["key_code"], "+".join(t["modifiers"]),
+          c.get("type", "-"), " ".join(c.get("bundle_identifiers", [])))
+' "$_karabiner")
+    start_test "Ctrl+Page Down and Up are Ctrl+Tab and Ctrl+Shift+Tab, outside terminals"
+    assert_contains "page_down control -> tab left_option frontmost_application_unless ^net" "$_tab_pairs"
+    assert_contains "page_up control -> tab left_option+shift frontmost_application_unless ^net" "$_tab_pairs"
+    assert_equal "2" "$(printf '%s\n' "$_tab_pairs" | grep '^page_' | grep -c 'kitty.*ghostty.*Terminal.*iterm2')"
+    start_test "the rule's name still starts as setup-macos and tide for macOS find it"
+    assert_equal "Ctrl+Tab goes to the next tab" "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["rules"][0]["description"][:29])' "$_karabiner")"
+fi
 
 # Right Alt is deliberately left alone; mapping it would take away a plain
 # modifier for no benefit. Both spellings, since either would mean it was
@@ -428,7 +450,8 @@ PY
 fi
 
 # Caps Lock held, or a MacBook's Fn, with the arrows: Home, End, Page Up and
-# Page Down, the keys themselves, and with Ctrl, Ctrl+Home and Ctrl+End. A
+# Page Down, the keys themselves, and with Ctrl, Ctrl+Home, End, Page Up and
+# Page Down: the document's ends and the previous and next tab. A
 # Caps Lock tap is still Caps Lock, which tide's hidutil mapping makes F18,
 # Compose. Home and End go on to tide for macOS, which makes them the line's
 # ends in a text field. Ctrl's outside terminals are the keys the rotation
@@ -488,6 +511,11 @@ PY
         assert_contains "$_w all ${_p}right_arrow shift -> end" "$_nav"
         assert_contains "$_w all ${_p}up_arrow shift -> page_up" "$_nav"
         assert_contains "$_w all ${_p}down_arrow shift -> page_down" "$_nav"
+        start_test "$_w ${_p}Up and Down with Ctrl: the previous and next tab, as Ctrl+Page Up and Down"
+        assert_contains "$_w app ${_p}control+up_arrow noshift -> left_option+shift+tab" "$_nav"
+        assert_contains "$_w app ${_p}control+down_arrow noshift -> left_option+tab" "$_nav"
+        assert_contains "$_w terminal ${_p}control+up_arrow noshift -> left_option+page_up" "$_nav"
+        assert_contains "$_w terminal ${_p}control+down_arrow noshift -> left_option+page_down" "$_nav"
         start_test "$_w ${_p}arrows with Ctrl: the document's start and end, as Ctrl+Home and End"
         assert_contains "$_w app ${_p}control+left_arrow shift -> left_control+up_arrow" "$_nav"
         assert_contains "$_w app ${_p}control+right_arrow shift -> left_control+down_arrow" "$_nav"
@@ -500,9 +528,9 @@ PY
     assert_not_contains " option+" "$_nav"
     assert_not_contains "+option+" "$_nav"
 
-    start_test "nothing else: 16 key manipulators, 4 of them for terminals"
-    assert_equal "16" "$(printf '%s\n' "$_nav" | grep -c -- ' -> ')"
-    assert_equal "4" "$(printf '%s\n' "$_nav" | grep -c -- '^[a-z]* terminal ')"
+    start_test "nothing else: 24 key manipulators, 8 of them for terminals"
+    assert_equal "24" "$(printf '%s\n' "$_nav" | grep -c -- ' -> ')"
+    assert_equal "8" "$(printf '%s\n' "$_nav" | grep -c -- '^[a-z]* terminal ')"
 fi
 
 test_summary "karabiner_test"
