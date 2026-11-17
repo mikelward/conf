@@ -2,7 +2,7 @@
     "title": "PC keyboard navigation",
     "rules": [
         {
-            "description": "Caps Lock or Fn with the arrows is Home, End, Page Up and Page Down, with Alt the document's start and end, as Alt+Home and Alt+End are; a Caps Lock tap is still Compose (PC muscle memory, alongside the setup-macos modifier rotation)",
+            "description": "Caps Lock or Fn with the arrows is Home, End, Page Up and Page Down, and with Ctrl too, as Ctrl+Home and Ctrl+End are; a Caps Lock tap is still Compose (PC muscle memory, alongside the setup-macos modifier rotation)",
             "manipulators": [
                 {
                     "type": "basic",
@@ -74,345 +74,6 @@
                     "from": {
                         "key_code": "left_arrow",
                         "modifiers": {
-                            "mandatory": [
-                                "option"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "up_arrow",
-                            "modifiers": [
-                                "left_control"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "variable_if",
-                            "name": "pc_nav_layer",
-                            "value": 1
-                        },
-                        {
-                            "type": "frontmost_application_unless",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "left_arrow",
-                        "modifiers": {
-                            "mandatory": [
-                                "option"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "home",
-                            "modifiers": [
-                                "left_option"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "variable_if",
-                            "name": "pc_nav_layer",
-                            "value": 1
-                        },
-                        {
-                            "type": "frontmost_application_if",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "right_arrow",
-                        "modifiers": {
-                            "mandatory": [
-                                "option"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "down_arrow",
-                            "modifiers": [
-                                "left_control"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "variable_if",
-                            "name": "pc_nav_layer",
-                            "value": 1
-                        },
-                        {
-                            "type": "frontmost_application_unless",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "right_arrow",
-                        "modifiers": {
-                            "mandatory": [
-                                "option"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "end",
-                            "modifiers": [
-                                "left_option"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "variable_if",
-                            "name": "pc_nav_layer",
-                            "value": 1
-                        },
-                        {
-                            "type": "frontmost_application_if",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "up_arrow",
-                        "modifiers": {
-                            "mandatory": [
-                                "option"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "up_arrow",
-                            "modifiers": [
-                                "left_control"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "variable_if",
-                            "name": "pc_nav_layer",
-                            "value": 1
-                        },
-                        {
-                            "type": "frontmost_application_unless",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "up_arrow",
-                        "modifiers": {
-                            "mandatory": [
-                                "option"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "home",
-                            "modifiers": [
-                                "left_option"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "variable_if",
-                            "name": "pc_nav_layer",
-                            "value": 1
-                        },
-                        {
-                            "type": "frontmost_application_if",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "down_arrow",
-                        "modifiers": {
-                            "mandatory": [
-                                "option"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "down_arrow",
-                            "modifiers": [
-                                "left_control"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "variable_if",
-                            "name": "pc_nav_layer",
-                            "value": 1
-                        },
-                        {
-                            "type": "frontmost_application_unless",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "down_arrow",
-                        "modifiers": {
-                            "mandatory": [
-                                "option"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "end",
-                            "modifiers": [
-                                "left_option"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "variable_if",
-                            "name": "pc_nav_layer",
-                            "value": 1
-                        },
-                        {
-                            "type": "frontmost_application_if",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "left_arrow",
-                        "modifiers": {
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "left_arrow",
-                            "modifiers": [
-                                "left_control"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "variable_if",
-                            "name": "pc_nav_layer",
-                            "value": 1
-                        },
-                        {
-                            "type": "frontmost_application_unless",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "left_arrow",
-                        "modifiers": {
                             "optional": [
                                 "shift"
                             ]
@@ -428,50 +89,6 @@
                             "type": "variable_if",
                             "name": "pc_nav_layer",
                             "value": 1
-                        },
-                        {
-                            "type": "frontmost_application_if",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "right_arrow",
-                        "modifiers": {
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "right_arrow",
-                            "modifiers": [
-                                "left_control"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "variable_if",
-                            "name": "pc_nav_layer",
-                            "value": 1
-                        },
-                        {
-                            "type": "frontmost_application_unless",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
                         }
                     ]
                 },
@@ -495,15 +112,6 @@
                             "type": "variable_if",
                             "name": "pc_nav_layer",
                             "value": 1
-                        },
-                        {
-                            "type": "frontmost_application_if",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
                         }
                     ]
                 },
@@ -527,47 +135,6 @@
                             "type": "variable_if",
                             "name": "pc_nav_layer",
                             "value": 1
-                        },
-                        {
-                            "type": "frontmost_application_unless",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "up_arrow",
-                        "modifiers": {
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "page_up"
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "variable_if",
-                            "name": "pc_nav_layer",
-                            "value": 1
-                        },
-                        {
-                            "type": "frontmost_application_if",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
                         }
                     ]
                 },
@@ -591,6 +158,35 @@
                             "type": "variable_if",
                             "name": "pc_nav_layer",
                             "value": 1
+                        }
+                    ]
+                },
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "left_arrow",
+                        "modifiers": {
+                            "mandatory": [
+                                "control"
+                            ],
+                            "optional": [
+                                "shift"
+                            ]
+                        }
+                    },
+                    "to": [
+                        {
+                            "key_code": "up_arrow",
+                            "modifiers": [
+                                "left_control"
+                            ]
+                        }
+                    ],
+                    "conditions": [
+                        {
+                            "type": "variable_if",
+                            "name": "pc_nav_layer",
+                            "value": 1
                         },
                         {
                             "type": "frontmost_application_unless",
@@ -606,8 +202,11 @@
                 {
                     "type": "basic",
                     "from": {
-                        "key_code": "down_arrow",
+                        "key_code": "left_arrow",
                         "modifiers": {
+                            "mandatory": [
+                                "control"
+                            ],
                             "optional": [
                                 "shift"
                             ]
@@ -615,7 +214,10 @@
                     },
                     "to": [
                         {
-                            "key_code": "page_down"
+                            "key_code": "home",
+                            "modifiers": [
+                                "left_option"
+                            ]
                         }
                     ],
                     "conditions": [
@@ -638,79 +240,10 @@
                 {
                     "type": "basic",
                     "from": {
-                        "key_code": "left_arrow",
-                        "modifiers": {
-                            "mandatory": [
-                                "fn",
-                                "option"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "up_arrow",
-                            "modifiers": [
-                                "left_control"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "frontmost_application_unless",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "left_arrow",
-                        "modifiers": {
-                            "mandatory": [
-                                "fn",
-                                "option"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "home",
-                            "modifiers": [
-                                "left_option"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "frontmost_application_if",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
                         "key_code": "right_arrow",
                         "modifiers": {
                             "mandatory": [
-                                "fn",
-                                "option"
+                                "control"
                             ],
                             "optional": [
                                 "shift"
@@ -726,6 +259,11 @@
                         }
                     ],
                     "conditions": [
+                        {
+                            "type": "variable_if",
+                            "name": "pc_nav_layer",
+                            "value": 1
+                        },
                         {
                             "type": "frontmost_application_unless",
                             "bundle_identifiers": [
@@ -743,8 +281,7 @@
                         "key_code": "right_arrow",
                         "modifiers": {
                             "mandatory": [
-                                "fn",
-                                "option"
+                                "control"
                             ],
                             "optional": [
                                 "shift"
@@ -761,176 +298,12 @@
                     ],
                     "conditions": [
                         {
-                            "type": "frontmost_application_if",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "up_arrow",
-                        "modifiers": {
-                            "mandatory": [
-                                "fn",
-                                "option"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "up_arrow",
-                            "modifiers": [
-                                "left_control"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "frontmost_application_unless",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "up_arrow",
-                        "modifiers": {
-                            "mandatory": [
-                                "fn",
-                                "option"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "home",
-                            "modifiers": [
-                                "left_option"
-                            ]
-                        }
-                    ],
-                    "conditions": [
+                            "type": "variable_if",
+                            "name": "pc_nav_layer",
+                            "value": 1
+                        },
                         {
                             "type": "frontmost_application_if",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "down_arrow",
-                        "modifiers": {
-                            "mandatory": [
-                                "fn",
-                                "option"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "down_arrow",
-                            "modifiers": [
-                                "left_control"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "frontmost_application_unless",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "down_arrow",
-                        "modifiers": {
-                            "mandatory": [
-                                "fn",
-                                "option"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "end",
-                            "modifiers": [
-                                "left_option"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "frontmost_application_if",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "left_arrow",
-                        "modifiers": {
-                            "mandatory": [
-                                "fn"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "left_arrow",
-                            "modifiers": [
-                                "left_control"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "frontmost_application_unless",
                             "bundle_identifiers": [
                                 "^net\\.kovidgoyal\\.kitty$",
                                 "^com\\.mitchellh\\.ghostty$",
@@ -957,50 +330,6 @@
                         {
                             "key_code": "home"
                         }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "frontmost_application_if",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "right_arrow",
-                        "modifiers": {
-                            "mandatory": [
-                                "fn"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "right_arrow",
-                            "modifiers": [
-                                "left_control"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "frontmost_application_unless",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
                     ]
                 },
                 {
@@ -1020,17 +349,6 @@
                         {
                             "key_code": "end"
                         }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "frontmost_application_if",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
                     ]
                 },
                 {
@@ -1049,47 +367,6 @@
                     "to": [
                         {
                             "key_code": "page_up"
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "frontmost_application_unless",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "up_arrow",
-                        "modifiers": {
-                            "mandatory": [
-                                "fn"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "page_up"
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "frontmost_application_if",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
                         }
                     ]
                 },
@@ -1110,56 +387,16 @@
                         {
                             "key_code": "page_down"
                         }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "frontmost_application_unless",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
                     ]
                 },
                 {
                     "type": "basic",
                     "from": {
-                        "key_code": "down_arrow",
+                        "key_code": "left_arrow",
                         "modifiers": {
                             "mandatory": [
-                                "fn"
-                            ],
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "page_down"
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "frontmost_application_if",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "home",
-                        "modifiers": {
-                            "mandatory": [
-                                "option"
+                                "fn",
+                                "control"
                             ],
                             "optional": [
                                 "shift"
@@ -1189,10 +426,11 @@
                 {
                     "type": "basic",
                     "from": {
-                        "key_code": "home",
+                        "key_code": "left_arrow",
                         "modifiers": {
                             "mandatory": [
-                                "option"
+                                "fn",
+                                "control"
                             ],
                             "optional": [
                                 "shift"
@@ -1222,10 +460,11 @@
                 {
                     "type": "basic",
                     "from": {
-                        "key_code": "end",
+                        "key_code": "right_arrow",
                         "modifiers": {
                             "mandatory": [
-                                "option"
+                                "fn",
+                                "control"
                             ],
                             "optional": [
                                 "shift"
@@ -1255,10 +494,11 @@
                 {
                     "type": "basic",
                     "from": {
-                        "key_code": "end",
+                        "key_code": "right_arrow",
                         "modifiers": {
                             "mandatory": [
-                                "option"
+                                "fn",
+                                "control"
                             ],
                             "optional": [
                                 "shift"

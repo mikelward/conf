@@ -397,68 +397,8 @@
             ]
         },
         {
-            "description": "Home and End go to the line's start and end, and Ctrl+Home/End to the document's, outside terminals (PC muscle memory, alongside the setup-macos modifier rotation)",
+            "description": "Ctrl+Home/End go to the document's start and end, outside terminals (PC muscle memory, alongside the setup-macos modifier rotation)",
             "manipulators": [
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "home",
-                        "modifiers": {
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "left_arrow",
-                            "modifiers": [
-                                "left_control"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "frontmost_application_unless",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "basic",
-                    "from": {
-                        "key_code": "end",
-                        "modifiers": {
-                            "optional": [
-                                "shift"
-                            ]
-                        }
-                    },
-                    "to": [
-                        {
-                            "key_code": "right_arrow",
-                            "modifiers": [
-                                "left_control"
-                            ]
-                        }
-                    ],
-                    "conditions": [
-                        {
-                            "type": "frontmost_application_unless",
-                            "bundle_identifiers": [
-                                "^net\\.kovidgoyal\\.kitty$",
-                                "^com\\.mitchellh\\.ghostty$",
-                                "^com\\.apple\\.Terminal$",
-                                "^com\\.googlecode\\.iterm2$"
-                            ]
-                        }
-                    ]
-                },
                 {
                     "type": "basic",
                     "from": {
