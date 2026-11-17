@@ -2,7 +2,7 @@
     "title": "PC keyboard Ctrl+Tab",
     "rules": [
         {
-            "description": "Ctrl+Tab goes to the next tab, not the application switcher (PC muscle memory, alongside the setup-macos modifier rotation; Alt+Tab is tide for macOS's)",
+            "description": "Ctrl+Tab goes to the next tab, not the application switcher, and Ctrl+Page Down and Up go to the next and previous tab outside terminals (PC muscle memory, alongside the setup-macos modifier rotation; Alt+Tab is tide for macOS's)",
             "manipulators": [
                 {
                     "type": "basic",
@@ -31,6 +31,48 @@
                         {
                             "key_code": "tab",
                             "modifiers": ["left_option"]
+                        }
+                    ]
+                },
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "page_down",
+                        "modifiers": {
+                            "mandatory": ["control"]
+                        }
+                    },
+                    "to": [
+                        {
+                            "key_code": "tab",
+                            "modifiers": ["left_option"]
+                        }
+                    ],
+                    "conditions": [
+                        {
+                            "type": "frontmost_application_unless",
+                            "bundle_identifiers": ["^net\\.kovidgoyal\\.kitty$", "^com\\.mitchellh\\.ghostty$", "^com\\.apple\\.Terminal$", "^com\\.googlecode\\.iterm2$"]
+                        }
+                    ]
+                },
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "page_up",
+                        "modifiers": {
+                            "mandatory": ["control"]
+                        }
+                    },
+                    "to": [
+                        {
+                            "key_code": "tab",
+                            "modifiers": ["left_option", "shift"]
+                        }
+                    ],
+                    "conditions": [
+                        {
+                            "type": "frontmost_application_unless",
+                            "bundle_identifiers": ["^net\\.kovidgoyal\\.kitty$", "^com\\.mitchellh\\.ghostty$", "^com\\.apple\\.Terminal$", "^com\\.googlecode\\.iterm2$"]
                         }
                     ]
                 }

@@ -3,7 +3,8 @@
 Complex-modification rules for a PC keyboard, in five files:
 
 - `assets/complex_modifications/pc-alt-tab.json` puts the next tab back on
-  physical Ctrl+Tab; physical Alt+Tab is tide for macOS's.
+  physical Ctrl+Tab, and the next and previous tab on Ctrl+Page Down and
+  Up; physical Alt+Tab is tide for macOS's.
 - `assets/complex_modifications/pc-arrows.json` makes physical Ctrl+Left/Right,
   left or right Ctrl, move by word, Win+Left/Right switch Spaces and
   Win+Shift+Left/Right move the window a Space; see
@@ -46,6 +47,14 @@ tab. This rule puts the next tab back there.
 | --- | --- | --- |
 | Ctrl+Tab | switch applications | **next tab** |
 | Shift+Ctrl+Tab | switch applications, backwards | **previous tab** |
+| Ctrl+Page Down, either Ctrl | nothing (Command+Page Down) | **next tab** |
+| Ctrl+Page Up, either Ctrl | nothing (Command+Page Up) | **previous tab** |
+
+Ctrl+Page Down and Up are sent as Ctrl+Tab and Ctrl+Shift+Tab, a Mac's next
+and previous tab, which Chrome, Safari, Firefox and Finder all take; a Mac
+app has no Control+Page Down of its own to rely on. Not in kitty, Ghostty,
+Terminal or iTerm2, whose own rule sends them on as Control+Page Down and
+Up.
 
 **Physical Alt+Tab is tide for macOS's**, swap with the master, in tide for macOS's rule
 below (tidemo SPEC.md §7.2). This rule used to swap the two both ways, making
@@ -248,15 +257,18 @@ layer with keyd:
 | Caps Lock or Fn + Left, Right | Home, End | as the keys do (see [Home and End](#home-and-end)) |
 | Caps Lock or Fn + Up, Down | Page Up, Page Down | a page up or down |
 | Caps Lock or Fn + Ctrl + Left, Right | as Ctrl+Home, End | the document's start, end |
+| Caps Lock or Fn + Ctrl + Up, Down | as Ctrl+Page Up, Down | the previous, next tab |
 
 Shift with any of them selects to there. They're the keys themselves, in
 every app, so they do whatever Home, End, Page Up and Page Down do there.
 Home and End then go on to tide for macOS, which makes them the line's ends
 in a text field. Karabiner doesn't run its own output through its rules
-again, so Ctrl's are written out as Ctrl+Home's are: `left_control`+Up and
-Down outside terminals, which the rotation makes Command+Up and Down, and
-`left_option`+Home and End in kitty, Ghostty, Terminal and iTerm2, which it
-makes Control+Home and End.
+again, so Ctrl's are written out as the Ctrl+Home and Ctrl+Page Down rules
+write them: outside terminals `left_control`+Up and Down, which the
+rotation makes Command+Up and Down, and `left_option`+Tab, with Shift for
+the previous tab, which it makes Control+Tab; in kitty, Ghostty, Terminal
+and iTerm2 `left_option`+Home, End, Page Up and Page Down, which it makes
+Control with each.
 
 - **A Caps Lock tap is still Caps Lock,** which tide for macOS's mapping
   makes F18, its Compose key. It's sent as the key comes up, and only when no
