@@ -196,29 +196,31 @@ for i, m in enumerate(ms):
     assert_not_contains "right_control -> left_arrow left_option" "$_pairs"
     assert_not_contains "right_control -> right_arrow left_option" "$_pairs"
 
-    # On a Mac, Home and End scroll the document and leave the cursor where
-    # it is. Outside terminals, which take Home and End themselves, they go
-    # to the line's start and end as on a PC: Command+Left and Right, emitted
-    # as left_control for the rotation. Ctrl+Home and End go to the
-    # document's ends, Command+Up and Down. Shift passes through to select.
-    start_test "Home and End go to the line's start and end, Ctrl+Home/End the document's"
-    assert_contains "home - -> left_arrow left_control" "$_pairs"
-    assert_contains "end - -> right_arrow left_control" "$_pairs"
+    # Plain Home and End are tide for macOS's, which looks at what has
+    # focus: Command+Left, the line's start, is Back in a browser when no
+    # text field has it (tidemo SPEC.md §10). Ctrl+Home and End are never
+    # that, so they stay here: the document's ends, Command+Up and Down,
+    # emitted as left_control for the rotation. Shift passes through to
+    # select.
+    start_test "plain Home and End are left alone, for tide for macOS"
+    assert_not_contains "home - ->" "$_pairs"
+    assert_not_contains "end - ->" "$_pairs"
+    start_test "Ctrl+Home/End go to the document's start and end, from either Ctrl"
     assert_contains "home left_control -> up_arrow left_control" "$_pairs"
     assert_contains "end left_control -> down_arrow left_control" "$_pairs"
-    start_test "right Ctrl+Home/End go to the document's ends too"
     assert_contains "home right_control -> up_arrow left_control" "$_pairs"
     assert_contains "end right_control -> down_arrow left_control" "$_pairs"
     _home=$(python3 -c '
 import json, sys
 r = json.load(open(sys.argv[1]))["rules"][1]
-print(r["description"][:35])
+print(r["description"][:50])
 for m in r["manipulators"]:
     print(m["from"]["modifiers"].get("optional"), json.dumps(m["conditions"]))
 ' "$_arrow_file")
-    start_test "the Home and End rule keeps Shift, and leaves the terminals alone"
-    assert_contains "Home and End go to the line's start" "$_home"
-    assert_equal "6" "$(printf '%s\n' "$_home" | grep -c "\['shift'\].*frontmost_application_unless.*kitty.*ghostty.*Terminal.*iterm2")"
+    start_test "the Ctrl+Home/End rule keeps Shift, and leaves the terminals alone"
+    assert_contains "Ctrl+Home/End go to the document's start and end" "$_home"
+    assert_equal "4" "$(printf '%s\n' "$_home" | grep -c "\['shift'\].*frontmost_application_unless.*kitty.*ghostty.*Terminal.*iterm2")"
+    assert_equal "5" "$(printf '%s\n' "$_home" | wc -l | tr -d ' ')"
 fi
 
 start_test "eighteen arrow manipulators: left and right Ctrl, Alt and Win, with and without Shift, per arrow, and Alt's Back and Forward"
@@ -426,11 +428,12 @@ PY
 fi
 
 # Caps Lock held, or a MacBook's Fn, with the arrows: Home, End, Page Up and
-# Page Down, and with Alt the document's start and end, as Alt+Home and
-# Alt+End are. A Caps Lock tap is still Caps Lock, which tide's hidutil
-# mapping makes F18, Compose. Outside terminals the outputs name the keys
-# the rotation turns into Command (left_control); in terminals they're the
-# PC keys, with left_option, which the rotation makes Control.
+# Page Down, the keys themselves, and with Ctrl, Ctrl+Home and Ctrl+End. A
+# Caps Lock tap is still Caps Lock, which tide's hidutil mapping makes F18,
+# Compose. Home and End go on to tide for macOS, which makes them the line's
+# ends in a text field. Ctrl's outside terminals are the keys the rotation
+# turns into Command+Up and Down (left_control); in terminals Control+Home
+# and End, with left_option, which the rotation makes Control.
 _nav_file="$_srcdir/config/karabiner/assets/complex_modifications/pc-nav.json"
 
 start_test "the navigation rule exists"
@@ -455,8 +458,10 @@ for r in d["rules"]:
                   "tap", m["to_if_alone"][0]["key_code"],
                   "release", m["to_after_key_up"][0]["set_variable"]["value"])
             continue
-        where = "layer" if any(c["type"] == "variable_if" for c in m["conditions"]) else "plain"
-        term = "terminal" if any(c["type"] == "frontmost_application_if" for c in m["conditions"]) else "app"
+        conds = m.get("conditions", [])
+        where = "layer" if any(c["type"] == "variable_if" for c in conds) else "plain"
+        term = ("terminal" if any(c["type"] == "frontmost_application_if" for c in conds)
+                else "app" if any(c["type"] == "frontmost_application_unless" for c in conds) else "all")
         to = " ".join("+".join(t.get("modifiers", []) + [t["key_code"]]) for t in m["to"])
         print(where, term, key, "shift" if "shift" in mods.get("optional", []) else "noshift", "->", to)
 PY
@@ -474,35 +479,30 @@ PY
     start_test "F18 too, should Karabiner see the mapped key"
     assert_contains "hold f18 sets pc_nav_layer tap f18 release 0" "$_nav"
 
-    # The Caps Lock layer, then Fn: the same moves.
+    # The Caps Lock layer, then Fn: the same keys.
     for _via in "layer " "plain fn+"; do
         _w=${_via% *}
         _p=${_via#* }
-        start_test "$_w ${_p}arrows: the line's ends and the page, selecting with shift"
-        assert_contains "$_w app ${_p}left_arrow shift -> left_control+left_arrow" "$_nav"
-        assert_contains "$_w app ${_p}right_arrow shift -> left_control+right_arrow" "$_nav"
-        assert_contains "$_w app ${_p}up_arrow shift -> page_up" "$_nav"
-        assert_contains "$_w app ${_p}down_arrow shift -> page_down" "$_nav"
-        start_test "$_w ${_p}arrows with Alt: the document's start and end"
-        assert_contains "$_w app ${_p}option+left_arrow shift -> left_control+up_arrow" "$_nav"
-        assert_contains "$_w app ${_p}option+up_arrow shift -> left_control+up_arrow" "$_nav"
-        assert_contains "$_w app ${_p}option+right_arrow shift -> left_control+down_arrow" "$_nav"
-        assert_contains "$_w app ${_p}option+down_arrow shift -> left_control+down_arrow" "$_nav"
-        start_test "$_w ${_p}arrows in terminals: the PC keys, Alt's as Control"
-        assert_contains "$_w terminal ${_p}left_arrow shift -> home" "$_nav"
-        assert_contains "$_w terminal ${_p}down_arrow shift -> page_down" "$_nav"
-        assert_contains "$_w terminal ${_p}option+left_arrow shift -> left_option+home" "$_nav"
-        assert_contains "$_w terminal ${_p}option+right_arrow shift -> left_option+end" "$_nav"
+        start_test "$_w ${_p}arrows are Home, End, Page Up and Page Down everywhere, selecting with shift"
+        assert_contains "$_w all ${_p}left_arrow shift -> home" "$_nav"
+        assert_contains "$_w all ${_p}right_arrow shift -> end" "$_nav"
+        assert_contains "$_w all ${_p}up_arrow shift -> page_up" "$_nav"
+        assert_contains "$_w all ${_p}down_arrow shift -> page_down" "$_nav"
+        start_test "$_w ${_p}arrows with Ctrl: the document's start and end, as Ctrl+Home and End"
+        assert_contains "$_w app ${_p}control+left_arrow shift -> left_control+up_arrow" "$_nav"
+        assert_contains "$_w app ${_p}control+right_arrow shift -> left_control+down_arrow" "$_nav"
+        assert_contains "$_w terminal ${_p}control+left_arrow shift -> left_option+home" "$_nav"
+        assert_contains "$_w terminal ${_p}control+right_arrow shift -> left_option+end" "$_nav"
     done
 
-    start_test "Alt+Home and Alt+End go to the document's start and end"
-    assert_contains "plain app option+home shift -> left_control+up_arrow" "$_nav"
-    assert_contains "plain app option+end shift -> left_control+down_arrow" "$_nav"
-    assert_contains "plain terminal option+home shift -> left_option+home" "$_nav"
+    # Alt+Home is a PC browser's home page, not the document's start.
+    start_test "nothing on Alt: Ctrl+Home and End are the document's ends"
+    assert_not_contains " option+" "$_nav"
+    assert_not_contains "+option+" "$_nav"
 
-    start_test "nothing else: 36 key manipulators, half of them for terminals"
-    assert_equal "36" "$(printf '%s\n' "$_nav" | grep -c -- ' -> ')"
-    assert_equal "18" "$(printf '%s\n' "$_nav" | grep -c -- '^[a-z]* terminal ')"
+    start_test "nothing else: 16 key manipulators, 4 of them for terminals"
+    assert_equal "16" "$(printf '%s\n' "$_nav" | grep -c -- ' -> ')"
+    assert_equal "4" "$(printf '%s\n' "$_nav" | grep -c -- '^[a-z]* terminal ')"
 fi
 
 test_summary "karabiner_test"

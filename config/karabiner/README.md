@@ -16,8 +16,7 @@ Complex-modification rules for a PC keyboard, in five files:
   password at the lock screen, as on Linux; see [Lock screen](#lock-screen).
 - `assets/complex_modifications/pc-nav.json` makes Caps Lock held, or a
   MacBook's Fn, with the arrows Home, End, Page Up and Page Down, and with
-  Alt the document's start and end, as Alt+Home and Alt+End are; see
-  [Caps Lock and Fn](#caps-lock-and-fn).
+  Ctrl too Ctrl+Home and Ctrl+End; see [Caps Lock and Fn](#caps-lock-and-fn).
 
 Only the asset file is kept here. Karabiner rewrites
 `~/.config/karabiner/karabiner.json` itself on every UI change, so that file is
@@ -153,18 +152,24 @@ word moves. Only left Win and left Alt are mapped.
 ### Home and End
 
 On a Mac, Home and End scroll to the top and bottom of the document and leave
-the cursor where it is. A second rule in the same file makes them go to the
-line's start and end, as on a PC, everywhere but the terminals, which take
-Home and End themselves (kitty, Ghostty, Terminal and iTerm2):
+the cursor where it is. A PC's go to the line's start and end in a text
+field, and that's Command+Left and Right on a Mac; but in a browser, with no
+text field focused, Command+Left and Right are Back and Forward. Karabiner
+can't see what has focus, so plain Home and End are left to
+[tide for macOS](https://github.com/mikelward/tidemo), which looks first
+(its SPEC.md §10). Without it, they scroll, as a Mac's do.
+
+Ctrl+Home and End are never Back, so a second rule in this file makes them
+the document's start and end, everywhere but the terminals, which take them
+themselves (kitty, Ghostty, Terminal and iTerm2):
 
 | Physical keys | Emits | macOS sees | Does |
 | --- | --- | --- | --- |
-| Home, End | `left_control`+Left, Right | Command+Left, Right | the line's start, end |
-| Shift+Home, End | the same, plus `shift` | Command+Shift+Left, Right | select to there |
 | Ctrl+Home, End, either Ctrl | `left_control`+Up, Down | Command+Up, Down | the document's start, end |
+| Ctrl+Shift+Home, End | the same, plus `shift` | Command+Shift+Up, Down | select to there |
 
-It's its own rule, "Home and End go to the line's start and end", enabled on
-its own.
+It's its own rule, "Ctrl+Home/End go to the document's start and end",
+enabled on its own.
 
 ## Terminals
 
@@ -238,18 +243,20 @@ stands in for them. This rule gives a PC keyboard the same with Caps Lock
 held, and makes both match Linux, where `setup` gives Caps Lock the same
 layer with keyd:
 
-| Physical keys | Does |
-| --- | --- |
-| Caps Lock or Fn + Left, Right | the line's start, end (Home, End) |
-| Caps Lock or Fn + Up, Down | Page Up, Page Down |
-| Caps Lock or Fn + Alt + an arrow | Left or Up the document's start, Right or Down its end |
-| Alt+Home, Alt+End | the document's start, end |
+| Physical keys | Emits | Does |
+| --- | --- | --- |
+| Caps Lock or Fn + Left, Right | Home, End | as the keys do (see [Home and End](#home-and-end)) |
+| Caps Lock or Fn + Up, Down | Page Up, Page Down | a page up or down |
+| Caps Lock or Fn + Ctrl + Left, Right | as Ctrl+Home, End | the document's start, end |
 
-Shift with any of them selects to there. Outside terminals the rule emits
-`left_control`+arrow, which the rotation makes Command+arrow, as the Home and
-End rule does; in kitty, Ghostty, Terminal and iTerm2 it emits Home, End,
-Page Up and Page Down themselves, and the document's ends as `left_option`+Home
-and End, which the rotation makes Control+Home and End.
+Shift with any of them selects to there. They're the keys themselves, in
+every app, so they do whatever Home, End, Page Up and Page Down do there.
+Home and End then go on to tide for macOS, which makes them the line's ends
+in a text field. Karabiner doesn't run its own output through its rules
+again, so Ctrl's are written out as Ctrl+Home's are: `left_control`+Up and
+Down outside terminals, which the rotation makes Command+Up and Down, and
+`left_option`+Home and End in kitty, Ghostty, Terminal and iTerm2, which it
+makes Control+Home and End.
 
 - **A Caps Lock tap is still Caps Lock,** which tide for macOS's mapping
   makes F18, its Compose key. It's sent as the key comes up, and only when no
@@ -258,12 +265,14 @@ and End, which the rotation makes Control+Home and End.
   macOS ignores a Caps Lock press with no time held.
 - **F18 too:** the rule takes held F18 the same way, in case Karabiner sees
   the mapped key rather than the physical one.
-- **Fn is matched as Fn+arrow and as Home and End,** whichever Karabiner
-  sees a MacBook's Fn+arrow as. Not tried on a Mac yet.
-- **Either Alt,** unlike the rest of these rules: the layer has nothing else
-  for right Alt to do.
-- **Above the arrow rule,** whose Alt+Left/Right word move would otherwise
-  match first, Caps Lock or Fn held or not. Enabled after it, it's above it;
+- **Fn is matched as Fn+arrow,** and should Karabiner see a MacBook's
+  Fn+arrow as Home and End instead, they pass through as those keys, and
+  Fn+Ctrl+arrow meets the Ctrl+Home rule. Not tried on a Mac yet.
+- **Either Ctrl,** as Ctrl+Home takes.
+- **No Alt.** It used to be the document's ends, as Alt+Home was; on a PC
+  Alt+Home is a browser's home page, and Ctrl+Home does the job.
+- **Above the arrow rule,** whose Ctrl+Left/Right word move would otherwise
+  match first while Caps Lock is held. Enabled after it, it's above it;
   tide for macOS puts a rule it doesn't know at the top.
 
 ## Lock screen
@@ -323,8 +332,8 @@ the list. Enable, in this order:
    keyboard's Command+U there as Super+U;
 6. under "PC keyboard navigation", "Caps Lock or Fn with the arrows is
    Home, End, …", after the arrow rule, so it sits above it: the arrow
-   rule's Alt+Left/Right would otherwise take Caps Lock or Fn with Alt+Left
-   and Right as a word move.
+   rule's Ctrl+Left/Right would otherwise take Caps Lock with Ctrl+Left and
+   Right as a word move.
 
 Karabiner puts each rule you enable at the top of the Complex Modifications
 list, and uses the first that matches a key. `setup-macos` installs Karabiner
@@ -343,8 +352,8 @@ the System Settings page for it.
 ## Scope
 
 Only left Ctrl, and in tide for macOS's Win rule left Alt, are mapped, but for the
-arrow rule's Ctrl+arrow and Ctrl+Home/End and the lock screen's Ctrl+U,
-which take right Ctrl too. Right Alt is left alone so it stays available as
+arrow rule's Ctrl+arrow, Ctrl+Home/End and the navigation layer's Ctrl, and
+the lock screen's Ctrl+U, which take right Ctrl too. Right Alt is left alone so it stays available as
 a plain modifier, and the rotation still sends it to right Control.
 
 ## Modifier names
