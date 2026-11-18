@@ -40,7 +40,6 @@ bindsym --name=meet $mod+m exec tide launch --app '*' -- $runenv google-meet
 bindsym --name=notepad $mod+n exec tide launch --app '*' -- $runenv notepad
 bindsym --name=music $mod+y exec tide launch --app '*' -- $runenv youtube-music
 bindsym --name=headphones $mod+b exec $runenv bluetooth-connect
-bindsym --name=audio_profile $mod+Shift+b exec $runenv pulseprofile.py
 
 # The scripts repo's screenshot, which asks tidewm for the window, as
 # hyprland.lua's screenshot option.

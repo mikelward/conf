@@ -118,6 +118,7 @@ test("the app keys run the scripts repo's helpers through runenv", function()
     eq("~/scripts/runenv bluetooth-connect", bound.headphones.target.exec)
     for name, b in pairs(bound) do
         truthy(type(b.does) == "string" and b.does ~= "", name .. " says what it does")
+        truthy(b.keys ~= "SUPER + SHIFT + B", name .. " leaves Super+Shift+B to tide's Report a bug")
     end
 end)
 

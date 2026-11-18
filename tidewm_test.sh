@@ -22,6 +22,9 @@ _lines=$(awk '
     /{[[:space:]]*$/ { inblock = 1; sub(/[[:space:]]*{[[:space:]]*$/, ""); print; next }
     { print }' "$_cfg")
 
+start_test "Super+Shift+B is left to tide, for Report a bug"
+assert_not_contains "\$mod+Shift+b " "$_lines"
+
 start_test "tide's config comes first, so these win over it"
 assert_equal "include tide.conf" "$(printf '%s\n' "$_lines" | head -n 1)"
 

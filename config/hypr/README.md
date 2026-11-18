@@ -192,7 +192,7 @@ tide's Keyboard shortcuts can give them other keys:
 | `SUPER + G` / `SUPER + F` | Browser 1 / Browser 2 |
 | `SUPER + Shift + G` | Browser 3 |
 | `SUPER + E` | File manager (yazi in a terminal) |
-| `SUPER + B` / `SUPER + Shift + B` | Bluetooth connect / audio profile |
+| `SUPER + B` | Bluetooth connect |
 | `SUPER + V` | Clipboard history and special characters: tide's picker, where Enter pastes (needs the tide shell) |
 | `SUPER + ;` | Emoji and symbols, by name: tide's picker on its Characters tab, where Enter pastes (needs the tide shell) |
 | `SUPER + Shift + V` | Snippets and Bitwarden logins: tide's picker on its Fill tab, where Enter types the field chosen (needs the tide shell, and rbw for Bitwarden) |
