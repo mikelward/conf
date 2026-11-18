@@ -129,6 +129,9 @@ assert_contains "bindsym \$mod+space exec ~/.config/hypr/scripts/launch-fuzzel.s
 start_test "file-manager bind (SUPER+E) launches yazi"
 assert_contains "bindsym \$mod+e exec \$term -e yazi" "$_sway_body"
 
+start_test "SUPER+Shift+B is left to tide, for Report a bug"
+assert_not_contains "bindsym \$mod+Shift+b " "$_sway_body"
+
 start_test "close window is bound to SUPER+BackSpace"
 assert_contains "bindsym \$mod+BackSpace kill" "$_sway_body"
 

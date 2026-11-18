@@ -11,9 +11,6 @@
 "bluetooth-connect"
     Mod4 + b
 
-"pulseprofile.py"
-    Mod4 + Shift + b
-
 "google-chat"
 	Mod4 + c
 

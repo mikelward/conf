@@ -62,7 +62,6 @@ local opts = {
         app("browser_third", "SHIFT + G", "browser3", "Browser, third profile")
         app("browser_second", "F", "browser2", "Browser, second profile")
         t.bind("headphones", t.key("B"), t.exec(runenv .. " bluetooth-connect"), t.does("Connect the headphones"))
-        t.bind("audio_profile", t.key("SHIFT + B"), t.exec(runenv .. " pulseprofile.py"), t.does("Next audio profile"))
         app("chat", "C", "google-chat", "Google Chat")
         app("calendar", "SHIFT + C", "google-calendar", "Google Calendar")
         app("home_folder", "H", "home", "Home folder")
