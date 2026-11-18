@@ -146,6 +146,11 @@ start_test "on a Mac, the middle button pastes what selecting copied"
 assert_true test "$(_effective macos mouse_map middle release ungrabbed)" = "paste_from_buffer $_buffer"
 assert_true test "$(_effective macos mouse_map shift+middle release ungrabbed,grabbed)" = "paste_from_buffer $_buffer"
 
+start_test "on a Mac, tide's Ctrl+Shift+middle click pastes the clipboard, even with the mouse grabbed"
+assert_true test "$(_effective macos mouse_map ctrl+shift+middle release ungrabbed,grabbed)" = paste_from_clipboard
+assert_true test "$(_effective macos mouse_map ctrl+shift+middle press ungrabbed,grabbed)" = discard_event
+assert_true test -z "$(_effective linux mouse_map ctrl+shift+middle release ungrabbed,grabbed)"
+
 start_test "on a Mac, every key that pastes the selection on Linux pastes that buffer"
 _keys=$(sed -n 's/^map  *\([^ ]*\)  *paste_from_selection$/\1/p' "$_kitty_conf")
 assert_true test -n "$_keys"
