@@ -127,6 +127,7 @@ test-all: \
 	test-gitconfig \
 	test-makefile \
 	test-claude-settings \
+	test-claude-statusline \
 	test-session-start-hook \
 	test-install-ci-shells \
 	test-amethyst \
@@ -381,6 +382,15 @@ $(CACHE)/test-claude-settings.stamp: .claude/settings.json \
 	fi
 test-claude-settings: $(CACHE)/test-claude-settings.stamp
 
+$(CACHE)/test-claude-statusline.stamp: claude/statusline.sh \
+                          claude_statusline_test.sh shrc_test_lib.sh | $(CACHE)
+	@if command -v jq >/dev/null 2>&1; then \
+		sh claude_statusline_test.sh && touch $@; \
+	else \
+		echo "SKIP: test-claude-statusline (jq not installed)"; \
+	fi
+test-claude-statusline: $(CACHE)/test-claude-statusline.stamp
+
 $(CACHE)/test-amethyst.stamp: amethyst.yml amethyst_test.sh shrc_test_lib.sh | $(CACHE)
 	@bash amethyst_test.sh
 	@touch $@
@@ -490,7 +500,7 @@ test-tidewm: $(CACHE)/test-tidewm.stamp
 
 .PHONY: all install install-dotfiles install-vcs bootstrap \
 	vcs-build vcs-sync vcs-fetch \
-	test test-verbose test-full test-all test-claude-settings test-session-start-hook \
+	test test-verbose test-full test-all test-claude-settings test-claude-statusline test-session-start-hook \
 	test-dash test-ksh test-bash test-zsh test-prompt test-prompt-zsh test-prompt-perf \
 	test-vcs test-vcs-zsh \
 	test-fish test-nu test-mesh test-elvish test-lint \
