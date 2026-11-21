@@ -1,6 +1,6 @@
 # Karabiner-Elements
 
-Complex-modification rules for a PC keyboard, in five files:
+Complex-modification rules for a PC keyboard, in six files:
 
 - `assets/complex_modifications/pc-alt-tab.json` puts the next tab back on
   physical Ctrl+Tab, and the next and previous tab on Ctrl+Page Down and
@@ -18,6 +18,10 @@ Complex-modification rules for a PC keyboard, in five files:
 - `assets/complex_modifications/pc-nav.json` makes Caps Lock held, or a
   MacBook's Fn, with the arrows Home, End, Page Up and Page Down, and with
   Ctrl too Ctrl+Home and Ctrl+End; see [Caps Lock and Fn](#caps-lock-and-fn).
+- `assets/complex_modifications/pc-apps.json` gives apps their PC keys:
+  Ctrl+Alt+key as Google Docs uses it, Ctrl+Backspace and Ctrl+Delete
+  deleting a word, Ctrl+Y redo, Chrome's Ctrl+J and Ctrl+H, and Finder's
+  F2; see [Apps](#apps).
 
 Only the asset file is kept here. Karabiner rewrites
 `~/.config/karabiner/karabiner.json` itself on every UI change, so that file is
@@ -287,6 +291,92 @@ Control with each.
   match first while Caps Lock is held. Enabled after it, it's above it;
   tide for macOS puts a rule it doesn't know at the top.
 
+## Apps
+
+Some apps' PC keys land on the wrong Mac shortcut under the rotation. This
+file puts them back, in four rules, each on its own:
+
+| Physical keys | Emits | macOS sees | Does |
+| --- | --- | --- | --- |
+| Ctrl+Alt+letter, digit or punctuation | `left_control`+`left_command`+key | Command+Option+key | the app's Ctrl+Alt shortcut, such as Google Docs' |
+| Ctrl+Alt+Shift+the same | the same, plus `shift` | Command+Option+Shift+key | the same, with Shift |
+| Ctrl+Backspace, either Ctrl | `left_command`+Backspace | Option+Backspace | delete the word before |
+| Ctrl+Delete, either Ctrl | `left_command`+Forward Delete | Option+Forward Delete | delete the word after |
+| Ctrl+Y, in QWERTY or Dvorak | `left_control`+`shift`+Z | Command+Shift+Z | redo |
+| Ctrl+J, in Chrome and Brave, in QWERTY or Dvorak | `left_control`+`shift`+J | Command+Shift+J | Downloads |
+| Ctrl+H, in Chrome and Brave, in QWERTY or Dvorak | `left_control`+Y | Command+Y | History |
+| F2, in Finder | Return | Return | rename |
+
+The outputs name the keys the rotation turns into what macOS should see,
+by the same layering as above: `left_control` becomes Command and
+`left_command` becomes Option. Left to the rotation, each key above means
+something else: Ctrl+Alt is Command+Control, Ctrl+Backspace
+(Command+Backspace) deletes to the line's start, Ctrl+Y (Command+Y) is
+Chrome's History, and Ctrl+H (Command+H) hides Chrome.
+
+- **Ctrl+Alt is for Google Docs, Sheets and Slides,** whose PC shortcuts
+  are Command+Option on a Mac *(unverified)*: Ctrl+Alt+M adds a comment,
+  Ctrl+Alt+1 to 6 set headings, Ctrl+Alt+C and V copy and paste
+  formatting, and in Sheets Ctrl+Alt+= and - insert and delete cells. It
+  takes the letters, digits and punctuation, but no arrows, editing keys,
+  Space, Escape or F keys: Command+Option with those is something else on
+  a Mac, such as Chrome's next tab or Force Quit, and Ctrl+Alt+F1 to F12
+  are Linux's text consoles. The rotation's own Command+Control shortcuts
+  are gone from physical Ctrl+Alt, Lock Screen's Command+Control+Q among
+  them; tide for macOS locks on Super+L. Only left Ctrl and left Alt.
+- **Ctrl+H is sent as Command+Y,** Chrome's History, and Ctrl+J as
+  Command+Shift+J, its Downloads *(unverified)*. In Google Docs, Sheets
+  and Slides, where Ctrl+H is find and replace, tide for macOS is to
+  make Command+Y that (a tidemo change still to come). Chrome and Brave
+  are the bundle IDs the arrow rule names, Chrome's apps included. Left
+  Ctrl only.
+- **Ctrl+Y, Ctrl+J and Ctrl+H depend on the layout.** Karabiner's key
+  codes are physical keys, named for their QWERTY letters, and macOS
+  reads the letter through the input source. So these three have a copy
+  for each layout they know, chosen by `input_source_if`:
+
+  | Input source | Ctrl+Y | Ctrl+J | Ctrl+H |
+  | --- | --- | --- | --- |
+  | QWERTY: U.S., ABC, U.S. Extended, British, British – PC, Australian, Canadian | `y` → `shift`+`z` | `j` → `shift`+`j` | `h` → `y` |
+  | Dvorak | `t` → `shift`+`slash` | `c` → `shift`+`c` | `j` → `t` |
+
+  The keys are physical, each with `left_control`: in Dvorak, Y, Z, J
+  and H sit on QWERTY's T, /, C and J. Any other layout gets none of
+  them, Dvorak – QWERTY ⌘ included: under the rotation every output holds
+  Command, which that layout turns back into QWERTY, while the keys you
+  press without it are Dvorak's, so neither table fits. Ctrl+Alt,
+  Backspace, Delete and F2 keep their key, so they follow the layout as
+  the rotation's own shortcuts do.
+- **The lock screen's Ctrl+U doesn't know the layout yet.** It takes the
+  physical U, which is Dvorak's G; see TODO.md.
+- **Redo is Command+Shift+Z,** a Mac's redo in nearly every app; Command+Y
+  is History in Chrome. Left Ctrl only, as Ctrl+Tab.
+- **F2 is Return in Finder,** which renames the selected file. Only from a
+  PC keyboard: a Mac keyboard's F2 is brightness. Delete, which moves a
+  file to the Trash on a PC, is left alone: sent as Command+Backspace,
+  pressed while renaming, it would move the file you're renaming to the
+  Trash.
+- **Not in terminals** (kitty, Ghostty, Terminal and iTerm2), which take
+  Ctrl and Alt themselves; see [Terminals](#terminals). F2, Ctrl+J and
+  Ctrl+H are only their own apps'.
+- **Home and End stay tide for macOS's,** which makes them the line's ends
+  in a text field and leaves them scrolling elsewhere, as on a page; see
+  [Home and End](#home-and-end). A rule here could only choose by app, so
+  a native app's Home would stop scrolling, and a browser's text fields
+  would get none. Caps Lock or Fn with Left and
+  Right send Home and End, so they agree.
+- **Left out: Ctrl+Space,** Sheets' select column. Under the rotation it's
+  Spotlight (Command+Space), and Sheets' own key on a Mac, Control+Space
+  *(unverified)*, is macOS's input source switch.
+- The Mac shortcuts the rules send are the apps' own, and none could be
+  checked against Google's or Apple's pages *(unverified)*. Nor has
+  Karabiner been run with them on a Mac.
+- **It's a new file:** run `confinst` once after pulling conf, to link it
+  into Karabiner's folder. tide for macOS then turns its rules on by
+  itself, at the top; without tide for macOS, enable them as in
+  [Enabling it](#enabling-it). They share no keys with the other rules, so
+  their place doesn't matter.
+
 ## Lock screen
 
 On Linux, Ctrl+U clears a password field, tide's lock among them. The
@@ -345,7 +435,8 @@ the list. Enable, in this order:
 6. under "PC keyboard navigation", "Caps Lock or Fn with the arrows is
    Home, End, …", after the arrow rule, so it sits above it: the arrow
    rule's Ctrl+Left/Right would otherwise take Caps Lock with Ctrl+Left and
-   Right as a word move.
+   Right as a word move;
+7. under "PC keyboard apps", each of its four rules, anywhere.
 
 Karabiner puts each rule you enable at the top of the Complex Modifications
 list, and uses the first that matches a key. `setup-macos` installs Karabiner
@@ -364,8 +455,9 @@ the System Settings page for it.
 ## Scope
 
 Only left Ctrl, and in tide for macOS's Win rule left Alt, are mapped, but for the
-arrow rule's Ctrl+arrow, Ctrl+Home/End and the navigation layer's Ctrl, and
-the lock screen's Ctrl+U, which take right Ctrl too. Right Alt is left alone so it stays available as
+arrow rule's Ctrl+arrow, Ctrl+Home/End and the navigation layer's Ctrl, the
+lock screen's Ctrl+U, and the apps rule's Ctrl+Backspace and Ctrl+Delete,
+which take right Ctrl too. Right Alt is left alone so it stays available as
 a plain modifier, and the rotation still sends it to right Control.
 
 ## Modifier names
