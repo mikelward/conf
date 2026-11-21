@@ -171,6 +171,14 @@ Delete an entry once you have agreed with it or reversed it.
       inhibit, swaync's `--dnd-on`). *Reversible:* one bind each in
       `config/sway/config` and `xbindkeysrc`.
 
+## Make the lock screen's Ctrl+U follow the input source
+
+`pc-lock.json` takes the physical U, which in Dvorak is G, so a Dvorak
+typist's Ctrl+U doesn't clear the password, and Ctrl+G does. Give it the
+QWERTY and Dvorak copies `pc-apps.json` has (`input_source_if`), with
+Dvorak's U on QWERTY's F, and check the other files for any other rule
+that picks a letter.
+
 ## Fill tidewm's keys
 
 `config/tidewm/config`, for tide's tidewm session, leaves out what tidewm

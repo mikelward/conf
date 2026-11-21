@@ -533,4 +533,221 @@ PY
     assert_equal "8" "$(printf '%s\n' "$_nav" | grep -c -- '^[a-z]* terminal ')"
 fi
 
+# Apps' own PC keys: Ctrl+Alt+key, Google Docs' way, as Command+Option+key;
+# Ctrl+Backspace and Ctrl+Delete deleting a word; Ctrl+Y redo; Chrome's
+# Ctrl+J and Ctrl+H; Finder's F2. Each output names the key the rotation
+# turns into what macOS should see: left_control for Command, left_command
+# for Option. Not in the terminals, which take Ctrl and Alt themselves.
+_apps_file="$_srcdir/config/karabiner/assets/complex_modifications/pc-apps.json"
+
+start_test "the apps rule exists"
+assert_true test -f "$_apps_file"
+
+if command -v python3 >/dev/null 2>&1; then
+    start_test "the apps rule is valid JSON"
+    assert_true python3 -m json.tool "$_apps_file" /dev/null
+
+    # Each manipulator as "rule key mandatory optional -> to... where",
+    # where is the condition types, then each one's bundle IDs or devices.
+    _apps=$(python3 - "$_apps_file" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+print("title", d.get("title"))
+for i, r in enumerate(d["rules"]):
+    print("description", i, r["description"])
+    for m in r["manipulators"]:
+        f = m["from"]
+        mods = f.get("modifiers", {})
+        to = " ".join("+".join(t.get("modifiers", []) + [t["key_code"]]) for t in m["to"])
+        where = " ".join(c["type"] + ":" + ",".join(c.get("bundle_identifiers", []) or [s["input_source_id"] for s in c.get("input_sources", [])]
+                                                     or [json.dumps(x, sort_keys=True) for x in c.get("identifiers", [])])
+                         for c in m.get("conditions", [])) or "everywhere"
+        print(i, f["key_code"], "+".join(mods.get("mandatory", [])) or "-", "+".join(mods.get("optional", [])) or "-", "->", to, where)
+PY
+)
+    _terms='^net\.kovidgoyal\.kitty$,^com\.mitchellh\.ghostty$,^com\.apple\.Terminal$,^com\.googlecode\.iterm2$'
+    _not_terms="frontmost_application_unless:$_terms"
+
+    start_test "the apps rule has a title, and each rule says what it does first"
+    assert_contains "title PC keyboard apps" "$_apps"
+    assert_contains "description 0 Ctrl+Alt+key is Command+Option+key outside terminals" "$_apps"
+    assert_contains "description 1 Ctrl+Backspace and Ctrl+Delete delete a word, and Ctrl+Y redoes, outside terminals" "$_apps"
+    assert_contains "description 2 Ctrl+J opens Downloads and Ctrl+H History in Chrome and Brave" "$_apps"
+    assert_contains "description 3 F2 renames in Finder" "$_apps"
+
+    start_test "the terminals the apps rule leaves alone are the Ctrl+Home rule's"
+    assert_equal "$_terms" "$(python3 -c '
+import json, sys
+m = json.load(open(sys.argv[1]))["rules"][1]["manipulators"][0]
+print(",".join(m["conditions"][0]["bundle_identifiers"]))
+' "$_arrow_file")"
+
+    # Google Docs: Ctrl+Alt+M comments, Ctrl+Alt+1 to 6 are headings,
+    # Ctrl+Alt+C and V copy and paste formatting; Sheets: Ctrl+Alt+= and -
+    # insert and delete cells. On a Mac each is Command+Option. Shift
+    # passes through, for Ctrl+Alt+Shift+H, version history.
+    start_test "Ctrl+Alt+M, 1, 6, C, V, = and - are Command+Option with the key, outside terminals"
+    for _k in m 1 6 c v equal_sign hyphen; do
+        assert_contains "0 $_k left_control+left_option shift -> left_control+left_command+$_k $_not_terms" "$_apps"
+    done
+    start_test "every Ctrl+Alt manipulator keeps its key and Shift, and leaves the terminals alone"
+    assert_equal "" "$(printf '%s\n' "$_apps" | NOT_TERMS="$_not_terms" python3 -c '
+import os, sys
+for line in sys.stdin:
+    w = line.split()
+    if w[0] == "0" and w[2:] != ["left_control+left_option", "shift", "->", "left_control+left_command+" + w[1], os.environ["NOT_TERMS"]]:
+        print(line, end="")
+')"
+    start_test "Ctrl+Alt takes letters, digits and punctuation: 47 keys"
+    assert_equal "47" "$(printf '%s\n' "$_apps" | grep -c '^0 ')"
+    # Command+Option with these is something else on a Mac: switching
+    # tabs, Force Quit, a Finder search, the Dock. Ctrl+Alt+F1 to F12 are
+    # Linux's text consoles.
+    start_test "Ctrl+Alt leaves the arrows, editing keys, Space, Escape and F keys to the rotation"
+    for _k in left_arrow right_arrow up_arrow down_arrow tab spacebar return_or_enter delete_or_backspace delete_forward escape home end page_up page_down f1 f2; do
+        assert_not_contains "0 $_k " "$_apps"
+    done
+
+    # The rotation makes Ctrl+Backspace Command+Backspace, which deletes to
+    # the line's start; a word is Option+Backspace. Either Ctrl, as the
+    # arrow rule's word moves take.
+    start_test "either Ctrl+Backspace and Ctrl+Delete are Option with the key, deleting a word"
+    for _c in left_control right_control; do
+        assert_contains "1 delete_or_backspace $_c - -> left_command+delete_or_backspace $_not_terms" "$_apps"
+        assert_contains "1 delete_forward $_c - -> left_command+delete_forward $_not_terms" "$_apps"
+    done
+    # Karabiner's key codes are physical keys, in QWERTY's places, and
+    # macOS reads the letter through the input source. So a manipulator
+    # that changes the letter has a copy for each layout it knows: QWERTY,
+    # and Dvorak, whose Y, Z, J and H sit on QWERTY's T, /, C and J. Any
+    # other layout, Dvorak - QWERTY Command among them, gets neither.
+    _qwerty="input_source_if:^com\\.apple\\.keylayout\\.(US|ABC|USExtended|British|British-PC|Australian|Canadian)\$"
+    _dvorak="input_source_if:^com\\.apple\\.keylayout\\.Dvorak\$"
+
+    # Command+Y is History in Chrome; Command+Shift+Z is a Mac's redo.
+    start_test "Ctrl+Y is Command+Shift+Z, redo, outside terminals, in QWERTY"
+    assert_contains "1 y left_control - -> left_control+shift+z $_not_terms $_qwerty" "$_apps"
+    start_test "Ctrl+Y is Command+Shift+Z in Dvorak too, from and to Dvorak's keys"
+    assert_contains "1 t left_control - -> left_control+shift+slash $_not_terms $_dvorak" "$_apps"
+    start_test "nothing else in the word and redo rule"
+    assert_equal "6" "$(printf '%s\n' "$_apps" | grep -c '^1 ')"
+
+    # Chrome and Brave, as the arrow rule names them, Chrome's apps
+    # included. Ctrl+H is left to the rotation as Command+H, which hides
+    # the app, so it's sent as Command+Y, History; tide for macOS makes
+    # Command+Y find and replace in Google Docs, Sheets and Slides.
+    _chrome="frontmost_application_if:^com\\.google\\.Chrome,^com\\.brave\\.Browser"
+    start_test "Ctrl+J is Command+Shift+J, Downloads, and Ctrl+H Command+Y, History, in Chrome and Brave"
+    assert_contains "2 j left_control - -> left_control+shift+j $_chrome $_qwerty" "$_apps"
+    assert_contains "2 h left_control - -> left_control+y $_chrome $_qwerty" "$_apps"
+    start_test "in Dvorak, from and to Dvorak's J, H and Y"
+    assert_contains "2 c left_control - -> left_control+shift+c $_chrome $_dvorak" "$_apps"
+    assert_contains "2 j left_control - -> left_control+t $_chrome $_dvorak" "$_apps"
+    assert_equal "4" "$(printf '%s\n' "$_apps" | grep -c '^2 ')"
+
+    # A manipulator that takes or sends a letter means it for one layout,
+    # but for the Ctrl+Alt rule's, which take every letter alike: it names
+    # the input source, and each QWERTY one has its
+    # Dvorak twin, its keys moved to where Dvorak puts the same letters
+    # (the US Dvorak layout, as Apple's and xkb's us(dvorak) have it).
+    _layouts=$(python3 - "$_apps_file" <<'PY2'
+import json, sys
+QWERTY = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "open_bracket", "close_bracket",
+          "a", "s", "d", "f", "g", "h", "j", "k", "l", "semicolon", "quote",
+          "z", "x", "c", "v", "b", "n", "m", "comma", "period", "slash"]
+DVORAK = "',.pyfgcrl/=" "aoeuidhtns-" ";qjkxbmwvz"
+# Where Dvorak types each letter, as a physical key.
+AT = {ch: QWERTY[i] for i, ch in enumerate(DVORAK) if ch.isalpha()}
+LETTERS = set("abcdefghijklmnopqrstuvwxyz")
+def src(m):
+    return [s["input_source_id"] for c in m.get("conditions", []) if c["type"] == "input_source_if" for s in c["input_sources"]]
+def rest(m):
+    return [c for c in m.get("conditions", []) if c["type"] != "input_source_if"]
+rules = json.load(open(sys.argv[1]))["rules"]
+ms = [m for r in rules for m in r["manipulators"]]
+alike = rules[0]["manipulators"]
+dvorak = [m for m in ms if src(m) == ["^com\\.apple\\.keylayout\\.Dvorak$"]]
+for m in ms:
+    f, t = m["from"]["key_code"], m["to"][0]["key_code"]
+    if (f in LETTERS or t in LETTERS) and not src(m) and m not in alike:
+        print("no layout", f, t)
+    if src(m) and src(m)[0].startswith("^com\\.apple\\.keylayout\\.(US|"):
+        twin = json.loads(json.dumps(m))
+        twin["from"]["key_code"] = AT[f]
+        twin["to"][0]["key_code"] = AT[t]
+        if not any(d["from"] == twin["from"] and d["to"] == twin["to"] and rest(d) == rest(m) for d in dvorak):
+            print("no Dvorak twin", f, t)
+print(len(dvorak), "Dvorak")
+PY2
+)
+    start_test "every manipulator that takes or sends a letter names its layout, but for Ctrl+Alt's"
+    assert_not_contains "no layout" "$_layouts"
+    start_test "each QWERTY one has a Dvorak twin, and there are three"
+    assert_not_contains "no Dvorak twin" "$_layouts"
+    assert_contains "3 Dvorak" "$_layouts"
+    start_test "a Dvorak Y is QWERTY's T, Z its /, J its C and H its J"
+    assert_equal "t slash c j" "$(python3 -c '
+q = "qwertyuiop[]asdfghjkl;'"'"'zxcvbnm,./"
+d = "'"'"',.pyfgcrl/=aoeuidhtns-;qjkxbmwvz"
+print(" ".join({"/": "slash"}.get(q[d.index(c)], q[d.index(c)]) for c in "yzjh"))
+')"
+    start_test "Chrome and Brave are the arrow rule's bundle IDs"
+    assert_contains "\"^com\\\\.google\\\\.Chrome\"" "$_arrow"
+    assert_contains "\"^com\\\\.brave\\\\.Browser\"" "$_arrow"
+
+    # Finder renames on Return. Not a Mac keyboard's F2, which is
+    # brightness. Delete stays as it is: as Command+Backspace it would
+    # move the file being renamed to the Trash.
+    _mac_kbd='{"is_built_in_keyboard": true},{"vendor_id": 1452},{"vendor_id": 76}'
+    start_test "F2 is Return in Finder, from a PC keyboard"
+    assert_contains "3 f2 - - -> return_or_enter frontmost_application_if:^com\\.apple\\.finder\$ device_unless:$_mac_kbd" "$_apps"
+    assert_equal "1" "$(printf '%s\n' "$_apps" | grep -c '^3 ')"
+    start_test "Delete is left alone in Finder"
+    assert_not_contains " delete_forward - " "$_apps"
+    assert_not_contains "finder" "$(printf '%s\n' "$_apps" | grep ' delete_')"
+
+    # Plain Home and End are tide for macOS's, which looks at what has
+    # focus; Ctrl+Space stays Spotlight.
+    start_test "plain Home and End and Ctrl+Space are left alone"
+    assert_not_contains " home - " "$_apps"
+    assert_not_contains " end - " "$_apps"
+    assert_not_contains " spacebar " "$_apps"
+
+    # Across conf's rule files: no two manipulators take the same key with
+    # the same modifiers where the same conditions hold, and none of the
+    # apps rule's keys is another file's outside the terminals, where
+    # Karabiner would use whichever rule sits higher.
+    _clash=$(python3 - "$_srcdir/config/karabiner/assets/complex_modifications" <<'PY'
+import glob, json, os, sys
+TERMS = {"^net\\.kovidgoyal\\.kitty$", "^com\\.mitchellh\\.ghostty$", "^com\\.apple\\.Terminal$", "^com\\.googlecode\\.iterm2$"}
+seen, apps, others = {}, [], []
+for path in sorted(glob.glob(os.path.join(sys.argv[1], "*.json"))):
+    name = os.path.basename(path)
+    for r in json.load(open(path))["rules"]:
+        for m in r["manipulators"]:
+            f = m["from"]
+            mods = f.get("modifiers", {})
+            key = (f.get("key_code"), tuple(sorted(mods.get("mandatory", []))), tuple(sorted(mods.get("optional", []))),
+                   json.dumps(m.get("conditions", []), sort_keys=True))
+            if key in seen:
+                print("same", name, seen[key], key)
+            seen[key] = name
+            (apps if name == "pc-apps.json" else others).append((name, f.get("key_code"), set(mods.get("mandatory", [])), m.get("conditions", [])))
+def side(mods):
+    # "control" in a rule is either Ctrl.
+    return {x for m in mods for x in (("left_control", "right_control") if m == "control" else (m,))}
+def terminals_only(conds):
+    return any(c["type"] == "frontmost_application_if" and set(c["bundle_identifiers"]) <= TERMS for c in conds)
+for _, k, mods, _ in apps:
+    for name, k2, mods2, conds2 in others:
+        if k == k2 and side(mods) & side(mods2) and side(mods) - {"left_control", "right_control"} == side(mods2) - {"left_control", "right_control"} and not terminals_only(conds2):
+            print("clash", k, sorted(mods), name)
+PY
+)
+    start_test "no two manipulators in conf's rule files take the same key, modifiers and conditions"
+    assert_not_contains "same" "$_clash"
+    start_test "the apps rule's keys are no other rule's outside the terminals"
+    assert_not_contains "clash" "$_clash"
+fi
+
 test_summary "karabiner_test"

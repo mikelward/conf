@@ -392,6 +392,7 @@ $(CACHE)/test-karabiner.stamp: \
                           config/karabiner/assets/complex_modifications/pc-terminal.json \
                           config/karabiner/assets/complex_modifications/pc-lock.json \
                           config/karabiner/assets/complex_modifications/pc-nav.json \
+                          config/karabiner/assets/complex_modifications/pc-apps.json \
                           config/kitty/kitty.conf \
                           config/ghostty/config \
                           karabiner_test.sh shrc_test_lib.sh | $(CACHE)
