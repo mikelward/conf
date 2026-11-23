@@ -19,7 +19,19 @@ install-dotfiles:
 install-vcs:
 	$(MAKE) vcs-sync
 	$(MAKE) vcs-build
-	$(MAKE) -C vcs install
+	$(MAKE) install-vcs-built
+
+# install-vcs-built installs the vcs just built, or, where that binary won't
+# run (a Mac whose Santa is in Lockdown mode, or a policy that kills
+# unapproved binaries), vcs's portable version: a sh script and a Python one,
+# which run under the system's sh and python3.
+install-vcs-built:
+	@if vcs/vcs version >/dev/null 2>&1; then \
+		$(MAKE) -C vcs install; \
+	else \
+		echo "The vcs just built won't run on this machine, so installing its portable version" >&2; \
+		$(MAKE) -C vcs install-portable; \
+	fi
 
 # vcs-build builds the vcs binary from whatever's currently checked
 # out. It does NOT pull from remote -- the post-merge/post-rewrite
@@ -498,7 +510,7 @@ $(CACHE)/test-tidewm.stamp: tidewm_test.sh shrc_test_lib.sh \
 	@touch $@
 test-tidewm: $(CACHE)/test-tidewm.stamp
 
-.PHONY: all install install-dotfiles install-vcs bootstrap \
+.PHONY: install-vcs-built all install install-dotfiles install-vcs bootstrap \
 	vcs-build vcs-sync vcs-fetch \
 	test test-verbose test-full test-all test-claude-settings test-claude-statusline test-session-start-hook \
 	test-dash test-ksh test-bash test-zsh test-prompt test-prompt-zsh test-prompt-perf \
