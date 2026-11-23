@@ -322,6 +322,29 @@ assert_contains "make vcs-build" "$_install_vcs_recipe"
 start_test "install-vcs runs the vcs install"
 assert_contains "make -C vcs install" "$_install_vcs_recipe"
 
+# install-vcs-built installs the vcs it built only where that binary runs;
+# elsewhere (Santa in Lockdown mode kills it) the portable version. Run in a
+# copy of the Makefile, with a stand-in vcs checkout whose install targets
+# just say which ran.
+_ivb_dir=$(mktemp -d)
+cp "$_srcdir/Makefile" "$_ivb_dir/Makefile"
+mkdir "$_ivb_dir/vcs"
+printf 'install:\n\t@echo GO-INSTALL\ninstall-portable:\n\t@echo PORTABLE-INSTALL\n' \
+    > "$_ivb_dir/vcs/Makefile"
+printf '#!/bin/sh\nexit 0\n' > "$_ivb_dir/vcs/vcs"
+chmod +x "$_ivb_dir/vcs/vcs"
+_ivb_out=$(make -s -C "$_ivb_dir" install-vcs-built 2>&1)
+start_test "install-vcs-built installs the vcs it built when it runs"
+assert_contains "GO-INSTALL" "$_ivb_out"
+assert_not_contains "PORTABLE-INSTALL" "$_ivb_out"
+printf '#!/bin/sh\nkill -9 $$\n' > "$_ivb_dir/vcs/vcs"
+_ivb_out=$(make -s -C "$_ivb_dir" install-vcs-built 2>&1)
+start_test "install-vcs-built installs the portable vcs when the built one is killed"
+assert_contains "PORTABLE-INSTALL" "$_ivb_out"
+assert_contains "won't run on this machine" "$_ivb_out"
+assert_not_contains "GO-INSTALL" "$_ivb_out"
+rm -rf "$_ivb_dir"
+
 start_test "install depends on install-dotfiles"
 _install_deps=$(make -C "$_srcdir" -pRrq 2>/dev/null | grep '^install:')
 assert_contains "install-dotfiles" "$_install_deps"
