@@ -1,7 +1,7 @@
 ---
 trigger: always_on
 alwaysApply: true
-last_modified: 2026-11-14
+last_modified: 2026-11-24
 ---
 
 # conf
@@ -90,6 +90,8 @@ Shared by every mikelward repo and the user-level agent config; canonical in mik
 - **Autopilot**. Drive without asking, logging guesses in `TODO.md` under *Decisions
   needing review*. Still ask before anything irreversible, outside this repo, or private.
 - **Red baseline**. Fix existing failures first, in their own commit.
+- **Fix fully**. Fix a reported problem's cause, everywhere it occurs (every platform,
+  consumer and copy), not only the case reported.
 - **Lasting fixes**. Fix the cause in a repo. Don't propose a step that lasts only this
   session (stopping a service, a setting in this container) or a hand edit to a dotfile:
   neither persists.
