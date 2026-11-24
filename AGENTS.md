@@ -30,6 +30,8 @@ Shared by every mikelward repo and the user-level agent config; canonical in mik
 - **Claude Code**. It reliably shows only a turn's last message; put everything there.
 - **Replies**. Short, key point first, ending with open PR links and any pending
   question.
+- **Commands and URLs**. Give ones that work as pasted, never placeholders: find each
+  value in the repo first, and ask only for those it lacks.
 - **Network access**. If you want access to a host and you can't access it or a mirror,
   ask the user to allowlist the domain(s) along with the purpose.
 
